@@ -1,0 +1,20 @@
+---
+- name: Update web servers
+  hosts: webservers
+  remote_user: root
+
+  tasks:
+  - name: Ensure apache is at the latest version
+    ansible.builtin.apt:
+      name: apache2
+      state: latest
+  - name: Create default page file
+    ansible.builtin.copy:
+      dest: /var/www/html/index.html
+      # We want each webserver to show its IP address
+      content: "Welcome, {{ ansible_default_ipv4.address }}!" 
+  - name: Start apache service # It could be nginx
+    ansible.builtin.service:
+      name: apache2
+      enabled: yes
+      state: started
