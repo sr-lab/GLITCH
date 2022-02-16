@@ -45,7 +45,7 @@ class AnsibleParser(p.Parser):
         return list(filter(lambda c: "#" in c[1], \
             [(c[0] + 1, c[1].strip()) for c in yaml_comments(d)]))
 
-    def __parse_tasks(self, name, module, file):
+    def __parse_tasks(self, module, name, file):
         parsed_file = yaml.YAML().load(file)
         unit_block = UnitBlock(name)
 
@@ -81,11 +81,11 @@ class AnsibleParser(p.Parser):
 
         module.add_block(unit_block)
 
-    def __parse_vars(self, name, module, file):
-        def parse_var(unit_block, cur_name, map):
+    def __parse_vars(self, module, name, file):
+        def parse_var(cur_name, map):
             for key, val in map.items():
                 if isinstance(val, dict):
-                    parse_var(unit_block, cur_name + key + ".", val)
+                    parse_var(cur_name + key + ".", val)
                 else:
                     unit_block.add_variable(Variable(cur_name + key, str(val)))
 
@@ -96,7 +96,7 @@ class AnsibleParser(p.Parser):
             module.add_block(unit_block)
             return
 
-        parse_var(unit_block, "", parsed_file)
+        parse_var("", parsed_file)
         module.add_block(unit_block)
 
     def __parse_file_structure(self, folder, path):
@@ -109,31 +109,19 @@ class AnsibleParser(p.Parser):
                 folder.add_folder(new_folder)
 
     def parse(self, path: str) -> Module:
+        def parse_folder(folder, p_function):
+            files = [f for f in os.listdir(path + folder) \
+                if os.path.isfile(os.path.join(path + folder, f))]
+            for file in files:
+                with open(path + folder + file) as f:
+                    p_function(res, folder + file, f)
+
         res: Module = Module(os.path.basename(os.path.normpath(path)))
         self.__parse_file_structure(res.folder, path)
 
-        tasks_files = [f for f in os.listdir(path + "/tasks") \
-            if os.path.isfile(os.path.join(path + "/tasks", f))]
-        for tasks_file in tasks_files:
-            with open(path + "/tasks/" + tasks_file) as file:
-                self.__parse_tasks("/tasks/" + tasks_file, res, file)
-
-        handlers_files = [f for f in os.listdir(path + "/handlers") \
-            if os.path.isfile(os.path.join(path + "/handlers", f))]
-        for handlers_file in handlers_files:
-            with open(path + "/handlers/" + handlers_file) as file:
-                self.__parse_tasks("/handlers/" + handlers_file, res, file)
-
-        vars_files = [f for f in os.listdir(path + "/vars") \
-            if os.path.isfile(os.path.join(path + "/vars", f))]
-        for vars_file in vars_files:
-            with open(path + "/vars/" + vars_file) as file:
-                self.__parse_vars("/vars/"  + vars_file, res, file)
-
-        defaults_files = [f for f in os.listdir(path + "/defaults") \
-            if os.path.isfile(os.path.join(path + "/defaults", f))]
-        for defaults_file in defaults_files:
-            with open(path + "/defaults/" + defaults_file) as file:
-                self.__parse_vars("/defaults/"  + defaults_file, res, file)
+        parse_folder("/tasks/", self.__parse_tasks)
+        parse_folder("/handlers/", self.__parse_tasks)
+        parse_folder("/vars/", self.__parse_vars)
+        parse_folder("/defaults/", self.__parse_vars)
 
         return res

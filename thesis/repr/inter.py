@@ -47,6 +47,7 @@ class AtomicUnit:
 
         for attribute in self.attributes:
             res += attribute.print(tab + 1) + "\n"
+        res = res[:-1]
 
         return res
 
