@@ -3,6 +3,9 @@
   hosts: webservers
   remote_user: root
 
+  vars:
+    http_port: 80
+
   tasks:
   - name: Ensure apache is at the latest version
     ansible.builtin.apt:

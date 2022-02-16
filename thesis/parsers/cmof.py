@@ -1,5 +1,6 @@
 import thesis.parsers.parser as p
 import ruamel.yaml as yaml
+import os
 from thesis.repr.inter import *
 
 class AnsibleParser(p.Parser):
@@ -9,7 +10,10 @@ class AnsibleParser(p.Parser):
         for t in tl:
             if t is None:
                 continue
-            res.append((t.start_mark.line, t.value))
+            if isinstance(t, list):
+                res += self.__extract_from_token(t)
+            else:
+                res.append((t.start_mark.line, t.value))
         return res
 
     def __get_yaml_comments_aux(self, d):
@@ -43,23 +47,38 @@ class AnsibleParser(p.Parser):
         return list(filter(lambda c: "#" in c[1], \
             [(c[0] + 1, c[1].strip()) for c in aux]))
 
-    def parse(self, path: str) -> Module:
-        res: Module = Module("tst") #FIXME
+    def __parse_tasks(self, name, module, file):
+        parsed_file = yaml.YAML().load(file)
+        unit_block = UnitBlock(name)
 
-        with open(path) as file:
-            parsed_file = yaml.YAML().load(file)[0]
-            unit_block = UnitBlock(parsed_file["name"])
+        for task in parsed_file:
+            if list(task.keys())[0] != "include":
+                m: str = list(task.values())[1]
+                atomic_unit = AtomicUnit(list(task.keys())[1])
 
-            for task in parsed_file['tasks']:
-                module: str = list(filter(lambda n: n != "name", task.keys()))[0]
-                atomic_unit = AtomicUnit(module)
-                for attribute in task[module].keys():
-                    atomic_unit.add_attribute(Attribute(attribute, str(task[module][attribute])))
+                if (isinstance(m, str)):
+                    atomic_unit.add_attribute(Attribute("", m))
+                else:
+                    for atr in m:
+                        atomic_unit.add_attribute(Attribute(atr, m[atr]))
                 unit_block.add_atomic_unit(atomic_unit)
 
-            for comment in self.__get_yaml_comments(parsed_file):
-                unit_block.add_comment(Comment(comment[1]))
+        for comment in self.__get_yaml_comments(parsed_file):
+           unit_block.add_comment(Comment(comment[1]))
 
-            res.add_block(unit_block)
+        for task in parsed_file:
+            if list(task.keys())[0] == "include":
+                unit_block.add_dependency(list(task.values())[0])
+
+        module.add_block(unit_block)
+
+    def parse(self, path: str) -> Module:
+        res: Module = Module(os.path.basename(os.path.normpath(path)))
+
+        playbooks = [f for f in os.listdir(path + "/tasks") \
+            if os.path.isfile(os.path.join(path + "/tasks", f))]
+        for playbook in playbooks:
+            with open(path + "/tasks/" + playbook) as file:
+                self.__parse_tasks(playbook, res, file)
 
         return res

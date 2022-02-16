@@ -33,10 +33,11 @@ class Attribute:
 
 class AtomicUnit:
     name: str
-    attributes: list[Attribute] = []
+    attributes: list[Attribute]
 
     def __init__(self, name: str) -> None:
         self.name = name
+        self.attributes = []
 
     def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
@@ -51,16 +52,20 @@ class AtomicUnit:
 
 class UnitBlock:
     name: str
-    dependencies: list['UnitBlock'] = []
-    comments: list[Comment] = []
-    variables: list[Variable] = []
-    atomic_units: list[AtomicUnit] = []
+    dependencies: list[str]
+    comments: list[Comment]
+    variables: list[Variable]
+    atomic_units: list[AtomicUnit]
 
     def __init__(self, name: str) -> None:
+        self.dependencies = []
+        self.comments = []
+        self.variables = []
+        self.atomic_units = []
         self.name = name
 
-    def add_dependency(self, u: 'UnitBlock') -> None:
-        self.dependencies.append(u)
+    def add_dependency(self, d: str) -> None:
+        self.dependencies.append(d)
 
     def add_comment(self, c: Comment) -> None:
         self.comments.append(c)
@@ -76,7 +81,7 @@ class UnitBlock:
         
         res += (tab * "\t") + "\tdependencies:\n"
         for dependency in self.dependencies:
-            res += (tab * "\t") + "\t\t" + dependency.name
+            res += (tab * "\t") + "\t\t" + dependency + "\n"
 
         res += (tab * "\t") + "\tcomments:\n"
         for comment in self.comments:
@@ -94,10 +99,11 @@ class UnitBlock:
 
 class Module:
     name: str
-    blocks: list[UnitBlock] = []
+    blocks: list[UnitBlock]
 
     def __init__(self, name) -> None:
         self.name = name
+        self.blocks = []
 
     def add_block(self, u: UnitBlock) -> None:
         self.blocks.append(u)
