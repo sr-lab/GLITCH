@@ -49,8 +49,13 @@ class AnsibleParser(p.Parser):
         parsed_file = yaml.YAML().load(file)
         unit_block = UnitBlock(name)
 
+        if (parsed_file == None):
+            module.add_block(unit_block)
+            return
+
         for task in parsed_file:
             atomic_unit = AtomicUnit("")
+
             for key, val in task.items():
                 # Dependencies
                 if key == "include":
@@ -65,7 +70,7 @@ class AnsibleParser(p.Parser):
                         atomic_unit.add_attribute(Attribute(key, str(val)))
                     else:
                         for atr in val:
-                            atomic_unit.add_attribute(Attribute(atr, val[atr]))
+                            atomic_unit.add_attribute(Attribute(atr, str(val[atr])))
 
             # If it was a task without a module we ignore it (e.g. dependency)
             if atomic_unit.name != "":
@@ -77,12 +82,21 @@ class AnsibleParser(p.Parser):
         module.add_block(unit_block)
 
     def __parse_vars(self, name, module, file):
+        def parse_var(unit_block, cur_name, map):
+            for key, val in map.items():
+                if isinstance(val, dict):
+                    parse_var(unit_block, cur_name + key + ".", val)
+                else:
+                    unit_block.add_variable(Variable(cur_name + key, str(val)))
+
         parsed_file = yaml.YAML().load(file)
         unit_block = UnitBlock(name)
 
-        for key, val in parsed_file.items():
-            unit_block.add_variable(Variable(key, str(val)))
+        if (parsed_file == None):
+            module.add_block(unit_block)
+            return
 
+        parse_var(unit_block, "", parsed_file)
         module.add_block(unit_block)
 
     def parse(self, path: str) -> Module:
@@ -94,10 +108,22 @@ class AnsibleParser(p.Parser):
             with open(path + "/tasks/" + tasks_file) as file:
                 self.__parse_tasks("/tasks/" + tasks_file, res, file)
 
+        handlers_files = [f for f in os.listdir(path + "/handlers") \
+            if os.path.isfile(os.path.join(path + "/handlers", f))]
+        for handlers_file in handlers_files:
+            with open(path + "/handlers/" + handlers_file) as file:
+                self.__parse_tasks("/handlers/" + handlers_file, res, file)
+
         vars_files = [f for f in os.listdir(path + "/vars") \
             if os.path.isfile(os.path.join(path + "/vars", f))]
         for vars_file in vars_files:
             with open(path + "/vars/" + vars_file) as file:
                 self.__parse_vars("/vars/"  + vars_file, res, file)
+
+        defaults_files = [f for f in os.listdir(path + "/defaults") \
+            if os.path.isfile(os.path.join(path + "/defaults", f))]
+        for defaults_file in defaults_files:
+            with open(path + "/defaults/" + defaults_file) as file:
+                self.__parse_vars("/defaults/"  + defaults_file, res, file)
 
         return res
