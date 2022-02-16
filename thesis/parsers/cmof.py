@@ -4,81 +4,100 @@ import os
 from thesis.repr.inter import *
 
 class AnsibleParser(p.Parser):
-    def __extract_from_token(self, tl):
-        assert isinstance(tl, list)
-        res = []
-        for t in tl:
-            if t is None:
-                continue
-            if isinstance(t, list):
-                res += self.__extract_from_token(t)
-            else:
-                res.append((t.start_mark.line, t.value))
-        return res
-
-    def __get_yaml_comments_aux(self, d):
-        res = []
-
-        if isinstance(d, dict):
-            if d.ca.comment is not None:
-                for l, c in self.__extract_from_token(d.ca.comment):
-                    res.append((l, c))
-            for key, val in d.items():
-                for l, c in self.__get_yaml_comments_aux(val):
-                    res.append((l, c))
-                if key in d.ca.items:
-                    for l, c in self.__extract_from_token(d.ca.items[key]):
-                        res.append((l, c))
-        elif isinstance(d, list):
-            if d.ca.comment is not None:
-                for l, c in self.__extract_from_token(d.ca.comment):
-                    res.append((l, c))
-            for idx, item in enumerate(d):
-                for l, c in self.__get_yaml_comments_aux(item):
-                    res.append((l, c))
-                if idx in d.ca.items:
-                    for l, c in self.__extract_from_token(d.ca.items[idx]):
-                        res.append((l, c))
-
-        return res
-
     def __get_yaml_comments(self, d):
-        aux = self.__get_yaml_comments_aux(d)
+        def extract_from_token(tokenlist):
+            res = []
+            for token in tokenlist:
+                if token is None:
+                    continue
+                if isinstance(token, list):
+                    res += extract_from_token(token)
+                else:
+                    res.append((token.start_mark.line, token.value))
+            return res
+
+        def yaml_comments(d):
+            res = []
+
+            if isinstance(d, dict):
+                if d.ca.comment is not None:
+                    for line, comment in extract_from_token(d.ca.comment):
+                        res.append((line, comment))
+                for key, val in d.items():
+                    for line, comment in yaml_comments(val):
+                        res.append((line, comment))
+                    if key in d.ca.items:
+                        for line, comment in extract_from_token(d.ca.items[key]):
+                            res.append((line, comment))
+            elif isinstance(d, list):
+                if d.ca.comment is not None:
+                    for line, comment in extract_from_token(d.ca.comment):
+                        res.append((line, comment))
+                for idx, item in enumerate(d):
+                    for line, comment in yaml_comments(item):
+                        res.append((line, comment))
+                    if idx in d.ca.items:
+                        for line, comment in extract_from_token(d.ca.items[idx]):
+                            res.append((line, comment))
+
+            return res
+
         return list(filter(lambda c: "#" in c[1], \
-            [(c[0] + 1, c[1].strip()) for c in aux]))
+            [(c[0] + 1, c[1].strip()) for c in yaml_comments(d)]))
 
     def __parse_tasks(self, name, module, file):
         parsed_file = yaml.YAML().load(file)
         unit_block = UnitBlock(name)
 
         for task in parsed_file:
-            if list(task.keys())[0] != "include":
-                m: str = list(task.values())[1]
-                atomic_unit = AtomicUnit(list(task.keys())[1])
+            atomic_unit = AtomicUnit("")
+            for key, val in task.items():
+                # Dependencies
+                if key == "include":
+                    unit_block.add_dependency(val)
+                    break
 
-                if (isinstance(m, str)):
-                    atomic_unit.add_attribute(Attribute("", m))
-                else:
-                    for atr in m:
-                        atomic_unit.add_attribute(Attribute(atr, m[atr]))
+                if key != "name":
+                    if atomic_unit.name == "":
+                        atomic_unit.name = key
+
+                    if (isinstance(val, str) or isinstance(val, list)):
+                        atomic_unit.add_attribute(Attribute(key, str(val)))
+                    else:
+                        for atr in val:
+                            atomic_unit.add_attribute(Attribute(atr, val[atr]))
+
+            # If it was a task without a module we ignore it (e.g. dependency)
+            if atomic_unit.name != "":
                 unit_block.add_atomic_unit(atomic_unit)
 
         for comment in self.__get_yaml_comments(parsed_file):
            unit_block.add_comment(Comment(comment[1]))
 
-        for task in parsed_file:
-            if list(task.keys())[0] == "include":
-                unit_block.add_dependency(list(task.values())[0])
+        module.add_block(unit_block)
+
+    def __parse_vars(self, name, module, file):
+        parsed_file = yaml.YAML().load(file)
+        unit_block = UnitBlock(name)
+
+        for key, val in parsed_file.items():
+            unit_block.add_variable(Variable(key, str(val)))
 
         module.add_block(unit_block)
 
     def parse(self, path: str) -> Module:
         res: Module = Module(os.path.basename(os.path.normpath(path)))
 
-        playbooks = [f for f in os.listdir(path + "/tasks") \
+        tasks_files = [f for f in os.listdir(path + "/tasks") \
             if os.path.isfile(os.path.join(path + "/tasks", f))]
-        for playbook in playbooks:
-            with open(path + "/tasks/" + playbook) as file:
-                self.__parse_tasks(playbook, res, file)
+        for tasks_file in tasks_files:
+            with open(path + "/tasks/" + tasks_file) as file:
+                self.__parse_tasks("/tasks/" + tasks_file, res, file)
+
+        vars_files = [f for f in os.listdir(path + "/vars") \
+            if os.path.isfile(os.path.join(path + "/vars", f))]
+        for vars_file in vars_files:
+            with open(path + "/vars/" + vars_file) as file:
+                self.__parse_vars("/vars/"  + vars_file, res, file)
 
         return res
