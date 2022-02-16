@@ -99,8 +99,18 @@ class AnsibleParser(p.Parser):
         parse_var(unit_block, "", parsed_file)
         module.add_block(unit_block)
 
+    def __parse_file_structure(self, folder, path):
+        for f in os.listdir(path):
+            if os.path.isfile(os.path.join(path, f)):
+                folder.add_file(File(f))
+            elif os.path.isdir(os.path.join(path, f)):
+                new_folder = Folder(f)
+                self.__parse_file_structure(new_folder, os.path.join(path, f))
+                folder.add_folder(new_folder)
+
     def parse(self, path: str) -> Module:
         res: Module = Module(os.path.basename(os.path.normpath(path)))
+        self.__parse_file_structure(res.folder, path)
 
         tasks_files = [f for f in os.listdir(path + "/tasks") \
             if os.path.isfile(os.path.join(path + "/tasks", f))]

@@ -97,13 +97,47 @@ class UnitBlock:
 
         return res
 
+class File:
+    name: str
+
+    def __init__(self, name) -> None:
+        self.name = name
+
+    def print(self, tab) -> str:
+        return (tab * "\t") + self.name
+
+class Folder:
+    name: str
+    content: list
+
+    def __init__(self, name) -> None:
+        self.content = []
+        self.name = name
+
+    def add_folder(self, folder: 'Folder') -> None:
+        self.content.append(folder)
+
+    def add_file(self, file: File) -> None:
+        self.content.append(file)
+
+    def print(self, tab) -> str:
+        res = (tab * "\t") + self.name + "\n"
+
+        for c in self.content:
+            res += c.print(tab + 1) + "\n"
+        res = res[:-1]
+
+        return res
+
 class Module:
     name: str
     blocks: list[UnitBlock]
+    folder: Folder
 
     def __init__(self, name) -> None:
         self.name = name
         self.blocks = []
+        self.folder = Folder(name)
 
     def add_block(self, u: UnitBlock) -> None:
         self.blocks.append(u)
@@ -111,7 +145,11 @@ class Module:
     def __repr__(self) -> str:
         res = self.name + "\n"
 
+        res += "\tblocks:\n"
         for block in self.blocks:
-            res += block.print(1)
+            res += block.print(2)
+
+        res += "\tfile structure:\n"
+        res += self.folder.print(2)
 
         return res
