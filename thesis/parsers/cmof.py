@@ -125,3 +125,7 @@ class AnsibleParser(p.Parser):
         parse_folder("/defaults/", self.__parse_vars)
 
         return res
+
+class ChefParser(p.Parser):
+    def parse(self, path: str) -> Module:
+        pass

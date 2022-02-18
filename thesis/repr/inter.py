@@ -1,5 +1,3 @@
-from attr import attributes
-
 class Comment:
     content: str
 
