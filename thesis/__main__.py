@@ -1,4 +1,4 @@
 from thesis.parsers.cmof import *
 
-parser = AnsibleParser()
-print(parser.parse("thesis/examples/ansible/ansible_virtualization/roles/vmtools"))
+parser = ChefParser()
+print(parser.parse("thesis/examples/chef/webserver.rb"))

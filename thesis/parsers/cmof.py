@@ -2,6 +2,7 @@ import thesis.parsers.parser as p
 import ruamel.yaml as yaml
 import os
 from thesis.repr.inter import *
+import ply
 
 class AnsibleParser(p.Parser):
     def __get_yaml_comments(self, d):
@@ -128,4 +129,24 @@ class AnsibleParser(p.Parser):
 
 class ChefParser(p.Parser):
     def parse(self, path: str) -> Module:
-        pass
+        script_ast = os.popen('ruby -r ripper -e \'file = \
+            File.open(\"' + path + '\")\np Ripper.sexp(file)\'').read()
+
+        tokens = ('LPAREN', 'RPAREN', 'STRING', 'ID', 'INTEGER', 'TRUE', 'FALSE')
+        states = (
+            ('string', 'exclusive'),
+            ('id', 'inclusive'),
+        )
+
+        t_LPAREN = r'\['
+        t_RPAREN = r'\]'
+
+        def t_string_STRING(t):
+            r'\".*\"'
+            t.value = t.value[1:-1]
+
+        def t_ID(t):
+            r'\:'
+
+
+        print(script_ast)
