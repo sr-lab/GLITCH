@@ -31,17 +31,19 @@ class Attribute:
 
 class AtomicUnit:
     name: str
+    type: str
     attributes: list[Attribute]
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, type: str) -> None:
         self.name = name
+        self.type = type
         self.attributes = []
 
     def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
 
     def print(self, tab) -> str:
-        res = (tab * "\t") + self.name + "\n"
+        res = (tab * "\t") + self.type + ' ' + self.name + "\n"
 
         for attribute in self.attributes:
             res += attribute.print(tab + 1) + "\n"
