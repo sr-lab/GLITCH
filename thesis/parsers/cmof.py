@@ -140,11 +140,14 @@ class ChefParser(p.Parser):
             def __repr__(self) -> str:
                 return str(self.id)
 
+            def __iter__(self):
+                return iter(self.args)
+
         def create_ast(l):
             args = []
             for el in l[1:]:
                 if isinstance(el, list): 
-                    if len(el) > 0 and isinstance(el[0], tuple) and el[0][0] == "id": #FIXME
+                    if len(el) > 0 and isinstance(el[0], tuple) and el[0][0] == "id":
                         args.append(create_ast(el))
                     else:
                         arg = []
@@ -159,13 +162,34 @@ class ChefParser(p.Parser):
 
             return Node(l[0][1], args)
 
-        def get_content_bounds(ast):
-            start_line = float('inf')
-            start_column = float('inf')
-            end_line = 0
-            end_column = 0
+        def check_id(ast, ids):
+            return isinstance(ast, Node) and ast.id in ids
 
-            if (isinstance(ast, list)):
+        def is_bounds(l):
+            return (isinstance(l, list) and len(l) == 2 and isinstance(l[0], int)
+                    and isinstance(l[1], int))
+
+        def check_node(ast, ids, size):
+            return check_id(ast, ids) and len(ast.args) == size
+
+        def get_content_bounds(ast):
+            start_line, start_column = float('inf'), float('inf')
+            end_line, end_column = 0, 0
+            bounded_structures = \
+                ["brace_block", "arg_paren", "string_literal", "string_embexpr", 
+                    "aref", "array"]
+
+            if (isinstance(ast, Node) and is_bounds(ast.args[-1])):
+                start_line, start_column = ast.args[-1][0], ast.args[-1][1]
+                # The second argument counting from the end has the content
+                # of the node (variable name, string...)
+                end_line, end_column = ast.args[-1][0], ast.args[-1][1] + len(ast.args[-2]) - 1
+
+                # With identifiers we need to consider the : behind them
+                if check_id(ast, ["@ident"]):
+                    start_column -= 1
+
+            elif (isinstance(ast, list) or isinstance(ast, Node)):
                 for arg in ast:
                     bound = get_content_bounds(arg)
                     if bound[0] < start_line:
@@ -176,46 +200,55 @@ class ChefParser(p.Parser):
                         end_line = bound[2]
                     if bound[3] > end_column:
                         end_column = bound[3]
-            elif (isinstance(ast, Node) and isinstance(ast.args[-1], list) and 
-                len(ast.args[-1]) == 2 and isinstance(ast.args[-1][0], int)
-                    and isinstance(ast.args[-1][1], int)):
-                start_line = ast.args[-1][0]
-                start_column = ast.args[-1][1]
-                end_line = ast.args[-1][0]
-                end_column = ast.args[-1][1] + len(ast.args[-2])
-            elif isinstance(ast, Node):
-                for arg in ast.args:
-                    bound = get_content_bounds(arg)
-                    if bound[0] < start_line:
-                        start_line = bound[0]
-                    if bound[1] < start_column:
-                        start_column = bound[1]
-                    if bound[2] > end_line:
-                        end_line = bound[2]
-                    if bound[3] > end_column:
-                        end_column = bound[3]
 
-                if (ast.id == "string_literal" or ast.id == "string_embexpr" or ast.id == "brace_block" or ast.id == "arg_paren"):
-                    end_column += 1
-                elif (ast.id == "top_const_ref"):
-                    start_column -= 1
+                # We have to consider extra characters which correspond
+                # to enclosing characters of these structures
+                if (start_line != float('inf') and check_id(ast, bounded_structures)):
+                    r_brackets = ['}', ')', ']', '"', '\'']
+                    # Add spaces/brackets in front of last token
+                    i = 0
+                    for c in lines[end_line - 1][end_column + 1:]:
+                        if c == ' ':
+                            i += 1
+                        elif c in r_brackets:
+                            end_column += i + 1
+                            break
+                        else:
+                            break
+                    end_column += i
+
+                    l_brackets = ['{', '(', '[', '"', '\'']
+                    # Add spaces/brackets behind first token
+                    i = 0
+                    for c in lines[start_line - 1][:start_column][::-1]:
+                        if c == ' ':
+                            i += 1
+                        elif c in l_brackets:
+                            start_column -= i + 1
+                            break
+                        else:
+                            break
+
+                # The original AST does not have the start column
+                # of these refs. We need to consider the ::
+                elif check_id(ast, ["top_const_ref"]):
+                    start_column -= 2
 
             return (start_line, start_column, end_line, end_column)
 
         def get_content(ast):
             bounds = get_content_bounds(ast)
-
             res = ""
             if (bounds[0] == float('inf')):
                 return res
 
             for l in range(bounds[0] - 1, bounds[2]):
                 if (bounds[0] - 1 == bounds[2] - 1):
-                    res += lines[l][bounds[1] - 1:bounds[3]]
+                    res += lines[l][bounds[1]:bounds[3] + 1]
                 elif (l == bounds[2] - 1):
-                    res += lines[l][:bounds[3]]
+                    res += lines[l][:bounds[3] + 1]
                 elif (l == bounds[0] - 1):
-                    res += lines[l][bounds[1] - 1:]
+                    res += lines[l][bounds[1]:]
                 else:
                     res += lines[l]
 
@@ -223,43 +256,34 @@ class ChefParser(p.Parser):
 
         def parse_resource(ast):
             def parse_attributes(ast):
-                if (isinstance(ast, Node) and (ast.id == "command" or ast.id == "method_add_arg")):
+                if (check_id(ast, ["command", "method_add_arg"]) or 
+                  (check_id(ast, ["method_add_block"]) and 
+                  check_id(ast.args[0], ["method_add_arg"]) and 
+                  check_id(ast.args[1], ["brace_block"]))):
                     atomic_unit.add_attribute(Attribute(get_content(ast.args[0]),
                         get_content(ast.args[1])))
-                elif (isinstance(ast, Node) and ast.id == "method_add_block" and ast.args[0].id 
-                    == "method_add_arg" and ast.args[1].id == "brace_block"):
-                    atomic_unit.add_attribute(Attribute(get_content(ast.args[0]),
-                        get_content(ast.args[1])))
-                elif isinstance(ast, Node):
-                    for arg in ast.args:
-                        parse_attributes(arg)
-                elif isinstance(ast, list):
+                elif isinstance(ast, Node) or isinstance(ast, list):
                     for arg in ast:
                         parse_attributes(arg)
-                
 
             atomic_unit = AtomicUnit("", "")
-            if (isinstance(ast, Node) and ast.id == "method_add_block" and len(ast.args) == 2 
-                and isinstance(ast.args[0], Node) and ast.args[0].id == "command"
-                    and isinstance(ast.args[0], Node) and ast.args[1].id == "do_block"):
+            if (check_node(ast, ["method_add_block"], 2) and check_node(ast.args[0], ["command"], 2) 
+              and check_node(ast.args[1], ["do_block"], 1)):
                 command = ast.args[0]
                 do_block = ast.args[1]
 
-                if (len(command.args) == 2 
-                    and isinstance(command.args[0], Node) and command.args[0].id == "@ident" 
-                    and len(command.args[0].args) == 2
-                        and isinstance(command.args[1], Node) and command.args[1].id == "args_add_block" 
-                        and len(command.args[1].args) == 2):
+                if (check_node(command.args[0], ["@ident"], 2) 
+                  and check_node(command.args[1], ["args_add_block"], 2)):
                     ident = command.args[0]
                     add_block = command.args[1]
 
-                    if (isinstance(ident.args[0], str) and isinstance(ident.args[1], list)):
+                    if (isinstance(ident.args[0], str) and isinstance(ident.args[1], list) \
+                      and ident.args[0] != "action"):
                         atomic_unit.type = ident.args[0]
                     else:
                         return (False, atomic_unit)
 
-                    if (len(add_block.args) == 2 and isinstance(add_block.args[0][0], Node) and add_block.args[1] == False
-                        and atomic_unit.type != "action"):
+                    if (isinstance(add_block.args[0][0], Node) and add_block.args[1] == False):
                         resource_id = add_block.args[0][0]
                         atomic_unit.name = get_content(resource_id)
                     else:
@@ -267,8 +291,7 @@ class ChefParser(p.Parser):
                 else:
                     return (False, atomic_unit)
 
-                if (len(do_block.args) == 1 
-                    and isinstance(do_block.args[0], Node) and do_block.args[0].id == "bodystmt"):
+                if check_id(do_block.args[0], ["bodystmt"]):
                     parse_attributes(do_block.args[0].args[0])
                 else:
                     return (False, atomic_unit)
