@@ -5,7 +5,6 @@ def parser_yacc(script_ast):
         tokens = ('LPAREN', 'RPAREN', 'STRING', 'ID', 'INTEGER', 
             'TRUE', 'FALSE')
         states = (
-            ('string', 'exclusive'),
             ('id', 'exclusive'),
         )
 
@@ -20,16 +19,9 @@ def parser_yacc(script_ast):
             t.value = int(t.value)
             return t
 
-        def t_begin_string(t):
-            r'\"'
-            t.lexer.begin('string')
-
-        def t_string_end(t):
-            r'\"'
-            t.lexer.begin('INITIAL')
-
-        def t_string_STRING(t):
-            r'[^"]+'
+        def t_STRING(t):
+            r'\"([^\\\n]|(\\.))*?\"'
+            t.value = t.value[1:-1]
             return t
 
         def t_begin_id(t):

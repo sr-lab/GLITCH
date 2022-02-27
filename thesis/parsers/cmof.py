@@ -254,9 +254,19 @@ class ChefParser(p.Parser):
 
             return res.strip()
 
+        def check_resource_type(ast, atomic_unit):
+            if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) \
+                and ast.args[0] != "action"):
+                atomic_unit.type = ast.args[0]
+                return True
+            else:
+                return False
+
         def parse_resource(ast):
             def parse_attributes(ast):
-                if (check_id(ast, ["command", "method_add_arg"]) or 
+                if (check_node(ast, ["method_add_arg"], 2) and check_id(ast.args[0], ["call"])):
+                    parse_attributes(ast.args[0].args[0])
+                elif ((check_id(ast, ["command", "method_add_arg"]) and ast.args[1] != []) or 
                   (check_id(ast, ["method_add_block"]) and 
                   check_id(ast.args[0], ["method_add_arg"]) and 
                   check_id(ast.args[1], ["brace_block"]))):
@@ -277,10 +287,7 @@ class ChefParser(p.Parser):
                     ident = command.args[0]
                     add_block = command.args[1]
 
-                    if (isinstance(ident.args[0], str) and isinstance(ident.args[1], list) \
-                      and ident.args[0] != "action"):
-                        atomic_unit.type = ident.args[0]
-                    else:
+                    if not check_resource_type(ident, atomic_unit):
                         return (False, atomic_unit)
 
                     if (isinstance(add_block.args[0][0], Node) and add_block.args[1] == False):
@@ -293,6 +300,28 @@ class ChefParser(p.Parser):
 
                 if check_id(do_block.args[0], ["bodystmt"]):
                     parse_attributes(do_block.args[0].args[0])
+                else:
+                    return (False, atomic_unit)
+
+            elif (check_node(ast, ["command"], 2)):
+                if (check_id(ast.args[0], ["@ident"]) 
+                  and check_node(ast.args[1], ["args_add_block"], 2)):
+                    ident = ast.args[0]
+                    add_block = ast.args[1]
+
+                    if not check_resource_type(ident, atomic_unit):
+                        return (False, atomic_unit)
+
+                    if (check_node(add_block.args[0][0], ["method_add_block"], 2) and add_block.args[1] == False):
+                        resource_id = add_block.args[0][0].args[0]
+                        atomic_unit.name = get_content(resource_id)
+                    else:
+                        return (False, atomic_unit)
+
+                    if check_id(add_block.args[0][0].args[1], ["brace_block"]):
+                        parse_attributes(add_block.args[0][0].args[1])
+                    else:
+                        return (False, atomic_unit)
                 else:
                     return (False, atomic_unit)
             else:
@@ -314,17 +343,18 @@ class ChefParser(p.Parser):
                         if (isinstance(arg, Node) or isinstance(arg, list)):
                             get_resources(arg)
 
-        script_ast = os.popen('ruby -r ripper -e \'file = \
-            File.open(\"' + path + '\")\npp Ripper.sexp(file)\'').read()
-
-        f = open(path, "r")
-        lines = f.readlines()
-
-        res: Module = Module("Test")
-        unit_block: UnitBlock = UnitBlock("Test")
-
-        get_resources(create_ast(parser_yacc(script_ast)))
-        res.add_block(unit_block)
+        res: Module = Module(os.path.basename(os.path.normpath(path)))
+        files = [f for f in os.listdir(path + "/resources/") \
+            if os.path.isfile(os.path.join(path + "/resources/", f))]
+        for file in files:
+            with open(path + "/resources/" + file) as f:
+                script_ast = os.popen('ruby -r ripper -e \'file = \
+                    File.open(\"' + path + "/resources/" + file + '\")\npp Ripper.sexp(file)\'').read()
+                lines = f.readlines()
+                unit_block: UnitBlock = UnitBlock(file)
+                ast = create_ast(parser_yacc(script_ast))
+                get_resources(ast)
+                res.add_block(unit_block)
 
         return res
 

@@ -27,7 +27,7 @@ class Attribute:
         self.value = value
 
     def print(self, tab) -> str:
-        return (tab * "\t") + self.name + "->" + self.value
+        return (tab * "\t") + self.name + "->" + self.value.replace('\n', '')
 
 class AtomicUnit:
     name: str
