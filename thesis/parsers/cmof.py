@@ -176,26 +176,27 @@ class ChefParser(p.Parser):
         def check_node(ast, ids, size):
             return check_id(ast, ids) and len(ast.args) == size
 
-        def get_content_bounds(ast):
+        def get_content_bounds(ast, lines):
             start_line, start_column = float('inf'), float('inf')
             end_line, end_column = 0, 0
             bounded_structures = \
                 ["brace_block", "arg_paren", "string_literal", "string_embexpr", 
-                    "aref", "array"]
+                    "aref", "array", "args_add_block"]
 
-            if (isinstance(ast, Node) and is_bounds(ast.args[-1])):
+            if (isinstance(ast, Node) and len(ast.args) > 0 and is_bounds(ast.args[-1])):
                 start_line, start_column = ast.args[-1][0], ast.args[-1][1]
                 # The second argument counting from the end has the content
                 # of the node (variable name, string...)
                 end_line, end_column = ast.args[-1][0], ast.args[-1][1] + len(ast.args[-2]) - 1
 
                 # With identifiers we need to consider the : behind them
-                if check_id(ast, ["@ident"]):
+                if (check_id(ast, ["@ident"]) 
+                  and lines[start_line - 1][start_column - 1] == ":"):
                     start_column -= 1
 
             elif (isinstance(ast, list) or isinstance(ast, Node)):
                 for arg in ast:
-                    bound = get_content_bounds(arg)
+                    bound = get_content_bounds(arg, lines)
                     if bound[0] < start_line:
                         start_line = bound[0]
                     if bound[1] < start_column:
@@ -212,7 +213,7 @@ class ChefParser(p.Parser):
                     # Add spaces/brackets in front of last token
                     i = 0
                     for c in lines[end_line - 1][end_column + 1:]:
-                        if c == ' ':
+                        if c.isspace():
                             i += 1
                         elif c in r_brackets:
                             end_column += i + 1
@@ -224,14 +225,20 @@ class ChefParser(p.Parser):
                     l_brackets = ['{', '(', '[', '"', '\'']
                     # Add spaces/brackets behind first token
                     i = 0
+
                     for c in lines[start_line - 1][:start_column][::-1]:
-                        if c == ' ':
+                        if c.isspace():
                             i += 1
                         elif c in l_brackets:
                             start_column -= i + 1
                             break
                         else:
                             break
+
+                    if (check_id(ast, ['string_embexpr'])):
+                        if (lines[start_line - 1][start_column] == "{" and
+                            lines[start_line - 1][start_column - 1] == "#"):
+                            start_column -= 1
 
                 # The original AST does not have the start column
                 # of these refs. We need to consider the ::
@@ -240,8 +247,18 @@ class ChefParser(p.Parser):
 
             return (start_line, start_column, end_line, end_column)
 
-        def get_content(ast):
-            bounds = get_content_bounds(ast)
+        def get_content(ast, lines):
+            empty_structures = {
+                'string_literal': "''",
+                'hash': "{}",
+                'array': "[]"
+            }
+
+            if ((ast.id in empty_structures and len(ast.args) == 0) or
+                (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
+                return empty_structures[ast.id]
+
+            bounds = get_content_bounds(ast, lines)
             res = ""
             if (bounds[0] == float('inf')):
                 return res
@@ -256,6 +273,9 @@ class ChefParser(p.Parser):
                 else:
                     res += lines[l]
 
+            if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
+                res += "end"
+
             return res.strip()
 
         def check_resource_type(ast, atomic_unit):
@@ -266,7 +286,7 @@ class ChefParser(p.Parser):
             else:
                 return False
 
-        def parse_resource(ast):
+        def parse_resource(ast, lines):
             def parse_attributes(ast):
                 if (check_node(ast, ["method_add_arg"], 2) and check_id(ast.args[0], ["call"])):
                     parse_attributes(ast.args[0].args[0])
@@ -274,8 +294,8 @@ class ChefParser(p.Parser):
                   (check_id(ast, ["method_add_block"]) and 
                   check_id(ast.args[0], ["method_add_arg"]) and 
                   check_id(ast.args[1], ["brace_block"]))):
-                    atomic_unit.add_attribute(Attribute(get_content(ast.args[0]),
-                        get_content(ast.args[1])))
+                    atomic_unit.add_attribute(Attribute(get_content(ast.args[0], lines),
+                        get_content(ast.args[1], lines)))
                 elif isinstance(ast, Node) or isinstance(ast, list):
                     for arg in ast:
                         parse_attributes(arg)
@@ -296,7 +316,7 @@ class ChefParser(p.Parser):
 
                     if (isinstance(add_block.args[0][0], Node) and add_block.args[1] == False):
                         resource_id = add_block.args[0][0]
-                        atomic_unit.name = get_content(resource_id)
+                        atomic_unit.name = get_content(resource_id, lines)
                     else:
                         return (False, atomic_unit)
                 else:
@@ -318,7 +338,7 @@ class ChefParser(p.Parser):
 
                     if (check_node(add_block.args[0][0], ["method_add_block"], 2) and add_block.args[1] == False):
                         resource_id = add_block.args[0][0].args[0]
-                        atomic_unit.name = get_content(resource_id)
+                        atomic_unit.name = get_content(resource_id, lines)
                     else:
                         return (False, atomic_unit)
 
@@ -333,31 +353,42 @@ class ChefParser(p.Parser):
 
             return (True, atomic_unit)
 
-        def get_resources(ast):
+        def parse_variable(ast, lines):
+            if (check_node(ast, ["assign"], 2)):
+                return (True,
+                    Variable(get_content(ast.args[0], lines), 
+                        get_content(ast.args[1], lines)))
+            else:
+                return (False, Variable("", ""))
+
+        def transverse_ast(ast, unit_block, lines):
             if (isinstance(ast, list)):
                 for arg in ast:
                     if (isinstance(arg, Node) or isinstance(arg, list)):
-                        get_resources(arg)
+                        transverse_ast(arg, unit_block, lines)
             else:
-                is_resource, resource = parse_resource(ast)
+                is_resource, resource = parse_resource(ast, lines)
+                is_variable, variable = parse_variable(ast, lines)
+
                 if (is_resource):
                     unit_block.add_atomic_unit(resource)
+                elif (is_variable):
+                    unit_block.add_variable(variable)
+
+                    # variables might have resources associated to it
+                    transverse_ast(ast.args[1], unit_block, lines)
                 else:
                     for arg in ast.args:
                         if (isinstance(arg, Node) or isinstance(arg, list)):
-                            get_resources(arg)
+                            transverse_ast(arg, unit_block, lines)
 
-        res: Module = Module(os.path.basename(os.path.normpath(path)))
-
-        files = [f for f in os.listdir(path + "/resources/") \
-            if os.path.isfile(os.path.join(path + "/resources/", f))]
-        for file in files:
-            with open(path + "/resources/" + file) as f:
+        def parse_file(path, file):
+            with open(path + file) as f:
                 ripper = resource_filename("thesis.parsers", 'resources/comments.rb.template')
                 ripper = open(ripper, "r")
                 ripper_script = Template(ripper.read())
                 ripper.close()
-                ripper_script = ripper_script.substitute({'path': '\"' + path + "/resources/" + file + '\"'})
+                ripper_script = ripper_script.substitute({'path': '\"' + path + file + '\"'})
 
                 unit_block: UnitBlock = UnitBlock(file)
                 lines = f.readlines()
@@ -373,11 +404,29 @@ class ChefParser(p.Parser):
                         unit_block.add_comment(Comment(re.sub(r'\\n$', '', comment)))
 
                 script_ast = os.popen('ruby -r ripper -e \'file = \
-                    File.open(\"' + path + "/resources/" + file + '\")\npp Ripper.sexp(file)\'').read()
+                    File.open(\"' + path + file + '\")\npp Ripper.sexp(file)\'').read()
                 _, program = parser_yacc(script_ast)
                 ast = create_ast(program)
-                get_resources(ast)
+                transverse_ast(ast, unit_block, lines)
                 res.add_block(unit_block)
+
+        res: Module = Module(os.path.basename(os.path.normpath(path)))
+
+        if os.path.exists(path + "/resources/"):
+            files = [f for f in os.listdir(path + "/resources/") \
+                if os.path.isfile(os.path.join(path + "/resources/", f))]
+            for file in files:
+                parse_file(path + "/resources/", file)
+        if os.path.exists(path + "/recipes/"):
+            files = [f for f in os.listdir(path + "/recipes/") \
+                if os.path.isfile(os.path.join(path + "/recipes/", f))]
+            for file in files:
+                parse_file(path + "/recipes/", file)
+        if os.path.exists(path + "/attributes/"):
+            files = [f for f in os.listdir(path + "/attributes/") \
+                if os.path.isfile(os.path.join(path + "/attributes/", f))]
+            for file in files:
+                parse_file(path + "/attributes/", file)
 
         return res
 
