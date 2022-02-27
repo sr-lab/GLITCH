@@ -1,0 +1,11 @@
+require 'ripper'
+require 'pp'
+
+class CommentRipper < Ripper::SexpBuilder
+    def on_comment(token)
+        super.tap { |result| pp result }
+    end
+end
+
+contents = File.read($path)
+pp CommentRipper.new(contents).parse

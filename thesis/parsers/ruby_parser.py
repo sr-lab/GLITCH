@@ -3,7 +3,7 @@ from ply.yacc import yacc
 
 def parser_yacc(script_ast):
         tokens = ('LPAREN', 'RPAREN', 'STRING', 'ID', 'INTEGER', 
-            'TRUE', 'FALSE')
+            'TRUE', 'FALSE', 'COMMENT')
         states = (
             ('id', 'exclusive'),
         )
@@ -29,11 +29,20 @@ def parser_yacc(script_ast):
             t.lexer.begin('id')
 
         def t_id_end(t):
-            r'\,'
+            r'[\,]'
             t.lexer.begin('INITIAL')
 
+        def t_id_RPAREN(t):
+            r'\]'
+            t.lexer.begin('INITIAL')
+            return t
+
+        def t_id_COMMENT(t):
+            r'@comment'
+            return t
+
         def t_id_ID(t):
-            r'[^,]+'
+            r'[^,\]]+'
             return t
 
         def t_ANY_error(t):
@@ -43,6 +52,22 @@ def parser_yacc(script_ast):
         lexer = lex()
         # Give the lexer some input
         lexer.input(script_ast)
+
+        def p_program(p):
+            r'program : comments list'
+            p[0] = (p[1], p[2])
+
+        def p_comments(p):
+            r'comments : comments comment'
+            p[0] = [p[2]] + p[1]
+
+        def p_comments_empty(p):
+            r'comments : empty'
+            p[0] = []
+
+        def p_comment(p):
+            r'comment : LPAREN COMMENT STRING LPAREN INTEGER INTEGER RPAREN RPAREN'
+            p[0] = p[3]
 
         def p_list(p):
             r'list : LPAREN args RPAREN'

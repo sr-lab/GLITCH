@@ -3,6 +3,10 @@ import ruamel.yaml as yaml
 import os
 from thesis.repr.inter import *
 from thesis.parsers.ruby_parser import parser_yacc
+from pkg_resources import resource_filename
+from string import Template
+import tempfile
+import re
 
 class AnsibleParser(p.Parser):
     def __get_yaml_comments(self, d):
@@ -344,15 +348,34 @@ class ChefParser(p.Parser):
                             get_resources(arg)
 
         res: Module = Module(os.path.basename(os.path.normpath(path)))
+
         files = [f for f in os.listdir(path + "/resources/") \
             if os.path.isfile(os.path.join(path + "/resources/", f))]
         for file in files:
             with open(path + "/resources/" + file) as f:
+                ripper = resource_filename("thesis.parsers", 'resources/comments.rb.template')
+                ripper = open(ripper, "r")
+                ripper_script = Template(ripper.read())
+                ripper.close()
+                ripper_script = ripper_script.substitute({'path': '\"' + path + "/resources/" + file + '\"'})
+
+                unit_block: UnitBlock = UnitBlock(file)
+                lines = f.readlines()
+                
+                with tempfile.NamedTemporaryFile(mode="w+") as tmp:
+                    tmp.write(ripper_script)
+                    tmp.flush()
+
+                    script_ast = os.popen('ruby ' + tmp.name).read()
+                    comments, _ = parser_yacc(script_ast)
+                    
+                    for comment in comments:
+                        unit_block.add_comment(Comment(re.sub(r'\\n$', '', comment)))
+
                 script_ast = os.popen('ruby -r ripper -e \'file = \
                     File.open(\"' + path + "/resources/" + file + '\")\npp Ripper.sexp(file)\'').read()
-                lines = f.readlines()
-                unit_block: UnitBlock = UnitBlock(file)
-                ast = create_ast(parser_yacc(script_ast))
+                _, program = parser_yacc(script_ast)
+                ast = create_ast(program)
                 get_resources(ast)
                 res.add_block(unit_block)
 
