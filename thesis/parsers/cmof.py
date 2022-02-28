@@ -406,6 +406,15 @@ class ChefParser(p.Parser):
                         if (isinstance(arg, Node) or isinstance(arg, list)):
                             transverse_ast(arg, unit_block, lines)
 
+        def parse_file_structure(folder, path):
+            for f in os.listdir(path):
+                if os.path.isfile(os.path.join(path, f)):
+                    folder.add_file(File(f))
+                elif os.path.isdir(os.path.join(path, f)):
+                    new_folder = Folder(f)
+                    parse_file_structure(new_folder, os.path.join(path, f))
+                    folder.add_folder(new_folder)
+
         def parse_file(path, file):
             with open(path + file) as f:
                 ripper = resource_filename("thesis.parsers", 'resources/comments.rb.template')
@@ -435,6 +444,7 @@ class ChefParser(p.Parser):
                 res.add_block(unit_block)
 
         res: Module = Module(os.path.basename(os.path.normpath(path)))
+        parse_file_structure(res.folder, path)
 
         if os.path.exists(path + "/resources/"):
             files = [f for f in os.listdir(path + "/resources/") \
