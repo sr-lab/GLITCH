@@ -336,6 +336,14 @@ class ChefParser(p.Parser):
                     if not check_resource_type(ident, atomic_unit):
                         return (False, atomic_unit)
 
+                    # Resource without attributes
+                    if (check_id(add_block.args[0][0], ["string_literal"]) and add_block.args[1] == False):
+                        if (atomic_unit.type == "include_recipe"):
+                            return (False, atomic_unit)
+                        else:
+                            atomic_unit.name = get_content(add_block.args[0][0], lines)
+                            return (True, atomic_unit)
+
                     if (check_node(add_block.args[0][0], ["method_add_block"], 2) and add_block.args[1] == False):
                         resource_id = add_block.args[0][0].args[0]
                         atomic_unit.name = get_content(resource_id, lines)
@@ -361,6 +369,21 @@ class ChefParser(p.Parser):
             else:
                 return (False, Variable("", ""))
 
+        def parse_includes(ast, lines, unit_block):
+            if (check_node(ast, ["command"], 2)):
+                if (check_id(ast.args[0], ["@ident"]) 
+                  and check_node(ast.args[1], ["args_add_block"], 2)):
+                    ident = ast.args[0]
+                    add_block = ast.args[1]
+
+                    if (isinstance(ident.args[0], str) and isinstance(ident.args[1], list) 
+                      and ident.args[0] == "include_recipe"):
+                        if (check_id(add_block.args[0][0], ["string_literal"]) and add_block.args[1] == False):
+                            unit_block.add_dependency(get_content(add_block.args[0][0], lines))
+                            return True
+
+            return False
+
         def transverse_ast(ast, unit_block, lines):
             if (isinstance(ast, list)):
                 for arg in ast:
@@ -369,6 +392,7 @@ class ChefParser(p.Parser):
             else:
                 is_resource, resource = parse_resource(ast, lines)
                 is_variable, variable = parse_variable(ast, lines)
+                is_include = parse_includes(ast, lines, unit_block)
 
                 if (is_resource):
                     unit_block.add_atomic_unit(resource)
@@ -377,7 +401,7 @@ class ChefParser(p.Parser):
 
                     # variables might have resources associated to it
                     transverse_ast(ast.args[1], unit_block, lines)
-                else:
+                elif not is_include:
                     for arg in ast.args:
                         if (isinstance(arg, Node) or isinstance(arg, list)):
                             transverse_ast(arg, unit_block, lines)
