@@ -1,3 +1,4 @@
+from importlib.resources import is_resource
 import thesis.parsers.parser as p
 import ruamel.yaml as yaml
 import os
@@ -147,6 +148,167 @@ class ChefParser(p.Parser):
             def __iter__(self):
                 return iter(self.args)
 
+        def check_id(ast, ids):
+            return isinstance(ast, Node) and ast.id in ids
+
+        def check_node(ast, ids, size):
+            return check_id(ast, ids) and len(ast.args) == size
+
+        # FIXME unmatched brackets
+        def get_content(ast, lines):
+            empty_structures = {
+                'string_literal': "''",
+                'hash': "{}",
+                'array': "[]"
+            }
+
+            if ((ast.id in empty_structures and len(ast.args) == 0) or
+                (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
+                return empty_structures[ast.id]
+
+            bounds = get_content_bounds(ast, lines)
+
+            res = ""
+            if (bounds[0] == float('inf')):
+                return res
+
+            for l in range(bounds[0] - 1, bounds[2]):
+                if (bounds[0] - 1 == bounds[2] - 1):
+                    res += lines[l][bounds[1]:bounds[3] + 1]
+                elif (l == bounds[2] - 1):
+                    res += lines[l][:bounds[3] + 1]
+                elif (l == bounds[0] - 1):
+                    res += lines[l][bounds[1]:]
+                else:
+                    res += lines[l]
+
+            if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
+                res += "end"
+
+            return res.strip()
+
+        class Checker:
+            tests_ast_stack: list
+
+            def __init__(self):
+                self.tests_ast_stack = []
+
+            def check(self):
+                tests, ast = self.pop()
+                for test in tests:
+                    if test(ast):
+                        return True
+
+                return False
+
+            def check_all(self):
+                status = True
+                while (len(self.tests_ast_stack) != 0 and status):
+                    status = self.check()
+                self.atomic_unit.attributes.reverse()
+                return status
+
+            def push(self, tests, ast):
+                self.tests_ast_stack.append((tests, ast))
+
+            def pop(self):
+                return self.tests_ast_stack.pop()
+
+        class ResourceChecker(Checker):
+            atomic_unit: AtomicUnit
+            lines: list
+
+            def __init__(self, atomic_unit, lines, ast):
+                Checker.__init__(self)
+                self.push([self.is_block_resource, 
+                    self.is_inline_resource], ast)
+                self.atomic_unit = atomic_unit
+                self.lines = lines
+
+            def is_block_resource(self, ast):
+                if (check_node(ast, ["method_add_block"], 2) and 
+                    check_node(ast.args[0], ["command"], 2) 
+                        and check_node(ast.args[1], ["do_block"], 1)):
+                    self.push([self.is_resource_body], ast.args[1])
+                    self.push([self.is_resource_def], ast.args[0])
+                    return True
+                else:
+                    return False
+
+            def is_inline_resource(self, ast):
+                if (check_node(ast, ["command"], 2) and 
+                    check_id(ast.args[0], ["@ident"]) 
+                        and check_node(ast.args[1], ["args_add_block"], 2)):
+                    self.push([self.is_resource_body_without_attributes,
+                        self.is_inline_resource_name], ast.args[1])
+                    self.push([self.is_resource_type], ast.args[0])
+                    return True
+                else:
+                    return False
+
+            def is_resource_def(self, ast):
+                if (check_node(ast.args[0], ["@ident"], 2) 
+                  and check_node(ast.args[1], ["args_add_block"], 2)):
+                    self.push([self.is_resource_name], ast.args[1])
+                    self.push([self.is_resource_type], ast.args[0])
+                    return True
+                else:
+                    return False
+
+            def is_resource_type(self, ast):
+                if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) \
+                    and not ast.args[0] in ["action", "include_recipe", "deprecated_property_alias"]):
+                    self.atomic_unit.type = ast.args[0]
+                    return True
+                else:
+                    return False
+
+            def is_resource_name(self, ast):
+                if (isinstance(ast.args[0][0], Node) and ast.args[1] == False):
+                    resource_id = ast.args[0][0]
+                    self.atomic_unit.name = get_content(resource_id, self.lines)
+                    return True
+                else:
+                    return False
+
+            def is_inline_resource_name(self, ast):
+                if (check_node(ast.args[0][0], ["method_add_block"], 2) 
+                    and ast.args[1] == False):
+                    resource_id = ast.args[0][0].args[0]
+                    self.atomic_unit.name = get_content(resource_id, self.lines)
+                    self.push([self.is_attribute], ast.args[0][0].args[1])
+                    return True
+                else:
+                    return False
+
+            def is_resource_body(self, ast):
+                if check_id(ast.args[0], ["bodystmt"]):
+                    self.push([self.is_attribute], ast.args[0].args[0])
+                    return True
+                else:
+                    return False
+            
+            def is_resource_body_without_attributes(self, ast):
+                if (check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] == False):
+                    self.atomic_unit.name = get_content(ast.args[0][0], self.lines)
+                    return True
+                return False
+
+            def is_attribute(self, ast):
+                if (check_node(ast, ["method_add_arg"], 2) and check_id(ast.args[0], ["call"])):
+                    self.push([self.is_attribute], ast.args[0].args[0])
+                elif ((check_id(ast, ["command", "method_add_arg"]) and ast.args[1] != []) or 
+                  (check_id(ast, ["method_add_block"]) and 
+                  check_id(ast.args[0], ["method_add_arg"]) and 
+                  check_id(ast.args[1], ["brace_block"]))):
+                    self.atomic_unit.add_attribute(Attribute(
+                        get_content(ast.args[0], self.lines), get_content(ast.args[1], self.lines)))
+                elif isinstance(ast, Node) or isinstance(ast, list):
+                    for arg in ast:
+                        self.push([self.is_attribute], arg)
+
+                return True
+
         def create_ast(l):
             args = []
             for el in l[1:]:
@@ -166,15 +328,9 @@ class ChefParser(p.Parser):
 
             return Node(l[0][1], args)
 
-        def check_id(ast, ids):
-            return isinstance(ast, Node) and ast.id in ids
-
         def is_bounds(l):
             return (isinstance(l, list) and len(l) == 2 and isinstance(l[0], int)
                     and isinstance(l[1], int))
-
-        def check_node(ast, ids, size):
-            return check_id(ast, ids) and len(ast.args) == size
 
         def get_content_bounds(ast, lines):
             start_line, start_column = float('inf'), float('inf')
@@ -247,120 +403,6 @@ class ChefParser(p.Parser):
 
             return (start_line, start_column, end_line, end_column)
 
-        def get_content(ast, lines):
-            empty_structures = {
-                'string_literal': "''",
-                'hash': "{}",
-                'array': "[]"
-            }
-
-            if ((ast.id in empty_structures and len(ast.args) == 0) or
-                (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
-                return empty_structures[ast.id]
-
-            bounds = get_content_bounds(ast, lines)
-            res = ""
-            if (bounds[0] == float('inf')):
-                return res
-
-            for l in range(bounds[0] - 1, bounds[2]):
-                if (bounds[0] - 1 == bounds[2] - 1):
-                    res += lines[l][bounds[1]:bounds[3] + 1]
-                elif (l == bounds[2] - 1):
-                    res += lines[l][:bounds[3] + 1]
-                elif (l == bounds[0] - 1):
-                    res += lines[l][bounds[1]:]
-                else:
-                    res += lines[l]
-
-            if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
-                res += "end"
-
-            return res.strip()
-
-        def check_resource_type(ast, atomic_unit):
-            if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) \
-                and ast.args[0] != "action"):
-                atomic_unit.type = ast.args[0]
-                return True
-            else:
-                return False
-
-        def parse_resource(ast, lines):
-            def parse_attributes(ast):
-                if (check_node(ast, ["method_add_arg"], 2) and check_id(ast.args[0], ["call"])):
-                    parse_attributes(ast.args[0].args[0])
-                elif ((check_id(ast, ["command", "method_add_arg"]) and ast.args[1] != []) or 
-                  (check_id(ast, ["method_add_block"]) and 
-                  check_id(ast.args[0], ["method_add_arg"]) and 
-                  check_id(ast.args[1], ["brace_block"]))):
-                    atomic_unit.add_attribute(Attribute(get_content(ast.args[0], lines),
-                        get_content(ast.args[1], lines)))
-                elif isinstance(ast, Node) or isinstance(ast, list):
-                    for arg in ast:
-                        parse_attributes(arg)
-
-            atomic_unit = AtomicUnit("", "")
-            if (check_node(ast, ["method_add_block"], 2) and check_node(ast.args[0], ["command"], 2) 
-              and check_node(ast.args[1], ["do_block"], 1)):
-                command = ast.args[0]
-                do_block = ast.args[1]
-
-                if (check_node(command.args[0], ["@ident"], 2) 
-                  and check_node(command.args[1], ["args_add_block"], 2)):
-                    ident = command.args[0]
-                    add_block = command.args[1]
-
-                    if not check_resource_type(ident, atomic_unit):
-                        return (False, atomic_unit)
-
-                    if (isinstance(add_block.args[0][0], Node) and add_block.args[1] == False):
-                        resource_id = add_block.args[0][0]
-                        atomic_unit.name = get_content(resource_id, lines)
-                    else:
-                        return (False, atomic_unit)
-                else:
-                    return (False, atomic_unit)
-
-                if check_id(do_block.args[0], ["bodystmt"]):
-                    parse_attributes(do_block.args[0].args[0])
-                else:
-                    return (False, atomic_unit)
-
-            elif (check_node(ast, ["command"], 2)):
-                if (check_id(ast.args[0], ["@ident"]) 
-                  and check_node(ast.args[1], ["args_add_block"], 2)):
-                    ident = ast.args[0]
-                    add_block = ast.args[1]
-
-                    if not check_resource_type(ident, atomic_unit):
-                        return (False, atomic_unit)
-
-                    # Resource without attributes
-                    if (check_id(add_block.args[0][0], ["string_literal"]) and add_block.args[1] == False):
-                        if (atomic_unit.type == "include_recipe"):
-                            return (False, atomic_unit)
-                        else:
-                            atomic_unit.name = get_content(add_block.args[0][0], lines)
-                            return (True, atomic_unit)
-
-                    if (check_node(add_block.args[0][0], ["method_add_block"], 2) and add_block.args[1] == False):
-                        resource_id = add_block.args[0][0].args[0]
-                        atomic_unit.name = get_content(resource_id, lines)
-                    else:
-                        return (False, atomic_unit)
-
-                    if check_id(add_block.args[0][0].args[1], ["brace_block"]):
-                        parse_attributes(add_block.args[0][0].args[1])
-                    else:
-                        return (False, atomic_unit)
-                else:
-                    return (False, atomic_unit)
-            else:
-                return (False, atomic_unit)
-
-            return (True, atomic_unit)
-
         def parse_variable(ast, lines):
             if (check_node(ast, ["assign"], 2)):
                 return (True,
@@ -390,12 +432,12 @@ class ChefParser(p.Parser):
                     if (isinstance(arg, Node) or isinstance(arg, list)):
                         transverse_ast(arg, unit_block, lines)
             else:
-                is_resource, resource = parse_resource(ast, lines)
+                resource_checker = ResourceChecker(AtomicUnit("", ""), lines, ast)
                 is_variable, variable = parse_variable(ast, lines)
                 is_include = parse_includes(ast, lines, unit_block)
 
-                if (is_resource):
-                    unit_block.add_atomic_unit(resource)
+                if (resource_checker.check_all()):
+                    unit_block.add_atomic_unit(resource_checker.atomic_unit)
                 elif (is_variable):
                     unit_block.add_variable(variable)
 
