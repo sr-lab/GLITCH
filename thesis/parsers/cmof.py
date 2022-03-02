@@ -1,4 +1,3 @@
-from importlib.resources import is_resource
 import thesis.parsers.parser as p
 import ruamel.yaml as yaml
 import os
@@ -105,15 +104,6 @@ class AnsibleParser(p.Parser):
         parse_var("", parsed_file)
         module.add_block(unit_block)
 
-    def __parse_file_structure(self, folder, path):
-        for f in os.listdir(path):
-            if os.path.isfile(os.path.join(path, f)):
-                folder.add_file(File(f))
-            elif os.path.isdir(os.path.join(path, f)):
-                new_folder = Folder(f)
-                self.__parse_file_structure(new_folder, os.path.join(path, f))
-                folder.add_folder(new_folder)
-
     def parse(self, path: str) -> Module:
         def parse_folder(folder, p_function):
             files = [f for f in os.listdir(path + folder) \
@@ -123,7 +113,7 @@ class AnsibleParser(p.Parser):
                     p_function(res, folder + file, f)
 
         res: Module = Module(os.path.basename(os.path.normpath(path)))
-        self.__parse_file_structure(res.folder, path)
+        super().parse_file_structure(res.folder, path)
 
         parse_folder("/tasks/", self.__parse_tasks)
         parse_folder("/handlers/", self.__parse_tasks)
@@ -148,50 +138,133 @@ class ChefParser(p.Parser):
             def __iter__(self):
                 return iter(self.args)
 
-        def check_id(ast, ids):
-            return isinstance(ast, Node) and ast.id in ids
+            def __reversed__(self):
+                return reversed(self.args)
 
-        def check_node(ast, ids, size):
-            return check_id(ast, ids) and len(ast.args) == size
+            @staticmethod
+            def check_id(ast, ids):
+                return isinstance(ast, Node) and ast.id in ids
 
-        # FIXME unmatched brackets
-        def get_content(ast, lines):
-            empty_structures = {
-                'string_literal': "''",
-                'hash': "{}",
-                'array': "[]"
-            }
+            @staticmethod
+            def check_node(ast, ids, size):
+                return Node.check_id(ast, ids) and len(ast.args) == size
 
-            if ((ast.id in empty_structures and len(ast.args) == 0) or
-                (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
-                return empty_structures[ast.id]
+            @staticmethod
+            def get_content_bounds(ast, lines):
+                def is_bounds(l):
+                    return (isinstance(l, list) and len(l) == 2 and isinstance(l[0], int)
+                            and isinstance(l[1], int))
+                start_line, start_column = float('inf'), float('inf')
+                end_line, end_column = 0, 0
+                bounded_structures = \
+                    ["brace_block", "arg_paren", "string_literal", "string_embexpr", 
+                        "aref", "array", "args_add_block"]
 
-            bounds = get_content_bounds(ast, lines)
+                if (isinstance(ast, Node) and len(ast.args) > 0 and is_bounds(ast.args[-1])):
+                    start_line, start_column = ast.args[-1][0], ast.args[-1][1]
+                    # The second argument counting from the end has the content
+                    # of the node (variable name, string...)
+                    end_line, end_column = ast.args[-1][0], ast.args[-1][1] + len(ast.args[-2]) - 1
 
-            res = ""
-            if (bounds[0] == float('inf')):
-                return res
+                    # With identifiers we need to consider the : behind them
+                    if (Node.check_id(ast, ["@ident"]) 
+                    and lines[start_line - 1][start_column - 1] == ":"):
+                        start_column -= 1
 
-            for l in range(bounds[0] - 1, bounds[2]):
-                if (bounds[0] - 1 == bounds[2] - 1):
-                    res += lines[l][bounds[1]:bounds[3] + 1]
-                elif (l == bounds[2] - 1):
-                    res += lines[l][:bounds[3] + 1]
-                elif (l == bounds[0] - 1):
-                    res += lines[l][bounds[1]:]
-                else:
-                    res += lines[l]
+                elif (isinstance(ast, list) or isinstance(ast, Node)):
+                    for arg in ast:
+                        bound = Node.get_content_bounds(arg, lines)
+                        if bound[0] < start_line:
+                            start_line = bound[0]
+                        if bound[1] < start_column:
+                            start_column = bound[1]
+                        if bound[2] > end_line:
+                            end_line = bound[2]
+                        if bound[3] > end_column:
+                            end_column = bound[3]
 
-            if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
-                res += "end"
+                    # We have to consider extra characters which correspond
+                    # to enclosing characters of these structures
+                    if (start_line != float('inf') and Node.check_id(ast, bounded_structures)):
+                        r_brackets = ['}', ')', ']', '"', '\'']
+                        # Add spaces/brackets in front of last token
+                        i = 0
+                        for c in lines[end_line - 1][end_column + 1:]:
+                            if c.isspace():
+                                i += 1
+                            elif c in r_brackets:
+                                end_column += i + 1
+                                break
+                            else:
+                                break
+                        end_column += i
 
-            return res.strip()
+                        l_brackets = ['{', '(', '[', '"', '\'']
+                        # Add spaces/brackets behind first token
+                        i = 0
+
+                        for c in lines[start_line - 1][:start_column][::-1]:
+                            if c.isspace():
+                                i += 1
+                            elif c in l_brackets:
+                                start_column -= i + 1
+                                break
+                            else:
+                                break
+
+                        if (Node.check_id(ast, ['string_embexpr'])):
+                            if (lines[start_line - 1][start_column] == "{" and
+                                lines[start_line - 1][start_column - 1] == "#"):
+                                start_column -= 1
+
+                    # The original AST does not have the start column
+                    # of these refs. We need to consider the ::
+                    elif Node.check_id(ast, ["top_const_ref"]):
+                        start_column -= 2
+
+                return (start_line, start_column, end_line, end_column)
+
+            # FIXME unmatched brackets
+            @staticmethod
+            def get_content(ast, lines):
+                empty_structures = {
+                    'string_literal': "''",
+                    'hash': "{}",
+                    'array': "[]"
+                }
+
+                if ((ast.id in empty_structures and len(ast.args) == 0) or
+                    (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
+                    return empty_structures[ast.id]
+
+                bounds = Node.get_content_bounds(ast, lines)
+
+                res = ""
+                if (bounds[0] == float('inf')):
+                    return res
+
+                for l in range(bounds[0] - 1, bounds[2]):
+                    if (bounds[0] - 1 == bounds[2] - 1):
+                        res += lines[l][bounds[1]:bounds[3] + 1]
+                    elif (l == bounds[2] - 1):
+                        res += lines[l][:bounds[3] + 1]
+                    elif (l == bounds[0] - 1):
+                        res += lines[l][bounds[1]:]
+                    else:
+                        res += lines[l]
+
+                if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
+                    res += "end"
+
+                return res.strip()
 
         class Checker:
             tests_ast_stack: list
+            lines: list
 
-            def __init__(self):
+            def __init__(self, lines):
                 self.tests_ast_stack = []
+                self.lines = lines
 
             def check(self):
                 tests, ast = self.pop()
@@ -205,7 +278,6 @@ class ChefParser(p.Parser):
                 status = True
                 while (len(self.tests_ast_stack) != 0 and status):
                     status = self.check()
-                self.atomic_unit.attributes.reverse()
                 return status
 
             def push(self, tests, ast):
@@ -216,98 +288,131 @@ class ChefParser(p.Parser):
 
         class ResourceChecker(Checker):
             atomic_unit: AtomicUnit
-            lines: list
 
             def __init__(self, atomic_unit, lines, ast):
-                Checker.__init__(self)
+                super().__init__(lines)
                 self.push([self.is_block_resource, 
                     self.is_inline_resource], ast)
                 self.atomic_unit = atomic_unit
-                self.lines = lines
 
             def is_block_resource(self, ast):
-                if (check_node(ast, ["method_add_block"], 2) and 
-                    check_node(ast.args[0], ["command"], 2) 
-                        and check_node(ast.args[1], ["do_block"], 1)):
+                if (Node.check_node(ast, ["method_add_block"], 2) and 
+                    Node.check_node(ast.args[0], ["command"], 2) 
+                        and Node.check_node(ast.args[1], ["do_block"], 1)):
                     self.push([self.is_resource_body], ast.args[1])
                     self.push([self.is_resource_def], ast.args[0])
                     return True
-                else:
-                    return False
+                return False
 
             def is_inline_resource(self, ast):
-                if (check_node(ast, ["command"], 2) and 
-                    check_id(ast.args[0], ["@ident"]) 
-                        and check_node(ast.args[1], ["args_add_block"], 2)):
+                if (Node.check_node(ast, ["command"], 2) and 
+                    Node.check_id(ast.args[0], ["@ident"]) 
+                        and Node.check_node(ast.args[1], ["args_add_block"], 2)):
                     self.push([self.is_resource_body_without_attributes,
                         self.is_inline_resource_name], ast.args[1])
                     self.push([self.is_resource_type], ast.args[0])
                     return True
-                else:
-                    return False
+                return False
 
             def is_resource_def(self, ast):
-                if (check_node(ast.args[0], ["@ident"], 2) 
-                  and check_node(ast.args[1], ["args_add_block"], 2)):
+                if (Node.check_node(ast.args[0], ["@ident"], 2) 
+                  and Node.check_node(ast.args[1], ["args_add_block"], 2)):
                     self.push([self.is_resource_name], ast.args[1])
                     self.push([self.is_resource_type], ast.args[0])
                     return True
-                else:
-                    return False
+                return False
 
             def is_resource_type(self, ast):
                 if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) \
                     and not ast.args[0] in ["action", "include_recipe", "deprecated_property_alias"]):
                     self.atomic_unit.type = ast.args[0]
                     return True
-                else:
-                    return False
+                return False
 
             def is_resource_name(self, ast):
                 if (isinstance(ast.args[0][0], Node) and ast.args[1] == False):
                     resource_id = ast.args[0][0]
-                    self.atomic_unit.name = get_content(resource_id, self.lines)
+                    self.atomic_unit.name = Node.get_content(resource_id, self.lines)
                     return True
-                else:
-                    return False
+                return False
 
             def is_inline_resource_name(self, ast):
-                if (check_node(ast.args[0][0], ["method_add_block"], 2) 
+                if (Node.check_node(ast.args[0][0], ["method_add_block"], 2) 
                     and ast.args[1] == False):
                     resource_id = ast.args[0][0].args[0]
-                    self.atomic_unit.name = get_content(resource_id, self.lines)
+                    self.atomic_unit.name = Node.get_content(resource_id, self.lines)
                     self.push([self.is_attribute], ast.args[0][0].args[1])
                     return True
-                else:
-                    return False
+                return False
 
             def is_resource_body(self, ast):
-                if check_id(ast.args[0], ["bodystmt"]):
+                if Node.check_id(ast.args[0], ["bodystmt"]):
                     self.push([self.is_attribute], ast.args[0].args[0])
                     return True
-                else:
-                    return False
+                return False
             
             def is_resource_body_without_attributes(self, ast):
-                if (check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] == False):
-                    self.atomic_unit.name = get_content(ast.args[0][0], self.lines)
+                if (Node.check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] == False):
+                    self.atomic_unit.name = Node.get_content(ast.args[0][0], self.lines)
                     return True
                 return False
 
             def is_attribute(self, ast):
-                if (check_node(ast, ["method_add_arg"], 2) and check_id(ast.args[0], ["call"])):
+                if (Node.check_node(ast, ["method_add_arg"], 2) and Node.check_id(ast.args[0], ["call"])):
                     self.push([self.is_attribute], ast.args[0].args[0])
-                elif ((check_id(ast, ["command", "method_add_arg"]) and ast.args[1] != []) or 
-                  (check_id(ast, ["method_add_block"]) and 
-                  check_id(ast.args[0], ["method_add_arg"]) and 
-                  check_id(ast.args[1], ["brace_block"]))):
+                elif ((Node.check_id(ast, ["command", "method_add_arg"]) and ast.args[1] != []) or 
+                  (Node.check_id(ast, ["method_add_block"]) and 
+                  Node.check_id(ast.args[0], ["method_add_arg"]) and 
+                  Node.check_id(ast.args[1], ["brace_block"]))):
                     self.atomic_unit.add_attribute(Attribute(
-                        get_content(ast.args[0], self.lines), get_content(ast.args[1], self.lines)))
+                        Node.get_content(ast.args[0], self.lines), Node.get_content(ast.args[1], self.lines)))
                 elif isinstance(ast, Node) or isinstance(ast, list):
-                    for arg in ast:
+                    for arg in reversed(ast):
                         self.push([self.is_attribute], arg)
 
                 return True
+
+        class VariableChecker(Checker):
+            variable: Variable
+
+            def __init__(self, lines, ast):
+                super().__init__(lines)
+                self.variable = Variable("", "")
+                self.push([self.is_variable], ast)
+
+            def is_variable(self, ast):
+                if Node.check_node(ast, ["assign"], 2):
+                    self.variable.name = Node.get_content(ast.args[0], self.lines)
+                    self.variable.value = Node.get_content(ast.args[1], self.lines)
+                    return True
+                return False
+
+        class IncludeChecker(Checker):
+            include: str
+
+            def __init__(self, lines, ast):
+                super().__init__(lines)
+                self.push([self.is_include], ast)
+
+            def is_include(self, ast):
+                if (Node.check_node(ast, ["command"], 2) and Node.check_id(ast.args[0], ["@ident"]) 
+                  and Node.check_node(ast.args[1], ["args_add_block"], 2)):
+                    self.push([self.is_include_name], ast.args[1])
+                    self.push([self.is_include_type], ast.args[0])
+                    return True
+                return False
+
+            def is_include_type(self, ast):
+                if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) 
+                  and ast.args[0] == "include_recipe"):
+                    return True
+                return False
+
+            def is_include_name(self, ast):
+                if (Node.check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] == False):
+                    self.include = Node.get_content(ast.args[0][0], self.lines)
+                    return True
+                return False
 
         def create_ast(l):
             args = []
@@ -328,104 +433,6 @@ class ChefParser(p.Parser):
 
             return Node(l[0][1], args)
 
-        def is_bounds(l):
-            return (isinstance(l, list) and len(l) == 2 and isinstance(l[0], int)
-                    and isinstance(l[1], int))
-
-        def get_content_bounds(ast, lines):
-            start_line, start_column = float('inf'), float('inf')
-            end_line, end_column = 0, 0
-            bounded_structures = \
-                ["brace_block", "arg_paren", "string_literal", "string_embexpr", 
-                    "aref", "array", "args_add_block"]
-
-            if (isinstance(ast, Node) and len(ast.args) > 0 and is_bounds(ast.args[-1])):
-                start_line, start_column = ast.args[-1][0], ast.args[-1][1]
-                # The second argument counting from the end has the content
-                # of the node (variable name, string...)
-                end_line, end_column = ast.args[-1][0], ast.args[-1][1] + len(ast.args[-2]) - 1
-
-                # With identifiers we need to consider the : behind them
-                if (check_id(ast, ["@ident"]) 
-                  and lines[start_line - 1][start_column - 1] == ":"):
-                    start_column -= 1
-
-            elif (isinstance(ast, list) or isinstance(ast, Node)):
-                for arg in ast:
-                    bound = get_content_bounds(arg, lines)
-                    if bound[0] < start_line:
-                        start_line = bound[0]
-                    if bound[1] < start_column:
-                        start_column = bound[1]
-                    if bound[2] > end_line:
-                        end_line = bound[2]
-                    if bound[3] > end_column:
-                        end_column = bound[3]
-
-                # We have to consider extra characters which correspond
-                # to enclosing characters of these structures
-                if (start_line != float('inf') and check_id(ast, bounded_structures)):
-                    r_brackets = ['}', ')', ']', '"', '\'']
-                    # Add spaces/brackets in front of last token
-                    i = 0
-                    for c in lines[end_line - 1][end_column + 1:]:
-                        if c.isspace():
-                            i += 1
-                        elif c in r_brackets:
-                            end_column += i + 1
-                            break
-                        else:
-                            break
-                    end_column += i
-
-                    l_brackets = ['{', '(', '[', '"', '\'']
-                    # Add spaces/brackets behind first token
-                    i = 0
-
-                    for c in lines[start_line - 1][:start_column][::-1]:
-                        if c.isspace():
-                            i += 1
-                        elif c in l_brackets:
-                            start_column -= i + 1
-                            break
-                        else:
-                            break
-
-                    if (check_id(ast, ['string_embexpr'])):
-                        if (lines[start_line - 1][start_column] == "{" and
-                            lines[start_line - 1][start_column - 1] == "#"):
-                            start_column -= 1
-
-                # The original AST does not have the start column
-                # of these refs. We need to consider the ::
-                elif check_id(ast, ["top_const_ref"]):
-                    start_column -= 2
-
-            return (start_line, start_column, end_line, end_column)
-
-        def parse_variable(ast, lines):
-            if (check_node(ast, ["assign"], 2)):
-                return (True,
-                    Variable(get_content(ast.args[0], lines), 
-                        get_content(ast.args[1], lines)))
-            else:
-                return (False, Variable("", ""))
-
-        def parse_includes(ast, lines, unit_block):
-            if (check_node(ast, ["command"], 2)):
-                if (check_id(ast.args[0], ["@ident"]) 
-                  and check_node(ast.args[1], ["args_add_block"], 2)):
-                    ident = ast.args[0]
-                    add_block = ast.args[1]
-
-                    if (isinstance(ident.args[0], str) and isinstance(ident.args[1], list) 
-                      and ident.args[0] == "include_recipe"):
-                        if (check_id(add_block.args[0][0], ["string_literal"]) and add_block.args[1] == False):
-                            unit_block.add_dependency(get_content(add_block.args[0][0], lines))
-                            return True
-
-            return False
-
         def transverse_ast(ast, unit_block, lines):
             if (isinstance(ast, list)):
                 for arg in ast:
@@ -433,29 +440,25 @@ class ChefParser(p.Parser):
                         transverse_ast(arg, unit_block, lines)
             else:
                 resource_checker = ResourceChecker(AtomicUnit("", ""), lines, ast)
-                is_variable, variable = parse_variable(ast, lines)
-                is_include = parse_includes(ast, lines, unit_block)
-
                 if (resource_checker.check_all()):
                     unit_block.add_atomic_unit(resource_checker.atomic_unit)
-                elif (is_variable):
-                    unit_block.add_variable(variable)
+                    return
 
+                variable_checker = VariableChecker(lines, ast)
+                if (variable_checker.check_all()):
+                    unit_block.add_variable(variable_checker.variable)
                     # variables might have resources associated to it
                     transverse_ast(ast.args[1], unit_block, lines)
-                elif not is_include:
-                    for arg in ast.args:
-                        if (isinstance(arg, Node) or isinstance(arg, list)):
-                            transverse_ast(arg, unit_block, lines)
+                    return
 
-        def parse_file_structure(folder, path):
-            for f in os.listdir(path):
-                if os.path.isfile(os.path.join(path, f)):
-                    folder.add_file(File(f))
-                elif os.path.isdir(os.path.join(path, f)):
-                    new_folder = Folder(f)
-                    parse_file_structure(new_folder, os.path.join(path, f))
-                    folder.add_folder(new_folder)
+                include_checker = IncludeChecker(lines, ast)
+                if (include_checker.check_all()):
+                    unit_block.add_dependency(include_checker.include)
+                    return
+
+                for arg in ast.args:
+                    if (isinstance(arg, Node) or isinstance(arg, list)):
+                        transverse_ast(arg, unit_block, lines)
 
         def parse_file(path, file):
             with open(path + file) as f:
@@ -485,25 +488,18 @@ class ChefParser(p.Parser):
                 transverse_ast(ast, unit_block, lines)
                 res.add_block(unit_block)
 
-        res: Module = Module(os.path.basename(os.path.normpath(path)))
-        parse_file_structure(res.folder, path)
+        def parse_folder(folder):
+            if os.path.exists(path + folder):
+                files = [f for f in os.listdir(path + folder) \
+                    if os.path.isfile(os.path.join(path + folder, f))]
+                for file in files:
+                    parse_file(path + folder, file)
 
-        if os.path.exists(path + "/resources/"):
-            files = [f for f in os.listdir(path + "/resources/") \
-                if os.path.isfile(os.path.join(path + "/resources/", f))]
-            for file in files:
-                parse_file(path + "/resources/", file)
-        if os.path.exists(path + "/recipes/"):
-            files = [f for f in os.listdir(path + "/recipes/") \
-                if os.path.isfile(os.path.join(path + "/recipes/", f))]
-            for file in files:
-                parse_file(path + "/recipes/", file)
-        if os.path.exists(path + "/attributes/"):
-            files = [f for f in os.listdir(path + "/attributes/") \
-                if os.path.isfile(os.path.join(path + "/attributes/", f))]
-            for file in files:
-                parse_file(path + "/attributes/", file)
+        res: Module = Module(os.path.basename(os.path.normpath(path)))
+        super().parse_file_structure(res.folder, path)
+
+        parse_folder("/resources/")
+        parse_folder("/recipes/")
+        parse_folder("/attributes/")
 
         return res
-
-        
