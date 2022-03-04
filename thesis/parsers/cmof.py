@@ -224,7 +224,35 @@ class ChefParser(p.Parser):
 
                 return (start_line, start_column, end_line, end_column)
 
-            # FIXME unmatched brackets
+            @staticmethod
+            def remove_unmatched_brackets(string):
+                stack = []
+                aux = ""
+
+                for c in string:
+                    if c in ["(", "[", "{"]:
+                        stack.append(c)
+                    elif len(stack) > 0 and ((c == ")" and stack[-1] =="(") or
+                      (c == "]" and stack[-1] =="[") or
+                        (c == "}" and stack[-1] =="{")):
+                        stack.pop()
+                    elif c in [")", "]", "}"]:
+                        continue
+
+                    aux += c
+
+                i = 0
+                res = ""
+                while (len(stack) > 0 and i < len(aux)):
+                    if aux[i] == stack[0]:
+                        stack.pop(0)
+                        continue
+                    res += aux[i]
+                    i += 1
+                res += aux[i:]
+
+                return res
+
             @staticmethod
             def get_content(ast, lines):
                 empty_structures = {
@@ -256,7 +284,7 @@ class ChefParser(p.Parser):
                 if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
                     res += "end"
 
-                return res.strip()
+                return Node.remove_unmatched_brackets(res.strip())
 
         class Checker:
             tests_ast_stack: list
@@ -501,5 +529,8 @@ class ChefParser(p.Parser):
         parse_folder("/resources/")
         parse_folder("/recipes/")
         parse_folder("/attributes/")
+        parse_folder("/definitions/")
+        parse_folder("/libraries/")
+        parse_folder("/providers/")
 
         return res
