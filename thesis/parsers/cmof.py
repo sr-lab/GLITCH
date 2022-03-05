@@ -52,15 +52,17 @@ class AnsibleParser(p.Parser):
         return list(filter(lambda c: "#" in c[1], \
             [(c[0] + 1, c[1].strip()) for c in yaml_comments(d)]))
 
-    def __parse_playbook(self, module, name, file):
-        parsed_file = yaml.YAML().load(file)
-        unit_block = UnitBlock(name)
+    @staticmethod
+    def __parse_vars(unit_block, cur_name, vmap):
+        for key, val in vmap.items():
+            if isinstance(val, dict):
+                AnsibleParser.__parse_vars(unit_block, cur_name + key + ".", val)
+            else:
+                unit_block.add_variable(Variable(cur_name + key, str(val)))
 
-        if parsed_file is None:
-            module.add_block(unit_block)
-            return
-
-        for task in parsed_file:
+    @staticmethod
+    def __parse_tasks(unit_block, tasks):
+        for task in tasks:
             atomic_units = []
             attributes = []
             type = ""
@@ -99,19 +101,22 @@ class AnsibleParser(p.Parser):
                 au.attributes = attributes
                 unit_block.add_atomic_unit(au)
 
+    def __parse_playbook(self, module, name, file):
+        parsed_file = yaml.YAML().load(file)
+        unit_block = UnitBlock(name)
+
+        for e in parsed_file[0]:
+            if (e == "vars"):
+                AnsibleParser.__parse_vars(unit_block, "", parsed_file[0][e])
+            elif (e == "tasks"):
+                AnsibleParser.__parse_tasks(unit_block, parsed_file[0][e])
+
         for comment in self.__get_yaml_comments(parsed_file):
             unit_block.add_comment(Comment(comment[1]))
 
         module.add_block(unit_block)
 
-    def __parse_vars(self, module, name, file):
-        def parse_var(cur_name, vmap):
-            for key, val in vmap.items():
-                if isinstance(val, dict):
-                    parse_var(cur_name + key + ".", val)
-                else:
-                    unit_block.add_variable(Variable(cur_name + key, str(val)))
-
+    def __parse_tasks_file(self, module, name, file):
         parsed_file = yaml.YAML().load(file)
         unit_block = UnitBlock(name)
 
@@ -119,7 +124,21 @@ class AnsibleParser(p.Parser):
             module.add_block(unit_block)
             return
 
-        parse_var("", parsed_file)
+        AnsibleParser.__parse_tasks(unit_block, parsed_file)
+        for comment in self.__get_yaml_comments(parsed_file):
+            unit_block.add_comment(Comment(comment[1]))
+
+        module.add_block(unit_block)
+
+    def __parse_vars_file(self, module, name, file):
+        parsed_file = yaml.YAML().load(file)
+        unit_block = UnitBlock(name)
+
+        if parsed_file is None:
+            module.add_block(unit_block)
+            return
+
+        AnsibleParser.__parse_vars(unit_block, "", parsed_file)
         module.add_block(unit_block)
 
     def parse_module(self, path: str) -> Module:
@@ -133,10 +152,10 @@ class AnsibleParser(p.Parser):
         res: Module = Module(os.path.basename(os.path.normpath(path)))
         super().parse_file_structure(res.folder, path)
 
-        parse_folder("/tasks/", self.__parse_playbook)
-        parse_folder("/handlers/", self.__parse_playbook)
-        parse_folder("/vars/", self.__parse_vars)
-        parse_folder("/defaults/", self.__parse_vars)
+        parse_folder("/tasks/", self.__parse_tasks_file)
+        parse_folder("/handlers/", self.__parse_tasks_file)
+        parse_folder("/vars/", self.__parse_vars_file)
+        parse_folder("/defaults/", self.__parse_vars_file)
 
         return res
 
