@@ -60,7 +60,9 @@ class AnsibleParser(p.Parser):
             return
 
         for task in parsed_file:
-            atomic_unit = AtomicUnit("", "") #FIXME type
+            atomic_units = []
+            attributes = []
+            type = ""
 
             for key, val in task.items():
                 # Dependencies
@@ -69,18 +71,32 @@ class AnsibleParser(p.Parser):
                     break
 
                 if key != "name":
-                    if atomic_unit.name == "":
-                        atomic_unit.name = key
+                    if type == "":
+                        type = key
 
                     if isinstance(val, (list, str)):
-                        atomic_unit.add_attribute(Attribute(key, str(val)))
+                        attributes.append(Attribute(key, str(val)))
                     else:
                         for atr in val:
-                            atomic_unit.add_attribute(Attribute(atr, str(val[atr])))
+                            if (atr == "name"):
+                                names = [name.strip() for name in str(val[atr]).split(',')]
+                                for name in names:
+                                    if name == "": continue
+                                    atomic_units.append(AtomicUnit(name, type))
+                            else:
+                                attributes.append(Attribute(atr, str(val[atr])))
 
             # If it was a task without a module we ignore it (e.g. dependency)
-            if atomic_unit.name != "":
-                unit_block.add_atomic_unit(atomic_unit)
+            for au in atomic_units:
+                if au.type != "":
+                    au.attributes = attributes.copy()
+                    unit_block.add_atomic_unit(au)
+
+            # Tasks without name
+            if (len(atomic_units) == 0 and type != ""):
+                au = AtomicUnit("", type)
+                au.attributes = attributes
+                unit_block.add_atomic_unit(au)
 
         for comment in self.__get_yaml_comments(parsed_file):
             unit_block.add_comment(Comment(comment[1]))
