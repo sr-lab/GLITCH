@@ -1,12 +1,13 @@
-import thesis.parsers.parser as p
-import ruamel.yaml as yaml
 import os
+import re
+import tempfile
+from string import Template
+import ruamel.yaml as yaml
+from pkg_resources import resource_filename
+
+import thesis.parsers.parser as p
 from thesis.repr.inter import *
 from thesis.parsers.ruby_parser import parser_yacc
-from pkg_resources import resource_filename
-from string import Template
-import tempfile
-import re
 
 class AnsibleParser(p.Parser):
     def __get_yaml_comments(self, d):
@@ -54,7 +55,7 @@ class AnsibleParser(p.Parser):
         parsed_file = yaml.YAML().load(file)
         unit_block = UnitBlock(name)
 
-        if (parsed_file == None):
+        if parsed_file is None:
             module.add_block(unit_block)
             return
 
@@ -71,7 +72,7 @@ class AnsibleParser(p.Parser):
                     if atomic_unit.name == "":
                         atomic_unit.name = key
 
-                    if (isinstance(val, str) or isinstance(val, list)):
+                    if isinstance(val, (list, str)):
                         atomic_unit.add_attribute(Attribute(key, str(val)))
                     else:
                         for atr in val:
@@ -82,13 +83,13 @@ class AnsibleParser(p.Parser):
                 unit_block.add_atomic_unit(atomic_unit)
 
         for comment in self.__get_yaml_comments(parsed_file):
-           unit_block.add_comment(Comment(comment[1]))
+            unit_block.add_comment(Comment(comment[1]))
 
         module.add_block(unit_block)
 
     def __parse_vars(self, module, name, file):
-        def parse_var(cur_name, map):
-            for key, val in map.items():
+        def parse_var(cur_name, vmap):
+            for key, val in vmap.items():
                 if isinstance(val, dict):
                     parse_var(cur_name + key + ".", val)
                 else:
@@ -97,7 +98,7 @@ class AnsibleParser(p.Parser):
         parsed_file = yaml.YAML().load(file)
         unit_block = UnitBlock(name)
 
-        if (parsed_file == None):
+        if parsed_file is None:
             module.add_block(unit_block)
             return
 
@@ -150,15 +151,16 @@ class ChefParser(p.Parser):
                 return Node.check_id(ast, ids) and len(ast.args) == size
 
             @staticmethod
-            def get_content_bounds(ast, lines):
+            def get_content_bounds(ast, source):
                 def is_bounds(l):
                     return (isinstance(l, list) and len(l) == 2 and isinstance(l[0], int)
                             and isinstance(l[1], int))
+                            
                 start_line, start_column = float('inf'), float('inf')
                 end_line, end_column = 0, 0
                 bounded_structures = \
-                    ["brace_block", "arg_paren", "string_literal", "string_embexpr", 
-                        "aref", "array", "args_add_block"]
+                    ["brace_block", "arg_paren", "string_literal", 
+                        "string_embexpr", "aref", "array", "args_add_block"]
 
                 if (isinstance(ast, Node) and len(ast.args) > 0 and is_bounds(ast.args[-1])):
                     start_line, start_column = ast.args[-1][0], ast.args[-1][1]
@@ -167,55 +169,41 @@ class ChefParser(p.Parser):
                     end_line, end_column = ast.args[-1][0], ast.args[-1][1] + len(ast.args[-2]) - 1
 
                     # With identifiers we need to consider the : behind them
-                    if (Node.check_id(ast, ["@ident"]) 
-                    and lines[start_line - 1][start_column - 1] == ":"):
+                    if (Node.check_id(ast, ["@ident"])
+                      and source[start_line - 1][start_column - 1] == ":"):
                         start_column -= 1
 
-                elif (isinstance(ast, list) or isinstance(ast, Node)):
+                elif isinstance(ast, (list, Node)):
                     for arg in ast:
-                        bound = Node.get_content_bounds(arg, lines)
-                        if bound[0] < start_line:
-                            start_line = bound[0]
-                        if bound[1] < start_column:
-                            start_column = bound[1]
-                        if bound[2] > end_line:
-                            end_line = bound[2]
-                        if bound[3] > end_column:
-                            end_column = bound[3]
+                        bound = Node.get_content_bounds(arg, source)
+                        if bound[0] < start_line: start_line = bound[0]
+                        if bound[1] < start_column: start_column = bound[1]
+                        if bound[2] > end_line: end_line = bound[2]
+                        if bound[3] > end_column: end_column = bound[3]
 
                     # We have to consider extra characters which correspond
                     # to enclosing characters of these structures
                     if (start_line != float('inf') and Node.check_id(ast, bounded_structures)):
                         r_brackets = ['}', ')', ']', '"', '\'']
                         # Add spaces/brackets in front of last token
-                        i = 0
-                        for c in lines[end_line - 1][end_column + 1:]:
-                            if c.isspace():
-                                i += 1
-                            elif c in r_brackets:
+                        for i, c in enumerate(source[end_line - 1][end_column + 1:]):
+                            if c in r_brackets:
                                 end_column += i + 1
                                 break
-                            else:
-                                break
-                        end_column += i
+                            elif not c.isspace(): break
 
                         l_brackets = ['{', '(', '[', '"', '\'']
                         # Add spaces/brackets behind first token
-                        i = 0
-
-                        for c in lines[start_line - 1][:start_column][::-1]:
-                            if c.isspace():
-                                i += 1
-                            elif c in l_brackets:
+                        for i, c in enumerate(source[start_line - 1][:start_column][::-1]):
+                            if c in l_brackets:
                                 start_column -= i + 1
                                 break
-                            else:
-                                break
+                            elif not c.isspace(): break
 
-                        if (Node.check_id(ast, ['string_embexpr'])):
-                            if (lines[start_line - 1][start_column] == "{" and
-                                lines[start_line - 1][start_column - 1] == "#"):
-                                start_column -= 1
+                        if (Node.check_id(ast, ['string_embexpr']) 
+                                and source[start_line - 1][start_column] == "{" and
+                                source[start_line - 1][start_column - 1] == "#"):
+                            start_column -= 1
 
                     # The original AST does not have the start column
                     # of these refs. We need to consider the ::
@@ -226,23 +214,19 @@ class ChefParser(p.Parser):
 
             @staticmethod
             def remove_unmatched_brackets(string):
-                stack = []
-                aux = ""
+                stack, aux = [], ""
 
                 for c in string:
-                    if c in ["(", "[", "{"]:
+                    if c in ["(", "[", "{"]: 
                         stack.append(c)
-                    elif len(stack) > 0 and ((c == ")" and stack[-1] =="(") or
-                      (c == "]" and stack[-1] =="[") or
-                        (c == "}" and stack[-1] =="{")):
+                    elif (len(stack) > 0 
+                            and (c, stack[-1]) in [(")", "("), ("]", "["), ("}", "{")]):
                         stack.pop()
-                    elif c in [")", "]", "}"]:
+                    elif c in [")", "]", "}"]: 
                         continue
-
                     aux += c
 
-                i = 0
-                res = ""
+                i, res = 0, ""
                 while (len(stack) > 0 and i < len(aux)):
                     if aux[i] == stack[0]:
                         stack.pop(0)
@@ -254,7 +238,7 @@ class ChefParser(p.Parser):
                 return res
 
             @staticmethod
-            def get_content(ast, lines):
+            def get_content(ast, source):
                 empty_structures = {
                     'string_literal': "''",
                     'hash': "{}",
@@ -262,24 +246,24 @@ class ChefParser(p.Parser):
                 }
 
                 if ((ast.id in empty_structures and len(ast.args) == 0) or
-                    (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
+                        (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
                     return empty_structures[ast.id]
 
-                bounds = Node.get_content_bounds(ast, lines)
+                bounds = Node.get_content_bounds(ast, source)
 
                 res = ""
-                if (bounds[0] == float('inf')):
+                if bounds[0] == float('inf'):
                     return res
 
                 for l in range(bounds[0] - 1, bounds[2]):
-                    if (bounds[0] - 1 == bounds[2] - 1):
-                        res += lines[l][bounds[1]:bounds[3] + 1]
-                    elif (l == bounds[2] - 1):
-                        res += lines[l][:bounds[3] + 1]
-                    elif (l == bounds[0] - 1):
-                        res += lines[l][bounds[1]:]
+                    if bounds[0] - 1 == bounds[2] - 1:
+                        res += source[l][bounds[1]:bounds[3] + 1]
+                    elif l == bounds[2] - 1:
+                        res += source[l][:bounds[3] + 1]
+                    elif l == bounds[0] - 1:
+                        res += source[l][bounds[1]:]
                     else:
-                        res += lines[l]
+                        res += source[l]
 
                 if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
                     res += "end"
@@ -288,11 +272,11 @@ class ChefParser(p.Parser):
 
         class Checker:
             tests_ast_stack: list
-            lines: list
+            source: list
 
-            def __init__(self, lines):
+            def __init__(self, source):
                 self.tests_ast_stack = []
-                self.lines = lines
+                self.source = source
 
             def check(self):
                 tests, ast = self.pop()
@@ -317,15 +301,15 @@ class ChefParser(p.Parser):
         class ResourceChecker(Checker):
             atomic_unit: AtomicUnit
 
-            def __init__(self, atomic_unit, lines, ast):
-                super().__init__(lines)
-                self.push([self.is_block_resource, 
+            def __init__(self, atomic_unit, source, ast):
+                super().__init__(source)
+                self.push([self.is_block_resource,
                     self.is_inline_resource], ast)
                 self.atomic_unit = atomic_unit
 
             def is_block_resource(self, ast):
-                if (Node.check_node(ast, ["method_add_block"], 2) and 
-                    Node.check_node(ast.args[0], ["command"], 2) 
+                if (Node.check_node(ast, ["method_add_block"], 2) and
+                    Node.check_node(ast.args[0], ["command"], 2)
                         and Node.check_node(ast.args[1], ["do_block"], 1)):
                     self.push([self.is_resource_body], ast.args[1])
                     self.push([self.is_resource_def], ast.args[0])
@@ -333,8 +317,8 @@ class ChefParser(p.Parser):
                 return False
 
             def is_inline_resource(self, ast):
-                if (Node.check_node(ast, ["command"], 2) and 
-                    Node.check_id(ast.args[0], ["@ident"]) 
+                if (Node.check_node(ast, ["command"], 2) and
+                    Node.check_id(ast.args[0], ["@ident"])
                         and Node.check_node(ast.args[1], ["args_add_block"], 2)):
                     self.push([self.is_resource_body_without_attributes,
                         self.is_inline_resource_name], ast.args[1])
@@ -343,7 +327,7 @@ class ChefParser(p.Parser):
                 return False
 
             def is_resource_def(self, ast):
-                if (Node.check_node(ast.args[0], ["@ident"], 2) 
+                if (Node.check_node(ast.args[0], ["@ident"], 2)
                   and Node.check_node(ast.args[1], ["args_add_block"], 2)):
                     self.push([self.is_resource_name], ast.args[1])
                     self.push([self.is_resource_type], ast.args[0])
@@ -352,23 +336,25 @@ class ChefParser(p.Parser):
 
             def is_resource_type(self, ast):
                 if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) \
-                    and not ast.args[0] in ["action", "include_recipe", "deprecated_property_alias"]):
+                    and not ast.args[0] in ["action",
+                                            "include_recipe",
+                                            "deprecated_property_alias"]):
                     self.atomic_unit.type = ast.args[0]
                     return True
                 return False
 
             def is_resource_name(self, ast):
-                if (isinstance(ast.args[0][0], Node) and ast.args[1] == False):
+                if (isinstance(ast.args[0][0], Node) and ast.args[1] is False):
                     resource_id = ast.args[0][0]
-                    self.atomic_unit.name = Node.get_content(resource_id, self.lines)
+                    self.atomic_unit.name = Node.get_content(resource_id, self.source)
                     return True
                 return False
 
             def is_inline_resource_name(self, ast):
-                if (Node.check_node(ast.args[0][0], ["method_add_block"], 2) 
-                    and ast.args[1] == False):
+                if (Node.check_node(ast.args[0][0], ["method_add_block"], 2)
+                    and ast.args[1] is False):
                     resource_id = ast.args[0][0].args[0]
-                    self.atomic_unit.name = Node.get_content(resource_id, self.lines)
+                    self.atomic_unit.name = Node.get_content(resource_id, self.source)
                     self.push([self.is_attribute], ast.args[0][0].args[1])
                     return True
                 return False
@@ -378,23 +364,25 @@ class ChefParser(p.Parser):
                     self.push([self.is_attribute], ast.args[0].args[0])
                     return True
                 return False
-            
+
             def is_resource_body_without_attributes(self, ast):
-                if (Node.check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] == False):
-                    self.atomic_unit.name = Node.get_content(ast.args[0][0], self.lines)
+                if (Node.check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] is False):
+                    self.atomic_unit.name = Node.get_content(ast.args[0][0], self.source)
                     return True
                 return False
 
             def is_attribute(self, ast):
-                if (Node.check_node(ast, ["method_add_arg"], 2) and Node.check_id(ast.args[0], ["call"])):
+                if (Node.check_node(ast, ["method_add_arg"], 2)
+                        and Node.check_id(ast.args[0], ["call"])):
                     self.push([self.is_attribute], ast.args[0].args[0])
-                elif ((Node.check_id(ast, ["command", "method_add_arg"]) and ast.args[1] != []) or 
-                  (Node.check_id(ast, ["method_add_block"]) and 
-                  Node.check_id(ast.args[0], ["method_add_arg"]) and 
-                  Node.check_id(ast.args[1], ["brace_block"]))):
-                    self.atomic_unit.add_attribute(Attribute(
-                        Node.get_content(ast.args[0], self.lines), Node.get_content(ast.args[1], self.lines)))
-                elif isinstance(ast, Node) or isinstance(ast, list):
+                elif ((Node.check_id(ast, ["command", "method_add_arg"]) and ast.args[1] != []) or
+                        (Node.check_id(ast, ["method_add_block"]) and
+                        Node.check_id(ast.args[0], ["method_add_arg"]) and
+                        Node.check_id(ast.args[1], ["brace_block"]))):
+                    self.atomic_unit.add_attribute(
+                        Attribute(Node.get_content(ast.args[0], self.source),
+                            Node.get_content(ast.args[1], self.source)))
+                elif isinstance(ast, (Node, list)):
                     for arg in reversed(ast):
                         self.push([self.is_attribute], arg)
 
@@ -403,27 +391,27 @@ class ChefParser(p.Parser):
         class VariableChecker(Checker):
             variable: Variable
 
-            def __init__(self, lines, ast):
-                super().__init__(lines)
+            def __init__(self, source, ast):
+                super().__init__(source)
                 self.variable = Variable("", "")
                 self.push([self.is_variable], ast)
 
             def is_variable(self, ast):
                 if Node.check_node(ast, ["assign"], 2):
-                    self.variable.name = Node.get_content(ast.args[0], self.lines)
-                    self.variable.value = Node.get_content(ast.args[1], self.lines)
+                    self.variable.name = Node.get_content(ast.args[0], self.source)
+                    self.variable.value = Node.get_content(ast.args[1], self.source)
                     return True
                 return False
 
         class IncludeChecker(Checker):
             include: str
 
-            def __init__(self, lines, ast):
-                super().__init__(lines)
+            def __init__(self, source, ast):
+                super().__init__(source)
                 self.push([self.is_include], ast)
 
             def is_include(self, ast):
-                if (Node.check_node(ast, ["command"], 2) and Node.check_id(ast.args[0], ["@ident"]) 
+                if (Node.check_node(ast, ["command"], 2) and Node.check_id(ast.args[0], ["@ident"])
                   and Node.check_node(ast.args[1], ["args_add_block"], 2)):
                     self.push([self.is_include_name], ast.args[1])
                     self.push([self.is_include_type], ast.args[0])
@@ -431,21 +419,21 @@ class ChefParser(p.Parser):
                 return False
 
             def is_include_type(self, ast):
-                if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) 
+                if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list)
                   and ast.args[0] == "include_recipe"):
                     return True
                 return False
 
             def is_include_name(self, ast):
-                if (Node.check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] == False):
-                    self.include = Node.get_content(ast.args[0][0], self.lines)
+                if (Node.check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] is False):
+                    self.include = Node.get_content(ast.args[0][0], self.source)
                     return True
                 return False
 
         def create_ast(l):
             args = []
             for el in l[1:]:
-                if isinstance(el, list): 
+                if isinstance(el, list):
                     if len(el) > 0 and isinstance(el[0], tuple) and el[0][0] == "id":
                         args.append(create_ast(el))
                     else:
@@ -461,32 +449,32 @@ class ChefParser(p.Parser):
 
             return Node(l[0][1], args)
 
-        def transverse_ast(ast, unit_block, lines):
-            if (isinstance(ast, list)):
+        def transverse_ast(ast, unit_block, source):
+            if isinstance(ast, list):
                 for arg in ast:
-                    if (isinstance(arg, Node) or isinstance(arg, list)):
-                        transverse_ast(arg, unit_block, lines)
+                    if isinstance(arg, (Node, list)):
+                        transverse_ast(arg, unit_block, source)
             else:
-                resource_checker = ResourceChecker(AtomicUnit("", ""), lines, ast)
-                if (resource_checker.check_all()):
+                resource_checker = ResourceChecker(AtomicUnit("", ""), source, ast)
+                if resource_checker.check_all():
                     unit_block.add_atomic_unit(resource_checker.atomic_unit)
                     return
 
-                variable_checker = VariableChecker(lines, ast)
-                if (variable_checker.check_all()):
+                variable_checker = VariableChecker(source, ast)
+                if variable_checker.check_all():
                     unit_block.add_variable(variable_checker.variable)
                     # variables might have resources associated to it
-                    transverse_ast(ast.args[1], unit_block, lines)
+                    transverse_ast(ast.args[1], unit_block, source)
                     return
 
-                include_checker = IncludeChecker(lines, ast)
-                if (include_checker.check_all()):
+                include_checker = IncludeChecker(source, ast)
+                if include_checker.check_all():
                     unit_block.add_dependency(include_checker.include)
                     return
 
                 for arg in ast.args:
-                    if (isinstance(arg, Node) or isinstance(arg, list)):
-                        transverse_ast(arg, unit_block, lines)
+                    if isinstance(arg, (Node, list)):
+                        transverse_ast(arg, unit_block, source)
 
         def parse_file(path, file):
             with open(path + file) as f:
@@ -497,23 +485,24 @@ class ChefParser(p.Parser):
                 ripper_script = ripper_script.substitute({'path': '\"' + path + file + '\"'})
 
                 unit_block: UnitBlock = UnitBlock(file)
-                lines = f.readlines()
-                
+                source = f.readlines()
+
                 with tempfile.NamedTemporaryFile(mode="w+") as tmp:
                     tmp.write(ripper_script)
                     tmp.flush()
 
                     script_ast = os.popen('ruby ' + tmp.name).read()
                     comments, _ = parser_yacc(script_ast)
-                    
+
                     for comment in comments:
                         unit_block.add_comment(Comment(re.sub(r'\\n$', '', comment)))
 
                 script_ast = os.popen('ruby -r ripper -e \'file = \
                     File.open(\"' + path + file + '\")\npp Ripper.sexp(file)\'').read()
                 _, program = parser_yacc(script_ast)
+                
                 ast = create_ast(program)
-                transverse_ast(ast, unit_block, lines)
+                transverse_ast(ast, unit_block, source)
                 res.add_block(unit_block)
 
         def parse_folder(folder):
