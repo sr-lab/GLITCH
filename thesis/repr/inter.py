@@ -4,10 +4,14 @@ class CodeElement(ABC):
     line: int
     column: int
 
+    def __init__(self) -> None:
+        self.line, self.column = -1, -1
+
 class Comment(CodeElement):
     content: str
 
     def __init__(self, content: str) -> None:
+        super().__init__()
         self.content = content
 
     def print(self, tab) -> str:
@@ -18,6 +22,7 @@ class Variable(CodeElement):
     value: str
 
     def __init__(self, name: str, value: str) -> None:
+        super().__init__()
         self.name = name
         self.value = value
 
@@ -30,6 +35,7 @@ class Attribute(CodeElement):
     value: str
 
     def __init__(self, name: str, value: str) -> None:
+        super().__init__()
         self.name = name
         self.value = value
 
@@ -43,6 +49,7 @@ class AtomicUnit(CodeElement):
     attributes: list[Attribute]
 
     def __init__(self, name: str, type: str) -> None:
+        super().__init__()
         self.name = name
         self.type = type
         self.attributes = []
@@ -60,9 +67,19 @@ class AtomicUnit(CodeElement):
 
         return res
 
+class Dependency(CodeElement):
+    name: str
+
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self.name = name
+
+    def print(self, tab) -> str:
+        return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
+
 class UnitBlock:
     name: str
-    dependencies: list[str]
+    dependencies: list[Dependency]
     comments: list[Comment]
     variables: list[Variable]
     atomic_units: list[AtomicUnit]
@@ -74,7 +91,7 @@ class UnitBlock:
         self.atomic_units = []
         self.name = name
 
-    def add_dependency(self, d: str) -> None:
+    def add_dependency(self, d: Dependency) -> None:
         self.dependencies.append(d)
 
     def add_comment(self, c: Comment) -> None:
@@ -91,7 +108,7 @@ class UnitBlock:
         
         res += (tab * "\t") + "\tdependencies:\n"
         for dependency in self.dependencies:
-            res += (tab * "\t") + "\t\t" + dependency + "\n"
+            res += dependency.print(tab + 2) + "\n"
 
         res += (tab * "\t") + "\tcomments:\n"
         for comment in self.comments:

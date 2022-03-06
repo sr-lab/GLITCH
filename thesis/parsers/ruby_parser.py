@@ -67,7 +67,7 @@ def parser_yacc(script_ast):
 
     def p_comment(p):
         r'comment : LPAREN COMMENT STRING LPAREN INTEGER INTEGER RPAREN RPAREN'
-        p[0] = p[3]
+        p[0] = (p[3], p[5])
 
     def p_list(p):
         r'list : LPAREN args RPAREN'

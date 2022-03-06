@@ -77,7 +77,9 @@ class AnsibleParser(p.Parser):
             for key, val in task.value:
                 # Dependencies
                 if key.value == "include":
-                    unit_block.add_dependency(val.value)
+                    d = Dependency(val.value)
+                    d.line = key.start_mark.line + 1
+                    unit_block.add_dependency(d)
                     break
 
                 if key.value != "name":
@@ -85,24 +87,36 @@ class AnsibleParser(p.Parser):
                         type = key.value
                         line = task.start_mark.line + 1
 
-                    for atr, atr_val in val.value:
-                        if (atr.value == "name"):
-                            names = [name.strip() for name in str(atr_val.value).split(',')]
-                            for name in names:
-                                if name == "": continue
-                                atomic_units.append(AtomicUnit(name, type))
-                        else:
-                            if isinstance(atr_val, ScalarNode):
-                                a = Attribute(atr.value, str(atr_val.value))
-                                a.line = atr.start_mark.line + 1
-                                attributes.append(a)
-                            elif isinstance(atr_val, SequenceNode):
-                                value = []
-                                for v in atr_val.value:
-                                    value.append(v.value)
-                                a = Attribute(atr.value, str(value))
-                                a.line = atr.start_mark.line + 1
-                                attributes.append(a)
+                    if (isinstance(val, MappingNode)):
+                        for atr, atr_val in val.value:
+                            if (atr.value == "name"):
+                                names = [name.strip() for name in str(atr_val.value).split(',')]
+                                for name in names:
+                                    if name == "": continue
+                                    atomic_units.append(AtomicUnit(name, type))
+                            else:
+                                if isinstance(atr_val, ScalarNode):
+                                    a = Attribute(atr.value, str(atr_val.value))
+                                    a.line = atr.start_mark.line + 1
+                                    attributes.append(a)
+                                elif isinstance(atr_val, SequenceNode):
+                                    value = []
+                                    for v in atr_val.value:
+                                        value.append(v.value)
+                                    a = Attribute(atr.value, str(value))
+                                    a.line = atr.start_mark.line + 1
+                                    attributes.append(a)
+                    elif (isinstance(val, ScalarNode)):
+                        a = Attribute(key.value, str(val.value))
+                        a.line = key.start_mark.line + 1
+                        attributes.append(a)
+                    elif isinstance(val, SequenceNode):
+                        value = []
+                        for v in val.value:
+                            value.append(v.value)
+                        a = Attribute(key.value, str(value))
+                        a.line = key.start_mark.line + 1
+                        attributes.append(a)
 
             # If it was a task without a module we ignore it (e.g. dependency)
             for au in atomic_units:
@@ -235,7 +249,7 @@ class ChefParser(p.Parser):
         return ChefParser._check_id(ast, ids) and len(ast.args) == size
 
     @staticmethod
-    def __get_content_bounds(ast, source):
+    def _get_content_bounds(ast, source):
         def is_bounds(l):
             return (isinstance(l, list) and len(l) == 2 and isinstance(l[0], int)
                     and isinstance(l[1], int))
@@ -259,7 +273,7 @@ class ChefParser(p.Parser):
 
         elif isinstance(ast, (list, ChefParser.Node)):
             for arg in ast:
-                bound = ChefParser.__get_content_bounds(arg, source)
+                bound = ChefParser._get_content_bounds(arg, source)
                 if bound[0] < start_line: start_line = bound[0]
                 if bound[1] < start_column: start_column = bound[1]
                 if bound[2] > end_line: end_line = bound[2]
@@ -308,7 +322,7 @@ class ChefParser(p.Parser):
                 (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
             return empty_structures[ast.id]
 
-        bounds = ChefParser.__get_content_bounds(ast, source)
+        bounds = ChefParser._get_content_bounds(ast, source)
 
         res = ""
         if bounds[0] == float('inf'):
@@ -372,6 +386,7 @@ class ChefParser(p.Parser):
                     and ChefParser._check_node(ast.args[1], ["do_block"], 1)):
                 self.push([self.is_resource_body], ast.args[1])
                 self.push([self.is_resource_def], ast.args[0])
+                self.atomic_unit.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
             return False
 
@@ -382,6 +397,7 @@ class ChefParser(p.Parser):
                 self.push([self.is_resource_body_without_attributes,
                     self.is_inline_resource_name], ast.args[1])
                 self.push([self.is_resource_type], ast.args[0])
+                self.atomic_unit.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
             return False
 
@@ -439,9 +455,10 @@ class ChefParser(p.Parser):
                             (ChefParser._check_id(ast, ["method_add_block"]) and
                                 ChefParser._check_id(ast.args[0], ["method_add_arg"]) and
                                     ChefParser._check_id(ast.args[1], ["brace_block"]))):
-                self.atomic_unit.add_attribute(
-                    Attribute(ChefParser._get_content(ast.args[0], self.source),
-                        ChefParser._get_content(ast.args[1], self.source)))
+                a = Attribute(ChefParser._get_content(ast.args[0], self.source),
+                        ChefParser._get_content(ast.args[1], self.source))
+                a.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
                 for arg in reversed(ast):
                     self.push([self.is_attribute], arg)
@@ -460,11 +477,12 @@ class ChefParser(p.Parser):
             if ChefParser._check_node(ast, ["assign"], 2):
                 self.variable.name = ChefParser._get_content(ast.args[0], self.source)
                 self.variable.value = ChefParser._get_content(ast.args[1], self.source)
+                self.variable.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
             return False
 
     class IncludeChecker(Checker):
-        include: str
+        include: Dependency
 
         def __init__(self, source, ast):
             super().__init__(source)
@@ -487,7 +505,9 @@ class ChefParser(p.Parser):
 
         def is_include_name(self, ast):
             if (ChefParser._check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] is False):
-                self.include = ChefParser._get_content(ast.args[0][0], self.source)
+                d = Dependency(ChefParser._get_content(ast.args[0][0], self.source))
+                d.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                self.include = d
                 return True
             return False
 
@@ -557,9 +577,12 @@ class ChefParser(p.Parser):
 
                 script_ast = os.popen('ruby ' + tmp.name).read()
                 comments, _ = parser_yacc(script_ast)
+                if comments is not None: comments.reverse()
 
-                for comment in comments:
-                    unit_block.add_comment(Comment(re.sub(r'\\n$', '', comment)))
+                for comment, line in comments:
+                    c = Comment(re.sub(r'\\n$', '', comment))
+                    c.line = line
+                    unit_block.add_comment(c)
 
             script_ast = os.popen('ruby -r ripper -e \'file = \
                 File.open(\"' + path + file + '\")\npp Ripper.sexp(file)\'').read()
