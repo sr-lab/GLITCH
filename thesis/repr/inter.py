@@ -1,13 +1,19 @@
-class Comment:
+from abc import ABC
+
+class CodeElement(ABC):
+    line: int
+    column: int
+
+class Comment(CodeElement):
     content: str
 
     def __init__(self, content: str) -> None:
         self.content = content
 
     def print(self, tab) -> str:
-        return (tab * "\t") + self.content
+        return (tab * "\t") + self.content + ' (on line ' + str(self.line) + ')'
 
-class Variable:
+class Variable(CodeElement):
     name: str
     value: str
 
@@ -16,9 +22,10 @@ class Variable:
         self.value = value
 
     def print(self, tab) -> str:
-        return (tab * "\t") + self.name + "->" + self.value
+        return (tab * "\t") + self.name + "->" + self.value + \
+            " (on line " + str(self.line) + ")"
 
-class Attribute:
+class Attribute(CodeElement):
     name: str
     value: str
 
@@ -27,9 +34,10 @@ class Attribute:
         self.value = value
 
     def print(self, tab) -> str:
-        return (tab * "\t") + self.name + "->" + self.value.replace('\n', '')
+        return (tab * "\t") + self.name + "->" + self.value.replace('\n', '') + \
+            " (on line " + str(self.line) + ")"
 
-class AtomicUnit:
+class AtomicUnit(CodeElement):
     name: str
     type: str
     attributes: list[Attribute]
@@ -43,7 +51,8 @@ class AtomicUnit:
         self.attributes.append(a)
 
     def print(self, tab) -> str:
-        res = (tab * "\t") + self.type + ' ' + self.name + "\n"
+        res = ((tab * "\t") + self.type + ' ' + self.name + " (on line " 
+                + str(self.line) + ")\n")
 
         for attribute in self.attributes:
             res += attribute.print(tab + 1) + "\n"

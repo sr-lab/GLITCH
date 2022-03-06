@@ -3,7 +3,8 @@ import re
 import tempfile
 from string import Template
 import ruamel.yaml as yaml
-from pkg_resources import resource_filename
+from ruamel.yaml import ScalarNode, MappingNode, SequenceNode
+from pkg_resources import resource_filename 
 
 import thesis.parsers.parser as p
 from thesis.repr.inter import *
@@ -26,26 +27,23 @@ class AnsibleParser(p.Parser):
         def yaml_comments(d):
             res = []
 
-            if isinstance(d, dict):
-                if d.ca.comment is not None:
-                    for line, comment in extract_from_token(d.ca.comment):
+            if isinstance(d, MappingNode):
+                if d.comment is not None:
+                    for line, comment in extract_from_token(d.comment):
                         res.append((line, comment))
-                for key, val in d.items():
+                for _, val in d.value:
                     for line, comment in yaml_comments(val):
                         res.append((line, comment))
-                    if key in d.ca.items:
-                        for line, comment in extract_from_token(d.ca.items[key]):
-                            res.append((line, comment))
-            elif isinstance(d, list):
-                if d.ca.comment is not None:
-                    for line, comment in extract_from_token(d.ca.comment):
+            elif isinstance(d, SequenceNode):
+                if d.comment is not None:
+                    for line, comment in extract_from_token(d.comment):
                         res.append((line, comment))
-                for idx, item in enumerate(d):
+                for item in d.value:
                     for line, comment in yaml_comments(item):
                         res.append((line, comment))
-                    if idx in d.ca.items:
-                        for line, comment in extract_from_token(d.ca.items[idx]):
-                            res.append((line, comment))
+            elif isinstance(d, ScalarNode):
+                if d.comment is not None:
+                    res = extract_from_token(d.comment)
 
             return res
 
@@ -54,44 +52,62 @@ class AnsibleParser(p.Parser):
 
     @staticmethod
     def __parse_vars(unit_block, cur_name, vmap):
-        for key, val in vmap.items():
-            if isinstance(val, dict):
-                AnsibleParser.__parse_vars(unit_block, cur_name + key + ".", val)
+        for key, val in vmap.value:
+            if isinstance(val, MappingNode):
+                AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", val)
+            elif isinstance(val, SequenceNode):
+                value = []
+                for v in val.value:
+                    value.append(v.value)
+                v = Variable(cur_name + key.value, str(value))
+                v.line = key.start_mark.line + 1
+                unit_block.add_variable(v)
             else:
-                unit_block.add_variable(Variable(cur_name + key, str(val)))
+                v = Variable(cur_name + key.value, str(val.value))
+                v.line = key.start_mark.line + 1
+                unit_block.add_variable(v)
 
+    #FIXME It might be a good idea to have a recursive approach
     @staticmethod
     def __parse_tasks(unit_block, tasks):
-        for task in tasks:
-            atomic_units = []
-            attributes = []
-            type = ""
+        for task in tasks.value:
+            atomic_units, attributes = [], []
+            type, line = "", 0
 
-            for key, val in task.items():
+            for key, val in task.value:
                 # Dependencies
-                if key == "include":
-                    unit_block.add_dependency(val)
+                if key.value == "include":
+                    unit_block.add_dependency(val.value)
                     break
 
-                if key != "name":
+                if key.value != "name":
                     if type == "":
-                        type = key
+                        type = key.value
+                        line = task.start_mark.line + 1
 
-                    if isinstance(val, (list, str)):
-                        attributes.append(Attribute(key, str(val)))
-                    else:
-                        for atr in val:
-                            if (atr == "name"):
-                                names = [name.strip() for name in str(val[atr]).split(',')]
-                                for name in names:
-                                    if name == "": continue
-                                    atomic_units.append(AtomicUnit(name, type))
-                            else:
-                                attributes.append(Attribute(atr, str(val[atr])))
+                    for atr, atr_val in val.value:
+                        if (atr.value == "name"):
+                            names = [name.strip() for name in str(atr_val.value).split(',')]
+                            for name in names:
+                                if name == "": continue
+                                atomic_units.append(AtomicUnit(name, type))
+                        else:
+                            if isinstance(atr_val, ScalarNode):
+                                a = Attribute(atr.value, str(atr_val.value))
+                                a.line = atr.start_mark.line + 1
+                                attributes.append(a)
+                            elif isinstance(atr_val, SequenceNode):
+                                value = []
+                                for v in atr_val.value:
+                                    value.append(v.value)
+                                a = Attribute(atr.value, str(value))
+                                a.line = atr.start_mark.line + 1
+                                attributes.append(a)
 
             # If it was a task without a module we ignore it (e.g. dependency)
             for au in atomic_units:
                 if au.type != "":
+                    au.line = line
                     au.attributes = attributes.copy()
                     unit_block.add_atomic_unit(au)
 
@@ -99,25 +115,29 @@ class AnsibleParser(p.Parser):
             if (len(atomic_units) == 0 and type != ""):
                 au = AtomicUnit("", type)
                 au.attributes = attributes
+                au.line = line
                 unit_block.add_atomic_unit(au)
 
     def __parse_playbook(self, module, name, file):
-        parsed_file = yaml.YAML().load(file)
+        parsed_file = yaml.YAML().compose(file)
         unit_block = UnitBlock(name)
 
-        for e in parsed_file[0]:
-            if (e == "vars"):
-                AnsibleParser.__parse_vars(unit_block, "", parsed_file[0][e])
-            elif (e == "tasks"):
-                AnsibleParser.__parse_tasks(unit_block, parsed_file[0][e])
+        for play in parsed_file.value:
+            for key, value in play.value:
+                if (key.value == "vars"):
+                    AnsibleParser.__parse_vars(unit_block, "", value)
+                elif (key.value == "tasks"):
+                    AnsibleParser.__parse_tasks(unit_block, value)
 
         for comment in self.__get_yaml_comments(parsed_file):
-            unit_block.add_comment(Comment(comment[1]))
+            c = Comment(comment[1])
+            c.line = comment[0]
+            unit_block.add_comment(c)
 
         module.add_block(unit_block)
 
     def __parse_tasks_file(self, module, name, file):
-        parsed_file = yaml.YAML().load(file)
+        parsed_file = yaml.YAML().compose(file)
         unit_block = UnitBlock(name)
 
         if parsed_file is None:
@@ -126,12 +146,14 @@ class AnsibleParser(p.Parser):
 
         AnsibleParser.__parse_tasks(unit_block, parsed_file)
         for comment in self.__get_yaml_comments(parsed_file):
-            unit_block.add_comment(Comment(comment[1]))
+            c = Comment(comment[1])
+            c.line = comment[0]
+            unit_block.add_comment(c)
 
         module.add_block(unit_block)
 
     def __parse_vars_file(self, module, name, file):
-        parsed_file = yaml.YAML().load(file)
+        parsed_file = yaml.YAML().compose(file)
         unit_block = UnitBlock(name)
 
         if parsed_file is None:
@@ -139,6 +161,11 @@ class AnsibleParser(p.Parser):
             return
 
         AnsibleParser.__parse_vars(unit_block, "", parsed_file)
+        for comment in self.__get_yaml_comments(parsed_file):
+            c = Comment(comment[1])
+            c.line = comment[0]
+            unit_block.add_comment(c)
+
         module.add_block(unit_block)
 
     def parse_module(self, path: str) -> Module:
@@ -164,7 +191,7 @@ class AnsibleParser(p.Parser):
 
         files = []
         for (dirpath, _, filenames) in os.walk(path):
-            filenames = filter(lambda f: f.endswith('.yml'), filenames)
+            filenames = filter(lambda f: f.endswith('.yml') or f.endswith('.yaml'), filenames)
             files += [os.path.join(dirpath, file) for file in filenames]
 
         for file in files:
