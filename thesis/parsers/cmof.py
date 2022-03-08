@@ -47,7 +47,7 @@ class AnsibleParser(p.Parser):
 
             return res
 
-        return list(filter(lambda c: "#" in c[1], \
+        return set(filter(lambda c: "#" in c[1], \
             [(c[0] + 1, c[1].strip()) for c in yaml_comments(d)]))
 
     @staticmethod
@@ -135,6 +135,7 @@ class AnsibleParser(p.Parser):
     def __parse_playbook(self, module, name, file):
         parsed_file = yaml.YAML().compose(file)
         unit_block = UnitBlock(name)
+        unit_block.path = file.name
 
         for play in parsed_file.value:
             for key, value in play.value:
@@ -153,6 +154,7 @@ class AnsibleParser(p.Parser):
     def __parse_tasks_file(self, module, name, file):
         parsed_file = yaml.YAML().compose(file)
         unit_block = UnitBlock(name)
+        unit_block.path = file.name
 
         if parsed_file is None:
             module.add_block(unit_block)
@@ -169,6 +171,7 @@ class AnsibleParser(p.Parser):
     def __parse_vars_file(self, module, name, file):
         parsed_file = yaml.YAML().compose(file)
         unit_block = UnitBlock(name)
+        unit_block.path = file.name
 
         if parsed_file is None:
             module.add_block(unit_block)
@@ -569,6 +572,7 @@ class ChefParser(p.Parser):
             ripper_script = ripper_script.substitute({'path': '\"' + path + file + '\"'})
 
             unit_block: UnitBlock = UnitBlock(file)
+            unit_block.path = path + file
             source = f.readlines()
 
             with tempfile.NamedTemporaryFile(mode="w+") as tmp:

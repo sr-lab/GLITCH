@@ -83,6 +83,7 @@ class UnitBlock:
     comments: list[Comment]
     variables: list[Variable]
     atomic_units: list[AtomicUnit]
+    path: str
 
     def __init__(self, name: str) -> None:
         self.dependencies = []
