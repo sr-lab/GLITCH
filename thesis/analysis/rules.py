@@ -3,19 +3,29 @@ from thesis.repr.inter import *
 from abc import ABC, abstractmethod
 
 class Error():
-    msg: str
+    __ERRORS = {
+        'sec_https': "We should prefer the usage of https instead of http.",
+        'sec_susp_comm': "Suspicious word in comment",
+        'sec_def_admin': "Admin by default.",
+        'sec_empty_pass': "Empty password.",
+        'sec_weak_crypt': "Weak Crypto Algorithm.",
+        'sec_hard_secr': "Hard-coded secret.",
+        'sec_invalid_bind': "Invalid IP address binding."
+    }
+
+    code: str
     el: CodeElement
     path: str
 
-    def __init__(self, msg: str, el: CodeElement, path: str) -> None:
-        self.msg: str = msg
+    def __init__(self, code: str, el: CodeElement, path: str) -> None:
+        self.code: str = code
         self.el: CodeElement = el
         self.path = path
 
     def __repr__(self) -> str:
         with open(self.path) as f:
             return self.path + "\nIssue on line " + \
-                str(self.el.line) + ": " + self.msg + \
+                str(self.el.line) + ": " + Error.__ERRORS[self.code] + \
                     "\n" + f.readlines()[self.el.line - 1].strip() + "\n"
 
 class RuleVisitor(ABC):
@@ -84,58 +94,41 @@ class SecurityVisitor(RuleVisitor):
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
-        pass
+        return []
+
+    def __check_keyvalue(self, c: CodeElement, name: str, value: str, file: str):
+        errors = []
+        name = name.strip().lower()
+        value = value.strip().lower()
+
+        if (re.match(SecurityVisitor.URL_REGEX, value) and
+                ('http' in value or 'www' in value) and 'https' not in value):
+            errors.append(Error('sec_https', c, file))
+        elif re.match(r'^0.0.0.0', value):
+            errors.append(Error('sec_invalid_bind', c, file))
+        elif value.startswith('sha1') or value.startswith('md5'):
+            errors.append(Error('sec_weak_crypt', c, file))
+        elif (name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.USERS) \
+                and 'admin' in value:
+            errors.append(Error('sec_def_admin', c, file))
+        elif name in SecurityVisitor.PASSWORDS and len(value) == 0:
+            errors.append(Error('sec_empty_pass', c, file))
+        elif ((name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.SECRETS)
+                and len(value) > 0):
+            errors.append(Error('sec_hard_secr', c, file))
+
+        return errors
 
     def check_attribute(self, a: Attribute, file: str) -> list[Error]:
-        errors = []
-        name = a.name.strip().lower()
-        value = a.value.strip().lower()
-
-        if (re.match(SecurityVisitor.URL_REGEX, value) and
-                ('http' in value or 'www' in value) and 'https' not in value):
-            errors.append(Error("We should prefer the usage of https instead of http.", a, file))
-        elif re.match(r'^0.0.0.0', value):
-            errors.append(Error("Invalid IP address binding.", a, file))
-        elif value.startswith('sha1') or value.startswith('md5'):
-            errors.append(Error("Weak Crypto Algorithm.", a, file))
-        elif (name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.USERS) \
-                and 'admin' in value:
-            errors.append(Error("Admin by default.", a, file))
-        elif name in SecurityVisitor.PASSWORDS and len(value) == 0:
-            errors.append(Error("Empty password.", a, file))
-        elif ((name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.SECRETS)
-                and len(value) > 0):
-            errors.append(Error("Hard-coded secret.", a, file))
-
-        return errors
+        return self.__check_keyvalue(a, a.name, a.value, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
-        errors = []
-        name = v.name.strip().lower()
-        value = v.value.strip().lower()
-
-        if (re.match(SecurityVisitor.URL_REGEX, value) and
-                ('http' in value or 'www' in value) and 'https' not in value):
-            errors.append(Error("We should prefer the usage of https instead of http.", v, file))
-        elif re.match(r'^0.0.0.0', value):
-            errors.append(Error("Invalid IP address binding.", v, file))
-        elif value.startswith('sha1') or value.startswith('md5'):
-            errors.append(Error("Weak Crypto Algorithm.", v, file))
-        elif (name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.USERS) \
-                and 'admin' in value:
-            errors.append(Error("Admin by default.", v, file))
-        elif name in SecurityVisitor.PASSWORDS and len(value) == 0:
-            errors.append(Error("Empty password.", v, file))
-        elif ((name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.SECRETS)
-                and len(value) > 0):
-            errors.append(Error("Hard-coded secret.", v, file))
-
-        return errors
+        return self.__check_keyvalue(v, v.name, v.value, file)
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
         for word in SecurityVisitor.WRONG_WORDS:
             if word in c.content.lower():
-                errors.append(Error("Suspicious word in comment", c, file))
+                errors.append(Error('sec_susp_comm', c, file))
                 break
         return errors
