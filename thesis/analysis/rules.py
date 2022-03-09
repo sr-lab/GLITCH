@@ -24,9 +24,9 @@ class Error():
 
     def __repr__(self) -> str:
         with open(self.path) as f:
-            return self.path + "\nIssue on line " + \
-                str(self.el.line) + ": " + Error.__ERRORS[self.code] + \
-                    "\n" + f.readlines()[self.el.line - 1].strip() + "\n"
+            return \
+                f"{self.path}\nIssue on line {self.el.line}: {Error.__ERRORS[self.code]}\n" + \
+                    f"{f.readlines()[self.el.line - 1].strip()}\n" 
 
 class RuleVisitor(ABC):
     @abstractmethod

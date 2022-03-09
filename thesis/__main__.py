@@ -17,7 +17,8 @@ def analysis(tech, path, module):
     # FIXME Might have performance issues
     module = parser.parse(path, module)
     analysis = SecurityVisitor()
-    for error in analysis.check_module(module):
+    errors = sorted(analysis.check_module(module), key=lambda e: (e.path, e.el.line))
+    for error in errors:
         print(error)
 
 analysis(prog_name='#TODO')
