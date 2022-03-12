@@ -12,11 +12,11 @@ class Parser(ABC):
             return self.parse_folder(path)
 
     @abstractmethod
-    def parse_file(self, path: str) -> Module:
+    def parse_file(self, path: str) -> UnitBlock:
         pass
 
     @abstractmethod
-    def parse_folder(self, path: str) -> Module:
+    def parse_folder(self, path: str) -> Project:
         pass
 
     @abstractmethod
@@ -25,7 +25,9 @@ class Parser(ABC):
 
     def parse_file_structure(self, folder, path):
         for f in os.listdir(path):
-            if os.path.isfile(os.path.join(path, f)):
+            if os.path.islink(os.path.join(path, f)):
+                continue
+            elif os.path.isfile(os.path.join(path, f)):
                 folder.add_file(File(f))
             elif os.path.isdir(os.path.join(path, f)):
                 new_folder = Folder(f)

@@ -3,7 +3,7 @@ import re
 import tempfile
 from string import Template
 import ruamel.yaml as yaml
-from ruamel.yaml import ScalarNode, MappingNode, SequenceNode
+from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, CommentToken
 from pkg_resources import resource_filename 
 
 import thesis.parsers.parser as p
@@ -18,9 +18,9 @@ class AnsibleParser(p.Parser):
             for token in tokenlist:
                 if token is None:
                     continue
-                if isinstance(token, list):
+                elif isinstance(token, list):
                     res += extract_from_token(token)
-                else:
+                elif isinstance(token, CommentToken): #FIXME there are comments that appear as strings for some reason
                     res.append((token.start_mark.line, token.value))
             return res
 
@@ -52,20 +52,23 @@ class AnsibleParser(p.Parser):
 
     @staticmethod
     def __parse_vars(unit_block, cur_name, vmap):
-        for key, val in vmap.value:
-            if isinstance(val, MappingNode):
-                AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", val)
-            elif isinstance(val, SequenceNode):
-                value = []
-                for v in val.value:
-                    value.append(v.value)
-                v = Variable(cur_name + key.value, str(value))
-                v.line = key.start_mark.line + 1
-                unit_block.add_variable(v)
-            else:
-                v = Variable(cur_name + key.value, str(val.value))
-                v.line = key.start_mark.line + 1
-                unit_block.add_variable(v)
+        try:
+            for key, val in vmap.value:
+                if isinstance(val, MappingNode):
+                    AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", val)
+                elif isinstance(val, SequenceNode):
+                    value = []
+                    for v in val.value:
+                        value.append(v.value)
+                    v = Variable(cur_name + key.value, str(value))
+                    v.line = key.start_mark.line + 1
+                    unit_block.add_variable(v)
+                else:
+                    v = Variable(cur_name + key.value, str(val.value))
+                    v.line = key.start_mark.line + 1
+                    unit_block.add_variable(v)
+        except:
+            pass #FIXME
 
     #FIXME It might be a good idea to have a recursive approach
     @staticmethod
@@ -132,99 +135,133 @@ class AnsibleParser(p.Parser):
                 au.line = line
                 unit_block.add_atomic_unit(au)
 
-    def __parse_playbook(self, module, name, file):
-        parsed_file = yaml.YAML().compose(file)
-        unit_block = UnitBlock(name)
-        unit_block.path = file.name
+    def __parse_playbook(self, name, file) -> UnitBlock:
+        try:
+            parsed_file = yaml.YAML().compose(file)
+            unit_block = UnitBlock(name)
+            unit_block.path = file.name
 
-        for play in parsed_file.value:
-            for key, value in play.value:
-                if (key.value == "vars"):
-                    AnsibleParser.__parse_vars(unit_block, "", value)
-                elif (key.value == "tasks"):
-                    AnsibleParser.__parse_tasks(unit_block, value)
+            for play in parsed_file.value:
+                for key, value in play.value:
+                    if (key.value == "vars"):
+                        AnsibleParser.__parse_vars(unit_block, "", value)
+                    elif (key.value == "tasks"):
+                        AnsibleParser.__parse_tasks(unit_block, value)
 
-        for comment in self.__get_yaml_comments(parsed_file):
-            c = Comment(comment[1])
-            c.line = comment[0]
-            unit_block.add_comment(c)
+            for comment in self.__get_yaml_comments(parsed_file):
+                c = Comment(comment[1])
+                c.line = comment[0]
+                unit_block.add_comment(c)
 
-        module.add_block(unit_block)
+            return unit_block
+        except:
+            # FIXME is not a playbook
+            return None
 
-    def __parse_tasks_file(self, module, name, file):
-        parsed_file = yaml.YAML().compose(file)
-        unit_block = UnitBlock(name)
-        unit_block.path = file.name
+    def __parse_tasks_file(self, name, file) -> UnitBlock:
+        try:
+            parsed_file = yaml.YAML().compose(file)
+            unit_block = UnitBlock(name)
+            unit_block.path = file.name
 
-        if parsed_file is None:
-            module.add_block(unit_block)
-            return
+            if parsed_file is None:
+                return unit_block
 
-        AnsibleParser.__parse_tasks(unit_block, parsed_file)
-        for comment in self.__get_yaml_comments(parsed_file):
-            c = Comment(comment[1])
-            c.line = comment[0]
-            unit_block.add_comment(c)
+            AnsibleParser.__parse_tasks(unit_block, parsed_file)
+            for comment in self.__get_yaml_comments(parsed_file):
+                c = Comment(comment[1])
+                c.line = comment[0]
+                unit_block.add_comment(c)
 
-        module.add_block(unit_block)
+            return unit_block
+        except:
+            # FIXME is not a tasks file
+            return None
 
-    def __parse_vars_file(self, module, name, file):
-        parsed_file = yaml.YAML().compose(file)
-        unit_block = UnitBlock(name)
-        unit_block.path = file.name
+    def __parse_vars_file(self, name, file) -> UnitBlock:
+        try:
+            parsed_file = yaml.YAML().compose(file)
+            unit_block = UnitBlock(name)
+            unit_block.path = file.name
 
-        if parsed_file is None:
-            module.add_block(unit_block)
-            return
+            if parsed_file is None:
+                return unit_block
 
-        AnsibleParser.__parse_vars(unit_block, "", parsed_file)
-        for comment in self.__get_yaml_comments(parsed_file):
-            c = Comment(comment[1])
-            c.line = comment[0]
-            unit_block.add_comment(c)
+            AnsibleParser.__parse_vars(unit_block, "", parsed_file)
+            for comment in self.__get_yaml_comments(parsed_file):
+                c = Comment(comment[1])
+                c.line = comment[0]
+                unit_block.add_comment(c)
 
-        module.add_block(unit_block)
+            return unit_block
+        except:
+            # FIXME is not a vars file
+            return None
+
+    @staticmethod
+    def __apply_to_files(module, path, p_function):
+        if os.path.exists(path):
+            files = [f for f in os.listdir(path) \
+                if os.path.isfile(os.path.join(path, f)) and f.endswith(('.yml', '.yaml'))]
+            for file in files:
+                with open(path + file) as f:
+                    unit_block = p_function(path + file, f)
+                    if (unit_block is not None):
+                        module.add_block(unit_block)
 
     def parse_module(self, path: str) -> Module:
-        def parse_folder(folder, p_function):
-            files = [f for f in os.listdir(path + folder) \
-                if os.path.isfile(os.path.join(path + folder, f))]
-            for file in files:
-                with open(path + folder + file) as f:
-                    p_function(res, folder + file, f)
-
         res: Module = Module(os.path.basename(os.path.normpath(path)))
         super().parse_file_structure(res.folder, path)
 
-        parse_folder("/tasks/", self.__parse_tasks_file)
-        parse_folder("/handlers/", self.__parse_tasks_file)
-        parse_folder("/vars/", self.__parse_vars_file)
-        parse_folder("/defaults/", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/tasks/", self.__parse_tasks_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/handlers/", self.__parse_tasks_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/vars/", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/defaults/", self.__parse_vars_file)
+
+        # Check subfolders
+        subfolders = [f.path for f in os.scandir(f"{path}/") if f.is_dir() and not f.is_symlink()]
+        for d in subfolders:
+            if os.path.dirname(d) not \
+                    in ["tasks", "handlers", "vars", "defaults"]:
+                aux = self.parse_module(d)
+                res.blocks += aux.blocks
 
         return res
 
-    def parse_folder(self, path: str) -> Module:
-        res: Module = Module("")
+    def parse_folder(self, path: str) -> Project:
+        '''
+        It follows the sample directory layout found in:
+        https://docs.ansible.com/ansible/latest/user_guide/sample_setup.html#sample-directory-layout
+        '''
+        res: Project = Project(os.path.basename(os.path.normpath(path)))
 
-        files = []
-        for (dirpath, _, filenames) in os.walk(path):
-            filenames = filter(lambda f: f.endswith('.yml') or f.endswith('.yaml'), filenames)
-            files += [os.path.join(dirpath, file) for file in filenames]
+        AnsibleParser.__apply_to_files(res, f"{path}/", self.__parse_playbook)
+        AnsibleParser.__apply_to_files(res, f"{path}/playbooks/", self.__parse_playbook)
+        AnsibleParser.__apply_to_files(res, f"{path}/group_vars/", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/host_vars/", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/tasks/", self.__parse_tasks_file)
 
-        for file in files:
-            with open(file) as f:
-                self.__parse_playbook(res, file, f)
+        if os.path.exists(f"{path}/roles/"):
+            subfolders = [f.path for f in os.scandir(f"{path}/roles/") if f.is_dir()]
+            for m in subfolders:
+                res.add_module(self.parse_module(m))
+
+        # Check subfolders
+        subfolders = [f.path for f in os.scandir(f"{path}/") if f.is_dir() and not f.is_symlink()]
+        for d in subfolders:
+            if os.path.dirname(d) not \
+                    in ["playbooks", "group_vars", "host_vars", "tasks", "roles"]:
+                aux = self.parse_folder(d)
+                res.blocks += aux.blocks
+                res.modules += aux.modules
 
         return res
-        
 
-    def parse_file(self, path: str) -> Module:
-        res: Module = Module("")
+    def parse_file(self, path: str) -> UnitBlock:
         with open(path) as f:
-            self.__parse_playbook(res, path, f)
+            return self.__parse_playbook(path, f)
 
-        return res
-
+# FIXME
 class ChefParser(p.Parser):
     class Node:
         id: str
@@ -621,6 +658,7 @@ class ChefParser(p.Parser):
         self.__parse_recipe(os.path.dirname(path) + "/", os.path.basename(path), res)
         return res
 
+    # FIXME
     def parse_folder(self, path: str) -> Module:
         res: Module = Module("")
 

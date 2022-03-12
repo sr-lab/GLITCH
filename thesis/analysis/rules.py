@@ -10,17 +10,24 @@ class Error():
         'sec_empty_pass': "Empty password.",
         'sec_weak_crypt': "Weak Crypto Algorithm.",
         'sec_hard_secr': "Hard-coded secret.",
+        'sec_hard_pass': "Hard-coded password.",
+        "sec_hard_user": "Hard-coded user.",
         'sec_invalid_bind': "Invalid IP address binding."
     }
 
     code: str
     el: CodeElement
     path: str
+    repr: str
 
-    def __init__(self, code: str, el: CodeElement, path: str) -> None:
+    def __init__(self, code: str, el: CodeElement, path: str, repr: str) -> None:
         self.code: str = code
         self.el: CodeElement = el
         self.path = path
+        self.repr = repr
+
+    def to_csv(self) -> str:
+        return f"{self.path}, {self.el.line}, {self.code}, {self.repr}"
 
     def __repr__(self) -> str:
         with open(self.path) as f:
@@ -29,6 +36,18 @@ class Error():
                     f"{f.readlines()[self.el.line - 1].strip()}\n" 
 
 class RuleVisitor(ABC):
+    def check(self, code) -> list[Error]:
+        if isinstance(code, Project):
+            return self.check_project(code)
+        elif isinstance(code, Module):
+            return self.check_module(code)
+        elif isinstance(code, UnitBlock):
+            return self.check_unitblock(code)
+
+    @abstractmethod
+    def check_project(self, p: Project) -> list[Error]:
+        pass
+
     @abstractmethod
     def check_module(self, m: Module) -> list[Error]:
         pass
@@ -62,11 +81,28 @@ class SecurityVisitor(RuleVisitor):
     URL_REGEX = r'^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)' \
         '?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$'
     WRONG_WORDS = ['bug', 'debug', 'todo', 'to-do', 'to_do', 'fix',
-        'issue', 'problem', 'solve', 'hack', 'ticket', 'later', 'incorrect', 'fixme']
-    PASSWORDS = ["pass", "password", "pwd"]
-    USERS = ["user", "usr"]
+            'issue', 'problem', 'solve', 'hack', 'ticket', 'later', 'incorrect', 'fixme']
+    PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
+    USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name', 
+            'owner-name', 'owner_name', 'owner', 'admin', 'login', 'userid', 'loginid']
     SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id"
-        "cert", "token", "ssh_key", "rsa", "ssl"]
+            "cert", "token", "ssh_key", "rsa", "ssl", 'auth_token', 
+            'authetication_token','auth-token', 'authentication-token', 'md5' 
+            'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
+            'ssh-key-content', 'ssh_key_public', 'ssh-key-public', 'ssh_key_private', 
+            'ssh-key-private', 'ssh_key_public_content', 'ssh_key_private_content', 
+            'ssh-key-public-content', 'ssh-key-private-content']
+    ROLES = ["role"]
+
+    def check_project(self, p: Project) -> list[Error]:
+        errors = []
+        for m in p.modules:
+            errors += self.check_module(m)
+
+        for u in p.blocks:
+            errors += self.check_unitblock(u)
+
+        return errors
 
     def check_module(self, m: Module) -> list[Error]:
         errors = []
@@ -103,19 +139,24 @@ class SecurityVisitor(RuleVisitor):
 
         if (re.match(SecurityVisitor.URL_REGEX, value) and
                 ('http' in value or 'www' in value) and 'https' not in value):
-            errors.append(Error('sec_https', c, file))
+            errors.append(Error('sec_https', c, file, repr(c)))
         elif re.match(r'^0.0.0.0', value):
-            errors.append(Error('sec_invalid_bind', c, file))
+            errors.append(Error('sec_invalid_bind', c, file, repr(c)))
         elif value.startswith('sha1') or value.startswith('md5'):
-            errors.append(Error('sec_weak_crypt', c, file))
-        elif (name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.USERS) \
+            errors.append(Error('sec_weak_crypt', c, file, repr(c)))
+        elif (name in SecurityVisitor.ROLES or name in SecurityVisitor.USERS) \
                 and 'admin' in value:
-            errors.append(Error('sec_def_admin', c, file))
+            errors.append(Error('sec_def_admin', c, file, repr(c)))
         elif name in SecurityVisitor.PASSWORDS and len(value) == 0:
-            errors.append(Error('sec_empty_pass', c, file))
-        elif ((name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.SECRETS)
-                and len(value) > 0):
-            errors.append(Error('sec_hard_secr', c, file))
+            errors.append(Error('sec_empty_pass', c, file, repr(c)))
+        elif ((name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.SECRETS 
+                or name in SecurityVisitor.USERS) and len(value) > 0):
+            errors.append(Error('sec_hard_secr', c, file, repr(c)))
+
+            if (name in SecurityVisitor.PASSWORDS):
+                errors.append(Error('sec_hard_pass', c, file, repr(c)))
+            elif (name in SecurityVisitor.USERS):
+                errors.append(Error('sec_hard_user', c, file, repr(c)))
 
         return errors
 
@@ -127,8 +168,10 @@ class SecurityVisitor(RuleVisitor):
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
+        lines = c.content.lower().split('\n')
         for word in SecurityVisitor.WRONG_WORDS:
-            if word in c.content.lower():
-                errors.append(Error('sec_susp_comm', c, file))
-                break
+            for line in lines:
+                if word in line:
+                    errors.append(Error('sec_susp_comm', c, file, line))
+                    break
         return errors

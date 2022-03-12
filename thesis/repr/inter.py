@@ -14,6 +14,9 @@ class Comment(CodeElement):
         super().__init__()
         self.content = content
 
+    def __repr__(self) -> str:
+        return self.content
+
     def print(self, tab) -> str:
         return (tab * "\t") + self.content + ' (on line ' + str(self.line) + ')'
 
@@ -25,6 +28,10 @@ class Variable(CodeElement):
         super().__init__()
         self.name = name
         self.value = value
+
+    def __repr__(self) -> str:
+        value = self.value.split('\n')[0]
+        return f"{self.name}:{value}"
 
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + "->" + self.value + \
@@ -38,6 +45,10 @@ class Attribute(CodeElement):
         super().__init__()
         self.name = name
         self.value = value
+
+    def __repr__(self) -> str:
+        value = self.value.split('\n')[0]
+        return f"{self.name}:{value}"
 
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + "->" + self.value.replace('\n', '') + \
@@ -57,6 +68,9 @@ class AtomicUnit(CodeElement):
     def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
 
+    def __repr__(self) -> str:
+        return f"{self.name} {self.type}"
+
     def print(self, tab) -> str:
         res = ((tab * "\t") + self.type + ' ' + self.name + " (on line " 
                 + str(self.line) + ")\n")
@@ -73,6 +87,9 @@ class Dependency(CodeElement):
     def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
+
+    def __repr__(self) -> str:
+        return self.name
 
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
@@ -91,6 +108,9 @@ class UnitBlock:
         self.variables = []
         self.atomic_units = []
         self.name = name
+
+    def __repr__(self) -> str:
+        return self.name
 
     def add_dependency(self, d: Dependency) -> None:
         self.dependencies.append(d)
@@ -167,17 +187,52 @@ class Module:
         self.blocks = []
         self.folder = Folder(name)
 
+    def __repr__(self) -> str:
+        return self.name
+
     def add_block(self, u: UnitBlock) -> None:
         self.blocks.append(u)
 
+    def print(self, tab) -> str:
+        res = (tab * "\t") + self.name + "\n"
+
+        res += (tab * "\t") + "\tblocks:\n"
+        for block in self.blocks:
+            res += block.print(tab + 2)
+
+        res += (tab * "\t") + "\tfile structure:\n"
+        res += self.folder.print(tab + 2)
+
+        return res
+
+class Project:
+    modules: list[Module]
+    blocks: list[UnitBlock]
+    name: str
+
+    def __init__(self, name) -> None:
+        self.name = name
+        self.modules = []
+        self.blocks = []
+
     def __repr__(self) -> str:
+        return self.name
+
+    def add_module(self, m: Module):
+        self.modules.append(m)
+    
+    def add_block(self, u: UnitBlock):
+        self.blocks.append(u)
+
+    def print(self, tab) -> str:
         res = self.name + "\n"
 
-        res += "\tblocks:\n"
-        for block in self.blocks:
-            res += block.print(2)
+        res += (tab * "\t") + "\tmodules:\n"
+        for module in self.modules:
+            res += module.print(tab + 2)
 
-        res += "\tfile structure:\n"
-        res += self.folder.print(2)
+        res += (tab * "\t") + "\tblocks:\n"
+        for block in self.blocks:
+            res += block.print(tab + 2)
 
         return res
