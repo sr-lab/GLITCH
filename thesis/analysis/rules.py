@@ -12,7 +12,8 @@ class Error():
         'sec_hard_secr': "Hard-coded secret.",
         'sec_hard_pass': "Hard-coded password.",
         "sec_hard_user": "Hard-coded user.",
-        'sec_invalid_bind': "Invalid IP address binding."
+        'sec_invalid_bind': "Invalid IP address binding.",
+        'sec_no_int_check': "No integrity check."
     }
 
     code: str
@@ -78,21 +79,23 @@ class RuleVisitor(ABC):
 
 # FIXME we may want to look to the improvements made to these detections
 class SecurityVisitor(RuleVisitor):
-    URL_REGEX = r'^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)' \
+    __URL_REGEX = r'^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)' \
         '?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$'
-    WRONG_WORDS = ['bug', 'debug', 'todo', 'to-do', 'to_do', 'fix',
+    __WRONG_WORDS = ['bug', 'debug', 'todo', 'to-do', 'to_do', 'fix',
             'issue', 'problem', 'solve', 'hack', 'ticket', 'later', 'incorrect', 'fixme']
-    PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
-    USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name', 
+    __PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
+    __USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name', 
             'owner-name', 'owner_name', 'owner', 'admin', 'login', 'userid', 'loginid']
-    SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id"
+    __SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id"
             "cert", "token", "ssh_key", "rsa", "ssl", 'auth_token', 
             'authetication_token','auth-token', 'authentication-token', 'md5' 
             'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
             'ssh-key-content', 'ssh_key_public', 'ssh-key-public', 'ssh_key_private', 
             'ssh-key-private', 'ssh_key_public_content', 'ssh_key_private_content', 
             'ssh-key-public-content', 'ssh-key-private-content']
-    ROLES = ["role"]
+    __ROLES = ["role"]
+    __DOWNLOAD = ['iso', 'tar', 'tar.gz', 'tar.bzip2', 'zip', 
+            'rar', 'gzip', 'gzip2', 'deb', 'rpm', 'sh', 'run', 'bin']
 
     def check_project(self, p: Project) -> list[Error]:
         errors = []
@@ -127,6 +130,24 @@ class SecurityVisitor(RuleVisitor):
         for a in au.attributes:
             errors += self.check_attribute(a, file)
 
+        # Check integrity check
+        for a in au.attributes:
+            value = a.value.strip().lower()
+            for item in SecurityVisitor.__DOWNLOAD:
+                if re.match(r'(http|https|www)[_\-a-zA-Z0-9:\/.]*{text}$'
+                        .format(text = item), value):
+                    integrity_check = False
+                    for other in au.attributes:
+                        name = other.name.strip().lower()
+                        if 'checksum' in name or 'gpg' in name:
+                            integrity_check = True
+                            break
+
+                    if not integrity_check:
+                        errors.append(Error('sec_no_int_check', a, file, repr(a)))
+
+                    break
+
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
@@ -137,26 +158,29 @@ class SecurityVisitor(RuleVisitor):
         name = name.strip().lower()
         value = value.strip().lower()
 
-        if (re.match(SecurityVisitor.URL_REGEX, value) and
+        if (re.match(SecurityVisitor.__URL_REGEX, value) and
                 ('http' in value or 'www' in value) and 'https' not in value):
             errors.append(Error('sec_https', c, file, repr(c)))
         elif re.match(r'^0.0.0.0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
         elif value.startswith('sha1') or value.startswith('md5'):
             errors.append(Error('sec_weak_crypt', c, file, repr(c)))
-        elif (name in SecurityVisitor.ROLES or name in SecurityVisitor.USERS) \
+        elif (name in SecurityVisitor.__ROLES or name in SecurityVisitor.__USERS) \
                 and 'admin' in value:
             errors.append(Error('sec_def_admin', c, file, repr(c)))
-        elif name in SecurityVisitor.PASSWORDS and len(value) == 0:
+        elif name in SecurityVisitor.__PASSWORDS and len(value) == 0:
             errors.append(Error('sec_empty_pass', c, file, repr(c)))
-        elif ((name in SecurityVisitor.PASSWORDS or name in SecurityVisitor.SECRETS 
-                or name in SecurityVisitor.USERS) and len(value) > 0):
+        elif ((name in SecurityVisitor.__PASSWORDS or name in SecurityVisitor.__SECRETS 
+                or name in SecurityVisitor.__USERS) and len(value) > 0):
             errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-            if (name in SecurityVisitor.PASSWORDS):
+            if (name in SecurityVisitor.__PASSWORDS):
                 errors.append(Error('sec_hard_pass', c, file, repr(c)))
-            elif (name in SecurityVisitor.USERS):
+            elif (name in SecurityVisitor.__USERS):
                 errors.append(Error('sec_hard_user', c, file, repr(c)))
+        elif (('gpgcheck' in name or 'get_checksum' in name) \
+                and (value == 'no' or value == 'false')):
+            errors.append(Error('sec_no_int_check', c, file, repr(c)))
 
         return errors
 
@@ -169,7 +193,7 @@ class SecurityVisitor(RuleVisitor):
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
         lines = c.content.lower().split('\n')
-        for word in SecurityVisitor.WRONG_WORDS:
+        for word in SecurityVisitor.__WRONG_WORDS:
             for line in lines:
                 if word in line:
                     errors.append(Error('sec_susp_comm', c, file, line))
