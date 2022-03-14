@@ -73,6 +73,12 @@ class AnsibleParser(p.Parser):
     #FIXME It might be a good idea to have a recursive approach
     @staticmethod
     def __parse_tasks(unit_block, tasks):
+        def create_attribute(token, name, value):
+            has_variable = "{{" in value and "}}" in value
+            a = Attribute(name, value, has_variable)
+            a.line = token.start_mark.line + 1
+            attributes.append(a)
+
         for task in tasks.value:
             atomic_units, attributes = [], []
             type, line = "", 0
@@ -99,27 +105,19 @@ class AnsibleParser(p.Parser):
                                     atomic_units.append(AtomicUnit(name, type))
                             else:
                                 if isinstance(atr_val, ScalarNode):
-                                    a = Attribute(atr.value, str(atr_val.value))
-                                    a.line = atr.start_mark.line + 1
-                                    attributes.append(a)
+                                    create_attribute(atr, atr.value, str(atr_val.value))
                                 elif isinstance(atr_val, SequenceNode):
                                     value = []
                                     for v in atr_val.value:
                                         value.append(v.value)
-                                    a = Attribute(atr.value, str(value))
-                                    a.line = atr.start_mark.line + 1
-                                    attributes.append(a)
+                                    create_attribute(atr, atr.value, str(value))
                     elif (isinstance(val, ScalarNode)):
-                        a = Attribute(key.value, str(val.value))
-                        a.line = key.start_mark.line + 1
-                        attributes.append(a)
+                        create_attribute(key, key.value, str(val.value))
                     elif isinstance(val, SequenceNode):
                         value = []
                         for v in val.value:
                             value.append(v.value)
-                        a = Attribute(key.value, str(value))
-                        a.line = key.start_mark.line + 1
-                        attributes.append(a)
+                        create_attribute(key, key.value, str(value))
 
             # If it was a task without a module we ignore it (e.g. dependency)
             for au in atomic_units:

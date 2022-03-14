@@ -40,11 +40,13 @@ class Variable(CodeElement):
 class Attribute(CodeElement):
     name: str
     value: str
+    has_variable: bool
 
-    def __init__(self, name: str, value: str) -> None:
+    def __init__(self, name: str, value: str, has_variable: bool) -> None:
         super().__init__()
         self.name = name
         self.value = value
+        self.has_variable = has_variable
 
     def __repr__(self) -> str:
         value = self.value.split('\n')[0]

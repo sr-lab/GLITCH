@@ -153,7 +153,9 @@ class SecurityVisitor(RuleVisitor):
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
         return []
 
-    def __check_keyvalue(self, c: CodeElement, name: str, value: str, file: str):
+    # FIXME attribute and variables need to have superclass
+    def __check_keyvalue(self, c: CodeElement, name: str, 
+            value: str, has_variable: bool, file: str):
         errors = []
         name = name.strip().lower()
         value = value.strip().lower()
@@ -171,7 +173,7 @@ class SecurityVisitor(RuleVisitor):
         elif name in SecurityVisitor.__PASSWORDS and len(value) == 0:
             errors.append(Error('sec_empty_pass', c, file, repr(c)))
         elif ((name in SecurityVisitor.__PASSWORDS or name in SecurityVisitor.__SECRETS 
-                or name in SecurityVisitor.__USERS) and len(value) > 0):
+                or name in SecurityVisitor.__USERS) and len(value) > 0 and not has_variable):
             errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
             if (name in SecurityVisitor.__PASSWORDS):
@@ -185,10 +187,10 @@ class SecurityVisitor(RuleVisitor):
         return errors
 
     def check_attribute(self, a: Attribute, file: str) -> list[Error]:
-        return self.__check_keyvalue(a, a.name, a.value, file)
+        return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
-        return self.__check_keyvalue(v, v.name, v.value, file)
+        return self.__check_keyvalue(v, v.name, v.value, False, file) #FIXME
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
