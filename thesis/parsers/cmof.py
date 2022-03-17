@@ -4,7 +4,6 @@ import tempfile
 from string import Template
 import ruamel.yaml as yaml
 from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, CommentToken
-from pkg_resources import resource_filename 
 
 import thesis.parsers.parser as p
 from thesis.repr.inter import *
@@ -12,7 +11,7 @@ from thesis.parsers.ruby_parser import parser_yacc
 from thesis.helpers import remove_unmatched_brackets
 
 class AnsibleParser(p.Parser):
-    def __get_yaml_comments(self, d):
+    def __get_yaml_comments(self, d, file):
         def extract_from_token(tokenlist):
             res = []
             for token in tokenlist:
@@ -47,8 +46,14 @@ class AnsibleParser(p.Parser):
 
             return res
 
-        return set(filter(lambda c: "#" in c[1], \
+        comments = list(filter(lambda c: "#" in c[1], \
             [(c[0] + 1, c[1].strip()) for c in yaml_comments(d)]))
+        file.seek(0, 0)
+        for i, line in enumerate(file.readlines()):
+            if line.startswith("#"):
+                comments.append((i + 1, line))
+
+        return set(comments)
 
     @staticmethod
     def __parse_vars(unit_block, cur_name, vmap):
@@ -146,7 +151,7 @@ class AnsibleParser(p.Parser):
                     elif (key.value == "tasks"):
                         AnsibleParser.__parse_tasks(unit_block, value)
 
-            for comment in self.__get_yaml_comments(parsed_file):
+            for comment in self.__get_yaml_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 unit_block.add_comment(c)
@@ -166,7 +171,7 @@ class AnsibleParser(p.Parser):
                 return unit_block
 
             AnsibleParser.__parse_tasks(unit_block, parsed_file)
-            for comment in self.__get_yaml_comments(parsed_file):
+            for comment in self.__get_yaml_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 unit_block.add_comment(c)
@@ -186,7 +191,7 @@ class AnsibleParser(p.Parser):
                 return unit_block
 
             AnsibleParser.__parse_vars(unit_block, "", parsed_file)
-            for comment in self.__get_yaml_comments(parsed_file):
+            for comment in self.__get_yaml_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 unit_block.add_comment(c)
@@ -198,12 +203,14 @@ class AnsibleParser(p.Parser):
 
     @staticmethod
     def __apply_to_files(module, path, p_function):
-        if os.path.exists(path):
+        if os.path.exists(path) and os.path.isdir(path) \
+                and not os.path.islink(path):
             files = [f for f in os.listdir(path) \
                 if os.path.isfile(os.path.join(path, f)) and f.endswith(('.yml', '.yaml'))]
             for file in files:
-                with open(path + file) as f:
-                    unit_block = p_function(path + file, f)
+                f_path = os.path.join(path, file)
+                with open(f_path) as f:
+                    unit_block = p_function(f_path, f)
                     if (unit_block is not None):
                         module.add_block(unit_block)
 
@@ -211,10 +218,10 @@ class AnsibleParser(p.Parser):
         res: Module = Module(os.path.basename(os.path.normpath(path)))
         super().parse_file_structure(res.folder, path)
 
-        AnsibleParser.__apply_to_files(res, f"{path}/tasks/", self.__parse_tasks_file)
-        AnsibleParser.__apply_to_files(res, f"{path}/handlers/", self.__parse_tasks_file)
-        AnsibleParser.__apply_to_files(res, f"{path}/vars/", self.__parse_vars_file)
-        AnsibleParser.__apply_to_files(res, f"{path}/defaults/", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/tasks", self.__parse_tasks_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/handlers", self.__parse_tasks_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/vars", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/defaults", self.__parse_vars_file)
 
         # Check subfolders
         subfolders = [f.path for f in os.scandir(f"{path}/") if f.is_dir() and not f.is_symlink()]
@@ -226,30 +233,33 @@ class AnsibleParser(p.Parser):
 
         return res
 
-    def parse_folder(self, path: str) -> Project:
+    def parse_folder(self, path: str, root=True) -> Project:
         '''
         It follows the sample directory layout found in:
         https://docs.ansible.com/ansible/latest/user_guide/sample_setup.html#sample-directory-layout
         '''
         res: Project = Project(os.path.basename(os.path.normpath(path)))
 
-        AnsibleParser.__apply_to_files(res, f"{path}/", self.__parse_playbook)
-        AnsibleParser.__apply_to_files(res, f"{path}/playbooks/", self.__parse_playbook)
-        AnsibleParser.__apply_to_files(res, f"{path}/group_vars/", self.__parse_vars_file)
-        AnsibleParser.__apply_to_files(res, f"{path}/host_vars/", self.__parse_vars_file)
-        AnsibleParser.__apply_to_files(res, f"{path}/tasks/", self.__parse_tasks_file)
+        if root:
+            AnsibleParser.__apply_to_files(res, f"{path}", self.__parse_playbook)
+        AnsibleParser.__apply_to_files(res, f"{path}/playbooks", self.__parse_playbook)
+        AnsibleParser.__apply_to_files(res, f"{path}/group_vars", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/host_vars", self.__parse_vars_file)
+        AnsibleParser.__apply_to_files(res, f"{path}/tasks", self.__parse_tasks_file)
 
-        if os.path.exists(f"{path}/roles/"):
-            subfolders = [f.path for f in os.scandir(f"{path}/roles/") if f.is_dir()]
+        if os.path.exists(f"{path}/roles") and not os.path.islink(f"{path}/roles"):
+            subfolders = [f.path for f in os.scandir(f"{path}/roles") 
+                if f.is_dir() and not f.is_symlink()]
             for m in subfolders:
                 res.add_module(self.parse_module(m))
 
         # Check subfolders
-        subfolders = [f.path for f in os.scandir(f"{path}/") if f.is_dir() and not f.is_symlink()]
+        subfolders = [f.path for f in os.scandir(f"{path}") 
+            if f.is_dir() and not f.is_symlink()]
         for d in subfolders:
             if os.path.dirname(d) not \
                     in ["playbooks", "group_vars", "host_vars", "tasks", "roles"]:
-                aux = self.parse_folder(d)
+                aux = self.parse_folder(d, root=False)
                 res.blocks += aux.blocks
                 res.modules += aux.modules
 

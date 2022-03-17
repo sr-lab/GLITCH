@@ -28,7 +28,7 @@ class Error():
         self.repr = repr
 
     def to_csv(self) -> str:
-        return f"{self.path}, {self.el.line}, {self.code}, {self.repr}"
+        return f"{self.path},{self.el.line},{self.code},{self.repr.strip()}"
 
     def __repr__(self) -> str:
         with open(self.path) as f:
@@ -163,26 +163,29 @@ class SecurityVisitor(RuleVisitor):
         if (re.match(SecurityVisitor.__URL_REGEX, value) and
                 ('http' in value or 'www' in value) and 'https' not in value):
             errors.append(Error('sec_https', c, file, repr(c)))
-        elif re.match(r'^0.0.0.0', value):
+        if re.match(r'^0.0.0.0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
-        elif value.startswith('sha1') or value.startswith('md5'):
+        if value.startswith('sha1') or value.startswith('md5'):
             errors.append(Error('sec_weak_crypt', c, file, repr(c)))
-        elif (name in SecurityVisitor.__ROLES or name in SecurityVisitor.__USERS) \
+        if (name in SecurityVisitor.__ROLES or name in SecurityVisitor.__USERS) \
                 and 'admin' in value:
             errors.append(Error('sec_def_admin', c, file, repr(c)))
-        elif name in SecurityVisitor.__PASSWORDS and len(value) == 0:
+        if name in SecurityVisitor.__PASSWORDS and len(value) == 0:
             errors.append(Error('sec_empty_pass', c, file, repr(c)))
-        elif ((name in SecurityVisitor.__PASSWORDS or name in SecurityVisitor.__SECRETS 
-                or name in SecurityVisitor.__USERS) and len(value) > 0 and not has_variable):
-            errors.append(Error('sec_hard_secr', c, file, repr(c)))
-
-            if (name in SecurityVisitor.__PASSWORDS):
-                errors.append(Error('sec_hard_pass', c, file, repr(c)))
-            elif (name in SecurityVisitor.__USERS):
-                errors.append(Error('sec_hard_user', c, file, repr(c)))
-        elif (('gpgcheck' in name or 'get_checksum' in name) \
+        if (('gpgcheck' in name or 'get_checksum' in name) \
                 and (value == 'no' or value == 'false')):
             errors.append(Error('sec_no_int_check', c, file, repr(c)))
+
+        for item in (SecurityVisitor.__PASSWORDS + 
+                SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
+            if (re.match(r'[_A-Za-z0-9-]*{text}\b'.format(text=item), name)
+                    and len(value) > 0 and not has_variable):
+                errors.append(Error('sec_hard_secr', c, file, repr(c)))
+
+                if (item in SecurityVisitor.__PASSWORDS):
+                    errors.append(Error('sec_hard_pass', c, file, repr(c)))
+                elif (item in SecurityVisitor.__USERS):
+                    errors.append(Error('sec_hard_user', c, file, repr(c)))
 
         return errors
 
@@ -194,10 +197,9 @@ class SecurityVisitor(RuleVisitor):
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
-        lines = c.content.lower().split('\n')
+        lines = c.content.split('\n')
         for word in SecurityVisitor.__WRONG_WORDS:
             for line in lines:
-                if word in line:
+                if word in line.lower():
                     errors.append(Error('sec_susp_comm', c, file, line))
-                    break
         return errors
