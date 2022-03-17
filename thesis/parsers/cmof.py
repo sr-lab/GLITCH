@@ -75,7 +75,6 @@ class AnsibleParser(p.Parser):
         except:
             pass #FIXME
 
-    #FIXME It might be a good idea to have a recursive approach
     @staticmethod
     def __parse_tasks(unit_block, tasks):
         def create_attribute(token, name, value):
@@ -84,9 +83,22 @@ class AnsibleParser(p.Parser):
             a.line = token.start_mark.line + 1
             attributes.append(a)
 
+        def parse_attribute(cur_name, token, val):
+            if isinstance(val, MappingNode):
+                for aux, aux_val in val.value:
+                    parse_attribute(f"{cur_name}.{aux.value}", aux, aux_val)
+            elif isinstance(val, ScalarNode):
+                create_attribute(token, cur_name, str(val.value))
+            elif isinstance(val, SequenceNode):
+                value = []
+                for v in val.value:
+                    value.append(v.value)
+                create_attribute(token, cur_name, str(value))
+
         for task in tasks.value:
             atomic_units, attributes = [], []
             type, line = "", 0
+            is_block = False
 
             for key, val in task.value:
                 # Dependencies
@@ -95,8 +107,13 @@ class AnsibleParser(p.Parser):
                     d.line = key.start_mark.line + 1
                     unit_block.add_dependency(d)
                     break
-
-                if key.value != "name":
+                if key.value == "block":
+                    is_block = True
+                    size = len(unit_block.atomic_units)
+                    AnsibleParser.__parse_tasks(unit_block, val)
+                    created = len(unit_block.atomic_units) - size
+                    atomic_units = unit_block.atomic_units[-created:]
+                elif key.value != "name":
                     if type == "":
                         type = key.value
                         line = task.start_mark.line + 1
@@ -109,13 +126,7 @@ class AnsibleParser(p.Parser):
                                     if name == "": continue
                                     atomic_units.append(AtomicUnit(name, type))
                             else:
-                                if isinstance(atr_val, ScalarNode):
-                                    create_attribute(atr, atr.value, str(atr_val.value))
-                                elif isinstance(atr_val, SequenceNode):
-                                    value = []
-                                    for v in atr_val.value:
-                                        value.append(v.value)
-                                    create_attribute(atr, atr.value, str(value))
+                                parse_attribute(atr.value, atr, atr_val)
                     elif (isinstance(val, ScalarNode)):
                         create_attribute(key, key.value, str(val.value))
                     elif isinstance(val, SequenceNode):
@@ -123,6 +134,11 @@ class AnsibleParser(p.Parser):
                         for v in val.value:
                             value.append(v.value)
                         create_attribute(key, key.value, str(value))
+
+            if is_block:
+                for au in atomic_units:
+                    au.attributes += attributes
+                continue
 
             # If it was a task without a module we ignore it (e.g. dependency)
             for au in atomic_units:
@@ -178,8 +194,8 @@ class AnsibleParser(p.Parser):
 
             return unit_block
         except:
-            # FIXME is not a tasks file
-            return None
+           # FIXME is not a tasks file
+           return None
 
     def __parse_vars_file(self, name, file) -> UnitBlock:
         try:
