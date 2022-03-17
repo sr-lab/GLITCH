@@ -3,7 +3,8 @@ import re
 import tempfile
 from string import Template
 import ruamel.yaml as yaml
-from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, CommentToken
+from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, \
+    CommentToken, CollectionNode
 
 import thesis.parsers.parser as p
 from thesis.repr.inter import *
@@ -63,8 +64,12 @@ class AnsibleParser(p.Parser):
                     AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", val)
                 elif isinstance(val, SequenceNode):
                     value = []
-                    for v in val.value:
-                        value.append(v.value)
+                    for i, v in enumerate(val.value):
+                        if isinstance(val, CollectionNode):
+                            AnsibleParser.__parse_vars(unit_block,
+                                    f"{cur_name}{key.value}[{i}].", v)
+                        else:
+                            value.append(v.value)
                     v = Variable(cur_name + key.value, str(value))
                     v.line = key.start_mark.line + 1
                     unit_block.add_variable(v)

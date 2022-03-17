@@ -31,7 +31,8 @@ class Variable(CodeElement):
 
     def __repr__(self) -> str:
         value = self.value.split('\n')[0]
-        return f"{self.name}:{value}"
+        name = self.name.split('.')[-1]
+        return f"{name}:{value}"
 
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + "->" + self.value + \
