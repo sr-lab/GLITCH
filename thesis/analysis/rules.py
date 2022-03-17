@@ -1,6 +1,7 @@
 import re
 from thesis.repr.inter import *
 from abc import ABC, abstractmethod
+from urllib.parse import urlparse
 
 class Error():
     __ERRORS = {
@@ -84,9 +85,9 @@ class SecurityVisitor(RuleVisitor):
     __WRONG_WORDS = ['bug', 'debug', 'todo', 'to-do', 'to_do', 'fix',
             'issue', 'problem', 'solve', 'hack', 'ticket', 'later', 'incorrect', 'fixme']
     __PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
-    __USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name', 
+    __USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name',
             'owner-name', 'owner_name', 'owner', 'admin', 'login', 'userid', 'loginid']
-    __SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id"
+    __SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id",
             "cert", "token", "ssh_key", "rsa", "ssl", 'auth_token', 
             'authetication_token','auth-token', 'authentication-token', 'md5' 
             'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
@@ -96,6 +97,8 @@ class SecurityVisitor(RuleVisitor):
     __ROLES = ["role"]
     __DOWNLOAD = ['iso', 'tar', 'tar.gz', 'tar.bzip2', 'zip', 
             'rar', 'gzip', 'gzip2', 'deb', 'rpm', 'sh', 'run', 'bin']
+    __SSH_DIR = ['source', 'destination', 'path', 'directory', 
+        'src', 'dest', 'file']
 
     def check_project(self, p: Project) -> list[Error]:
         errors = []
@@ -160,9 +163,13 @@ class SecurityVisitor(RuleVisitor):
         name = name.strip().lower()
         value = value.strip().lower()
 
-        if (re.match(SecurityVisitor.__URL_REGEX, value) and
-                ('http' in value or 'www' in value) and 'https' not in value):
-            errors.append(Error('sec_https', c, file, repr(c)))
+        try:
+            if (urlparse(value).scheme == 'http'):
+                errors.append(Error('sec_https', c, file, repr(c)))
+        except:
+            # The url is not valid
+            pass
+
         if re.match(r'^0.0.0.0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
         if value.startswith('sha1') or value.startswith('md5'):
@@ -178,7 +185,7 @@ class SecurityVisitor(RuleVisitor):
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9-]*{text}\b'.format(text=item), name)
+            if (re.match(r'[_A-Za-z0-9\.\[\]-]*{text}\b'.format(text=item), name)
                     and len(value) > 0 and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
@@ -186,6 +193,11 @@ class SecurityVisitor(RuleVisitor):
                     errors.append(Error('sec_hard_pass', c, file, repr(c)))
                 elif (item in SecurityVisitor.__USERS):
                     errors.append(Error('sec_hard_user', c, file, repr(c)))
+
+        for item in SecurityVisitor.__SSH_DIR:
+            if item.lower() in name:
+                if len(value) > 0 and '/id_rsa' in value:
+                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         return errors
 
