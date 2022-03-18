@@ -51,8 +51,8 @@ class AnsibleParser(p.Parser):
             [(c[0] + 1, c[1].strip()) for c in yaml_comments(d)]))
         file.seek(0, 0)
         for i, line in enumerate(file.readlines()):
-            if line.startswith("#"):
-                comments.append((i + 1, line))
+            if line.strip().startswith("#"):
+                comments.append((i + 1, line.strip()))
 
         return set(comments)
 
@@ -227,7 +227,8 @@ class AnsibleParser(p.Parser):
         if os.path.exists(path) and os.path.isdir(path) \
                 and not os.path.islink(path):
             files = [f for f in os.listdir(path) \
-                if os.path.isfile(os.path.join(path, f)) and f.endswith(('.yml', '.yaml'))]
+                if os.path.isfile(os.path.join(path, f))
+                    and not f.startswith('.') and f.endswith(('.yml', '.yaml'))]
             for file in files:
                 f_path = os.path.join(path, file)
                 with open(f_path) as f:

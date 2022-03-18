@@ -80,8 +80,6 @@ class RuleVisitor(ABC):
 
 # FIXME we may want to look to the improvements made to these detections
 class SecurityVisitor(RuleVisitor):
-    __URL_REGEX = r'^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)' \
-        '?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$'
     __WRONG_WORDS = ['bug', 'debug', 'todo', 'to-do', 'to_do', 'fix',
             'issue', 'problem', 'solve', 'hack', 'ticket', 'later', 'incorrect', 'fixme']
     __PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
@@ -177,22 +175,22 @@ class SecurityVisitor(RuleVisitor):
         if (name in SecurityVisitor.__ROLES or name in SecurityVisitor.__USERS) \
                 and 'admin' in value:
             errors.append(Error('sec_def_admin', c, file, repr(c)))
-        if name in SecurityVisitor.__PASSWORDS and len(value) == 0:
-            errors.append(Error('sec_empty_pass', c, file, repr(c)))
         if (('gpgcheck' in name or 'get_checksum' in name) \
                 and (value == 'no' or value == 'false')):
             errors.append(Error('sec_no_int_check', c, file, repr(c)))
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9\.\[\]-]*{text}\b'.format(text=item), name)
-                    and len(value) > 0 and not has_variable):
-                errors.append(Error('sec_hard_secr', c, file, repr(c)))
+            if (re.match(r'[_A-Za-z0-9\.\[\]-]*{text}\b'.format(text=item), name)):
+                if (len(value) > 0 and not has_variable):
+                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-                if (item in SecurityVisitor.__PASSWORDS):
-                    errors.append(Error('sec_hard_pass', c, file, repr(c)))
-                elif (item in SecurityVisitor.__USERS):
-                    errors.append(Error('sec_hard_user', c, file, repr(c)))
+                    if (item in SecurityVisitor.__PASSWORDS):
+                        errors.append(Error('sec_hard_pass', c, file, repr(c)))
+                    elif (item in SecurityVisitor.__USERS):
+                        errors.append(Error('sec_hard_user', c, file, repr(c)))
+                elif (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
+                    errors.append(Error('sec_empty_pass', c, file, repr(c)))
 
         for item in SecurityVisitor.__SSH_DIR:
             if item.lower() in name:
