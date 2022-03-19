@@ -97,8 +97,13 @@ class AnsibleParser(p.Parser):
             elif isinstance(val, SequenceNode):
                 value = []
                 for v in val.value:
-                    value.append(v.value)
-                create_attribute(token, cur_name, str(value))
+                    if not isinstance(v, ScalarNode):
+                        parse_attribute(cur_name, token, v)
+                    else:
+                        value.append(v.value)
+
+                if len(value) > 0:
+                    create_attribute(key, key.value, str(value))
 
         for task in tasks.value:
             atomic_units, attributes = [], []
@@ -137,8 +142,12 @@ class AnsibleParser(p.Parser):
                     elif isinstance(val, SequenceNode):
                         value = []
                         for v in val.value:
-                            value.append(v.value)
-                        create_attribute(key, key.value, str(value))
+                            if not isinstance(v, ScalarNode):
+                                parse_attribute(key.value, key, v)
+                            else:
+                                value.append(v.value)
+                        if len(value) > 0:
+                            create_attribute(key, key.value, str(value))
 
             if is_block:
                 for au in atomic_units:
@@ -169,7 +178,7 @@ class AnsibleParser(p.Parser):
                 for key, value in play.value:
                     if (key.value == "vars"):
                         AnsibleParser.__parse_vars(unit_block, "", value)
-                    elif (key.value == "tasks"):
+                    elif (key.value in ["tasks", "pre_tasks", "post_tasks", "handlers"]):
                         AnsibleParser.__parse_tasks(unit_block, value)
 
             for comment in self.__get_yaml_comments(parsed_file, file):

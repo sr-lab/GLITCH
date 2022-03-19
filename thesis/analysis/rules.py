@@ -85,7 +85,7 @@ class SecurityVisitor(RuleVisitor):
     __PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
     __USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name',
             'owner-name', 'owner_name', 'owner', 'admin', 'login', 'userid', 'loginid']
-    __SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id",
+    __SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id", "key",
             "cert", "token", "ssh_key", "rsa", "ssl", 'auth_token', 
             'authetication_token','auth-token', 'authentication-token', 'md5' 
             'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
