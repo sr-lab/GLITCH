@@ -1,4 +1,4 @@
-import os
+import os, sys
 import re
 import tempfile
 from string import Template
@@ -57,28 +57,26 @@ class AnsibleParser(p.Parser):
         return set(comments)
 
     @staticmethod
-    def __parse_vars(unit_block, cur_name, vmap):
-        try:
-            for key, val in vmap.value:
-                if isinstance(val, MappingNode):
-                    AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", val)
-                elif isinstance(val, SequenceNode):
-                    value = []
-                    for i, v in enumerate(val.value):
-                        if isinstance(val, CollectionNode):
-                            AnsibleParser.__parse_vars(unit_block,
-                                    f"{cur_name}{key.value}[{i}].", v)
-                        else:
-                            value.append(v.value)
-                    v = Variable(cur_name + key.value, str(value))
-                    v.line = key.start_mark.line + 1
-                    unit_block.add_variable(v)
+    def __parse_vars(unit_block, cur_name, token):
+        if isinstance(token, MappingNode):
+            for key, v in token.value:
+                AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", v)
+        elif isinstance(token, SequenceNode):
+            value = []
+            for i, v in enumerate(token.value):
+                if isinstance(v, CollectionNode):
+                    AnsibleParser.__parse_vars(unit_block, f"{cur_name}[{i}].", v)
                 else:
-                    v = Variable(cur_name + key.value, str(val.value))
-                    v.line = key.start_mark.line + 1
-                    unit_block.add_variable(v)
-        except:
-            pass #FIXME
+                    value.append(v.value)
+
+            if (len(value) > 0):
+                v = Variable(cur_name, str(value))
+                v.line = token.start_mark.line + 1
+                unit_block.add_variable(v)
+        else:
+            v = Variable(cur_name[:-1], str(token.value))
+            v.line = token.start_mark.line + 1
+            unit_block.add_variable(v)
 
     @staticmethod
     def __parse_tasks(unit_block, tasks):
@@ -188,7 +186,7 @@ class AnsibleParser(p.Parser):
 
             return unit_block
         except:
-            # FIXME is not a playbook
+            print(f"Ansible - File is not a playbook: {file.name}", file=sys.stderr)
             return None
 
     def __parse_tasks_file(self, name, file) -> UnitBlock:
@@ -208,7 +206,7 @@ class AnsibleParser(p.Parser):
 
             return unit_block
         except:
-           # FIXME is not a tasks file
+           print(f"Ansible - File is not a tasks file: {file.name}", file=sys.stderr)
            return None
 
     def __parse_vars_file(self, name, file) -> UnitBlock:
@@ -228,7 +226,7 @@ class AnsibleParser(p.Parser):
 
             return unit_block
         except:
-            # FIXME is not a vars file
+            print(f"Ansible - File is not a variables file: {file.name}", file=sys.stderr)
             return None
 
     @staticmethod
