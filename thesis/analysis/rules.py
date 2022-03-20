@@ -80,6 +80,7 @@ class RuleVisitor(ABC):
 
 # FIXME we may want to look to the improvements made to these detections
 class SecurityVisitor(RuleVisitor):
+    __URL_REGEX = r'^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$'
     __WRONG_WORDS = ['bug', 'debug', 'todo', 'to-do', 'to_do', 'fix',
             'issue', 'problem', 'solve', 'hack', 'ticket', 'later', 'incorrect', 'fixme']
     __PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
@@ -87,7 +88,7 @@ class SecurityVisitor(RuleVisitor):
             'owner-name', 'owner_name', 'owner', 'admin', 'login', 'userid', 'loginid']
     __SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id", "key",
             "cert", "token", "ssh_key", "rsa", "ssl", 'auth_token', 
-            'authetication_token','auth-token', 'authentication-token', 'md5' 
+            'authetication_token','auth-token', 'authentication-token', 'md5',
             'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
             'ssh-key-content', 'ssh_key_public', 'ssh-key-public', 'ssh_key_private', 
             'ssh-key-private', 'ssh_key_public_content', 'ssh_key_private_content', 
@@ -166,7 +167,9 @@ class SecurityVisitor(RuleVisitor):
         value = value.strip().lower()
 
         try:
-            if (urlparse(value).scheme == 'http'):
+            if (re.match(SecurityVisitor.__URL_REGEX, value) and
+                ('http' in value or 'www' in value) and 'https' not in value) or \
+                    (urlparse(value).scheme == 'http'):
                 errors.append(Error('sec_https', c, file, repr(c)))
         except:
             # The url is not valid
@@ -185,7 +188,7 @@ class SecurityVisitor(RuleVisitor):
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9\.\[\]-]*{text}\b'.format(text=item), name)):
+            if (re.match(r'[_A-Za-z0-9\/\.\[\]-]*{text}\b'.format(text=item), name)):
                 if (len(value) > 0 and not has_variable):
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
