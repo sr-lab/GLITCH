@@ -103,7 +103,9 @@ class UnitBlock:
     dependencies: list[Dependency]
     comments: list[Comment]
     variables: list[Variable]
+    attributes: list[Attribute]
     atomic_units: list[AtomicUnit]
+    unit_blocks: list['UnitBlock']
     path: str
 
     def __init__(self, name: str) -> None:
@@ -111,6 +113,8 @@ class UnitBlock:
         self.comments = []
         self.variables = []
         self.atomic_units = []
+        self.unit_blocks = []
+        self.attributes = []
         self.name = name
 
     def __repr__(self) -> str:
@@ -128,6 +132,12 @@ class UnitBlock:
     def add_atomic_unit(self, a: AtomicUnit) -> None:
         self.atomic_units.append(a)
 
+    def add_unit_block(self, u: 'UnitBlock') -> None:
+        self.unit_blocks.append(u)
+
+    def add_attributes(self, a: Attribute) -> None:
+        self.attributes.append(a)
+
     def print(self, tab) -> str:
         res = (tab * "\t") + self.name + "\n"
         
@@ -143,9 +153,17 @@ class UnitBlock:
         for variable in self.variables:
             res += variable.print(tab + 2) + "\n"
 
+        res += (tab * "\t") + "\tattributes:\n"
+        for attribute in self.attributes:
+            res += attribute.print(tab + 2) + "\n"
+
         res += (tab * "\t") + "\tatomic units:\n"
         for atomic in self.atomic_units:
             res += atomic.print(tab + 2) + "\n"
+
+        res += (tab * "\t") + "\tunit blocks:\n"
+        for unit_block in self.unit_blocks:
+            res += unit_block.print(tab + 2) + "\n"
 
         return res
 

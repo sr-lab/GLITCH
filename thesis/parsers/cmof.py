@@ -79,30 +79,34 @@ class AnsibleParser(p.Parser):
             unit_block.add_variable(v)
 
     @staticmethod
-    def __parse_tasks(unit_block, tasks):
+    def __parse_attribute(cur_name, token, val):
         def create_attribute(token, name, value):
             has_variable = "{{" in value and "}}" in value
             a = Attribute(name, value, has_variable)
             a.line = token.start_mark.line + 1
             attributes.append(a)
 
-        def parse_attribute(cur_name, token, val):
-            if isinstance(val, MappingNode):
-                for aux, aux_val in val.value:
-                    parse_attribute(f"{cur_name}.{aux.value}", aux, aux_val)
-            elif isinstance(val, ScalarNode):
-                create_attribute(token, cur_name, str(val.value))
-            elif isinstance(val, SequenceNode):
-                value = []
-                for v in val.value:
-                    if not isinstance(v, ScalarNode):
-                        parse_attribute(cur_name, token, v)
-                    else:
-                        value.append(v.value)
+        attributes = []
+        if isinstance(val, MappingNode):
+            for aux, aux_val in val.value:
+                attributes += AnsibleParser.__parse_attribute(f"{cur_name}.{aux.value}", 
+                        aux, aux_val)
+        elif isinstance(val, ScalarNode):
+            create_attribute(token, cur_name, str(val.value))
+        elif isinstance(val, SequenceNode):
+            value = []
+            for i, v in enumerate(val.value):
+                if not isinstance(v, ScalarNode):
+                    attributes += AnsibleParser.__parse_attribute(f"{cur_name}[{i}]", token, v)
+                else:
+                    value.append(v.value)
 
-                if len(value) > 0:
-                    create_attribute(key, key.value, str(value))
+            if len(value) > 0:
+                create_attribute(token, cur_name, str(value))
+        return attributes
 
+    @staticmethod
+    def __parse_tasks(unit_block, tasks):
         for task in tasks.value:
             atomic_units, attributes = [], []
             type, line = "", 0
@@ -134,18 +138,9 @@ class AnsibleParser(p.Parser):
                                     if name == "": continue
                                     atomic_units.append(AtomicUnit(name, type))
                             else:
-                                parse_attribute(atr.value, atr, atr_val)
-                    elif (isinstance(val, ScalarNode)):
-                        create_attribute(key, key.value, str(val.value))
-                    elif isinstance(val, SequenceNode):
-                        value = []
-                        for v in val.value:
-                            if not isinstance(v, ScalarNode):
-                                parse_attribute(key.value, key, v)
-                            else:
-                                value.append(v.value)
-                        if len(value) > 0:
-                            create_attribute(key, key.value, str(value))
+                                attributes += AnsibleParser.__parse_attribute(atr.value, atr, atr_val)
+                    else:
+                        attributes += AnsibleParser.__parse_attribute(key.value, key, val)
 
             if is_block:
                 for au in atomic_units:
@@ -172,12 +167,22 @@ class AnsibleParser(p.Parser):
             unit_block = UnitBlock(name)
             unit_block.path = file.name
 
-            for play in parsed_file.value:
-                for key, value in play.value:
-                    if (key.value == "vars"):
-                        AnsibleParser.__parse_vars(unit_block, "", value)
+            for p in parsed_file.value:
+                # Plays are unit blocks inside a unit block
+                play = UnitBlock("")
+                play.path = file.name
+
+                for key, value in p.value:
+                    if (key.value == "name" and play.name == ""):
+                        play.name = value.value
+                    elif (key.value == "vars"):
+                        AnsibleParser.__parse_vars(play, "", value)
                     elif (key.value in ["tasks", "pre_tasks", "post_tasks", "handlers"]):
-                        AnsibleParser.__parse_tasks(unit_block, value)
+                        AnsibleParser.__parse_tasks(play, value)
+                    else:
+                        play.attributes += AnsibleParser.__parse_attribute(key.value, key, value)
+
+                unit_block.add_unit_block(play)
 
             for comment in self.__get_yaml_comments(parsed_file, file):
                 c = Comment(comment[1])

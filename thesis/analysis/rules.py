@@ -123,6 +123,10 @@ class SecurityVisitor(RuleVisitor):
             errors += self.check_comment(c, u.path)
         for v in u.variables:
             errors += self.check_variable(v, u.path)
+        for ub in u.unit_blocks:
+            errors += self.check_unitblock(ub)
+        for a in u.attributes:
+            errors += self.check_attribute(a, u.path)
 
         return errors
 
