@@ -210,7 +210,7 @@ class SecurityVisitor(RuleVisitor):
         return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
-        return self.__check_keyvalue(v, v.name, v.value, False, file) #FIXME
+        return self.__check_keyvalue(v, v.name, v.value, v.has_variable, file) #FIXME
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []

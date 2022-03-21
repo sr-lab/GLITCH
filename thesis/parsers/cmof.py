@@ -58,6 +58,12 @@ class AnsibleParser(p.Parser):
 
     @staticmethod
     def __parse_vars(unit_block, cur_name, token):
+        def create_variable(name, value):
+            has_variable = ("{{" in value) and ("}}" in value)
+            v = Variable(name, value, has_variable)
+            v.line = token.start_mark.line + 1
+            unit_block.add_variable(v)
+        
         if isinstance(token, MappingNode):
             for key, v in token.value:
                 AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", v)
@@ -70,18 +76,14 @@ class AnsibleParser(p.Parser):
                     value.append(v.value)
 
             if (len(value) > 0):
-                v = Variable(cur_name, str(value))
-                v.line = token.start_mark.line + 1
-                unit_block.add_variable(v)
+                create_variable(cur_name, str(value))
         else:
-            v = Variable(cur_name[:-1], str(token.value))
-            v.line = token.start_mark.line + 1
-            unit_block.add_variable(v)
+            create_variable(cur_name[:-1], str(token.value))
 
     @staticmethod
     def __parse_attribute(cur_name, token, val):
         def create_attribute(token, name, value):
-            has_variable = "{{" in value and "}}" in value
+            has_variable = ("{{" in value) and ("}}" in value)
             a = Attribute(name, value, has_variable)
             a.line = token.start_mark.line + 1
             attributes.append(a)
