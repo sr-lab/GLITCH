@@ -60,6 +60,7 @@ class AnsibleParser(p.Parser):
     def __parse_vars(unit_block, cur_name, token):
         def create_variable(name, value):
             has_variable = ("{{" in value) and ("}}" in value)
+            if (value in ["null", "~"]): value = ""
             v = Variable(name, value, has_variable)
             v.line = token.start_mark.line + 1
             unit_block.add_variable(v)
@@ -84,6 +85,7 @@ class AnsibleParser(p.Parser):
     def __parse_attribute(cur_name, token, val):
         def create_attribute(token, name, value):
             has_variable = ("{{" in value) and ("}}" in value)
+            if (value in ["null", "~"]): value = ""
             a = Attribute(name, value, has_variable)
             a.line = token.start_mark.line + 1
             attributes.append(a)

@@ -86,13 +86,13 @@ class SecurityVisitor(RuleVisitor):
     __PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
     __USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name',
             'owner-name', 'owner_name', 'owner', 'admin', 'login', 'userid', 'loginid']
-    __SECRETS = ["uuid", "key", "crypt", "secret", "certificate", "id", "key",
-            "cert", "token", "ssh_key", "rsa", "ssl", 'auth_token', 
-            'authetication_token','auth-token', 'authentication-token', 'md5',
-            'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
+    __SECRETS = ["uuid", "crypt", "secret", "certificate", "token", "ssh_key", 
+            "rsa", 'auth_token',  'authetication_token','auth-token', 'authentication-token',
+            'md5', 'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
             'ssh-key-content', 'ssh_key_public', 'ssh-key-public', 'ssh_key_private', 
             'ssh-key-private', 'ssh_key_public_content', 'ssh_key_private_content', 
             'ssh-key-public-content', 'ssh-key-private-content']
+    __MISC = ['key','id', 'cert']
     __ROLES = ["role"]
     __DOWNLOAD = ['iso', 'tar', 'tar.gz', 'tar.bzip2', 'zip', 
             'rar', 'gzip', 'gzip2', 'deb', 'rpm', 'sh', 'run', 'bin']
@@ -203,6 +203,11 @@ class SecurityVisitor(RuleVisitor):
             if item.lower() in name:
                 if len(value) > 0 and '/id_rsa' in value:
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
+
+        for item in SecurityVisitor.__MISC:
+            if (re.match(r'[_A-Za-z0-9-]*{text}[-_]*$'.format(text=item), name) 
+                    and len(value) > 0 and not has_variable):
+                errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         return errors
 
