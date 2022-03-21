@@ -125,6 +125,8 @@ class AnsibleParser(p.Parser):
                     AnsibleParser.__parse_tasks(unit_block, val)
                     created = len(unit_block.atomic_units) - size
                     atomic_units = unit_block.atomic_units[-created:]
+                elif key.value == "always" or key.value == "rescue": # FIXME handling errors for blocks
+                    continue
                 elif key.value != "name":
                     if type == "":
                         type = key.value

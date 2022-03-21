@@ -163,7 +163,7 @@ class SecurityVisitor(RuleVisitor):
     def __check_keyvalue(self, c: CodeElement, name: str, 
             value: str, has_variable: bool, file: str):
         errors = []
-        name = name.strip().lower()
+        name = name.split('.')[-1].strip().lower()
         value = value.strip().lower()
 
         try:
