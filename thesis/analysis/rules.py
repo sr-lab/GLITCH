@@ -37,6 +37,14 @@ class Error():
                 f"{self.path}\nIssue on line {self.el.line}: {Error.__ERRORS[self.code]}\n" + \
                     f"{f.readlines()[self.el.line - 1].strip()}\n" 
 
+    def __hash__(self):
+        return hash((self.code, self.path, self.el.line))
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)): return NotImplemented
+        return self.code == other.code and self.path == other.path and\
+                    self.el.line == other.el.line
+
 class RuleVisitor(ABC):
     def check(self, code) -> list[Error]:
         if isinstance(code, Project):

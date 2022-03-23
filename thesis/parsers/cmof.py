@@ -56,6 +56,7 @@ class AnsibleParser(p.Parser):
             c_group_comments = c_group[1].strip().split("\n")
 
             for i, comment in enumerate(c_group_comments):
+                if comment == "": continue
                 aux = line + i
                 comment = comment.strip()
 
@@ -136,14 +137,12 @@ class AnsibleParser(p.Parser):
                     d.line = key.start_mark.line + 1
                     unit_block.add_dependency(d)
                     break
-                if key.value == "block":
+                if key.value in ["block", "always", "rescue"]:
                     is_block = True
                     size = len(unit_block.atomic_units)
                     AnsibleParser.__parse_tasks(unit_block, val)
                     created = len(unit_block.atomic_units) - size
                     atomic_units = unit_block.atomic_units[-created:]
-                elif key.value == "always" or key.value == "rescue": # FIXME handling errors for blocks
-                    continue
                 elif key.value != "name":
                     if type == "":
                         type = key.value
@@ -320,7 +319,8 @@ class AnsibleParser(p.Parser):
 
     def parse_file(self, path: str) -> UnitBlock:
         with open(path) as f:
-            return self.__parse_playbook(path, f)
+            return self.__parse_tasks_file(path, f)
+            #return self.__parse_playbook(path, f)
 
 # FIXME
 class ChefParser(p.Parser):
