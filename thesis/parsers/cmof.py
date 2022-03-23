@@ -47,17 +47,23 @@ class AnsibleParser(p.Parser):
 
             return res
 
+        file.seek(0, 0)
+        f_lines = file.readlines()
+
         comments = []
         for c_group in yaml_comments(d):
-            first_line = c_group[0] + 1
-            lines = filter(lambda l: l != "", c_group[1].split("\n"))
+            line = c_group[0]
+            c_group_comments = c_group[1].strip().split("\n")
 
-            for i, c in enumerate(lines):
-                if "#" in c:
-                    comments.append((first_line + i, c.strip()))
-        
-        file.seek(0, 0)
-        for i, line in enumerate(file.readlines()):
+            for i, comment in enumerate(c_group_comments):
+                aux = line + i
+                comment = comment.strip()
+
+                while comment not in f_lines[aux]:
+                    aux += 1
+                comments.append((aux + 1, comment))      
+
+        for i, line in enumerate(f_lines):
             if line.strip().startswith("#"):
                 comments.append((i + 1, line.strip()))
 
