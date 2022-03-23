@@ -196,8 +196,10 @@ class SecurityVisitor(RuleVisitor):
                         errors.append(Error('sec_hard_pass', c, file, repr(c)))
                     elif (item in SecurityVisitor.__USERS):
                         errors.append(Error('sec_hard_user', c, file, repr(c)))
+                    break
                 elif (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
                     errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                    break
 
         for item in SecurityVisitor.__SSH_DIR:
             if item.lower() in name:
@@ -220,8 +222,12 @@ class SecurityVisitor(RuleVisitor):
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
         lines = c.content.split('\n')
+        stop = False
         for word in SecurityVisitor.__WRONG_WORDS:
             for line in lines:
                 if word in line.lower():
                     errors.append(Error('sec_susp_comm', c, file, line))
+                    stop = True
+            if stop:
+                break
         return errors

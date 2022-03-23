@@ -47,8 +47,15 @@ class AnsibleParser(p.Parser):
 
             return res
 
-        comments = list(filter(lambda c: "#" in c[1], \
-            [(c[0] + 1, c[1].strip()) for c in yaml_comments(d)]))
+        comments = []
+        for c_group in yaml_comments(d):
+            first_line = c_group[0] + 1
+            lines = filter(lambda l: l != "", c_group[1].split("\n"))
+
+            for i, c in enumerate(lines):
+                if "#" in c:
+                    comments.append((first_line + i, c.strip()))
+        
         file.seek(0, 0)
         for i, line in enumerate(file.readlines()):
             if line.strip().startswith("#"):
@@ -266,7 +273,7 @@ class AnsibleParser(p.Parser):
         # Check subfolders
         subfolders = [f.path for f in os.scandir(f"{path}/") if f.is_dir() and not f.is_symlink()]
         for d in subfolders:
-            if os.path.dirname(d) not \
+            if os.path.basename(os.path.normpath(d)) not \
                     in ["tasks", "handlers", "vars", "defaults"]:
                 aux = self.parse_module(d)
                 res.blocks += aux.blocks
@@ -297,7 +304,7 @@ class AnsibleParser(p.Parser):
         subfolders = [f.path for f in os.scandir(f"{path}") 
             if f.is_dir() and not f.is_symlink()]
         for d in subfolders:
-            if os.path.dirname(d) not \
+            if os.path.basename(os.path.normpath(d)) not \
                     in ["playbooks", "group_vars", "host_vars", "tasks", "roles"]:
                 aux = self.parse_folder(d, root=False)
                 res.blocks += aux.blocks
