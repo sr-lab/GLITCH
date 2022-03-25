@@ -3,7 +3,7 @@ from ply.yacc import yacc
 
 def parser_yacc(script_ast):
     tokens = ('LPAREN', 'RPAREN', 'STRING', 'ID', 'INTEGER', 
-        'TRUE', 'FALSE', 'COMMENT')
+        'TRUE', 'FALSE', 'COMMENT', 'PLUS')
     states = (
         ('id', 'exclusive'),
     )
@@ -13,6 +13,7 @@ def parser_yacc(script_ast):
     t_TRUE = r'true'
     t_FALSE = r'false'
     t_ignore_ANY = r'[nil\,\ \n]'
+    t_PLUS = r'\+'
 
     def t_INTEGER(t):
         r'[0-9]+'
@@ -89,7 +90,15 @@ def parser_yacc(script_ast):
         r'empty : '
 
     def p_value_string(p):
-        r'value : STRING'
+        r'value : string'
+        p[0] = p[1]
+    
+    def p_multi_string(p):
+        r'string : STRING PLUS string'
+        p[0] = p[1] + p[3]
+
+    def p_string(p):
+        r'string : STRING'
         p[0] = p[1]
 
     def p_value_integer(p):
