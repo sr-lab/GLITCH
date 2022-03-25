@@ -2,6 +2,7 @@ import os, sys
 import re
 import tempfile
 from string import Template
+from pkg_resources import resource_filename
 import ruamel.yaml as yaml
 from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, \
     CommentToken, CollectionNode
@@ -319,10 +320,8 @@ class AnsibleParser(p.Parser):
 
     def parse_file(self, path: str) -> UnitBlock:
         with open(path) as f:
-            return self.__parse_tasks_file(path, f)
-            #return self.__parse_playbook(path, f)
+            return self.__parse_playbook(path, f)
 
-# FIXME
 class ChefParser(p.Parser):
     class Node:
         id: str
@@ -348,6 +347,15 @@ class ChefParser(p.Parser):
     @staticmethod
     def _check_node(ast, ids, size):
         return ChefParser._check_id(ast, ids) and len(ast.args) == size
+
+    @staticmethod
+    def _check_has_variable(ast):
+        if (ChefParser._check_id(ast, ["args_add_block"])):
+            return ChefParser._check_id(ast.args[0][0], ["vcall", "call"])
+        elif (ChefParser._check_id(ast, ["arg_paren"])):
+            return ChefParser._check_has_variable(ast.args[0])
+        else:
+            return ChefParser._check_id(ast, ["vcall", "call"])
 
     @staticmethod
     def _get_content_bounds(ast, source):
@@ -556,8 +564,9 @@ class ChefParser(p.Parser):
                             (ChefParser._check_id(ast, ["method_add_block"]) and
                                 ChefParser._check_id(ast.args[0], ["method_add_arg"]) and
                                     ChefParser._check_id(ast.args[1], ["brace_block"]))):
+                has_variable = ChefParser._check_has_variable(ast.args[1])
                 a = Attribute(ChefParser._get_content(ast.args[0], self.source),
-                        ChefParser._get_content(ast.args[1], self.source))
+                        ChefParser._get_content(ast.args[1], self.source), has_variable)
                 a.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
@@ -571,7 +580,7 @@ class ChefParser(p.Parser):
 
         def __init__(self, source, ast):
             super().__init__(source)
-            self.variable = Variable("", "")
+            self.variable = Variable("", "", False)
             self.push([self.is_variable], ast)
 
         def is_variable(self, ast):
@@ -579,6 +588,7 @@ class ChefParser(p.Parser):
                 self.variable.name = ChefParser._get_content(ast.args[0], self.source)
                 self.variable.value = ChefParser._get_content(ast.args[1], self.source)
                 self.variable.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                self.variable.has_variable = ChefParser._check_has_variable(ast.args[1])
                 return True
             return False
 
@@ -661,7 +671,7 @@ class ChefParser(p.Parser):
                     ChefParser.__transverse_ast(arg, unit_block, source)
 
     @staticmethod
-    def __parse_recipe(path, file, module):
+    def __parse_recipe(path, file) -> UnitBlock:
         with open(path + file) as f:
             ripper = resource_filename("thesis.parsers", 'resources/comments.rb.template')
             ripper = open(ripper, "r")
@@ -692,7 +702,7 @@ class ChefParser(p.Parser):
             
             ast = ChefParser.__create_ast(program)
             ChefParser.__transverse_ast(ast, unit_block, source)
-            module.add_block(unit_block)
+            return unit_block
 
     def parse_module(self, path: str) -> Module:
         def parse_folder(path: str):
@@ -700,7 +710,7 @@ class ChefParser(p.Parser):
                 files = [f for f in os.listdir(path) \
                     if os.path.isfile(os.path.join(path, f))]
                 for file in files:
-                    self.__parse_recipe(path, file, res)
+                    res.add_block(self.__parse_recipe(path, file))
 
         res: Module = Module(os.path.basename(os.path.normpath(path)))
         super().parse_file_structure(res.folder, path)
@@ -714,21 +724,18 @@ class ChefParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str) -> Module:
-        res: Module = Module("")
-        self.__parse_recipe(os.path.dirname(path) + "/", os.path.basename(path), res)
-        return res
+    def parse_file(self, path: str) -> UnitBlock:
+        return self.__parse_recipe(os.path.dirname(path) + "/", os.path.basename(path))
 
-    # FIXME
-    def parse_folder(self, path: str) -> Module:
-        res: Module = Module("")
+    def parse_folder(self, path: str) -> Project:
+        res: Project = Project(os.path.basename(os.path.normpath(path)))
 
-        files = []
-        for (dirpath, _, filenames) in os.walk(path):
-            filenames = filter(lambda f: f.endswith('.rb'), filenames)
-            files += [os.path.join(dirpath, file) for file in filenames]
+        res.add_module(self.parse_module(path))
 
-        for file in files:
-            self.__parse_recipe(os.path.dirname(file) + "/", os.path.basename(file), res)
+        if (os.path.exists(f"{path}/cookbooks")):
+            cookbooks = [f.path for f in os.scandir(f"{path}/cookbooks") 
+                if f.is_dir() and not f.is_symlink()]
+            for cookbook in cookbooks:
+                res.add_module(self.parse_module(cookbook))
 
         return res
