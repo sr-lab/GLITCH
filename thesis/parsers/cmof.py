@@ -350,12 +350,15 @@ class ChefParser(p.Parser):
 
     @staticmethod
     def _check_has_variable(ast):
+        references = ["vcall", "call", "aref", "fcall", "var_ref"]
         if (ChefParser._check_id(ast, ["args_add_block"])):
-            return ChefParser._check_id(ast.args[0][0], ["vcall", "call"])
+            return ChefParser._check_id(ast.args[0][0], references)
+        elif(ChefParser._check_id(ast, ["method_add_arg"])):
+            return ChefParser._check_id(ast.args[0], references)
         elif (ChefParser._check_id(ast, ["arg_paren"])):
             return ChefParser._check_has_variable(ast.args[0])
         else:
-            return ChefParser._check_id(ast, ["vcall", "call"])
+            return ChefParser._check_id(ast, references)
 
     @staticmethod
     def _get_content_bounds(ast, source):
