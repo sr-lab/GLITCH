@@ -21,13 +21,15 @@ def analysis(tech, path, module, csv, dataset):
         subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
         for d in subfolders:
             inter = parser.parse(d, module)
+            if inter == None: continue
             analysis = SecurityVisitor()
             errors += analysis.check(inter)
     else:
          # FIXME Might have performance issues
         inter = parser.parse(path, module)
-        analysis = SecurityVisitor()
-        errors += analysis.check(inter)
+        if inter != None:
+            analysis = SecurityVisitor()
+            errors += analysis.check(inter)
     errors = sorted(set(errors), key=lambda e: (e.el.line, e.path))
     
     if csv:

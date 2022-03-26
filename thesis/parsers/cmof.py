@@ -1,4 +1,4 @@
-import os, sys
+import os
 import re
 import tempfile
 from string import Template
@@ -6,6 +6,7 @@ from pkg_resources import resource_filename
 import ruamel.yaml as yaml
 from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, \
     CommentToken, CollectionNode
+from thesis.exceptions import EXCEPTIONS, throw_exception
 
 import thesis.parsers.parser as p
 from thesis.repr.inter import *
@@ -21,7 +22,7 @@ class AnsibleParser(p.Parser):
                     continue
                 elif isinstance(token, list):
                     res += extract_from_token(token)
-                elif isinstance(token, CommentToken): #FIXME there are comments that appear as strings for some reason
+                elif isinstance(token, CommentToken):
                     res.append((token.start_mark.line, token.value))
             return res
 
@@ -210,7 +211,7 @@ class AnsibleParser(p.Parser):
 
             return unit_block
         except:
-            print(f"Ansible - File is not a playbook: {file.name}", file=sys.stderr)
+            throw_exception(EXCEPTIONS["ANSIBLE_PLAYBOOK"], file.name)
             return None
 
     def __parse_tasks_file(self, name, file) -> UnitBlock:
@@ -230,8 +231,8 @@ class AnsibleParser(p.Parser):
 
             return unit_block
         except:
-           print(f"Ansible - File is not a tasks file: {file.name}", file=sys.stderr)
-           return None
+            throw_exception(EXCEPTIONS["ANSIBLE_TASKS_FILE"], file.name)
+            return None
 
     def __parse_vars_file(self, name, file) -> UnitBlock:
         try:
@@ -250,7 +251,7 @@ class AnsibleParser(p.Parser):
 
             return unit_block
         except:
-            print(f"Ansible - File is not a variables file: {file.name}", file=sys.stderr)
+            throw_exception(EXCEPTIONS["ANSIBLE_VARS_FILE"], file.name)
             return None
 
     @staticmethod
