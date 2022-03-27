@@ -175,14 +175,10 @@ class SecurityVisitor(RuleVisitor):
         value = value.strip().lower()
 
         try:
-            for v in value.split(' '):
-                if v.startswith(('"', "'")) and v.endswith(('"', "'")):
-                    v = v[1:-1]
-
-                if (re.match(SecurityVisitor.__URL_REGEX, v) and
-                    ('http' in v or 'www' in v) and 'https' not in v) or \
-                        (urlparse(v).scheme == 'http'):
-                    errors.append(Error('sec_https', c, file, repr(c)))
+            if (re.match(SecurityVisitor.__URL_REGEX, value) and
+                ('http' in value or 'www' in value) and 'https' not in value) or \
+                    (urlparse(value).scheme == 'http'):
+                errors.append(Error('sec_https', c, file, repr(c)))
         except:
             # The url is not valid
             pass
