@@ -693,21 +693,27 @@ class ChefParser(p.Parser):
                 tmp.write(ripper_script)
                 tmp.flush()
 
-                script_ast = os.popen('ruby ' + tmp.name).read()
-                comments, _ = parser_yacc(script_ast)
-                if comments is not None: comments.reverse()
+                try:
+                    script_ast = os.popen('ruby ' + tmp.name).read()
+                    comments, _ = parser_yacc(script_ast)
+                    if comments is not None: comments.reverse()
 
-                for comment, line in comments:
-                    c = Comment(re.sub(r'\\n$', '', comment))
-                    c.line = line
-                    unit_block.add_comment(c)
+                    for comment, line in comments:
+                        c = Comment(re.sub(r'\\n$', '', comment))
+                        c.line = line
+                        unit_block.add_comment(c)
+                except:
+                    throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], path + file)
 
-            script_ast = os.popen('ruby -r ripper -e \'file = \
-                File.open(\"' + path + file + '\")\npp Ripper.sexp(file)\'').read()
-            _, program = parser_yacc(script_ast)
-            
-            ast = ChefParser.__create_ast(program)
-            ChefParser.__transverse_ast(ast, unit_block, source)
+            try:
+                script_ast = os.popen('ruby -r ripper -e \'file = \
+                    File.open(\"' + path + file + '\")\npp Ripper.sexp(file)\'').read()
+                _, program = parser_yacc(script_ast)
+                ast = ChefParser.__create_ast(program)
+                ChefParser.__transverse_ast(ast, unit_block, source)
+            except:
+                throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], path + file)
+
             return unit_block
 
     def parse_module(self, path: str) -> Module:
