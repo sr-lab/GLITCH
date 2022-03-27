@@ -38,7 +38,7 @@ class Variable(CodeElement):
 
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + "->" + self.value + \
-            " (on line " + str(self.line) + ")"
+            " (on line " + str(self.line) + f" {self.has_variable})"
 
 class Attribute(CodeElement):
     name: str
@@ -58,7 +58,7 @@ class Attribute(CodeElement):
 
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + "->" + self.value.replace('\n', '') + \
-            " (on line " + str(self.line) + ")"
+            " (on line " + str(self.line) + f" {self.has_variable})"
 
 class AtomicUnit(CodeElement):
     name: str

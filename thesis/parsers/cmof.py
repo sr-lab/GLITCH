@@ -356,12 +356,18 @@ class ChefParser(p.Parser):
 
     @staticmethod
     def _check_has_variable(ast):
+        references = ["vcall", "call", "aref", "fcall", "var_ref"]
         if (ChefParser._check_id(ast, ["args_add_block"])):
-            return ChefParser._check_id(ast.args[0][0], ["vcall", "call"])
+            return ChefParser._check_id(ast.args[0][0], references)
+        elif(ChefParser._check_id(ast, ["method_add_arg"])):
+            return ChefParser._check_id(ast.args[0], references)
         elif (ChefParser._check_id(ast, ["arg_paren"])):
             return ChefParser._check_has_variable(ast.args[0])
+        elif (ChefParser._check_node(ast, ["binary"], 3)):
+            return ChefParser._check_has_variable(ast.args[0]) and \
+                    ChefParser._check_has_variable(ast.args[2])
         else:
-            return ChefParser._check_id(ast, ["vcall", "call"])
+            return ChefParser._check_id(ast, references)
 
     @staticmethod
     def _get_content_bounds(ast, source):
@@ -428,7 +434,7 @@ class ChefParser(p.Parser):
     @staticmethod
     def _get_content(ast, source):
         empty_structures = {
-            'string_literal': "''",
+            'string_literal': "",
             'hash': "{}",
             'array': "[]"
         }
@@ -456,7 +462,11 @@ class ChefParser(p.Parser):
         if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
             res += "end"
 
-        return remove_unmatched_brackets(res.strip())
+        res = res.strip()
+        if res.startswith(('"', "'")) and res.endswith(('"', "'")):
+            res = res[1:-1]
+        
+        return remove_unmatched_brackets(res)
 
     class Checker:
         tests_ast_stack: list
@@ -582,20 +592,33 @@ class ChefParser(p.Parser):
             return True
 
     class VariableChecker(Checker):
-        variable: Variable
+        variables: list[Variable]
 
         def __init__(self, source, ast):
             super().__init__(source)
-            self.variable = Variable("", "", False)
+            self.variables = []
             self.push([self.is_variable], ast)
 
         def is_variable(self, ast):
+            def parse_variable(key, current_name, ast):
+                if ChefParser._check_node(ast, ["hash"], 1) \
+                    and ChefParser._check_id(ast.args[0], ["assoclist_from_args"]):
+                        for assoc in ast.args[0].args[0]:
+                            parse_variable(assoc.args[0], current_name + "." +
+                                ChefParser._get_content(assoc.args[0], self.source), 
+                                    assoc.args[1])
+                else:
+                    value = ChefParser._get_content(ast, self.source)
+                    has_variable = ChefParser._check_has_variable(ast)
+                    variable = Variable(current_name, value, has_variable)
+                    variable.line = ChefParser._get_content_bounds(key, self.source)[0]
+                    self.variables.append(variable)
+
             if ChefParser._check_node(ast, ["assign"], 2):
-                self.variable.name = ChefParser._get_content(ast.args[0], self.source)
-                self.variable.value = ChefParser._get_content(ast.args[1], self.source)
-                self.variable.line = ChefParser._get_content_bounds(ast, self.source)[0]
-                self.variable.has_variable = ChefParser._check_has_variable(ast.args[1])
+                name = ChefParser._get_content(ast.args[0], self.source)
+                parse_variable(ast.args[0], name, ast.args[1])
                 return True
+
             return False
 
     class IncludeChecker(Checker):
@@ -662,7 +685,8 @@ class ChefParser(p.Parser):
 
             variable_checker = ChefParser.VariableChecker(source, ast)
             if variable_checker.check_all():
-                unit_block.add_variable(variable_checker.variable)
+                for variable in variable_checker.variables:
+                    unit_block.add_variable(variable)
                 # variables might have resources associated to it
                 ChefParser.__transverse_ast(ast.args[1], unit_block, source)
                 return

@@ -100,7 +100,7 @@ class SecurityVisitor(RuleVisitor):
             'ssh-key-content', 'ssh_key_public', 'ssh-key-public', 'ssh_key_private', 
             'ssh-key-private', 'ssh_key_public_content', 'ssh_key_private_content', 
             'ssh-key-public-content', 'ssh-key-private-content']
-    __MISC = ['key','id', 'cert']
+    __MISC = ['key', 'id', 'cert']
     __ROLES = ["role"]
     __DOWNLOAD = ['iso', 'tar', 'tar.gz', 'tar.bzip2', 'zip', 
             'rar', 'gzip', 'gzip2', 'deb', 'rpm', 'sh', 'run', 'bin']
