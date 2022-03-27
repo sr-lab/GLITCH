@@ -357,6 +357,9 @@ class ChefParser(p.Parser):
             return ChefParser._check_id(ast.args[0], references)
         elif (ChefParser._check_id(ast, ["arg_paren"])):
             return ChefParser._check_has_variable(ast.args[0])
+        elif (ChefParser._check_node(ast, ["binary"], 3)):
+            return ChefParser._check_has_variable(ast.args[0]) and \
+                    ChefParser._check_has_variable(ast.args[2])
         else:
             return ChefParser._check_id(ast, references)
 
