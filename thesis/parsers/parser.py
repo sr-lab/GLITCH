@@ -3,16 +3,16 @@ from thesis.repr.inter import *
 from abc import ABC, abstractmethod
 
 class Parser(ABC):
-    def parse(self, path: str, is_module: bool) -> Module:
+    def parse(self, path: str, type: str, is_module: bool) -> Module:
         if is_module:
             return self.parse_module(path)
         elif os.path.isfile(path):
-            return self.parse_file(path)
+            return self.parse_file(path, type)
         else:
             return self.parse_folder(path)
 
     @abstractmethod
-    def parse_file(self, path: str) -> UnitBlock:
+    def parse_file(self, path: str, type: str) -> UnitBlock:
         pass
 
     @abstractmethod

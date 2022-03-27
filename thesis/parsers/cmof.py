@@ -319,9 +319,14 @@ class AnsibleParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str) -> UnitBlock:
+    def parse_file(self, path: str, type: str) -> UnitBlock:
         with open(path) as f:
-            return self.__parse_playbook(path, f)
+            if (type == "script"):
+                return self.__parse_playbook(path, f)
+            elif (type == "tasks"):
+                return self.__parse_tasks_file(path, f)
+            elif (type == "vars"):
+                return self.__parse_vars_file(path, f)
 
 class ChefParser(p.Parser):
     class Node:
@@ -725,7 +730,7 @@ class ChefParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str) -> UnitBlock:
+    def parse_file(self, path: str, type: str) -> UnitBlock:
         return self.__parse_recipe(os.path.dirname(path) + "/", os.path.basename(path))
 
     def parse_folder(self, path: str) -> Project:

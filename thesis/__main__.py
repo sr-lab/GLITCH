@@ -5,11 +5,13 @@ from thesis.parsers.cmof import AnsibleParser, ChefParser
 @click.command()
 @click.option('--tech',
         type=click.Choice(['ansible', 'chef'], case_sensitive=False), required=True)
+@click.option('--type',
+    type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script')
 @click.option('--module', is_flag=True, default=False)
 @click.option('--dataset', is_flag=True, default=False)
 @click.option('--csv', is_flag=True, default=False)
 @click.argument('path', type=click.Path(exists=True), required=True)
-def analysis(tech, path, module, csv, dataset):
+def analysis(tech, type, path, module, csv, dataset):
     parser = None
     if tech == "ansible":
         parser = AnsibleParser()
@@ -20,13 +22,13 @@ def analysis(tech, path, module, csv, dataset):
     if dataset:
         subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
         for d in subfolders:
-            inter = parser.parse(d, module)
+            inter = parser.parse(d, type, module)
             if inter == None: continue
             analysis = SecurityVisitor()
             errors += analysis.check(inter)
     else:
-         # FIXME Might have performance issues
-        inter = parser.parse(path, module)
+        # FIXME Might have performance issues
+        inter = parser.parse(path, type, module)
         if inter != None:
             analysis = SecurityVisitor()
             errors += analysis.check(inter)
