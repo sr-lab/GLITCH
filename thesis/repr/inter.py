@@ -1,18 +1,14 @@
 from abc import ABC
 
 class CodeElement(ABC):
-    line: int
-    column: int
-
     def __init__(self) -> None:
-        self.line, self.column = -1, -1
+        self.line: int = -1
+        self.column: int = -1
 
 class Comment(CodeElement):
-    content: str
-
     def __init__(self, content: str) -> None:
         super().__init__()
-        self.content = content
+        self.content: str = content
 
     def __repr__(self) -> str:
         return self.content
@@ -21,15 +17,11 @@ class Comment(CodeElement):
         return (tab * "\t") + self.content + ' (on line ' + str(self.line) + ')'
 
 class Variable(CodeElement):
-    name: str
-    value: str
-    has_variable: bool
-
     def __init__(self, name: str, value: str, has_variable: bool) -> None:
         super().__init__()
-        self.name = name
-        self.value = value
-        self.has_variable = has_variable
+        self.name: str = name
+        self.value: str = value
+        self.has_variable: bool = has_variable
 
     def __repr__(self) -> str:
         value = self.value.split('\n')[0]
@@ -41,15 +33,11 @@ class Variable(CodeElement):
             " (on line " + str(self.line) + f" {self.has_variable})"
 
 class Attribute(CodeElement):
-    name: str
-    value: str
-    has_variable: bool
-
     def __init__(self, name: str, value: str, has_variable: bool) -> None:
         super().__init__()
-        self.name = name
-        self.value = value
-        self.has_variable = has_variable
+        self.name: str = name
+        self.value: str = value
+        self.has_variable: bool = has_variable
 
     def __repr__(self) -> str:
         value = self.value.split('\n')[0]
@@ -61,15 +49,11 @@ class Attribute(CodeElement):
             " (on line " + str(self.line) + f" {self.has_variable})"
 
 class AtomicUnit(CodeElement):
-    name: str
-    type: str
-    attributes: list[Attribute]
-
     def __init__(self, name: str, type: str) -> None:
         super().__init__()
-        self.name = name
-        self.type = type
-        self.attributes = []
+        self.name: str = name
+        self.type: str = type
+        self.attributes: list[Attribute] = []
 
     def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
@@ -88,11 +72,9 @@ class AtomicUnit(CodeElement):
         return res
 
 class Dependency(CodeElement):
-    name: str
-
     def __init__(self, name: str) -> None:
         super().__init__()
-        self.name = name
+        self.name: str = name
 
     def __repr__(self) -> str:
         return self.name
@@ -101,23 +83,15 @@ class Dependency(CodeElement):
         return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
 
 class UnitBlock:
-    name: str
-    dependencies: list[Dependency]
-    comments: list[Comment]
-    variables: list[Variable]
-    attributes: list[Attribute]
-    atomic_units: list[AtomicUnit]
-    unit_blocks: list['UnitBlock']
-    path: str
-
     def __init__(self, name: str) -> None:
-        self.dependencies = []
-        self.comments = []
-        self.variables = []
-        self.atomic_units = []
-        self.unit_blocks = []
-        self.attributes = []
-        self.name = name
+        self.dependencies: list[Dependency] = []
+        self.comments: list[Comment] = []
+        self.variables: list[Variable] = []
+        self.atomic_units: list[AtomicUnit] = []
+        self.unit_blocks: list['UnitBlock'] = []
+        self.attributes: list[Attribute] = []
+        self.name: str = name
+        self.path: str = ""
 
     def __repr__(self) -> str:
         return self.name
@@ -170,21 +144,16 @@ class UnitBlock:
         return res
 
 class File:
-    name: str
-
     def __init__(self, name) -> None:
-        self.name = name
+        self.name: str = name
 
     def print(self, tab) -> str:
         return (tab * "\t") + self.name
 
 class Folder:
-    name: str
-    content: list
-
     def __init__(self, name) -> None:
-        self.content = []
-        self.name = name
+        self.content: list = []
+        self.name: str = name
 
     def add_folder(self, folder: 'Folder') -> None:
         self.content.append(folder)
@@ -202,14 +171,10 @@ class Folder:
         return res
 
 class Module:
-    name: str
-    blocks: list[UnitBlock]
-    folder: Folder
-
     def __init__(self, name) -> None:
-        self.name = name
-        self.blocks = []
-        self.folder = Folder(name)
+        self.name: str = name
+        self.blocks: list[UnitBlock] = []
+        self.folder: Folder = Folder(name)
 
     def __repr__(self) -> str:
         return self.name
@@ -230,14 +195,10 @@ class Module:
         return res
 
 class Project:
-    modules: list[Module]
-    blocks: list[UnitBlock]
-    name: str
-
     def __init__(self, name) -> None:
-        self.name = name
-        self.modules = []
-        self.blocks = []
+        self.name: str = name
+        self.modules: list[Module] = []
+        self.blocks: list[UnitBlock] = []
 
     def __repr__(self) -> str:
         return self.name
