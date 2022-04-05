@@ -82,7 +82,7 @@ class Dependency(CodeElement):
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
 
-class UnitBlock:
+class UnitBlock(CodeElement):
     def __init__(self, name: str) -> None:
         self.dependencies: list[Dependency] = []
         self.comments: list[Comment] = []
@@ -111,7 +111,7 @@ class UnitBlock:
     def add_unit_block(self, u: 'UnitBlock') -> None:
         self.unit_blocks.append(u)
 
-    def add_attributes(self, a: Attribute) -> None:
+    def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
 
     def print(self, tab) -> str:

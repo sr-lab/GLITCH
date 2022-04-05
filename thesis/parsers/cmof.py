@@ -1,6 +1,8 @@
 import os
 import re
 import tempfile
+from puppetparser.parser import parse as parse_puppet
+import puppetparser.model as puppetmodel
 from string import Template
 from pkg_resources import resource_filename
 import ruamel.yaml as yaml
@@ -775,3 +777,208 @@ class ChefParser(p.Parser):
                 res.add_module(self.parse_module(cookbook))
 
         return res
+
+class PuppetParser(p.Parser):
+    @staticmethod
+    def __process_unitblock_component(ce, unit_block: UnitBlock):
+        if isinstance(ce, Dependency):
+            unit_block.add_dependency(ce)
+        elif isinstance(ce, Variable):
+            unit_block.add_dependency(ce)
+        elif isinstance(ce, AtomicUnit):
+            unit_block.add_atomic_unit(ce)
+        elif isinstance(ce, UnitBlock):
+            unit_block.add_unit_block(ce)
+        elif isinstance(ce, Attribute):
+            unit_block.add_unit_block(ce)
+        elif isinstance(ce, list):
+            for c in ce:
+                PuppetParser.__process_unitblock_component(c, unit_block)
+
+    @staticmethod
+    def __process_codeelement(codeelement):
+        if (isinstance(codeelement, puppetmodel.Value)):
+            return str(codeelement.value)
+        elif (isinstance(codeelement, puppetmodel.Attribute)):
+            name = PuppetParser.__process_codeelement(codeelement.key)
+            value = PuppetParser.__process_codeelement(codeelement.value)
+            has_variable = value.startswith("$")
+            attribute = Attribute(name, value, has_variable)
+            attribute.line, attribute.column = codeelement.line, codeelement.col
+            return attribute
+        elif (isinstance(codeelement, puppetmodel.Resource)):
+            resource: AtomicUnit = AtomicUnit(
+                PuppetParser.__process_codeelement(codeelement.title), 
+                PuppetParser.__process_codeelement(codeelement.type)
+            )
+            for attr in codeelement.attributes:
+                resource.add_attribute(PuppetParser.__process_codeelement(attr))
+            resource.line, resource.column = codeelement.line, codeelement.col
+            return resource 
+        elif (isinstance(codeelement, puppetmodel.ResourceDeclaration)):
+            # FIXME Resource Declarations are not yet supported
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block))
+        elif (isinstance(codeelement, puppetmodel.Parameter)):
+            # FIXME Parameters are not yet supported
+            variable = Variable(
+                PuppetParser.__process_codeelement(codeelement.name),
+                PuppetParser.__process_codeelement(codeelement.default), 
+                False
+            )
+            variable.line, variable.column = codeelement.line, codeelement.col
+            return variable 
+        elif (isinstance(codeelement, puppetmodel.Assignment)):
+            name = PuppetParser.__process_code_element(codeelement.name)
+            value = PuppetParser.__process_code_element(codeelement.value)
+            has_variable = codeelement.value.startswith("$")
+            variable: Variable = Variable(name, value, has_variable)
+            variable.line, variable.column = codeelement.line, codeelement.col
+            return variable
+        elif (isinstance(codeelement, puppetmodel.PuppetClass)):
+            # FIXME there are components of the class that are not considered
+            unit_block: UnitBlock = UnitBlock(
+                PuppetParser.__process_codeelement(codeelement.name)
+            )
+
+            if (codeelement.block != None):
+                for ce in list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block)):
+                    PuppetParser.__process_unitblock_component(ce, unit_block)
+
+            for p in codeelement.parameters:
+                unit_block.add_variable(PuppetParser.__process_codeelement(p))
+
+            unit_block.line, unit_block.column = codeelement.line, codeelement.col
+            return unit_block
+        elif (isinstance(codeelement, puppetmodel.Node)):
+            # FIXME Nodes are not yet supported
+            if (codeelement.block != None):
+                return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block))
+            else:
+                return []
+        elif (isinstance(codeelement, puppetmodel.Operation)):
+            if len(codeelement.arguments) == 1:
+                return codeelement.operator + \
+                    PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+            elif codeelement.operator == "[]":
+                return \
+                    (PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+                        + "[" + 
+                    PuppetParser.__process_unitblock_component(codeelement.arguments[1])
+                        + "]")
+            elif len(codeelement.arguments == 2):
+                return \
+                    (PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+                        + codeelement.operator + 
+                    PuppetParser.__process_unitblock_component(codeelement.arguments[1]))
+            elif codeelement.operator == "[,]":
+                return \
+                    (PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+                        + "[" +
+                    PuppetParser.__process_unitblock_component(codeelement.arguments[1])
+                        + "," + 
+                    PuppetParser.__process_unitblock_component(codeelement.arguments[2])
+                        + "]")
+        elif (isinstance(codeelement, puppetmodel.Lambda)):
+            # FIXME Lambdas are not yet supported
+            if (codeelement.block != None):
+                return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block))
+            else:
+                return []
+        elif (isinstance(codeelement, puppetmodel.FunctionCall)):
+            # FIXME Function calls are not yet supported
+            res = codeelement.name
+            for arg in codeelement.arguments:
+                res += PuppetParser.__process_codeelement(arg)
+            PuppetParser.__process_codeelement(codeelement.lamb)
+        elif (isinstance(codeelement, puppetmodel.If)):
+            # FIXME Conditionals are not yet supported
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), 
+                    codeelement.block + codeelement.elseblock))
+        elif (isinstance(codeelement, puppetmodel.Unless)):
+            # FIXME Conditionals are not yet supported
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), 
+                    codeelement.block + codeelement.elseblock))
+        elif (isinstance(codeelement, puppetmodel.Include)):
+            dependencies = []
+            for inc in codeelement.inc:
+                d = Dependency(PuppetParser.__process_codeelement(inc))
+                d.line, d.column = codeelement.line, codeelement.col
+                dependencies.append(d)
+            return dependencies
+        elif (isinstance(codeelement, puppetmodel.Require)):
+            dependencies = []
+            for req in codeelement.req:
+                d = Dependency(PuppetParser.__process_codeelement(req))
+                d.line, d.column = codeelement.line, codeelement.col
+                dependencies.append(d)
+            return dependencies
+        elif (isinstance(codeelement, puppetmodel.Contain)):
+            dependencies = []
+            for cont in codeelement.cont:
+                d = Dependency(PuppetParser.__process_codeelement(cont))
+                d.line, d.column = codeelement.line, codeelement.col
+                dependencies.append(d)
+            return dependencies
+        elif (isinstance(codeelement, (puppetmodel.Debug, puppetmodel.Fail, puppetmodel.Realize, puppetmodel.Tag))):
+            # FIXME Ignored unsupported concepts
+            pass
+        elif (isinstance(codeelement, puppetmodel.Match)):
+            # FIXME Matches are not yet supported
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block))
+        elif (isinstance(codeelement, puppetmodel.Case)):
+            # FIXME Conditionals are not yet supported
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.matches))
+        elif (isinstance(codeelement, puppetmodel.Selector)):
+            # FIXME Conditionals are not yet supported
+            pass
+        elif (isinstance(codeelement, puppetmodel.Reference)):
+            res = codeelement.type + "["
+            for r in codeelement.references:
+                res += PuppetParser.__process_codeelement(r)
+            res += "]"
+            return res
+        elif (isinstance(codeelement, puppetmodel.Function)):
+            # FIXME Functions definitions are not yet supported
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.body))
+        elif (isinstance(codeelement, puppetmodel.ResourceCollector)):
+            res = codeelement.resource_type + "<|"
+            res += PuppetParser.__process_codeelement(codeelement.search) + "|>"
+            return res
+        elif (isinstance(codeelement, puppetmodel.ResourceExpression)):
+            resources = []
+            resources.append(PuppetParser.__process_codeelement(codeelement.default))
+            for resource in codeelement.resources:
+                resources.append(PuppetParser.__process_codeelement(resource))
+            return resources
+        elif (isinstance(codeelement, puppetmodel.Chaining)):
+            # FIXME Chaining not yet supported
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.op1)) + \
+                list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.op2))
+        elif (isinstance(codeelement, list)):
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement))
+        else:
+            return codeelement
+        
+    def parse_module(self, path: str) -> Module:
+        pass
+
+    def parse_file(self, path: str, type: str) -> UnitBlock:
+        unit_block: UnitBlock = UnitBlock(os.path.basename(path))
+        unit_block.path = path
+        
+        with open(path) as f:
+            parsed_script, comments = parse_puppet(f.read())
+            for c in comments:
+                comment = Comment(c.content)
+                comment.line = c.line
+                unit_block.add_comment(comment)
+
+            PuppetParser.__process_unitblock_component(
+                PuppetParser.__process_codeelement(parsed_script),
+                unit_block
+            )
+        
+        return unit_block
+
+    def parse_folder(self, path: str) -> Project:
+        pass

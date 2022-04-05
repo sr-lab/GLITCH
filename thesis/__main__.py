@@ -1,10 +1,10 @@
 import click, os
 from thesis.analysis.rules import SecurityVisitor
-from thesis.parsers.cmof import AnsibleParser, ChefParser
+from thesis.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 
 @click.command()
 @click.option('--tech',
-        type=click.Choice(['ansible', 'chef'], case_sensitive=False), required=True)
+        type=click.Choice(['ansible', 'chef', 'puppet'], case_sensitive=False), required=True)
 @click.option('--type',
     type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script')
 @click.option('--module', is_flag=True, default=False)
@@ -17,6 +17,8 @@ def analysis(tech, type, path, module, csv, dataset):
         parser = AnsibleParser()
     elif tech == "chef":
         parser = ChefParser()
+    elif tech == "puppet":
+        parser = PuppetParser()
 
     errors = []
     if dataset:
@@ -29,6 +31,7 @@ def analysis(tech, type, path, module, csv, dataset):
     else:
         # FIXME Might have performance issues
         inter = parser.parse(path, type, module)
+        print(inter.print(0))
         if inter != None:
             analysis = SecurityVisitor()
             errors += analysis.check(inter)
