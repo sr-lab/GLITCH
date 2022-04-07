@@ -801,7 +801,8 @@ class PuppetParser(p.Parser):
             return str(codeelement.value)
         elif (isinstance(codeelement, puppetmodel.Attribute)):
             name = PuppetParser.__process_codeelement(codeelement.key)
-            value = PuppetParser.__process_codeelement(codeelement.value)
+            temp_value = PuppetParser.__process_codeelement(codeelement.value)
+            value = "" if temp_value is None else temp_value
             has_variable = value.startswith("$")
             attribute = Attribute(name, value, has_variable)
             attribute.line, attribute.column = codeelement.line, codeelement.col
@@ -828,9 +829,10 @@ class PuppetParser(p.Parser):
             variable.line, variable.column = codeelement.line, codeelement.col
             return variable 
         elif (isinstance(codeelement, puppetmodel.Assignment)):
-            name = PuppetParser.__process_code_element(codeelement.name)
-            value = PuppetParser.__process_code_element(codeelement.value)
-            has_variable = codeelement.value.startswith("$")
+            name = PuppetParser.__process_codeelement(codeelement.name)
+            temp_value = PuppetParser.__process_codeelement(codeelement.value)
+            value = "" if temp_value is None else temp_value
+            has_variable = value.startswith("$")
             variable: Variable = Variable(name, value, has_variable)
             variable.line, variable.column = codeelement.line, codeelement.col
             return variable
@@ -840,7 +842,7 @@ class PuppetParser(p.Parser):
                 PuppetParser.__process_codeelement(codeelement.name)
             )
 
-            if (codeelement.block != None):
+            if (codeelement.block is not None):
                 for ce in list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block)):
                     PuppetParser.__process_unitblock_component(ce, unit_block)
 
@@ -851,53 +853,60 @@ class PuppetParser(p.Parser):
             return unit_block
         elif (isinstance(codeelement, puppetmodel.Node)):
             # FIXME Nodes are not yet supported
-            if (codeelement.block != None):
+            if (codeelement.block is not None):
                 return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block))
             else:
                 return []
         elif (isinstance(codeelement, puppetmodel.Operation)):
             if len(codeelement.arguments) == 1:
                 return codeelement.operator + \
-                    PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+                    PuppetParser.__process_codeelement(codeelement.arguments[0])
             elif codeelement.operator == "[]":
                 return \
-                    (PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+                    (PuppetParser.__process_codeelement(codeelement.arguments[0])
                         + "[" + 
-                    PuppetParser.__process_unitblock_component(codeelement.arguments[1])
+                    ','.join(PuppetParser.__process_codeelement(codeelement.arguments[1]))
                         + "]")
-            elif len(codeelement.arguments == 2):
+            elif len(codeelement.arguments) == 2:
                 return \
-                    (PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+                    (PuppetParser.__process_codeelement(codeelement.arguments[0])
                         + codeelement.operator + 
-                    PuppetParser.__process_unitblock_component(codeelement.arguments[1]))
+                    PuppetParser.__process_codeelement(codeelement.arguments[1]))
             elif codeelement.operator == "[,]":
                 return \
-                    (PuppetParser.__process_unitblock_component(codeelement.arguments[0])
+                    (PuppetParser.__process_codeelement(codeelement.arguments[0])
                         + "[" +
-                    PuppetParser.__process_unitblock_component(codeelement.arguments[1])
+                    PuppetParser.__process_codeelement(codeelement.arguments[1])
                         + "," + 
-                    PuppetParser.__process_unitblock_component(codeelement.arguments[2])
+                    PuppetParser.__process_codeelement(codeelement.arguments[2])
                         + "]")
         elif (isinstance(codeelement, puppetmodel.Lambda)):
             # FIXME Lambdas are not yet supported
-            if (codeelement.block != None):
+            if (codeelement.block is not None):
                 return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.block))
             else:
                 return []
         elif (isinstance(codeelement, puppetmodel.FunctionCall)):
             # FIXME Function calls are not yet supported
-            res = codeelement.name
+            res = PuppetParser.__process_codeelement(codeelement.name)
             for arg in codeelement.arguments:
                 res += PuppetParser.__process_codeelement(arg)
-            PuppetParser.__process_codeelement(codeelement.lamb)
+            PuppetParser.__process_codeelement(codeelement.lamb) #FIXME
+            return res
         elif (isinstance(codeelement, puppetmodel.If)):
             # FIXME Conditionals are not yet supported
-            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), 
-                    codeelement.block + codeelement.elseblock))
+            res = list(map(lambda ce: PuppetParser.__process_codeelement(ce), 
+                    codeelement.block))
+            if (codeelement.elseblock is not None):
+                res += PuppetParser.__process_codeelement(codeelement.elseblock)
+            return res
         elif (isinstance(codeelement, puppetmodel.Unless)):
             # FIXME Conditionals are not yet supported
-            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), 
-                    codeelement.block + codeelement.elseblock))
+            res = list(map(lambda ce: PuppetParser.__process_codeelement(ce), 
+                    codeelement.block))
+            if (codeelement.elseblock is not None):
+                res += PuppetParser.__process_codeelement(codeelement.elseblock)
+            return res
         elif (isinstance(codeelement, puppetmodel.Include)):
             dependencies = []
             for inc in codeelement.inc:
@@ -930,11 +939,13 @@ class PuppetParser(p.Parser):
             return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.matches))
         elif (isinstance(codeelement, puppetmodel.Selector)):
             # FIXME Conditionals are not yet supported
-            pass
+            return PuppetParser.__process_codeelement(codeelement.control) + "?"\
+                    + PuppetParser.__process_codeelement(codeelement.hash)
         elif (isinstance(codeelement, puppetmodel.Reference)):
             res = codeelement.type + "["
             for r in codeelement.references:
-                res += PuppetParser.__process_codeelement(r)
+                temp = PuppetParser.__process_codeelement(r)
+                res += "" if temp is None else temp
             res += "]"
             return res
         elif (isinstance(codeelement, puppetmodel.Function)):
@@ -952,33 +963,76 @@ class PuppetParser(p.Parser):
             return resources
         elif (isinstance(codeelement, puppetmodel.Chaining)):
             # FIXME Chaining not yet supported
-            return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.op1)) + \
-                list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement.op2))
+            res = []
+            op1 = PuppetParser.__process_codeelement(codeelement.op1)
+            op2 = PuppetParser.__process_codeelement(codeelement.op2)
+            if isinstance(op1, list): res += op1 
+            else: res.append(op1)
+            if isinstance(op2, list): res += op2
+            else: res.append(op2)
         elif (isinstance(codeelement, list)):
             return list(map(lambda ce: PuppetParser.__process_codeelement(ce), codeelement))
+        elif (codeelement is None):
+            return ""
         else:
             return codeelement
         
     def parse_module(self, path: str) -> Module:
-        pass
+        res: Module = Module(os.path.basename(os.path.normpath(path)))
+        super().parse_file_structure(res.folder, path)
+
+        for root, _, files in os.walk(path, topdown=False):
+            for name in files:
+                name_split = name.split('.')
+                if len(name_split) == 2 and name_split[-1].endswith('pp'):
+                    res.add_block(self.parse_file(os.path.join(root, name), ""))
+
+        return res
 
     def parse_file(self, path: str, type: str) -> UnitBlock:
         unit_block: UnitBlock = UnitBlock(os.path.basename(path))
         unit_block.path = path
         
-        with open(path) as f:
-            parsed_script, comments = parse_puppet(f.read())
-            for c in comments:
-                comment = Comment(c.content)
-                comment.line = c.line
-                unit_block.add_comment(comment)
+        try:
+            with open(path) as f:
+                parsed_script, comments = parse_puppet(f.read())
+                for c in comments:
+                    comment = Comment(c.content)
+                    comment.line = c.line
+                    unit_block.add_comment(comment)
 
-            PuppetParser.__process_unitblock_component(
-                PuppetParser.__process_codeelement(parsed_script),
-                unit_block
-            )
+                PuppetParser.__process_unitblock_component(
+                    PuppetParser.__process_codeelement(parsed_script),
+                    unit_block
+                )
+        except:
+            import traceback
+            traceback.print_exc()
+            print(path)
         
         return unit_block
 
     def parse_folder(self, path: str) -> Project:
-        pass
+        res: Project = Project(os.path.basename(os.path.normpath(path)))
+
+        if os.path.exists(f"{path}/modules") and not os.path.islink(f"{path}/modules"):
+            subfolders = [f.path for f in os.scandir(f"{path}/modules") 
+                if f.is_dir() and not f.is_symlink()]
+            for m in subfolders:
+                res.add_module(self.parse_module(m))
+
+        for f in os.scandir(path):
+            name_split = f.name.split('.')
+            if f.is_file() and len(name_split) == 2 and name_split[-1].endswith('pp'):
+                res.add_block(self.parse_file(f.path, ""))
+
+        subfolders = [f.path for f in os.scandir(f"{path}") 
+            if f.is_dir() and not f.is_symlink()]
+        for d in subfolders:
+            if os.path.basename(os.path.normpath(d)) not \
+                    in ["modules"]:
+                aux = self.parse_folder(d)
+                res.blocks += aux.blocks
+                res.modules += aux.modules
+
+        return res
