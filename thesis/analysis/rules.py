@@ -2,6 +2,8 @@ import re
 from thesis.repr.inter import *
 from abc import ABC, abstractmethod
 from urllib.parse import urlparse
+import configparser
+import json
 
 class Error():
     __ERRORS = {
@@ -55,6 +57,10 @@ class RuleVisitor(ABC):
             return self.check_unitblock(code)
 
     @abstractmethod
+    def config(self, config_path: str):
+        pass
+
+    @abstractmethod
     def check_project(self, p: Project) -> list[Error]:
         pass
 
@@ -88,26 +94,22 @@ class RuleVisitor(ABC):
 
 # FIXME we may want to look to the improvements made to these detections
 class SecurityVisitor(RuleVisitor):
-    __URL_REGEX = r'^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$'
-    __WRONG_WORDS = ['bug', 'debug', 'todo', 'to-do', 'to_do', 'fix',
-            'issue', 'problem', 'solve', 'hack', 'ticket', 'later', 'incorrect', 'fixme']
-    __PASSWORDS = ['pass', 'pwd', 'password', 'passwd', 'passno', 'pass-no', 'pass_no' ]
-    __USERS = ['root', 'user', 'uname', 'username', 'user-name', 'user_name',
-            'owner-name', 'owner_name', 'owner', 'admin', 'login', 'userid', 'loginid']
-    __SECRETS = ["uuid", "crypt", "secret", "certificate", "token", "ssh_key", 
-            "rsa", 'auth_token',  'authetication_token','auth-token', 'authentication-token',
-            'md5', 'ssl_content', 'ca_content', 'ssl-content', 'ca-content', 'ssh_key_content', 
-            'ssh-key-content', 'ssh_key_public', 'ssh-key-public', 'ssh_key_private', 
-            'ssh-key-private', 'ssh_key_public_content', 'ssh_key_private_content', 
-            'ssh-key-public-content', 'ssh-key-private-content']
-    __MISC_SECRETS = ['key', 'id', 'cert']
-    __ROLES = ["role"]
-    __DOWNLOAD = ['iso', 'tar', 'tar.gz', 'tar.bzip2', 'zip', 
-            'rar', 'gzip', 'gzip2', 'deb', 'rpm', 'sh', 'run', 'bin']
-    __SSH_DIR = ['source', 'destination', 'path', 'directory', 
-        'src', 'dest', 'file']
-    __ADMIN = ['admin']
-    __CHECKSUM = ['gpg', 'checksum']
+    __URL_REGEX = r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
+
+    def config(self, config_path: str):
+        config = configparser.ConfigParser()
+        config.read(config_path)
+        SecurityVisitor.__WRONG_WORDS = json.loads(config['security']['suspicious_words'])
+        SecurityVisitor.__PASSWORDS = json.loads(config['security']['passwords'])
+        SecurityVisitor.__USERS = json.loads(config['security']['users'])
+        SecurityVisitor.__SECRETS = json.loads(config['security']['secrets'])
+        SecurityVisitor.__MISC_SECRETS = json.loads(config['security']['misc_secrets'])
+        SecurityVisitor.__ROLES = json.loads(config['security']['roles'])
+        SecurityVisitor.__DOWNLOAD = json.loads(config['security']['download_extensions'])
+        SecurityVisitor.__SSH_DIR = json.loads(config['security']['ssh_dirs'])
+        SecurityVisitor.__ADMIN = json.loads(config['security']['admin'])
+        SecurityVisitor.__CHECKSUM = json.loads(config['security']['checksum'])
+        SecurityVisitor.__CRYPT = json.loads(config['security']['weak_crypt'])
 
     def check_project(self, p: Project) -> list[Error]:
         errors = []
@@ -187,8 +189,11 @@ class SecurityVisitor(RuleVisitor):
 
         if re.match(r'^0.0.0.0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
-        if value.startswith('sha1') or value.startswith('md5'):
-            errors.append(Error('sec_weak_crypt', c, file, repr(c)))   
+
+        for crypt in SecurityVisitor.__CRYPT:
+            if value.startswith(crypt):
+                errors.append(Error('sec_weak_crypt', c, file, repr(c)))   
+                break
 
         for check in SecurityVisitor.__CHECKSUM:     
             if (check in name and (value == 'no' or value == 'false')):
