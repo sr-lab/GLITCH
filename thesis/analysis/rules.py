@@ -100,12 +100,14 @@ class SecurityVisitor(RuleVisitor):
             'ssh-key-content', 'ssh_key_public', 'ssh-key-public', 'ssh_key_private', 
             'ssh-key-private', 'ssh_key_public_content', 'ssh_key_private_content', 
             'ssh-key-public-content', 'ssh-key-private-content']
-    __MISC = ['key', 'id', 'cert']
+    __MISC_SECRETS = ['key', 'id', 'cert']
     __ROLES = ["role"]
     __DOWNLOAD = ['iso', 'tar', 'tar.gz', 'tar.bzip2', 'zip', 
             'rar', 'gzip', 'gzip2', 'deb', 'rpm', 'sh', 'run', 'bin']
     __SSH_DIR = ['source', 'destination', 'path', 'directory', 
         'src', 'dest', 'file']
+    __ADMIN = ['admin']
+    __CHECKSUM = ['gpg', 'checksum']
 
     def check_project(self, p: Project) -> list[Error]:
         errors = []
@@ -153,7 +155,7 @@ class SecurityVisitor(RuleVisitor):
                     integrity_check = False
                     for other in au.attributes:
                         name = other.name.strip().lower()
-                        if 'checksum' in name or 'gpg' in name:
+                        if any([check in name for check in SecurityVisitor.__CHECKSUM]):
                             integrity_check = True
                             break
 
@@ -186,13 +188,18 @@ class SecurityVisitor(RuleVisitor):
         if re.match(r'^0.0.0.0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
         if value.startswith('sha1') or value.startswith('md5'):
-            errors.append(Error('sec_weak_crypt', c, file, repr(c)))
-        if (name in SecurityVisitor.__ROLES or name in SecurityVisitor.__USERS) \
-                and 'admin' in value:
-            errors.append(Error('sec_def_admin', c, file, repr(c)))
-        if (('gpgcheck' in name or 'get_checksum' in name) \
-                and (value == 'no' or value == 'false')):
-            errors.append(Error('sec_no_int_check', c, file, repr(c)))
+            errors.append(Error('sec_weak_crypt', c, file, repr(c)))   
+
+        for check in SecurityVisitor.__CHECKSUM:     
+            if (check in name and (value == 'no' or value == 'false')):
+                errors.append(Error('sec_no_int_check', c, file, repr(c)))
+                break
+
+        if (name in SecurityVisitor.__ROLES or name in SecurityVisitor.__USERS):
+            for admin in SecurityVisitor.__ADMIN:
+                if admin in value:
+                    errors.append(Error('sec_def_admin', c, file, repr(c)))
+                    break
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
@@ -214,7 +221,7 @@ class SecurityVisitor(RuleVisitor):
                 if len(value) > 0 and '/id_rsa' in value:
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-        for item in SecurityVisitor.__MISC:
+        for item in SecurityVisitor.__MISC_SECRETS:
             if (re.match(r'[_A-Za-z0-9-]*{text}[-_]*$'.format(text=item), name) 
                     and len(value) > 0 and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
