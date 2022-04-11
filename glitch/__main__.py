@@ -12,8 +12,9 @@ from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 @click.option('--module', is_flag=True, default=False)
 @click.option('--dataset', is_flag=True, default=False)
 @click.option('--csv', is_flag=True, default=False)
+@click.option('--autodetect', is_flag=True, default=False)
 @click.argument('path', type=click.Path(exists=True), required=True)
-def analysis(tech, type, path, config, module, csv, dataset):
+def analysis(tech, type, path, config, module, csv, dataset, autodetect):
     parser = None
     if tech == "ansible":
         parser = AnsibleParser()
@@ -31,6 +32,19 @@ def analysis(tech, type, path, config, module, csv, dataset):
             inter = parser.parse(d, type, module)
             if inter == None: continue
             errors += analysis.check(inter)
+
+        files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
+        for file in files:
+            if (autodetect):
+                if "vars" in file or "default" in file:
+                    type = "vars"
+                elif "tasks" in file:
+                    type = "tasks"
+                else:
+                    type = "script"
+            inter = parser.parse(file, type, module)
+            if inter != None:
+                errors += analysis.check(inter)
     else:
         # FIXME Might have performance issues
         inter = parser.parse(path, type, module)
