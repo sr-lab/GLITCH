@@ -1,5 +1,5 @@
 import os
-from thesis.repr.inter import *
+from glitch.repr.inter import *
 from abc import ABC, abstractmethod
 
 class Parser(ABC):

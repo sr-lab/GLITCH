@@ -1,7 +1,7 @@
 from email.policy import default
 import click, os
-from thesis.analysis.rules import SecurityVisitor
-from thesis.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
+from glitch.analysis.rules import SecurityVisitor
+from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 
 @click.command()
 @click.option('--tech',
@@ -47,4 +47,4 @@ def analysis(tech, type, path, config, module, csv, dataset):
         for error in errors:
             print(error)
 
-analysis(prog_name='#TODO')
+analysis(prog_name='glitch')

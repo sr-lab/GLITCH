@@ -1,5 +1,5 @@
 import re
-from thesis.repr.inter import *
+from glitch.repr.inter import *
 from abc import ABC, abstractmethod
 from urllib.parse import urlparse
 import configparser

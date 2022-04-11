@@ -8,12 +8,12 @@ from pkg_resources import resource_filename
 import ruamel.yaml as yaml
 from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, \
     CommentToken, CollectionNode
-from thesis.exceptions import EXCEPTIONS, throw_exception
+from glitch.exceptions import EXCEPTIONS, throw_exception
 
-import thesis.parsers.parser as p
-from thesis.repr.inter import *
-from thesis.parsers.ruby_parser import parser_yacc
-from thesis.helpers import remove_unmatched_brackets
+import glitch.parsers.parser as p
+from glitch.repr.inter import *
+from glitch.parsers.ruby_parser import parser_yacc
+from glitch.helpers import remove_unmatched_brackets
 
 class AnsibleParser(p.Parser):
     def __get_yaml_comments(self, d, file):
