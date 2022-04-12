@@ -705,7 +705,7 @@ class ChefParser(p.Parser):
     @staticmethod
     def __parse_recipe(path, file) -> UnitBlock:
         with open(path + file) as f:
-            ripper = resource_filename("thesis.parsers", 'resources/comments.rb.template')
+            ripper = resource_filename("glitch.parsers", 'resources/comments.rb.template')
             ripper = open(ripper, "r")
             ripper_script = Template(ripper.read())
             ripper.close()
@@ -713,7 +713,11 @@ class ChefParser(p.Parser):
 
             unit_block: UnitBlock = UnitBlock(file)
             unit_block.path = path + file
-            source = f.readlines()
+            
+            try:
+                source = f.readlines()
+            except:
+                    throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], path + file)
 
             with tempfile.NamedTemporaryFile(mode="w+") as tmp:
                 tmp.write(ripper_script)

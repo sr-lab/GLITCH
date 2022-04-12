@@ -1,4 +1,3 @@
-from email.policy import default
 import click, os
 from glitch.analysis.rules import SecurityVisitor
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
