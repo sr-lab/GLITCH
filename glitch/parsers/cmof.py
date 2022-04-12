@@ -985,7 +985,7 @@ class PuppetParser(p.Parser):
         for root, _, files in os.walk(path, topdown=False):
             for name in files:
                 name_split = name.split('.')
-                if len(name_split) == 2 and name_split[-1].endswith('.pp'):
+                if len(name_split) == 2 and name_split[-1] == "pp":
                     res.add_block(self.parse_file(os.path.join(root, name), ""))
 
         return res
@@ -1022,7 +1022,7 @@ class PuppetParser(p.Parser):
 
         for f in os.scandir(path):
             name_split = f.name.split('.')
-            if f.is_file() and len(name_split) == 2 and name_split[-1].endswith('.pp'):
+            if f.is_file() and len(name_split) == 2 and name_split[-1] == "pp":
                 res.add_block(self.parse_file(f.path, ""))
 
         subfolders = [f.path for f in os.scandir(f"{path}") 
