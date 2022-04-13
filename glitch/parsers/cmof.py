@@ -471,9 +471,6 @@ class ChefParser(p.Parser):
         return remove_unmatched_brackets(res)
 
     class Checker:
-        tests_ast_stack: list
-        source: list
-
         def __init__(self, source):
             self.tests_ast_stack = []
             self.source = source
@@ -499,8 +496,6 @@ class ChefParser(p.Parser):
             return self.tests_ast_stack.pop()
 
     class ResourceChecker(Checker):
-        atomic_unit: AtomicUnit
-
         def __init__(self, atomic_unit, source, ast):
             super().__init__(source)
             self.push([self.is_block_resource,
@@ -594,8 +589,6 @@ class ChefParser(p.Parser):
             return True
 
     class VariableChecker(Checker):
-        variables: list[Variable]
-
         def __init__(self, source, ast):
             super().__init__(source)
             self.variables = []
@@ -624,8 +617,6 @@ class ChefParser(p.Parser):
             return False
 
     class IncludeChecker(Checker):
-        include: Dependency
-
         def __init__(self, source, ast):
             super().__init__(source)
             self.push([self.is_include], ast)
@@ -650,6 +641,51 @@ class ChefParser(p.Parser):
                 d = Dependency(ChefParser._get_content(ast.args[0][0], self.source))
                 d.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 self.include = d
+                return True
+            return False
+
+    # FIXME only identifying case statement
+    class ConditionChecker(Checker):
+        def __init__(self, source, ast):
+            super().__init__(source)
+            self.push([self.is_case], ast)
+
+        def is_case(self, ast):
+            if ChefParser._check_node(ast, ["case"], 2):
+                self.case_head = ChefParser._get_content(ast.args[0], self.source)
+                self.condition = None
+                self.push([self.is_case_condition], ast.args[1])
+                return True
+            return False
+
+        def is_case_condition(self, ast):
+            if (ChefParser._check_node(ast, ["when"], 3) \
+                    or ChefParser._check_node(ast, ["when"], 2)):
+                if self.condition is None:
+                    self.condition = ConditionStatement(
+                        self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
+                        ConditionStatement.ConditionType.SWITCH
+                    )
+                    self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                    self.current_condition = self.condition
+                else:
+                    self.current_condition.else_statement = ConditionStatement(
+                        self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
+                        ConditionStatement.ConditionType.SWITCH
+                    )
+                    self.current_condition = self.current_condition.else_statement
+                    self.current_condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                if (len(ast.args) == 3):
+                    self.push([self.is_case_condition], ast.args[2])
+                return True
+            elif (ChefParser._check_node(ast, ["else"], 1)):
+                self.current_condition.else_statement = ConditionStatement(
+                    "",
+                    ConditionStatement.ConditionType.SWITCH,
+                    is_default=True
+                )
+                self.current_condition.else_statement.line = \
+                        ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
             return False
 
@@ -698,13 +734,20 @@ class ChefParser(p.Parser):
                 unit_block.add_dependency(include_checker.include)
                 return
 
+            if_checker = ChefParser.ConditionChecker(source, ast)
+            if if_checker.check_all():
+                unit_block.add_statement(if_checker.condition)
+                # Check blocks inside
+                ChefParser.__transverse_ast(ast.args[1], unit_block, source)
+                return
+
             for arg in ast.args:
                 if isinstance(arg, (ChefParser.Node, list)):
                     ChefParser.__transverse_ast(arg, unit_block, source)
 
     @staticmethod
     def __parse_recipe(path, file) -> UnitBlock:
-        with open(path + file) as f:
+        with open(os.path.join(path, file)) as f:
             ripper = resource_filename("glitch.parsers", 'resources/comments.rb.template')
             ripper = open(ripper, "r")
             ripper_script = Template(ripper.read())
@@ -767,7 +810,7 @@ class ChefParser(p.Parser):
         return res
 
     def parse_file(self, path: str, type: str) -> UnitBlock:
-        return self.__parse_recipe(os.path.dirname(path) + "/", os.path.basename(path))
+        return self.__parse_recipe(os.path.dirname(path), os.path.basename(path))
 
     def parse_folder(self, path: str) -> Project:
         res: Project = Project(os.path.basename(os.path.normpath(path)))

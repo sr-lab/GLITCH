@@ -1,9 +1,48 @@
 from abc import ABC
+from enum import Enum
 
 class CodeElement(ABC):
     def __init__(self) -> None:
         self.line: int = -1
         self.column: int = -1
+
+class Block(CodeElement):
+    def __init__(self) -> None:
+        super().__init__()
+        self.statements = []
+
+    def add_statement(self, statement):
+        self.statements.append(statement)
+
+class ConditionStatement(Block):
+    class ConditionType(Enum):
+        IF = 1
+        SWITCH = 2
+
+    def __init__(self, condition: str, type, is_default=False) -> None:
+        super().__init__()
+        self.condition: str = condition
+        self.else_statement = None
+        self.is_default = is_default
+        self.type = type
+
+    def __repr__(self) -> str:
+        return self.type
+
+    def print(self, tab) -> str:
+        res = (tab * "\t") + str(self.type) + " " + self.condition + \
+            ("" if not self.is_default else "default") + ' (on line ' + str(self.line) + ')' + "\n"
+
+        res += (tab * "\t") + "\telse:\n"
+        if (self.else_statement is not None):
+            res += self.else_statement.print(tab + 2) + "\n"
+
+        res += (tab * "\t") + "\tblock:\n"
+        for statement in self.statements:
+            res += statement.print(tab + 2) + "\n"
+        res = res[:-1]
+
+        return res
 
 class Comment(CodeElement):
     def __init__(self, content: str) -> None:
@@ -48,7 +87,7 @@ class Attribute(CodeElement):
         return (tab * "\t") + self.name + "->" + self.value.replace('\n', '') + \
             " (on line " + str(self.line) + f" {self.has_variable})"
 
-class AtomicUnit(CodeElement):
+class AtomicUnit(Block):
     def __init__(self, name: str, type: str) -> None:
         super().__init__()
         self.name: str = name
@@ -67,6 +106,10 @@ class AtomicUnit(CodeElement):
 
         for attribute in self.attributes:
             res += attribute.print(tab + 1) + "\n"
+
+        res += (tab * "\t") + "block:\n"
+        for statement in self.statements:
+            res += statement.print(tab + 2) + "\n"
         res = res[:-1]
 
         return res
@@ -82,8 +125,9 @@ class Dependency(CodeElement):
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
 
-class UnitBlock(CodeElement):
+class UnitBlock(Block):
     def __init__(self, name: str) -> None:
+        super().__init__()
         self.dependencies: list[Dependency] = []
         self.comments: list[Comment] = []
         self.variables: list[Variable] = []
@@ -140,6 +184,10 @@ class UnitBlock(CodeElement):
         res += (tab * "\t") + "\tunit blocks:\n"
         for unit_block in self.unit_blocks:
             res += unit_block.print(tab + 2) + "\n"
+
+        res += (tab * "\t") + "\tblock:\n"
+        for statement in self.statements:
+            res += statement.print(tab + 2) + "\n"
 
         return res
 
