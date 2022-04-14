@@ -16,7 +16,8 @@ class Error():
         'sec_hard_pass': "Hard-coded password.",
         "sec_hard_user": "Hard-coded user.",
         'sec_invalid_bind': "Invalid IP address binding.",
-        'sec_no_int_check': "No integrity check."
+        'sec_no_int_check': "No integrity check.",
+        'sec_no_default_switch': "Switch statement should have default condition"
     }
 
     code: str
@@ -56,6 +57,20 @@ class RuleVisitor(ABC):
         elif isinstance(code, UnitBlock):
             return self.check_unitblock(code)
 
+    def check_element(self, c: CodeElement, file: str) -> list[Error]:
+        if isinstance(c, AtomicUnit):
+            return self.check_atomicunit(c, file)
+        elif isinstance(c, Dependency):
+            return self.check_dependency(c, file)
+        elif isinstance(c, Attribute):
+            return self.check_attribute(c, file)
+        elif isinstance(c, Variable):
+            return self.check_variable(c, file)
+        elif isinstance(c, ConditionStatement):
+            return self.check_condition(c, file)
+        elif isinstance(c, Comment):
+            return self.check_comment(c, file)
+
     @abstractmethod
     def config(self, config_path: str):
         pass
@@ -86,6 +101,10 @@ class RuleVisitor(ABC):
 
     @abstractmethod
     def check_variable(self, v: Variable, file: str) -> list[Error]:
+        pass
+
+    @abstractmethod
+    def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
         pass
 
     @abstractmethod
@@ -140,6 +159,8 @@ class SecurityVisitor(RuleVisitor):
             errors += self.check_unitblock(ub)
         for a in u.attributes:
             errors += self.check_attribute(a, u.path)
+        for s in u.statements:
+            errors += self.check_element(s, u.path)
 
         return errors
 
@@ -147,6 +168,9 @@ class SecurityVisitor(RuleVisitor):
         errors = []
         for a in au.attributes:
             errors += self.check_attribute(a, file)
+
+        for s in au.statements:
+            errors += self.check_element(s, file)
 
         # Check integrity check
         for a in au.attributes:
@@ -176,7 +200,11 @@ class SecurityVisitor(RuleVisitor):
             value: str, has_variable: bool, file: str):
         errors = []
         name = name.split('.')[-1].strip().lower()
-        value = value.strip().lower()
+        if (isinstance(value, str)):
+            value = value.strip().lower()
+        else:
+            errors += self.check_element(value, file)
+            value = repr(value)
 
         try:
             if (re.match(SecurityVisitor.__URL_REGEX, value) and
@@ -251,3 +279,17 @@ class SecurityVisitor(RuleVisitor):
             if stop:
                 break
         return errors
+
+    def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
+        condition = c
+        has_default = False
+
+        while condition != None:
+            if condition.is_default:
+                has_default = True
+                break
+            condition = condition.else_statement
+
+        if not has_default:
+            return  [Error('sec_no_default_switch', c, file, repr(c))]
+        return []

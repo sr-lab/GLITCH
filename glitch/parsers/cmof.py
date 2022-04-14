@@ -667,6 +667,7 @@ class ChefParser(p.Parser):
                         ConditionStatement.ConditionType.SWITCH
                     )
                     self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                    self.condition.repr_str = "case " + self.case_head
                     self.current_condition = self.condition
                 else:
                     self.current_condition.else_statement = ConditionStatement(
@@ -831,13 +832,13 @@ class PuppetParser(p.Parser):
         if isinstance(ce, Dependency):
             unit_block.add_dependency(ce)
         elif isinstance(ce, Variable):
-            unit_block.add_dependency(ce)
+            unit_block.add_variable(ce)
         elif isinstance(ce, AtomicUnit):
             unit_block.add_atomic_unit(ce)
         elif isinstance(ce, UnitBlock):
             unit_block.add_unit_block(ce)
         elif isinstance(ce, Attribute):
-            unit_block.add_unit_block(ce)
+            unit_block.add_attribute(ce)
         elif isinstance(ce, ConditionStatement):
             unit_block.add_statement(ce)
         elif isinstance(ce, list):
@@ -863,7 +864,7 @@ class PuppetParser(p.Parser):
             name = PuppetParser.__process_codeelement(codeelement.key, path)
             temp_value = PuppetParser.__process_codeelement(codeelement.value, path)
             value = "" if temp_value is None else temp_value
-            has_variable = value.startswith("$")
+            has_variable = not isinstance(value, str) or value.startswith("$")
             attribute = Attribute(name, value, has_variable)
             attribute.line, attribute.column = codeelement.line, codeelement.col
             return attribute
@@ -892,7 +893,7 @@ class PuppetParser(p.Parser):
             name = PuppetParser.__process_codeelement(codeelement.name, path)
             temp_value = PuppetParser.__process_codeelement(codeelement.value, path)
             value = "" if temp_value is None else temp_value
-            has_variable = value.startswith("$")
+            has_variable = not isinstance(value, str) or value.startswith("$")
             variable: Variable = Variable(name, value, has_variable)
             variable.line, variable.column = codeelement.line, codeelement.col
             return variable
@@ -1016,12 +1017,35 @@ class PuppetParser(p.Parser):
             for i in range(1, len(conditions)):
                 conditions[i - 1].else_statement = conditions[i]
 
+            conditions[0].repr_str = "case " + control
             return [conditions[0]] + \
                 list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.matches))
         elif (isinstance(codeelement, puppetmodel.Selector)):
-            # FIXME Conditionals are not yet supported
-            return PuppetParser.__process_codeelement(codeelement.control, path) + "?"\
-                    + PuppetParser.__process_codeelement(codeelement.hash, path)
+            control = PuppetParser.__process_codeelement(codeelement.control, path)
+            conditions = []
+        
+            for key, value in codeelement.hash.value.items():
+                key = PuppetParser.__process_codeelement(key, path)
+                value = PuppetParser.__process_codeelement(value, path)
+
+                if key != "default":
+                    condition = ConditionStatement(control + "==" + key, 
+                        ConditionStatement.ConditionType.SWITCH, False)
+                    condition.line, condition.column = codeelement.hash.line, codeelement.hash.col
+                    conditions.append(condition)
+                else:
+                    condition = ConditionStatement("", 
+                        ConditionStatement.ConditionType.SWITCH, True)
+                    condition.line, condition.column = codeelement.hash.line, codeelement.hash.col
+                    conditions.append(condition)
+
+            for i in range(1, len(conditions)):
+                conditions[i - 1].else_statement = conditions[i]
+            
+            conditions[0].repr_str = control + "?"\
+                + PuppetParser.__process_codeelement(codeelement.hash, path)
+
+            return conditions[0]
         elif (isinstance(codeelement, puppetmodel.Reference)):
             res = codeelement.type + "["
             for r in codeelement.references:

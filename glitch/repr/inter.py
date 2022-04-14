@@ -25,9 +25,10 @@ class ConditionStatement(Block):
         self.else_statement = None
         self.is_default = is_default
         self.type = type
+        self.repr_str = str(self.type) + " " + self.condition
 
     def __repr__(self) -> str:
-        return self.type
+        return self.repr_str
 
     def print(self, tab) -> str:
         res = (tab * "\t") + str(self.type) + " " + self.condition + \
@@ -68,8 +69,12 @@ class Variable(CodeElement):
         return f"{name}:{value}"
 
     def print(self, tab) -> str:
-        return (tab * "\t") + self.name + "->" + self.value + \
-            " (on line " + str(self.line) + f" {self.has_variable})"
+        if isinstance(self.value, str):
+            return (tab * "\t") + self.name + "->" + self.value + \
+                " (on line " + str(self.line) + f" {self.has_variable})"
+        else:
+            return (tab * "\t") + self.name + "->" + repr(self.value) + \
+                " (on line " + str(self.line) + f" {self.has_variable})"
 
 class Attribute(CodeElement):
     def __init__(self, name: str, value: str, has_variable: bool) -> None:
@@ -84,8 +89,12 @@ class Attribute(CodeElement):
         return f"{name}:{value}"
 
     def print(self, tab) -> str:
-        return (tab * "\t") + self.name + "->" + self.value.replace('\n', '') + \
-            " (on line " + str(self.line) + f" {self.has_variable})"
+        if isinstance(self.value, str):
+            return (tab * "\t") + self.name + "->" + self.value + \
+                " (on line " + str(self.line) + f" {self.has_variable})"
+        else:
+            return (tab * "\t") + self.name + "->" + repr(self.value) + \
+                " (on line " + str(self.line) + f" {self.has_variable})"
 
 class AtomicUnit(Block):
     def __init__(self, name: str, type: str) -> None:

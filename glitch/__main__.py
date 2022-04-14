@@ -47,7 +47,6 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect):
     else:
         # FIXME Might have performance issues
         inter = parser.parse(path, type, module)
-        print(inter.print(0))
         analysis = SecurityVisitor()
         analysis.config(config)
         if inter != None:
