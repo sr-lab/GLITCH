@@ -752,7 +752,7 @@ class ChefParser(p.Parser):
             ripper = open(ripper, "r")
             ripper_script = Template(ripper.read())
             ripper.close()
-            ripper_script = ripper_script.substitute({'path': '\"' + path + file + '\"'})
+            ripper_script = ripper_script.substitute({'path': '\"' + os.path.join(path, file)+ '\"'})
 
             unit_block: UnitBlock = UnitBlock(file)
             unit_block.path = path + file
@@ -760,7 +760,7 @@ class ChefParser(p.Parser):
             try:
                 source = f.readlines()
             except:
-                    throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], path + file)
+                    throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], os.path.join(path, file))
 
             with tempfile.NamedTemporaryFile(mode="w+") as tmp:
                 tmp.write(ripper_script)
@@ -776,16 +776,16 @@ class ChefParser(p.Parser):
                         c.line = line
                         unit_block.add_comment(c)
                 except:
-                    throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], path + file)
+                    throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], os.path.join(path, file))
 
             try:
                 script_ast = os.popen('ruby -r ripper -e \'file = \
-                    File.open(\"' + path + file + '\")\npp Ripper.sexp(file)\'').read()
+                    File.open(\"' + os.path.join(path, file) + '\")\npp Ripper.sexp(file)\'').read()
                 _, program = parser_yacc(script_ast)
                 ast = ChefParser.__create_ast(program)
                 ChefParser.__transverse_ast(ast, unit_block, source)
             except:
-                throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], path + file)
+                throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], os.path.join(path, file))
 
             return unit_block
 
@@ -838,6 +838,8 @@ class PuppetParser(p.Parser):
             unit_block.add_unit_block(ce)
         elif isinstance(ce, Attribute):
             unit_block.add_unit_block(ce)
+        elif isinstance(ce, ConditionStatement):
+            unit_block.add_statement(ce)
         elif isinstance(ce, list):
             for c in ce:
                 PuppetParser.__process_unitblock_component(c, unit_block)
@@ -845,6 +847,17 @@ class PuppetParser(p.Parser):
     @staticmethod
     def __process_codeelement(codeelement, path):
         if (isinstance(codeelement, puppetmodel.Value)):
+            if isinstance(codeelement, puppetmodel.Hash):
+                res = {}
+
+                for key, value in codeelement.value.items():
+                    res[PuppetParser.__process_codeelement(key, path)] = \
+                        PuppetParser.__process_codeelement(value, path)
+                
+                return str(res)
+            elif isinstance(codeelement, puppetmodel.Array):
+                return str(PuppetParser.__process_codeelement(codeelement.value, path))
+
             return str(codeelement.value)
         elif (isinstance(codeelement, puppetmodel.Attribute)):
             name = PuppetParser.__process_codeelement(codeelement.key, path)
@@ -981,10 +994,30 @@ class PuppetParser(p.Parser):
             pass
         elif (isinstance(codeelement, puppetmodel.Match)):
             # FIXME Matches are not yet supported
-            return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.block))
+            return [list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.block))]
         elif (isinstance(codeelement, puppetmodel.Case)):
-            # FIXME Conditionals are not yet supported
-            return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.matches))
+            control = PuppetParser.__process_codeelement(codeelement.control, path)
+            conditions = []
+
+            for match in codeelement.matches:
+                expressions = PuppetParser.__process_codeelement(match.expressions, path)
+                for expression in expressions:
+                    if expression != "default":
+                        condition = ConditionStatement(control + "==" + expression, 
+                            ConditionStatement.ConditionType.SWITCH, False)
+                        condition.line, condition.column = match.line, match.col
+                        conditions.append(condition)
+                    else:
+                        condition = ConditionStatement("", 
+                            ConditionStatement.ConditionType.SWITCH, True)
+                        condition.line, condition.column = match.line, match.col
+                        conditions.append(condition)
+
+            for i in range(1, len(conditions)):
+                conditions[i - 1].else_statement = conditions[i]
+
+            return [conditions[0]] + \
+                list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.matches))
         elif (isinstance(codeelement, puppetmodel.Selector)):
             # FIXME Conditionals are not yet supported
             return PuppetParser.__process_codeelement(codeelement.control, path) + "?"\
