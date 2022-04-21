@@ -129,6 +129,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__ADMIN = json.loads(config['security']['admin'])
         SecurityVisitor.__CHECKSUM = json.loads(config['security']['checksum'])
         SecurityVisitor.__CRYPT = json.loads(config['security']['weak_crypt'])
+        SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
 
     def check_project(self, p: Project) -> list[Error]:
         errors = []
@@ -208,8 +209,12 @@ class SecurityVisitor(RuleVisitor):
 
         try:
             if (re.match(SecurityVisitor.__URL_REGEX, value) and
-                ('http' in value or 'www' in value) and 'https' not in value) or \
-                    (urlparse(value).scheme == 'http'):
+                ('http' in value or 'www' in value) and 'https' not in value):
+                errors.append(Error('sec_https', c, file, repr(c)))
+
+            parsed_url = urlparse(value)
+            if parsed_url.scheme == 'http' and \
+                    parsed_url.hostname not in SecurityVisitor.__URL_WHITELIST:
                 errors.append(Error('sec_https', c, file, repr(c)))
         except:
             # The url is not valid
@@ -228,11 +233,13 @@ class SecurityVisitor(RuleVisitor):
                 errors.append(Error('sec_no_int_check', c, file, repr(c)))
                 break
 
-        if (name in SecurityVisitor.__ROLES or name in SecurityVisitor.__USERS):
-            for admin in SecurityVisitor.__ADMIN:
-                if admin in value:
-                    errors.append(Error('sec_def_admin', c, file, repr(c)))
-                    break
+        for item in (SecurityVisitor.__ROLES + SecurityVisitor.__USERS):
+            if (re.match(r'[_A-Za-z0-9\/\.\[\]-]*{text}\b'.format(text=item), name)):
+                if (len(value) > 0 and not has_variable):
+                    for admin in SecurityVisitor.__ADMIN:
+                        if admin in value:
+                            errors.append(Error('sec_def_admin', c, file, repr(c)))
+                            break
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
