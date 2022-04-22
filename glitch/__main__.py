@@ -1,13 +1,14 @@
 import click, os
 from glitch.analysis.rules import SecurityVisitor
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
+from pkg_resources import resource_filename
 
 @click.command()
 @click.option('--tech',
         type=click.Choice(['ansible', 'chef', 'puppet'], case_sensitive=False), required=True)
 @click.option('--type',
     type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script')
-@click.option('--config', type=click.Path(exists=True), default="configs/default.ini")
+@click.option('--config', type=click.Path(), default="configs/default.ini")
 @click.option('--module', is_flag=True, default=False)
 @click.option('--dataset', is_flag=True, default=False)
 @click.option('--csv', is_flag=True, default=False)
@@ -21,6 +22,9 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect):
         parser = ChefParser()
     elif tech == "puppet":
         parser = PuppetParser()
+
+    if config == "configs/default.ini":
+        config = resource_filename('glitch', "configs/default.ini")
 
     errors = []
     if dataset:
