@@ -441,6 +441,9 @@ class ChefParser(p.Parser):
             'array': "[]"
         }
 
+        if isinstance(ast, list):
+            return ''.join(list(map(lambda a: ChefParser._get_content(a, source), ast)))
+
         if ((ast.id in empty_structures and len(ast.args) == 0) or
                 (ast.id == 'string_literal' and len(ast.args[0].args) == 0)):
             return empty_structures[ast.id]
