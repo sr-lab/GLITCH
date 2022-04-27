@@ -129,6 +129,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__ADMIN = json.loads(config['security']['admin'])
         SecurityVisitor.__CHECKSUM = json.loads(config['security']['checksum'])
         SecurityVisitor.__CRYPT = json.loads(config['security']['weak_crypt'])
+        SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
 
     def check_project(self, p: Project) -> list[Error]:
@@ -224,9 +225,11 @@ class SecurityVisitor(RuleVisitor):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
 
         for crypt in SecurityVisitor.__CRYPT:
-            if value.startswith(crypt):
-                errors.append(Error('sec_weak_crypt', c, file, repr(c)))   
-                break
+            if crypt in value:
+                for whitelist in SecurityVisitor.__CRYPT_WHITELIST:
+                    if whitelist not in name and whitelist not in value:
+                        errors.append(Error('sec_weak_crypt', c, file, repr(c)))   
+                        break
 
         for check in SecurityVisitor.__CHECKSUM:     
             if (check in name and (value == 'no' or value == 'false')):
