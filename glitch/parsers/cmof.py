@@ -579,7 +579,7 @@ class ChefParser(p.Parser):
                         and ast.args[1] != []) or
                             (ChefParser._check_id(ast, ["method_add_block"]) and
                                 ChefParser._check_id(ast.args[0], ["method_add_arg"]) and
-                                    ChefParser._check_id(ast.args[1], ["brace_block"]))):
+                                    ChefParser._check_id(ast.args[1], ["brace_block", "do_block"]))):
                 has_variable = ChefParser._check_has_variable(ast.args[1])
                 value = ChefParser._get_content(ast.args[1], self.source)
                 if value == "nil": value = ""

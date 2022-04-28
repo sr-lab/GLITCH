@@ -226,10 +226,14 @@ class SecurityVisitor(RuleVisitor):
 
         for crypt in SecurityVisitor.__CRYPT:
             if crypt in value:
+                whitelist = False
                 for whitelist in SecurityVisitor.__CRYPT_WHITELIST:
-                    if whitelist not in name and whitelist not in value:
-                        errors.append(Error('sec_weak_crypt', c, file, repr(c)))   
+                    if whitelist in name or whitelist in value:
+                        whitelist = True
                         break
+
+                if not whitelist:
+                    errors.append(Error('sec_weak_crypt', c, file, repr(c)))   
 
         for check in SecurityVisitor.__CHECKSUM:     
             if (check in name and (value == 'no' or value == 'false')):
