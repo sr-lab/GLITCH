@@ -581,8 +581,10 @@ class ChefParser(p.Parser):
                                 ChefParser._check_id(ast.args[0], ["method_add_arg"]) and
                                     ChefParser._check_id(ast.args[1], ["brace_block"]))):
                 has_variable = ChefParser._check_has_variable(ast.args[1])
+                value = ChefParser._get_content(ast.args[1], self.source)
+                if value == "nil": value = ""
                 a = Attribute(ChefParser._get_content(ast.args[0], self.source),
-                        ChefParser._get_content(ast.args[1], self.source), has_variable)
+                        value, has_variable)
                 a.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
@@ -607,6 +609,7 @@ class ChefParser(p.Parser):
                                     assoc.args[1])
                 else:
                     value = ChefParser._get_content(ast, self.source)
+                    if (value == "nil"): value = ""
                     has_variable = ChefParser._check_has_variable(ast)
                     variable = Variable(current_name, value, has_variable)
                     variable.line = ChefParser._get_content_bounds(key, self.source)[0]
