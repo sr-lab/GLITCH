@@ -613,7 +613,17 @@ class ChefParser(p.Parser):
                     self.variables.append(variable)
 
             if ChefParser._check_node(ast, ["assign"], 2):
-                name = ChefParser._get_content(ast.args[0], self.source)
+                name = ""
+                names = ChefParser._get_content(ast.args[0], self.source).split("[")
+                for n in names:
+                    if n.startswith(":"):
+                        name += n[1:]
+                    else:
+                        name += n
+                    if name.endswith("]"):
+                        name = name[:-1]
+                    name += "."
+                name = name[:-1]
                 parse_variable(ast.args[0], name, ast.args[1])
                 return True
 
@@ -669,7 +679,7 @@ class ChefParser(p.Parser):
                         self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
                         ConditionStatement.ConditionType.SWITCH
                     )
-                    self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                    self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0] - 1
                     self.condition.repr_str = "case " + self.case_head
                     self.current_condition = self.condition
                 else:
