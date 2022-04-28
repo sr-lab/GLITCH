@@ -178,7 +178,7 @@ class SecurityVisitor(RuleVisitor):
         for a in au.attributes:
             value = a.value.strip().lower()
             for item in SecurityVisitor.__DOWNLOAD:
-                if re.match(r'(http|https|www)[_\-a-zA-Z0-9:\/.]*{text}$'
+                if re.match(r'(http|https|www).*{text}$'
                         .format(text = item), value):
                     integrity_check = False
                     for other in au.attributes:
@@ -188,7 +188,7 @@ class SecurityVisitor(RuleVisitor):
                             break
 
                     if not integrity_check:
-                        errors.append(Error('sec_no_int_check', a, file, repr(a)))
+                        errors.append(Error('sec_no_int_check', au, file, repr(a)))
 
                     break
 
