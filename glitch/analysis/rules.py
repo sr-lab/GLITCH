@@ -227,8 +227,8 @@ class SecurityVisitor(RuleVisitor):
         for crypt in SecurityVisitor.__CRYPT:
             if crypt in value:
                 whitelist = False
-                for whitelist in SecurityVisitor.__CRYPT_WHITELIST:
-                    if whitelist in name or whitelist in value:
+                for word in SecurityVisitor.__CRYPT_WHITELIST:
+                    if word in name or word in value:
                         whitelist = True
                         break
 
