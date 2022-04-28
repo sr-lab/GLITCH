@@ -827,7 +827,7 @@ class ChefParser(p.Parser):
         return res
 
     def parse_file(self, path: str, type: str) -> UnitBlock:
-        return self.__parse_recipe(os.path.dirname(path), os.path.basename(path))
+        return self.__parse_recipe(os.path.dirname(path) + "/", os.path.basename(path))
 
     def parse_folder(self, path: str) -> Project:
         res: Project = Project(os.path.basename(os.path.normpath(path)))
