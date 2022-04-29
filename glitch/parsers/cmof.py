@@ -619,12 +619,16 @@ class ChefParser(p.Parser):
                 name = ""
                 names = ChefParser._get_content(ast.args[0], self.source).split("[")
                 for n in names:
-                    if n.startswith(":"):
+                    if n.endswith("]"):
+                        n = n[:-1]
+                    if (n.startswith("'") and n.endswith("'")) or \
+                            (n.startswith('"') and n.endswith('"')):
+                        name += n[1:-1]
+                    elif n.startswith(":"):
                         name += n[1:]
                     else:
                         name += n
-                    if name.endswith("]"):
-                        name = name[:-1]
+
                     name += "."
                 name = name[:-1]
                 parse_variable(ast.args[0], name, ast.args[1])
