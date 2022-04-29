@@ -251,17 +251,17 @@ class SecurityVisitor(RuleVisitor):
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
             if (re.match(r'[_A-Za-z0-9\/\.\[\]-]*{text}\b'.format(text=item), name)):
-                if (len(value) > 0 and not has_variable):
-                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
+                errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-                    if (item in SecurityVisitor.__PASSWORDS):
-                        errors.append(Error('sec_hard_pass', c, file, repr(c)))
-                    elif (item in SecurityVisitor.__USERS):
-                        errors.append(Error('sec_hard_user', c, file, repr(c)))
-                    break
-                elif (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
+                if (item in SecurityVisitor.__PASSWORDS):
+                    errors.append(Error('sec_hard_pass', c, file, repr(c)))
+                elif (item in SecurityVisitor.__USERS):
+                    errors.append(Error('sec_hard_user', c, file, repr(c)))
+
+                if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
                     errors.append(Error('sec_empty_pass', c, file, repr(c)))
-                    break
+                    
+                break
 
         for item in SecurityVisitor.__SSH_DIR:
             if item.lower() in name:
