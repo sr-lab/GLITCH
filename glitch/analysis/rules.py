@@ -250,7 +250,7 @@ class SecurityVisitor(RuleVisitor):
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9\/\.\[\]-]*{text}\b'.format(text=item), name)):
+            if (re.match(r'[_A-Za-z0-9\/\.\[\]-]*{text}\b'.format(text=item), name) and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
                 if (item in SecurityVisitor.__PASSWORDS):
