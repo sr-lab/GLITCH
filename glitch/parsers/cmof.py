@@ -681,6 +681,11 @@ class ChefParser(p.Parser):
                 self.condition = None
                 self.push([self.is_case_condition], ast.args[1])
                 return True
+            elif ChefParser._check_node(ast, ["case"], 1):
+                self.case_head = ""
+                self.condition = None
+                self.push([self.is_case_condition], ast.args[0])
+                return True
             return False
 
         def is_case_condition(self, ast):
@@ -764,7 +769,7 @@ class ChefParser(p.Parser):
             if if_checker.check_all():
                 unit_block.add_statement(if_checker.condition)
                 # Check blocks inside
-                ChefParser.__transverse_ast(ast.args[1], unit_block, source)
+                ChefParser.__transverse_ast(ast.args[len(ast.args) - 1], unit_block, source)
                 return
 
             for arg in ast.args:
