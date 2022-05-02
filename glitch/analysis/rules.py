@@ -57,7 +57,7 @@ class RuleVisitor(ABC):
         elif isinstance(code, UnitBlock):
             return self.check_unitblock(code)
 
-    def check_element(self, c: CodeElement, file: str) -> list[Error]:
+    def check_element(self, c, file: str) -> list[Error]:
         if isinstance(c, AtomicUnit):
             return self.check_atomicunit(c, file)
         elif isinstance(c, Dependency):
@@ -70,6 +70,13 @@ class RuleVisitor(ABC):
             return self.check_condition(c, file)
         elif isinstance(c, Comment):
             return self.check_comment(c, file)
+        elif isinstance(c, dict):
+            errors = []
+            for k, v in c.items():
+                errors += self.check_element(k, file) + self.check_element(v, file)
+            return errors
+        else:
+            return []
 
     @abstractmethod
     def config(self, config_path: str):
@@ -176,7 +183,7 @@ class SecurityVisitor(RuleVisitor):
 
         # Check integrity check
         for a in au.attributes:
-            value = a.value.strip().lower()
+            value = repr(a.value).strip().lower()
             for item in SecurityVisitor.__DOWNLOAD:
                 if re.match(r'(http|https|www).*{text}$'
                         .format(text = item), value):
@@ -295,6 +302,10 @@ class SecurityVisitor(RuleVisitor):
         return errors
 
     def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
+        errors = []
+        for s in c.statements:
+            errors += self.check_element(s, file)
+
         condition = c
         has_default = False
 
@@ -305,5 +316,5 @@ class SecurityVisitor(RuleVisitor):
             condition = condition.else_statement
 
         if not has_default:
-            return  [Error('sec_no_default_switch', c, file, repr(c))]
-        return []
+            return errors + [Error('sec_no_default_switch', c, file, repr(c))]
+        return errors

@@ -883,8 +883,8 @@ class PuppetParser(p.Parser):
                 for key, value in codeelement.value.items():
                     res[PuppetParser.__process_codeelement(key, path)] = \
                         PuppetParser.__process_codeelement(value, path)
-                
-                return str(res)
+
+                return res
             elif isinstance(codeelement, puppetmodel.Array):
                 return str(PuppetParser.__process_codeelement(codeelement.value, path))
             elif codeelement.value == None:
@@ -983,7 +983,7 @@ class PuppetParser(p.Parser):
             # FIXME Function calls are not yet supported
             res = PuppetParser.__process_codeelement(codeelement.name, path)
             for arg in codeelement.arguments:
-                res += PuppetParser.__process_codeelement(arg, path)
+                res += repr(PuppetParser.__process_codeelement(arg, path))
             PuppetParser.__process_codeelement(codeelement.lamb, path) #FIXME
             return res
         elif (isinstance(codeelement, puppetmodel.If)):
@@ -1069,12 +1069,12 @@ class PuppetParser(p.Parser):
                         ConditionStatement.ConditionType.SWITCH, True)
                     condition.line, condition.column = codeelement.hash.line, codeelement.hash.col
                     conditions.append(condition)
-
+                condition.add_statement(PuppetParser.__process_codeelement(codeelement.hash, path))
             for i in range(1, len(conditions)):
                 conditions[i - 1].else_statement = conditions[i]
-            
+
             conditions[0].repr_str = control + "?"\
-                + PuppetParser.__process_codeelement(codeelement.hash, path)
+                + repr(PuppetParser.__process_codeelement(codeelement.hash, path))
 
             return conditions[0]
         elif (isinstance(codeelement, puppetmodel.Reference)):
@@ -1129,20 +1129,20 @@ class PuppetParser(p.Parser):
         unit_block: UnitBlock = UnitBlock(os.path.basename(path))
         unit_block.path = path
         
-        try:
-            with open(path) as f:
-                parsed_script, comments = parse_puppet(f.read())
-                for c in comments:
-                    comment = Comment(c.content)
-                    comment.line = c.line
-                    unit_block.add_comment(comment)
+        #try:
+        with open(path) as f:
+            parsed_script, comments = parse_puppet(f.read())
+            for c in comments:
+                comment = Comment(c.content)
+                comment.line = c.line
+                unit_block.add_comment(comment)
 
-                PuppetParser.__process_unitblock_component(
-                    PuppetParser.__process_codeelement(parsed_script, path),
-                    unit_block
-                )
-        except:
-            throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
+            PuppetParser.__process_unitblock_component(
+                PuppetParser.__process_codeelement(parsed_script, path),
+                unit_block
+            )
+        #except:
+        #    throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
 
         return unit_block
 
