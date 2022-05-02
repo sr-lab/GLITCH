@@ -8,7 +8,6 @@ from pkg_resources import resource_filename
 import ruamel.yaml as yaml
 from ruamel.yaml import ScalarNode, MappingNode, SequenceNode, \
     CommentToken, CollectionNode
-from sqlalchemy import false
 from glitch.exceptions import EXCEPTIONS, throw_exception
 
 import glitch.parsers.parser as p
@@ -888,7 +887,8 @@ class PuppetParser(p.Parser):
                 return str(res)
             elif isinstance(codeelement, puppetmodel.Array):
                 return str(PuppetParser.__process_codeelement(codeelement.value, path))
-
+            elif codeelement.value == None:
+                return ""
             return str(codeelement.value)
         elif (isinstance(codeelement, puppetmodel.Attribute)):
             name = PuppetParser.__process_codeelement(codeelement.key, path)
