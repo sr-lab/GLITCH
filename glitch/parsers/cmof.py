@@ -909,7 +909,8 @@ class PuppetParser(p.Parser):
             return resource 
         elif (isinstance(codeelement, puppetmodel.ResourceDeclaration)):
             # FIXME Resource Declarations are not yet supported
-            return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.block))
+            return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.block)) + \
+                list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.parameters))
         elif (isinstance(codeelement, puppetmodel.Parameter)):
             # FIXME Parameters are not yet supported
             variable = Variable(
