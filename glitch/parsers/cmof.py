@@ -993,9 +993,11 @@ class PuppetParser(p.Parser):
                 return []
         elif (isinstance(codeelement, puppetmodel.FunctionCall)):
             # FIXME Function calls are not yet supported
-            res = PuppetParser.__process_codeelement(codeelement.name, path)
+            res = PuppetParser.__process_codeelement(codeelement.name, path) + "("
             for arg in codeelement.arguments:
-                res += repr(PuppetParser.__process_codeelement(arg, path))
+                res += repr(PuppetParser.__process_codeelement(arg, path)) + ","
+            res = res[:-1]
+            res += ")"
             PuppetParser.__process_codeelement(codeelement.lamb, path) #FIXME
             return res
         elif (isinstance(codeelement, puppetmodel.If)):
