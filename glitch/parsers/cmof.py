@@ -916,7 +916,8 @@ class PuppetParser(p.Parser):
             name = PuppetParser.__process_codeelement(codeelement.name, path)
             temp_value = PuppetParser.__process_codeelement(codeelement.default, path)
             value = "" if temp_value is None else temp_value
-            has_variable = not isinstance(value, str) or value.startswith("$")
+            has_variable = not isinstance(value, str) or temp_value.startswith("$") or \
+                    codeelement.default is None
             variable = Variable(
                 name,
                 value,
