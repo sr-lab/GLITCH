@@ -913,10 +913,14 @@ class PuppetParser(p.Parser):
                 list(map(lambda ce: PuppetParser.__process_codeelement(ce, path), codeelement.parameters))
         elif (isinstance(codeelement, puppetmodel.Parameter)):
             # FIXME Parameters are not yet supported
+            name = PuppetParser.__process_codeelement(codeelement.name, path)
+            temp_value = PuppetParser.__process_codeelement(codeelement.default, path)
+            value = "" if temp_value is None else temp_value
+            has_variable = not isinstance(value, str) or value.startswith("$")
             variable = Variable(
-                PuppetParser.__process_codeelement(codeelement.name, path),
-                PuppetParser.__process_codeelement(codeelement.default, path), 
-                False
+                name,
+                value,
+                has_variable
             )
             variable.line, variable.column = codeelement.line, codeelement.col
             return variable 
