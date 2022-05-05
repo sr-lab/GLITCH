@@ -2,6 +2,7 @@ import click, os
 from glitch.analysis.rules import SecurityVisitor
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
+from pathlib import Path
 
 @click.command()
 @click.option('--tech',
@@ -11,10 +12,11 @@ from pkg_resources import resource_filename
 @click.option('--config', type=click.Path(), default="configs/default.ini")
 @click.option('--module', is_flag=True, default=False)
 @click.option('--dataset', is_flag=True, default=False)
+@click.option('--includeall', multiple=True)
 @click.option('--csv', is_flag=True, default=False)
 @click.option('--autodetect', is_flag=True, default=False)
 @click.argument('path', type=click.Path(exists=True), required=True)
-def analysis(tech, type, path, config, module, csv, dataset, autodetect):
+def analysis(tech, type, path, config, module, csv, dataset, autodetect, includeall):
     parser = None
     if tech == "ansible":
         parser = AnsibleParser()
@@ -28,13 +30,37 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect):
 
     errors = []
     if dataset:
-        subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
         analysis = SecurityVisitor()
         analysis.config(config)
-        for d in subfolders:
-            inter = parser.parse(d, type, module)
-            if inter == None: continue
-            errors += analysis.check(inter)
+
+        if includeall != ():
+            iac_files = []
+            for root, _, files in os.walk(path):
+                for name in files:
+                    name_split = name.split('.')
+                    if len(name_split) == 2 and name_split[-1] in includeall \
+                            and not Path(os.path.join(root, name)).is_symlink():
+                        iac_files.append(os.path.join(root, name))
+            iac_files = set(iac_files)
+
+            for file in iac_files:
+                if (autodetect):
+                    if "vars" in file or "default" in file:
+                        type = "vars"
+                    elif "tasks" in file:
+                        type = "tasks"
+                    else:
+                        type = "script"
+
+                inter = parser.parse(file, type, module)
+                if inter != None:
+                    errors += analysis.check(inter)
+        else:
+            subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
+            for d in subfolders:
+                inter = parser.parse(d, type, module)
+                if inter == None: continue
+                errors += analysis.check(inter)
 
         files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
         for file in files:
