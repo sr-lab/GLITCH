@@ -64,7 +64,7 @@ class Variable(CodeElement):
         self.has_variable: bool = has_variable
 
     def __repr__(self) -> str:
-        value = self.value.split('\n')[0]
+        value = repr(self.value).split('\n')[0]
         name = self.name.split('.')[-1]
         return f"{name}:{value}"
 
@@ -84,7 +84,7 @@ class Attribute(CodeElement):
         self.has_variable: bool = has_variable
 
     def __repr__(self) -> str:
-        value = self.value.split('\n')[0]
+        value = repr(self.value).split('\n')[0]
         name = self.name.split('.')[-1]
         return f"{name}:{value}"
 
