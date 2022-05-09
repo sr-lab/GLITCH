@@ -7,7 +7,6 @@ GLITCH, a new technology-agnostic framework that enables automated detection of 
 To install run:
 ```
 python3 -m pip install -e .
-
 ```
 
 ## Usage
