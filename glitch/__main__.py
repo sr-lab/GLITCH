@@ -1,5 +1,6 @@
 import click, os
-from glitch.analysis.rules import SecurityVisitor
+from glitch.analysis.rules import RuleVisitor, SecurityVisitor
+from glitch.helpers import RulesListOption
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
 from pathlib import Path
@@ -15,8 +16,9 @@ from pathlib import Path
 @click.option('--includeall', multiple=True)
 @click.option('--csv', is_flag=True, default=False)
 @click.option('--autodetect', is_flag=True, default=False)
+@click.option('--smells', cls=RulesListOption, default=[], multiple=True)
 @click.argument('path', type=click.Path(exists=True), required=True)
-def analysis(tech, type, path, config, module, csv, dataset, autodetect, includeall):
+def analysis(tech, type, path, config, module, csv, dataset, autodetect, includeall, smells):
     parser = None
     if tech == "ansible":
         parser = AnsibleParser()
@@ -28,11 +30,16 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
     if config == "configs/default.ini":
         config = resource_filename('glitch', "configs/default.ini")
 
+    analyses = []
+    rules = RuleVisitor.__subclasses__()
+    for r in rules:
+        if smells == () or r.get_name() in smells:
+            analysis = r()
+            analysis.config(config)
+            analyses.append(analysis)
+
     errors = []
     if dataset:
-        analysis = SecurityVisitor()
-        analysis.config(config)
-
         if includeall != ():
             iac_files = []
             for root, _, files in os.walk(path):
@@ -54,13 +61,15 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
 
                 inter = parser.parse(file, type, module)
                 if inter != None:
-                    errors += analysis.check(inter)
+                    for analysis in analyses:
+                        errors += analysis.check(inter)
         else:
             subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
             for d in subfolders:
                 inter = parser.parse(d, type, module)
                 if inter == None: continue
-                errors += analysis.check(inter)
+                for analysis in analyses:
+                    errors += analysis.check(inter)
 
         files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
         for file in files:
@@ -73,14 +82,13 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
                     type = "script"
             inter = parser.parse(file, type, module)
             if inter != None:
-                errors += analysis.check(inter)
+                for analysis in analyses:
+                    errors += analysis.check(inter)
     else:
-        # FIXME Might have performance issues
         inter = parser.parse(path, type, module)
-        analysis = SecurityVisitor()
-        analysis.config(config)
         if inter != None:
-            errors += analysis.check(inter)
+            for analysis in analyses:
+                errors += analysis.check(inter)
     errors = sorted(set(errors), key=lambda e: (e.el.line, e.path))
     
     if csv:
