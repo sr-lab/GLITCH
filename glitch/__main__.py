@@ -1,9 +1,13 @@
 import click, os
-from glitch.analysis.rules import RuleVisitor, SecurityVisitor
+from glitch.analysis.rules import RuleVisitor
 from glitch.helpers import RulesListOption
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
 from pathlib import Path
+
+# NOTE: There are necessary in order for python to load the visitors
+from glitch.analysis.design import DesignVisitor 
+from glitch.analysis.security import SecurityVisitor
 
 @click.command()
 @click.option('--tech',
@@ -23,7 +27,8 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
     if tech == "ansible":
         parser = AnsibleParser()
     elif tech == "chef":
-        parser = ChefParser()
+        parser = ChefParser()pos-puppet/github/derekmolloy@exploringBB/chp15/pru/ledFlashC/gen/ledFlash.pp
+Puppet - Could not parse file: ../thesis-datasets/puppet/re
     elif tech == "puppet":
         parser = PuppetParser()
 
