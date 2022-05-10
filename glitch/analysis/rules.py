@@ -13,7 +13,8 @@ class Error():
         "sec_hard_user": "Hard-coded user.",
         'sec_invalid_bind': "Invalid IP address binding.",
         'sec_no_int_check': "No integrity check.",
-        'sec_no_default_switch': "Switch statement should have default condition"
+        'sec_no_default_switch': "Switch statement should have default condition",
+        'design_imperative_abstraction': "Imperative abstraction - too much exec declarations",
     }
 
     code: str
