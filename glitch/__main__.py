@@ -27,8 +27,7 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
     if tech == "ansible":
         parser = AnsibleParser()
     elif tech == "chef":
-        parser = ChefParser()pos-puppet/github/derekmolloy@exploringBB/chp15/pru/ledFlashC/gen/ledFlash.pp
-Puppet - Could not parse file: ../thesis-datasets/puppet/re
+        parser = ChefParser()
     elif tech == "puppet":
         parser = PuppetParser()
 
