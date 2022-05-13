@@ -136,6 +136,7 @@ class AnsibleParser(p.Parser):
 
             for key, val in task.value:
                 # Dependencies
+                # FIXME include roles
                 if key.value == "include":
                     d = Dependency(val.value)
                     d.line = key.start_mark.line + 1
@@ -271,7 +272,7 @@ class AnsibleParser(p.Parser):
                         module.add_block(unit_block)
 
     def parse_module(self, path: str) -> Module:
-        res: Module = Module(os.path.basename(os.path.normpath(path)))
+        res: Module = Module(os.path.basename(os.path.normpath(path)), path)
         super().parse_file_structure(res.folder, path)
 
         AnsibleParser.__apply_to_files(res, f"{path}/tasks", self.__parse_tasks_file)
@@ -827,7 +828,7 @@ class ChefParser(p.Parser):
                 for file in files:
                     res.add_block(self.__parse_recipe(path, file))
 
-        res: Module = Module(os.path.basename(os.path.normpath(path)))
+        res: Module = Module(os.path.basename(os.path.normpath(path)), path)
         super().parse_file_structure(res.folder, path)
 
         parse_folder(path + "/resources/")
@@ -1129,7 +1130,7 @@ class PuppetParser(p.Parser):
             return codeelement
         
     def parse_module(self, path: str) -> Module:
-        res: Module = Module(os.path.basename(os.path.normpath(path)))
+        res: Module = Module(os.path.basename(os.path.normpath(path)), path)
         super().parse_file_structure(res.folder, path)
 
         for root, _, files in os.walk(path, topdown=False):

@@ -15,35 +15,36 @@ class Error():
         'sec_no_int_check': "No integrity check.",
         'sec_no_default_switch': "Switch statement should have default condition",
         'design_imperative_abstraction': "Imperative abstraction - too much exec declarations",
+        'design_unnecessary_abstraction': "Unnecessary Abstraction"
     }
 
-    code: str
-    el: CodeElement
-    path: str
-    repr: str
-
-    def __init__(self, code: str, el: CodeElement, path: str, repr: str) -> None:
+    def __init__(self, code: str, el, path: str, repr: str) -> None:
         self.code: str = code
-        self.el: CodeElement = el
+        self.el = el
         self.path = path
         self.repr = repr
 
+        if isinstance(self.el, CodeElement):
+            self.line = self.el.line
+        else:
+            self.line = -1
+
     def to_csv(self) -> str:
-        return f"{self.path},{self.el.line},{self.code},{self.repr.strip()}"
+        return f"{self.path},{self.line},{self.code},{self.repr.strip()}"
 
     def __repr__(self) -> str:
         with open(self.path) as f:
             return \
-                f"{self.path}\nIssue on line {self.el.line}: {Error.__ERRORS[self.code]}\n" + \
-                    f"{f.readlines()[self.el.line - 1].strip()}\n" 
+                f"{self.path}\nIssue on line {self.line}: {Error.__ERRORS[self.code]}\n" + \
+                    f"{f.readlines()[self.line - 1].strip()}\n" 
 
     def __hash__(self):
-        return hash((self.code, self.path, self.el.line))
+        return hash((self.code, self.path, self.line))
 
     def __eq__(self, other):
         if not isinstance(other, type(self)): return NotImplemented
         return self.code == other.code and self.path == other.path and\
-                    self.el.line == other.el.line
+                    self.line == other.line
 
 class RuleVisitor(ABC):
     def check(self, code) -> list[Error]:

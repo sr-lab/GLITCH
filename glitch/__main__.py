@@ -93,7 +93,7 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
         if inter != None:
             for analysis in analyses:
                 errors += analysis.check(inter)
-    errors = sorted(set(errors), key=lambda e: (e.path, e.el.line))
+    errors = sorted(set(errors), key=lambda e: (e.path, e.line))
     
     if csv:
         for error in errors:

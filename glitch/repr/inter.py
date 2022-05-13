@@ -228,8 +228,9 @@ class Folder:
         return res
 
 class Module:
-    def __init__(self, name) -> None:
+    def __init__(self, name, path) -> None:
         self.name: str = name
+        self.path: str = path
         self.blocks: list[UnitBlock] = []
         self.folder: Folder = Folder(name)
 
