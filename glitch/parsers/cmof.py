@@ -12,7 +12,7 @@ from glitch.exceptions import EXCEPTIONS, throw_exception
 
 import glitch.parsers.parser as p
 from glitch.repr.inter import *
-from glitch.parsers.ruby_parser import parser_yacc
+from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
 
 class AnsibleParser(p.Parser):
@@ -496,6 +496,11 @@ class ChefParser(p.Parser):
         
         return remove_unmatched_brackets(res)
 
+    @staticmethod
+    def _get_source(ast, source):
+        bounds = ChefParser._get_content_bounds(ast, source)
+        return ''.join(source[bounds[0] - 1 : bounds[2]])
+
     class Checker:
         def __init__(self, source):
             self.tests_ast_stack = []
@@ -534,6 +539,7 @@ class ChefParser(p.Parser):
                     and ChefParser._check_node(ast.args[1], ["do_block"], 1)):
                 self.push([self.is_resource_body], ast.args[1])
                 self.push([self.is_resource_def], ast.args[0])
+                self.atomic_unit.code = ChefParser._get_content(ast, self.source)
                 self.atomic_unit.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
             return False
@@ -545,6 +551,7 @@ class ChefParser(p.Parser):
                 self.push([self.is_resource_body_without_attributes,
                     self.is_inline_resource_name], ast.args[1])
                 self.push([self.is_resource_type], ast.args[0])
+                self.atomic_unit.code = ChefParser._get_content(ast, self.source)
                 self.atomic_unit.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
             return False
@@ -611,6 +618,7 @@ class ChefParser(p.Parser):
                 a = Attribute(ChefParser._get_content(ast.args[0], self.source),
                         value, has_variable)
                 a.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                a.code = ChefParser._get_content(ast, self.source)
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
                 for arg in reversed(ast):
@@ -625,21 +633,22 @@ class ChefParser(p.Parser):
             self.push([self.is_variable], ast)
 
         def is_variable(self, ast):
-            def parse_variable(key, current_name, ast):
-                if ChefParser._check_node(ast, ["hash"], 1) \
-                    and ChefParser._check_id(ast.args[0], ["assoclist_from_args"]):
-                        for assoc in ast.args[0].args[0]:
-                            parse_variable(assoc.args[0], current_name + "." +
+            def parse_variable(ast, key, current_name, value_ast):
+                if ChefParser._check_node(value_ast, ["hash"], 1) \
+                    and ChefParser._check_id(value_ast.args[0], ["assoclist_from_args"]):
+                        for assoc in value_ast.args[0].args[0]:
+                            parse_variable(ast, assoc.args[0], current_name + "." +
                                 ChefParser._get_content(assoc.args[0], self.source), 
                                     assoc.args[1])
                 else:
-                    value = ChefParser._get_content(ast, self.source)
-                    has_variable = ChefParser._check_has_variable(ast)
+                    value = ChefParser._get_content(value_ast, self.source)
+                    has_variable = ChefParser._check_has_variable(value_ast)
                     if value == "nil": 
                         value = ""
                         has_variable = False
                     variable = Variable(current_name, value, has_variable)
                     variable.line = ChefParser._get_content_bounds(key, self.source)[0]
+                    variable.code = ChefParser._get_source(ast, self.source)
                     self.variables.append(variable)
 
             if ChefParser._check_node(ast, ["assign"], 2):
@@ -658,7 +667,7 @@ class ChefParser(p.Parser):
 
                     name += "."
                 name = name[:-1]
-                parse_variable(ast.args[0], name, ast.args[1])
+                parse_variable(ast, ast.args[0], name, ast.args[1])
                 return True
 
             return False
@@ -667,6 +676,7 @@ class ChefParser(p.Parser):
         def __init__(self, source, ast):
             super().__init__(source)
             self.push([self.is_include], ast)
+            self.code = ""
 
         def is_include(self, ast):
             if (ChefParser._check_node(ast, ["command"], 2) 
@@ -674,6 +684,7 @@ class ChefParser(p.Parser):
                         and ChefParser._check_node(ast.args[1], ["args_add_block"], 2)):
                 self.push([self.is_include_name], ast.args[1])
                 self.push([self.is_include_type], ast.args[0])
+                self.code = ChefParser._get_source(ast, self.source)
                 return True
             return False
 
@@ -687,6 +698,7 @@ class ChefParser(p.Parser):
             if (ChefParser._check_id(ast.args[0][0], ["string_literal"]) and ast.args[1] is False):
                 d = Dependency(ChefParser._get_content(ast.args[0][0], self.source))
                 d.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                d.code = self.code
                 self.include = d
                 return True
             return False
@@ -718,6 +730,7 @@ class ChefParser(p.Parser):
                         self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
                         ConditionStatement.ConditionType.SWITCH
                     )
+                    self.condition.code = ChefParser._get_source(ast, self.source)
                     self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0] - 1
                     self.condition.repr_str = "case " + self.case_head
                     self.current_condition = self.condition
@@ -727,6 +740,7 @@ class ChefParser(p.Parser):
                         ConditionStatement.ConditionType.SWITCH
                     )
                     self.current_condition = self.current_condition.else_statement
+                    self.current_condition.code = ChefParser._get_source(ast, self.source)
                     self.current_condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
                 if (len(ast.args) == 3):
                     self.push([self.is_case_condition], ast.args[2])
@@ -808,7 +822,7 @@ class ChefParser(p.Parser):
             ripper_script = ripper_script.substitute({'path': '\"' + os.path.join(path, file)+ '\"'})
 
             unit_block: UnitBlock = UnitBlock(file)
-            unit_block.path = path + file
+            unit_block.path = os.path.join(path, file)
             
             try:
                 source = f.readlines()
@@ -826,6 +840,7 @@ class ChefParser(p.Parser):
 
                     for comment, line in comments:
                         c = Comment(re.sub(r'\\n$', '', comment))
+                        c.code = source[line - 1]
                         c.line = line
                         unit_block.add_comment(c)
                 except:

@@ -35,7 +35,9 @@ class SecurityVisitor(RuleVisitor):
         errors = super().check_atomicunit(au, file)
         # Check integrity check
         for a in au.attributes:
-            value = repr(a.value).strip().lower()
+            if isinstance(a.value, str): value = a.value.strip().lower()
+            else: value = repr(a.value).strip().lower()
+
             for item in SecurityVisitor.__DOWNLOAD:
                 if re.match(r'(http|https|www).*{text}$'
                         .format(text = item), value):
