@@ -15,7 +15,8 @@ class Error():
         'sec_no_int_check': "No integrity check.",
         'sec_no_default_switch': "Switch statement should have default condition",
         'design_imperative_abstraction': "Imperative abstraction - too much exec declarations",
-        'design_unnecessary_abstraction': "Unnecessary Abstraction"
+        'design_unnecessary_abstraction': "Unnecessary Abstraction",
+        'implementation_long_statement': "Long statement"
     }
 
     def __init__(self, code: str, el, path: str, repr: str) -> None:

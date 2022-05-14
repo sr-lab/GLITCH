@@ -51,16 +51,28 @@ class DesignVisitor(RuleVisitor):
         return errors
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
-        return []
+        return super().check_atomicunit(au, file) + self.__check_lines(au, au.code, file)
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
-        return []
+        return self.__check_lines(d, d.code, file)
 
     def check_attribute(self, a: Attribute, file: str) -> list[Error]:
-        return []
+        return self.__check_lines(a, a.code, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
-        return []
+        return self.__check_lines(v, v.code, file)
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
-        return []
+        return self.__check_lines(c, c.code, file)
+
+    def __check_lines(self, el, code, file):
+        errors = []
+
+        lines = code.split('\n')
+        for l, line in enumerate(lines):
+            if len(line) > 140:
+                error = Error('implementation_long_statement', el, file, line)
+                error.line = el.line + l
+                errors.append(error)
+
+        return errors

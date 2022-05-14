@@ -5,6 +5,7 @@ class CodeElement(ABC):
     def __init__(self) -> None:
         self.line: int = -1
         self.column: int = -1
+        self.code: str = ""
 
 class Block(CodeElement):
     def __init__(self) -> None:
