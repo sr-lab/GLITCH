@@ -5,22 +5,36 @@ from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
 from pathlib import Path
 
-# NOTE: There are necessary in order for python to load the visitors
+# NOTE: These are necessary in order for python to load the visitors.
+# Otherwise, python will not consider these types of rules.
 from glitch.analysis.design import DesignVisitor 
 from glitch.analysis.security import SecurityVisitor
 
-@click.command()
+@click.command(help="PATH is the file or folder to analyze.")
 @click.option('--tech',
-        type=click.Choice(['ansible', 'chef', 'puppet'], case_sensitive=False), required=True)
+        type=click.Choice(['ansible', 'chef', 'puppet'], case_sensitive=False), required=True,
+        help="The IaC technology in which the scripts analyzed are written in.")
 @click.option('--type',
-    type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script')
-@click.option('--config', type=click.Path(), default="configs/default.ini")
-@click.option('--module', is_flag=True, default=False)
-@click.option('--dataset', is_flag=True, default=False)
-@click.option('--includeall', multiple=True)
-@click.option('--csv', is_flag=True, default=False)
-@click.option('--autodetect', is_flag=True, default=False)
-@click.option('--smells', cls=RulesListOption, default=[], multiple=True)
+    type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script',
+    help="The type of scripts being analyzed. Currently this choice only makes a difference for Ansible.")
+@click.option('--config', type=click.Path(), default="configs/default.ini",
+    help="The path for a config file. Otherwise the default config will be used.")
+@click.option('--module', is_flag=True, default=False,
+    help="Use this flag if the folder you are going to analyze is a module (e.g. Chef cookbook).")
+@click.option('--dataset', is_flag=True, default=False,
+    help="Use this flag if the folder being analyzed is a dataset. A dataset is a folder with subfolders to be analyzed.")
+@click.option('--includeall', multiple=True,
+    help="Some files are ignored when analyzing a folder. For instance, sometimes only some" 
+         "folders in the folder structure are considered. Use this option if"
+         "you want to analyze all the files with a certain extension inside a folder. (e.g. --includeall yml)" 
+         "This flag is only relevant if you are using the dataset flag.")
+@click.option('--csv', is_flag=True, default=False,
+    help="Use this flag if you want the output to be in CSV format.")
+@click.option('--autodetect', is_flag=True, default=False,
+    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible and when"
+         "you are using the dataset flag.")
+@click.option('--smells', cls=RulesListOption, default=[], multiple=True, 
+    help="The type of smells being analyzed.")
 @click.argument('path', type=click.Path(exists=True), required=True)
 def analysis(tech, type, path, config, module, csv, dataset, autodetect, includeall, smells):
     parser = None
