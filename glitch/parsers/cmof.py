@@ -152,7 +152,7 @@ class AnsibleParser(p.Parser):
                     created = len(unit_block.atomic_units) - size
                     atomic_units = unit_block.atomic_units[-created:]
                 elif key.value == "name":
-                    name = key.value
+                    name = val.value
                 elif key.value != "name":
                     if type == "":
                         type = key.value
@@ -618,7 +618,7 @@ class ChefParser(p.Parser):
                 a = Attribute(ChefParser._get_content(ast.args[0], self.source),
                         value, has_variable)
                 a.line = ChefParser._get_content_bounds(ast, self.source)[0]
-                a.code = ChefParser._get_content(ast, self.source)
+                a.code = ChefParser._get_source(ast, self.source)
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
                 for arg in reversed(ast):

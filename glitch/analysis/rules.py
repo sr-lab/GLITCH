@@ -16,7 +16,8 @@ class Error():
         'sec_no_default_switch': "Switch statement should have default condition",
         'design_imperative_abstraction': "Imperative abstraction - too much exec declarations",
         'design_unnecessary_abstraction': "Unnecessary Abstraction",
-        'implementation_long_statement': "Long statement"
+        'implementation_long_statement': "Long statement",
+        'implementation_improper_alignment': "Improper Alignment"
     }
 
     def __init__(self, code: str, el, path: str, repr: str) -> None:
@@ -48,6 +49,10 @@ class Error():
                     self.line == other.line
 
 class RuleVisitor(ABC):
+    def __init__(self, tech) -> None:
+        super().__init__()
+        self.tech = tech
+
     def check(self, code) -> list[Error]:
         if isinstance(code, Project):
             return self.check_project(code)
@@ -151,4 +156,9 @@ class RuleVisitor(ABC):
 
     @abstractmethod
     def check_comment(self, c: Comment, file: str) -> list[Error]:
+        pass
+
+class SmellChecker(ABC):
+    @abstractmethod
+    def check(self, element, file: str) -> list[Error]:
         pass

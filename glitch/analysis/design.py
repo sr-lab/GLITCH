@@ -1,10 +1,44 @@
 import json
 import configparser
-from glitch.analysis.rules import Error, RuleVisitor
+from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
 
 from glitch.repr.inter import *
 
 class DesignVisitor(RuleVisitor):
+    class ImproperAlignmentSmell(SmellChecker):
+        def check(self, element: AtomicUnit, file: str):
+            identation = None
+            improper_alignment = False
+            for a in element.attributes:
+                first_line = a.code.split("\n")[0]
+                curr_id = len(first_line) - len(first_line.lstrip())
+
+                if ("\t" in first_line):
+                    improper_alignment = True
+                    break
+                elif (identation is None):
+                    identation = curr_id
+                elif (identation != curr_id):
+                    improper_alignment = True
+                    break
+
+            if improper_alignment:
+                return [Error('implementation_improper_alignment', element, file, repr(element))]
+
+            return []
+    
+    class AnsibleImproperAlignmentSmell(SmellChecker):
+        # YAML does not allow improper alignments (it also would have problems with generic attributes for all modules)
+        def check(self, element: AtomicUnit, file: str):
+            return []
+
+    def __init__(self, tech) -> None:
+        super().__init__(tech)
+        if tech == "ansible":
+            self.imp_align = DesignVisitor.AnsibleImproperAlignmentSmell()
+        else:
+            self.imp_align = DesignVisitor.ImproperAlignmentSmell()
+
     @staticmethod
     def get_name() -> str:
         return "design"
@@ -51,7 +85,9 @@ class DesignVisitor(RuleVisitor):
         return errors
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
-        return super().check_atomicunit(au, file) + self.__check_lines(au, au.code, file)
+        errors = super().check_atomicunit(au, file) + self.__check_lines(au, au.code, file)
+        errors += self.imp_align.check(au, file)
+        return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
         return self.__check_lines(d, d.code, file)

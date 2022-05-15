@@ -52,7 +52,7 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
     rules = RuleVisitor.__subclasses__()
     for r in rules:
         if smells == () or r.get_name() in smells:
-            analysis = r()
+            analysis = r(tech)
             analysis.config(config)
             analyses.append(analysis)
 
