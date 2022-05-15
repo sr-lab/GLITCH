@@ -76,6 +76,10 @@ class DesignVisitor(RuleVisitor):
         if total_execs > 2 and (total_execs / total_resources) > 0.20:
             errors.append(Error('design_imperative_abstraction', u, u.path, repr(u)))
 
+        with open(u.path, "r") as f:
+            if len(u.variables) / len(f.readlines()) > 0.5:
+                errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
+
         # FIXME Needs to consider more things
         # if (len(u.statements) == 0 and len(u.atomic_units) == 0 and
         #         len(u.variables) == 0 and len(u.unit_blocks) == 0 and
