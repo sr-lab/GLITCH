@@ -20,7 +20,8 @@ class Error():
         'implementation_long_statement': "Long statement",
         'implementation_improper_alignment': "Improper Alignment",
         'implementation_too_many_variables': "Too many variables",
-        'design_duplicate_block': "Duplicate block"
+        'design_duplicate_block': "Duplicate block",
+        'implementation_unguarded_variable': "Unguarded variable"
     }
 
     def __init__(self, code: str, el, path: str, repr: str) -> None:

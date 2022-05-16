@@ -1,4 +1,5 @@
 import json
+import re
 import configparser
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
 from glitch.helpers import kmp_search
@@ -40,6 +41,7 @@ class DesignVisitor(RuleVisitor):
             self.imp_align = DesignVisitor.AnsibleImproperAlignmentSmell()
         else:
             self.imp_align = DesignVisitor.ImproperAlignmentSmell()
+        self.variables_names = []
 
     @staticmethod
     def get_name() -> str:
@@ -49,6 +51,7 @@ class DesignVisitor(RuleVisitor):
         config = configparser.ConfigParser()
         config.read(config_path)
         DesignVisitor.__EXEC = json.loads(config['design']['exec_atomic_units'])
+        DesignVisitor.__VAR_REFER_SYMBOL = json.loads(config['design']['var_refer_symbol'])
 
     def check_module(self, m: Module) -> list[Error]:
         errors = super().check_module(m)
@@ -82,6 +85,17 @@ class DesignVisitor(RuleVisitor):
             code_lines = f.readlines()
             if len(u.variables) / len(code_lines) > 0.5:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
+
+            if DesignVisitor.__VAR_REFER_SYMBOL != "":
+                # FIXME could be improved if we considered strings as part of the model
+                for i, l in enumerate(code_lines):
+                    for tuple in re.findall(r'(\".*\")|(\'.*\')', l):
+                        for string in tuple:
+                            for var in self.variables_names:
+                                if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1].split(' '):
+                                    error = Error('implementation_unguarded_variable', u, u.path, string)
+                                    error.line = i + 1
+                                    errors.append(error)
 
             def get_line(i ,lines):
                 for j, line in lines:
@@ -150,6 +164,7 @@ class DesignVisitor(RuleVisitor):
         return self.__check_lines(a, a.code, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
+        self.variables_names.append(v.name)
         return self.__check_lines(v, v.code, file)
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
