@@ -1,6 +1,7 @@
 import json
 import configparser
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
+from glitch.helpers import kmp_search
 from glitch.tech import Tech
 
 from glitch.repr.inter import *
@@ -78,8 +79,56 @@ class DesignVisitor(RuleVisitor):
             errors.append(Error('design_imperative_abstraction', u, u.path, repr(u)))
 
         with open(u.path, "r") as f:
-            if len(u.variables) / len(f.readlines()) > 0.5:
+            code_lines = f.readlines()
+            if len(u.variables) / len(code_lines) > 0.5:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
+
+            def get_line(i ,lines):
+                for j, line in lines:
+                    if i < j:
+                        return line
+            
+            f.seek(0, 0)
+            all_code = f.read()
+            code = ""
+
+            lines = []
+            current_line = 1
+            i = 0
+            for c in all_code:
+                if c == '\n':
+                    lines.append((i, current_line))
+                    current_line += 1
+                elif not c.isspace():
+                    code += c
+                    i += 1
+
+            size = len(code)
+            checked = []
+            i = 0
+            while i < size - 150:
+                if (i + 150) in checked:
+                    i += 1
+                    continue
+
+                pattern = code[i : i + 150]
+                found = kmp_search(pattern, code[i + 150:])
+                if len(found) > 0:
+                    line = get_line(i, lines)
+                    error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
+                    error.line = line
+                    errors.append(error)
+
+                    for f in found:
+                        line = get_line(f + i + 150, lines)
+                        error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
+                        error.line = line
+                        errors.append(error)
+                        checked += list(range(f + i + 150, f + i + 300))
+
+                    i += 150
+                else:
+                    i += 1
 
         # FIXME Needs to consider more things
         # if (len(u.statements) == 0 and len(u.atomic_units) == 0 and
