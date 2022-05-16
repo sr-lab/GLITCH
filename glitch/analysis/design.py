@@ -1,6 +1,7 @@
 import json
 import configparser
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
+from glitch.tech import Tech
 
 from glitch.repr.inter import *
 
@@ -32,9 +33,9 @@ class DesignVisitor(RuleVisitor):
         def check(self, element: AtomicUnit, file: str):
             return []
 
-    def __init__(self, tech) -> None:
+    def __init__(self, tech: Tech) -> None:
         super().__init__(tech)
-        if tech == "ansible":
+        if tech == Tech.ansible:
             self.imp_align = DesignVisitor.AnsibleImproperAlignmentSmell()
         else:
             self.imp_align = DesignVisitor.ImproperAlignmentSmell()

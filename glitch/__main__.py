@@ -1,6 +1,7 @@
 import click, os
 from glitch.analysis.rules import RuleVisitor
 from glitch.helpers import RulesListOption
+from glitch.tech import Tech
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
 from pathlib import Path
@@ -12,7 +13,7 @@ from glitch.analysis.security import SecurityVisitor
 
 @click.command(help="PATH is the file or folder to analyze.")
 @click.option('--tech',
-        type=click.Choice(['ansible', 'chef', 'puppet'], case_sensitive=False), required=True,
+        type=click.Choice(Tech), required=True,
         help="The IaC technology in which the scripts analyzed are written in.")
 @click.option('--type',
     type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script',
@@ -38,11 +39,11 @@ from glitch.analysis.security import SecurityVisitor
 @click.argument('path', type=click.Path(exists=True), required=True)
 def analysis(tech, type, path, config, module, csv, dataset, autodetect, includeall, smells):
     parser = None
-    if tech == "ansible":
+    if tech == Tech.ansible:
         parser = AnsibleParser()
-    elif tech == "chef":
+    elif tech == Tech.chef:
         parser = ChefParser()
-    elif tech == "puppet":
+    elif tech == Tech.puppet:
         parser = PuppetParser()
 
     if config == "configs/default.ini":

@@ -1,5 +1,4 @@
 import click
-import ast
 
 from glitch.analysis.rules import RuleVisitor
 

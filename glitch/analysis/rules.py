@@ -1,3 +1,4 @@
+from glitch.tech import Tech
 from glitch.repr.inter import *
 from abc import ABC, abstractmethod
 
@@ -50,7 +51,7 @@ class Error():
                     self.line == other.line
 
 class RuleVisitor(ABC):
-    def __init__(self, tech) -> None:
+    def __init__(self, tech: Tech) -> None:
         super().__init__()
         self.tech = tech
 
