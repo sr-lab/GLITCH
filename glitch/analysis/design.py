@@ -1,3 +1,4 @@
+from cmath import inf
 import json
 import re
 import configparser
@@ -42,6 +43,7 @@ class DesignVisitor(RuleVisitor):
         else:
             self.imp_align = DesignVisitor.ImproperAlignmentSmell()
         self.variables_names = []
+        self.first_code_line = inf
 
     @staticmethod
     def get_name() -> str:
@@ -75,6 +77,8 @@ class DesignVisitor(RuleVisitor):
 
             return count_resources, count_execs
 
+        self.variables_names = []
+        self.__check_code(u)
         errors = super().check_unitblock(u)
         total_resources, total_execs = count_atomic_units(u)
 
@@ -150,25 +154,39 @@ class DesignVisitor(RuleVisitor):
         #             len(u.attributes) == 0):
         #     errors.append(Error('design_unnecessary_abstraction', u, u.path, repr(u)))
 
+        for c in u.comments:
+            errors += self.check_comment(c, u.path)
+
         return errors
 
+    def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
+        self.__check_code(c)
+        return super().check_condition(c, file)
+
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
+        self.__check_code(au)
         errors = super().check_atomicunit(au, file) + self.__check_lines(au, au.code, file)
         errors += self.imp_align.check(au, file)
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
+        self.__check_code(d)
         return self.__check_lines(d, d.code, file)
 
     def check_attribute(self, a: Attribute, file: str) -> list[Error]:
+        self.__check_code(a)
         return self.__check_lines(a, a.code, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
         self.variables_names.append(v.name)
+        self.__check_code(v)
         return self.__check_lines(v, v.code, file)
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
-        return self.__check_lines(c, c.code, file)
+        errors = self.__check_lines(c, c.code, file)
+        if c.line >= self.first_code_line:
+            errors.append(Error('design_avoid_comments', c, file, repr(c)))
+        return errors
 
     def __check_lines(self, el, code, file):
         errors = []
@@ -181,3 +199,7 @@ class DesignVisitor(RuleVisitor):
                 errors.append(error)
 
         return errors
+
+    def __check_code(self, ce: CodeElement):
+        if ce.line != -1 and ce.line < self.first_code_line:
+            self.first_code_line = ce.line
