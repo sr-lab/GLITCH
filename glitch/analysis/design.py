@@ -167,6 +167,13 @@ class DesignVisitor(RuleVisitor):
         self.__check_code(au)
         errors = super().check_atomicunit(au, file) + self.__check_lines(au, au.code, file)
         errors += self.imp_align.check(au, file)
+
+        if au.type in DesignVisitor.__EXEC:
+            for attribute in au.attributes:
+                if ("&&" in attribute.value or ";" in attribute.value or "|" in attribute.value):
+                    errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
+                    break
+
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:

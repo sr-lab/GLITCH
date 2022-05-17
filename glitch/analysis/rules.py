@@ -22,7 +22,8 @@ class Error():
         'implementation_too_many_variables': "Too many variables",
         'design_duplicate_block': "Duplicate block",
         'implementation_unguarded_variable': "Unguarded variable",
-        'design_avoid_comments': "Avoid comments"
+        'design_avoid_comments': "Avoid comments",
+        'design_multifaceted_abstraction': "Multifaceted Abstraction"
     }
 
     def __init__(self, code: str, el, path: str, repr: str) -> None:
