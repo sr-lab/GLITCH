@@ -13,6 +13,7 @@ setup(
         "ruamel.yaml",
         "ply",
         "click",
-        "alive-progress"
+        "alive-progress",
+        "prettytable"
     ],
 )

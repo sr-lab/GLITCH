@@ -1,6 +1,7 @@
 import click, os, sys
 from glitch.analysis.rules import RuleVisitor
 from glitch.helpers import RulesListOption
+from glitch.stats import print_stats
 from glitch.tech import Tech
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
@@ -136,5 +137,6 @@ def analysis(tech, type, path, config, module, csv,
             print(error, file = f)
 
     if f != sys.stdout: f.close()
+    print_stats(errors, smells)
 
 analysis(prog_name='glitch')

@@ -2,3 +2,4 @@ ruamel.yaml
 ply
 click
 alive-progress
+prettytable

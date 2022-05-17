@@ -3,28 +3,40 @@ from glitch.repr.inter import *
 from abc import ABC, abstractmethod
 
 class Error():
-    __ERRORS = {
-        'sec_https': "We should prefer the usage of https instead of http.",
-        'sec_susp_comm': "Suspicious word in comment",
-        'sec_def_admin': "Admin by default.",
-        'sec_empty_pass': "Empty password.",
-        'sec_weak_crypt': "Weak Crypto Algorithm.",
-        'sec_hard_secr': "Hard-coded secret.",
-        'sec_hard_pass': "Hard-coded password.",
-        "sec_hard_user": "Hard-coded user.",
-        'sec_invalid_bind': "Invalid IP address binding.",
-        'sec_no_int_check': "No integrity check.",
-        'sec_no_default_switch': "Switch statement should have default condition",
-        'design_imperative_abstraction': "Imperative abstraction - too much exec declarations",
-        'design_unnecessary_abstraction': "Unnecessary Abstraction",
-        'implementation_long_statement': "Long statement",
-        'implementation_improper_alignment': "Improper Alignment",
-        'implementation_too_many_variables': "Too many variables",
-        'design_duplicate_block': "Duplicate block",
-        'implementation_unguarded_variable': "Unguarded variable",
-        'design_avoid_comments': "Avoid comments",
-        'design_multifaceted_abstraction': "Multifaceted Abstraction"
+    ERRORS = {
+        'security': {
+            'sec_https': "Use of HTTP without TLS",
+            'sec_susp_comm': "Suspicious comment",
+            'sec_def_admin': "Admin by default",
+            'sec_empty_pass': "Empty password",
+            'sec_weak_crypt': "Weak Crypto Algorithm",
+            'sec_hard_secr': "Hard-coded secret",
+            'sec_hard_pass': "Hard-coded password",
+            'sec_hard_user': "Hard-coded user",
+            'sec_invalid_bind': "Invalid IP address binding",
+            'sec_no_int_check': "No integrity check",
+            'sec_no_default_switch': "Missing default case statement "
+        },
+        'design': {
+            'design_imperative_abstraction': "Imperative abstraction",
+            'design_unnecessary_abstraction': "Unnecessary abstraction",
+            'implementation_long_statement': "Long statement",
+            'implementation_improper_alignment': "Improper alignment",
+            'implementation_too_many_variables': "Too many variables",
+            'design_duplicate_block': "Duplicate block",
+            'implementation_unguarded_variable': "Unguarded variable",
+            'design_avoid_comments': "Avoid comments",
+            'design_multifaceted_abstraction': "Multifaceted Abstraction"
+        }
     }
+
+    ALL_ERRORS = {}
+
+    @staticmethod
+    def agglomerate_errors():
+        for error_list in Error.ERRORS.values():
+            for k,v in error_list.items():
+                Error.ALL_ERRORS[k] = v
 
     def __init__(self, code: str, el, path: str, repr: str) -> None:
         self.code: str = code
@@ -43,7 +55,7 @@ class Error():
     def __repr__(self) -> str:
         with open(self.path) as f:
             return \
-                f"{self.path}\nIssue on line {self.line}: {Error.__ERRORS[self.code]}\n" + \
+                f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n" + \
                     f"{f.readlines()[self.line - 1].strip()}\n" 
 
     def __hash__(self):
@@ -53,6 +65,8 @@ class Error():
         if not isinstance(other, type(self)): return NotImplemented
         return self.code == other.code and self.path == other.path and\
                     self.line == other.line
+
+Error.agglomerate_errors()
 
 class RuleVisitor(ABC):
     def __init__(self, tech: Tech) -> None:
@@ -163,7 +177,7 @@ class RuleVisitor(ABC):
     @abstractmethod
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         pass
-
+Error.agglomerate_errors()
 class SmellChecker(ABC):
     @abstractmethod
     def check(self, element, file: str) -> list[Error]:
