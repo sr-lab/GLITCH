@@ -12,6 +12,7 @@ setup(
     install_requires=[
         "ruamel.yaml",
         "ply",
-        "click"
+        "click",
+        "alive-progress"
     ],
 )

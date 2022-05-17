@@ -4,6 +4,7 @@ from glitch.helpers import RulesListOption
 from glitch.tech import Tech
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
+from alive_progress import alive_bar
 from pathlib import Path
 
 # NOTE: These are necessary in order for python to load the visitors.
@@ -73,7 +74,36 @@ def analysis(tech, type, path, config, module, csv,
                         iac_files.append(os.path.join(root, name))
             iac_files = set(iac_files)
 
-            for file in iac_files:
+            with alive_bar(len(iac_files), 
+                    title=f"ANALYZING ALL FILES WITH EXTENSIONS {includeall}") as bar:
+                for file in iac_files:
+                    if (autodetect):
+                        if "vars" in file or "default" in file:
+                            type = "vars"
+                        elif "tasks" in file:
+                            type = "tasks"
+                        else:
+                            type = "script"
+
+                    inter = parser.parse(file, type, module)
+                    if inter != None:
+                        for analysis in analyses:
+                            errors += analysis.check(inter)
+                    bar()
+        else:
+            subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
+            with alive_bar(len(subfolders), title="ANALYZING SUBFOLDERS") as bar:
+                for d in subfolders:
+                    inter = parser.parse(d, type, module)
+                    if inter == None: continue
+                    for analysis in analyses:
+                        errors += analysis.check(inter)
+                    bar()
+
+        files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
+
+        with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:
+            for file in files:
                 if (autodetect):
                     if "vars" in file or "default" in file:
                         type = "vars"
@@ -81,32 +111,11 @@ def analysis(tech, type, path, config, module, csv,
                         type = "tasks"
                     else:
                         type = "script"
-
                 inter = parser.parse(file, type, module)
                 if inter != None:
                     for analysis in analyses:
                         errors += analysis.check(inter)
-        else:
-            subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
-            for d in subfolders:
-                inter = parser.parse(d, type, module)
-                if inter == None: continue
-                for analysis in analyses:
-                    errors += analysis.check(inter)
-
-        files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
-        for file in files:
-            if (autodetect):
-                if "vars" in file or "default" in file:
-                    type = "vars"
-                elif "tasks" in file:
-                    type = "tasks"
-                else:
-                    type = "script"
-            inter = parser.parse(file, type, module)
-            if inter != None:
-                for analysis in analyses:
-                    errors += analysis.check(inter)
+                bar()
     else:
         inter = parser.parse(path, type, module)
         if inter != None:
