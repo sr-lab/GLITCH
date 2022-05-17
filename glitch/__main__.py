@@ -1,4 +1,4 @@
-import click, os
+import click, os, sys
 from glitch.analysis.rules import RuleVisitor
 from glitch.helpers import RulesListOption
 from glitch.tech import Tech
@@ -11,7 +11,9 @@ from pathlib import Path
 from glitch.analysis.design import DesignVisitor 
 from glitch.analysis.security import SecurityVisitor
 
-@click.command(help="PATH is the file or folder to analyze.")
+@click.command(
+    help="PATH is the file or folder to analyze. OUTPUT is an optional file to which we can redirect the smells output."
+)
 @click.option('--tech',
         type=click.Choice(Tech), required=True,
         help="The IaC technology in which the scripts analyzed are written in.")
@@ -37,7 +39,9 @@ from glitch.analysis.security import SecurityVisitor
 @click.option('--smells', cls=RulesListOption, default=[], multiple=True, 
     help="The type of smells being analyzed.")
 @click.argument('path', type=click.Path(exists=True), required=True)
-def analysis(tech, type, path, config, module, csv, dataset, autodetect, includeall, smells):
+@click.argument('output', type=click.Path(), required=False)
+def analysis(tech, type, path, config, module, csv, 
+        dataset, autodetect, includeall, smells, output):
     parser = None
     if tech == Tech.ansible:
         parser = AnsibleParser()
@@ -110,11 +114,18 @@ def analysis(tech, type, path, config, module, csv, dataset, autodetect, include
                 errors += analysis.check(inter)
     errors = sorted(set(errors), key=lambda e: (e.path, e.line))
     
+    if output is None:
+        f = sys.stdout
+    else:
+        f = open(output, "w")
+
     if csv:
         for error in errors:
-            print(error.to_csv())
+            print(error.to_csv(), file = f)
     else:
         for error in errors:
-            print(error)
+            print(error, file = f)
+
+    if f != sys.stdout: f.close()
 
 analysis(prog_name='glitch')
