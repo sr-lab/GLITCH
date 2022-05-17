@@ -174,6 +174,9 @@ class DesignVisitor(RuleVisitor):
                     errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
                     break
 
+        if au.type in DesignVisitor.__EXEC and au.code.count('\n') > 7:
+            errors.append(Error("design_long_resource", au, file, repr(au)))
+
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
