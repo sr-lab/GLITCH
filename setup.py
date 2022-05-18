@@ -14,6 +14,7 @@ setup(
         "ply",
         "click",
         "alive-progress",
-        "prettytable"
+        "prettytable",
+        "pandas"
     ],
 )

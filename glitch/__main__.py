@@ -27,6 +27,9 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.option('--tech',
         type=click.Choice(Tech), required=True,
         help="The IaC technology in which the scripts analyzed are written in.")
+@click.option('--tableformat',
+        type=click.Choice(("prettytable", "latex")), required=False, default="prettytable",
+        help="The presentation format of the tables that show stats about the run.")
 @click.option('--type',
     type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script',
     help="The type of scripts being analyzed. Currently this choice only makes a difference for Ansible.")
@@ -51,7 +54,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.argument('path', type=click.Path(exists=True), required=True)
 @click.argument('output', type=click.Path(), required=False)
 def glitch(tech, type, path, config, module, csv, 
-        dataset, autodetect, includeall, smells, output):
+        dataset, autodetect, includeall, smells, output, tableformat):
     parser = None
     if tech == Tech.ansible:
         parser = AnsibleParser()
@@ -134,6 +137,6 @@ def glitch(tech, type, path, config, module, csv,
             print(error, file = f)
 
     if f != sys.stdout: f.close()
-    print_stats(errors, smells, file_stats)
+    print_stats(errors, smells, file_stats, tableformat)
 
 glitch(prog_name='glitch')

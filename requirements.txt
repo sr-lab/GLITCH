@@ -3,3 +3,4 @@ ply
 click
 alive-progress
 prettytable
+pandas
