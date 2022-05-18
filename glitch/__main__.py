@@ -1,7 +1,8 @@
 import click, os, sys
 from glitch.analysis.rules import RuleVisitor
 from glitch.helpers import RulesListOption
-from glitch.stats import print_stats
+from glitch.stats.print import print_stats
+from glitch.stats.stats import FileStats
 from glitch.tech import Tech
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
@@ -12,6 +13,13 @@ from pathlib import Path
 # Otherwise, python will not consider these types of rules.
 from glitch.analysis.design import DesignVisitor 
 from glitch.analysis.security import SecurityVisitor
+
+def parse_and_check(type, path, module, parser, analyses, errors, stats):
+    inter = parser.parse(path, type, module)
+    if inter != None:
+        for analysis in analyses:
+            errors += analysis.check(inter)
+    stats.compute(inter)
 
 @click.command(
     help="PATH is the file or folder to analyze. OUTPUT is an optional file to which we can redirect the smells output."
@@ -42,7 +50,7 @@ from glitch.analysis.security import SecurityVisitor
     help="The type of smells being analyzed.")
 @click.argument('path', type=click.Path(exists=True), required=True)
 @click.argument('output', type=click.Path(), required=False)
-def analysis(tech, type, path, config, module, csv, 
+def glitch(tech, type, path, config, module, csv, 
         dataset, autodetect, includeall, smells, output):
     parser = None
     if tech == Tech.ansible:
@@ -51,6 +59,7 @@ def analysis(tech, type, path, config, module, csv,
         parser = ChefParser()
     elif tech == Tech.puppet:
         parser = PuppetParser()
+    file_stats = FileStats()
 
     if config == "configs/default.ini":
         config = resource_filename('glitch', "configs/default.ini")
@@ -86,19 +95,13 @@ def analysis(tech, type, path, config, module, csv,
                         else:
                             type = "script"
 
-                    inter = parser.parse(file, type, module)
-                    if inter != None:
-                        for analysis in analyses:
-                            errors += analysis.check(inter)
+                    parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                     bar()
         else:
             subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
             with alive_bar(len(subfolders), title="ANALYZING SUBFOLDERS") as bar:
                 for d in subfolders:
-                    inter = parser.parse(d, type, module)
-                    if inter == None: continue
-                    for analysis in analyses:
-                        errors += analysis.check(inter)
+                    parse_and_check(type, d, module, parser, analyses, errors, file_stats)
                     bar()
 
         files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
@@ -112,16 +115,10 @@ def analysis(tech, type, path, config, module, csv,
                         type = "tasks"
                     else:
                         type = "script"
-                inter = parser.parse(file, type, module)
-                if inter != None:
-                    for analysis in analyses:
-                        errors += analysis.check(inter)
+                parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                 bar()
     else:
-        inter = parser.parse(path, type, module)
-        if inter != None:
-            for analysis in analyses:
-                errors += analysis.check(inter)
+        parse_and_check(type, path, module, parser, analyses, errors, file_stats)
     errors = sorted(set(errors), key=lambda e: (e.path, e.line))
     
     if output is None:
@@ -137,6 +134,6 @@ def analysis(tech, type, path, config, module, csv,
             print(error, file = f)
 
     if f != sys.stdout: f.close()
-    print_stats(errors, smells)
+    print_stats(errors, smells, file_stats)
 
-analysis(prog_name='glitch')
+glitch(prog_name='glitch')

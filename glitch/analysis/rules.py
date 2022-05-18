@@ -15,7 +15,7 @@ class Error():
             'sec_hard_user': "Hard-coded user",
             'sec_invalid_bind': "Invalid IP address binding",
             'sec_no_int_check': "No integrity check",
-            'sec_no_default_switch': "Missing default case statement "
+            'sec_no_default_switch': "Missing default case statement"
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction",

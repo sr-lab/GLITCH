@@ -1196,25 +1196,25 @@ class PuppetParser(p.Parser):
         unit_block: UnitBlock = UnitBlock(os.path.basename(path))
         unit_block.path = path
         
-        #try:
-        with open(path) as f:
-            parsed_script, comments = parse_puppet(f.read())
+        try:
+            with open(path) as f:
+                parsed_script, comments = parse_puppet(f.read())
 
-            f.seek(0, 0)
-            code = f.readlines()
+                f.seek(0, 0)
+                code = f.readlines()
 
-            for c in comments:
-                comment = Comment(c.content)
-                comment.line = c.line
-                comment.code = ''.join(code[c.line - 1 : c.end_line])
-                unit_block.add_comment(comment)
+                for c in comments:
+                    comment = Comment(c.content)
+                    comment.line = c.line
+                    comment.code = ''.join(code[c.line - 1 : c.end_line])
+                    unit_block.add_comment(comment)
 
-            PuppetParser.__process_unitblock_component(
-                PuppetParser.__process_codeelement(parsed_script, path, code),
-                unit_block
-            )
-        #except:
-        #    throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
+                PuppetParser.__process_unitblock_component(
+                    PuppetParser.__process_codeelement(parsed_script, path, code),
+                    unit_block
+                )
+        except:
+            throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
 
         return unit_block
 
