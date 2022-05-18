@@ -40,10 +40,10 @@ def print_stats(errors, smells, file_stats, format):
         attributes.add_row([total_files, file_stats.loc])
         print(attributes)
     elif (format == "latex"):
-        table = pd.DataFrame(stats_info, columns = ["Smell", "Occurrences", 
-            "Smell density (Smell/KLoC)", "Proportion of scripts (%)"])
-        print(table.to_latex(index=False))
+        table = pd.DataFrame(stats_info, columns = ["\\textbf{Smell}", "\\textbf{Occurrences}", 
+            "\\textbf{Smell density (Smell/KLoC)}", "\\textbf{Proportion of scripts (\%)}"])
+        print(table.to_latex(index=False, escape=False))
 
         attributes = pd.DataFrame([[total_files, file_stats.loc]], columns=
-            ["Total IaC files", "Lines of Code"])
-        print(attributes.to_latex(index=False))
+            ["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"])
+        print(attributes.to_latex(index=False, escape=False))
