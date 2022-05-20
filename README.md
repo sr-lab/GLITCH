@@ -9,6 +9,8 @@ To install run:
 python3 -m pip install -e .
 ```
 
+To use the tool for Chef you also need Ruby and its Ripper package installed.
+
 ## Usage
 
 You can use the command to see all options:
