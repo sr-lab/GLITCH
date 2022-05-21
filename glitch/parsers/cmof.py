@@ -951,9 +951,22 @@ class PuppetParser(p.Parser):
             resource.code = get_code(codeelement)
             return resource 
         elif (isinstance(codeelement, puppetmodel.ResourceDeclaration)):
-            # FIXME Resource Declarations are not yet supported
-            return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement.block)) + \
-                list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement.parameters))
+            unit_block: UnitBlock = UnitBlock(
+                PuppetParser.__process_codeelement(codeelement.name, path, code)
+            )
+            unit_block.path = path
+
+            if (codeelement.block is not None):
+                for ce in list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement.block)):
+                    PuppetParser.__process_unitblock_component(ce, unit_block)
+
+            for p in codeelement.parameters:
+                unit_block.add_attribute(PuppetParser.__process_codeelement(p, path, code))
+
+            unit_block.line, unit_block.column = codeelement.line, codeelement.col
+            unit_block.code = get_code(codeelement)
+
+            return unit_block
         elif (isinstance(codeelement, puppetmodel.Parameter)):
             # FIXME Parameters are not yet supported
             name = PuppetParser.__process_codeelement(codeelement.name, path, code)
@@ -998,7 +1011,7 @@ class PuppetParser(p.Parser):
                     PuppetParser.__process_unitblock_component(ce, unit_block)
 
             for p in codeelement.parameters:
-                unit_block.add_variable(PuppetParser.__process_codeelement(p, path, code))
+                unit_block.add_attribute(PuppetParser.__process_codeelement(p, path, code))
 
             unit_block.line, unit_block.column = codeelement.line, codeelement.col
             unit_block.code = get_code(codeelement)

@@ -26,7 +26,8 @@ class Error():
             'design_duplicate_block': "Duplicate block",
             'implementation_unguarded_variable': "Unguarded variable",
             'design_avoid_comments': "Avoid comments",
-            'design_multifaceted_abstraction': "Multifaceted Abstraction"
+            'design_multifaceted_abstraction': "Multifaceted Abstraction",
+            'design_misplaced_attribute': "Misplaced attribute"
         }
     }
 

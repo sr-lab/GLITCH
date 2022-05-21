@@ -36,12 +36,58 @@ class DesignVisitor(RuleVisitor):
         def check(self, element: AtomicUnit, file: str):
             return []
 
+    class MisplacedAttribute(SmellChecker):
+        def check(self, element, file: str):
+            return []
+
+    class ChefMisplacedAttribute(SmellChecker):
+        def check(self, element, file: str):
+            if isinstance(element, AtomicUnit):
+                order = []
+                for attribute in element.attributes:
+                    if attribute.name == "source":
+                        order.append(1)
+                    elif attribute.name in ["owner", "group"]:
+                        order.append(2)
+                    elif attribute.name == "mode":
+                        order.append(3)
+                    elif attribute.name == "action":
+                        order.append(4)
+
+                if order != sorted(order):
+                    return [Error('design_misplaced_attribute', element, file, repr(element))]
+            return []
+
+    class PuppetMisplacedAttribute(SmellChecker):
+        def check(self, element, file: str):
+            if isinstance(element, AtomicUnit):
+                for i, attr in enumerate(element.attributes):
+                    if attr.name == "ensure" and i != 0:
+                        return [Error('design_misplaced_attribute', element, file, repr(element))]
+            elif isinstance(element, UnitBlock):
+                optional = False
+                for attr in element.attributes:
+                    if attr.value != "":
+                        optional = True
+                    elif optional == True:
+                        return [Error('design_misplaced_attribute', element, file, repr(element))]
+            return []
+
     def __init__(self, tech: Tech) -> None:
         super().__init__(tech)
+
         if tech == Tech.ansible:
             self.imp_align = DesignVisitor.AnsibleImproperAlignmentSmell()
         else:
             self.imp_align = DesignVisitor.ImproperAlignmentSmell()
+
+        if tech == Tech.chef:
+            self.misplaced_attr = DesignVisitor.ChefMisplacedAttribute()
+        elif tech == Tech.puppet:
+            self.misplaced_attr = DesignVisitor.PuppetMisplacedAttribute()
+        else:
+            self.misplaced_attr = DesignVisitor.MisplacedAttribute()
+
         self.variables_names = []
         self.first_code_line = inf
 
@@ -157,6 +203,8 @@ class DesignVisitor(RuleVisitor):
         for c in u.comments:
             errors += self.check_comment(c, u.path)
 
+        errors += self.misplaced_attr.check(u, u.path)
+
         return errors
 
     def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
@@ -167,6 +215,7 @@ class DesignVisitor(RuleVisitor):
         self.__check_code(au)
         errors = super().check_atomicunit(au, file) + self.__check_lines(au, au.code, file)
         errors += self.imp_align.check(au, file)
+        errors += self.misplaced_attr.check(au, file)
 
         if au.type in DesignVisitor.__EXEC:
             for attribute in au.attributes:
