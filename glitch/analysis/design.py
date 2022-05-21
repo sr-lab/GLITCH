@@ -12,23 +12,37 @@ class DesignVisitor(RuleVisitor):
     class ImproperAlignmentSmell(SmellChecker):
         def check(self, element: AtomicUnit, file: str):
             identation = None
-            improper_alignment = False
             for a in element.attributes:
                 first_line = a.code.split("\n")[0]
                 curr_id = len(first_line) - len(first_line.lstrip())
 
                 if ("\t" in first_line):
-                    improper_alignment = True
-                    break
+                    return [Error('implementation_improper_alignment', 
+                        element, file, repr(element))]
                 elif (identation is None):
                     identation = curr_id
                 elif (identation != curr_id):
-                    improper_alignment = True
-                    break
+                    return [Error('implementation_improper_alignment', 
+                        element, file, repr(element))]
 
-            if improper_alignment:
-                return [Error('implementation_improper_alignment', element, file, repr(element))]
+            return []
 
+    class PuppetImproperAlignmentSmell(SmellChecker):
+        def check(self, element: AtomicUnit, file: str) -> list[Error]:
+            arrow_column = None
+            for a in element.attributes:
+                first_line = a.code.split("\n")[0]
+                cur_arrow_column = len(first_line.split('=>')[0])
+
+                if ("\t" in first_line):
+                    return [Error('implementation_improper_alignment', 
+                        element, file, repr(element))]
+                elif arrow_column is None:
+                    arrow_column = cur_arrow_column
+                elif arrow_column != cur_arrow_column:
+                    return [Error('implementation_improper_alignment', 
+                        element, file, repr(element))]
+            
             return []
     
     class AnsibleImproperAlignmentSmell(SmellChecker):
@@ -78,6 +92,8 @@ class DesignVisitor(RuleVisitor):
 
         if tech == Tech.ansible:
             self.imp_align = DesignVisitor.AnsibleImproperAlignmentSmell()
+        elif tech == Tech.puppet:
+            self.imp_align = DesignVisitor.PuppetImproperAlignmentSmell()
         else:
             self.imp_align = DesignVisitor.ImproperAlignmentSmell()
 
