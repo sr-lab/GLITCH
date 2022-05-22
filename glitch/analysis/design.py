@@ -148,8 +148,12 @@ class DesignVisitor(RuleVisitor):
             errors.append(Error('design_imperative_abstraction', u, u.path, repr(u)))
 
         with open(u.path, "r") as f:
-            code_lines = f.readlines()
-            if len(u.variables) / len(code_lines) > 0.5:
+            try:
+                code_lines = f.readlines()
+            except UnicodeDecodeError:
+                return []
+            
+            if len(u.variables) / max(len(code_lines), 1) > 0.5:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
 
             if DesignVisitor.__VAR_REFER_SYMBOL != "":
@@ -228,7 +232,8 @@ class DesignVisitor(RuleVisitor):
 
         if au.type in DesignVisitor.__EXEC:
             for attribute in au.attributes:
-                if ("&&" in attribute.value or ";" in attribute.value or "|" in attribute.value):
+                value = repr(attribute.value)
+                if ("&&" in value or ";" in value or "|" in value):
                     errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
                     break
 

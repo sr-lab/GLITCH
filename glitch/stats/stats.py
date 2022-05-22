@@ -90,7 +90,10 @@ class FileStats(Stats):
         if os.path.isfile(u.path) and u.path not in self.files:
             self.files.add(u.path)
             with open(u.path, "r") as f:
-                self.loc += len(f.readlines())
+                try:
+                    self.loc += len(f.readlines())
+                except UnicodeDecodeError:
+                    pass
 
     def compute_atomicunit(self, au: AtomicUnit):
         pass
