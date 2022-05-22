@@ -7,6 +7,9 @@ class CodeElement(ABC):
         self.column: int = -1
         self.code: str = ""
 
+    def __str__(self) -> str:
+        return self.__repr__()
+
 class Block(CodeElement):
     def __init__(self) -> None:
         super().__init__()

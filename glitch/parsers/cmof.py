@@ -1034,9 +1034,9 @@ class PuppetParser(p.Parser):
                         + "]")
             elif len(codeelement.arguments) == 2:
                 return \
-                    (PuppetParser.__process_codeelement(codeelement.arguments[0], path, code)
+                    (str(PuppetParser.__process_codeelement(codeelement.arguments[0], path, code))
                         + codeelement.operator + 
-                    PuppetParser.__process_codeelement(codeelement.arguments[1], path, code))
+                    str(PuppetParser.__process_codeelement(codeelement.arguments[1], path, code)))
             elif codeelement.operator == "[,]":
                 return \
                     (PuppetParser.__process_codeelement(codeelement.arguments[0], path, code)
