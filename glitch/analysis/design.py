@@ -182,33 +182,26 @@ class DesignVisitor(RuleVisitor):
                 elif not c.isspace():
                     code += c
                     i += 1
+            lines.append((i, current_line))
 
-            size = len(code)
-            checked = []
-            i = 0
-            while i < size - 150:
-                if (i + 150) in checked:
-                    i += 1
-                    continue
-
-                pattern = code[i : i + 150]
-                found = kmp_search(pattern, code[i + 150:])
-                if len(found) > 0:
-                    line = get_line(i, lines)
-                    error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
-                    error.line = line
-                    errors.append(error)
-
-                    for f in found:
-                        line = get_line(f + i + 150, lines)
-                        error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
-                        error.line = line
-                        errors.append(error)
-                        checked += list(range(f + i + 150, f + i + 300))
-
-                    i += 150
+            blocks = {}
+            for i in range(len(code) - 150):
+                hash = code[i : i + 150].__hash__()
+                if hash not in blocks:
+                    blocks[hash] = [i]
                 else:
-                    i += 1
+                    blocks[hash].append(i)
+
+            checked = []
+            for _, value in blocks.items():
+                if len(value) >= 2:
+                    for i in value:
+                        if i not in checked:
+                            line = get_line(i, lines)
+                            error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
+                            error.line = line
+                            errors.append(error)
+                            checked += list(range(i, i + 150))
 
         # FIXME Needs to consider more things
         # if (len(u.statements) == 0 and len(u.atomic_units) == 0 and
