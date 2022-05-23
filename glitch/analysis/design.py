@@ -31,14 +31,16 @@ class DesignVisitor(RuleVisitor):
         def check(self, element: AtomicUnit, file: str) -> list[Error]:
             longest = 0
             longest_ident = 0
+            longest_split = ""
             for a in element.attributes:
                 if len(a.name) > longest:
                     longest = len(a.name)
                     split = a.code.split('=>')[0]
                     longest_ident = len(split)
-                    if len(split) - 1 != len(split.rstrip()):
-                        return [Error('implementation_improper_alignment', 
-                            element, file, repr(element))]
+                    longest_split = split
+            if len(longest_split) - 1 != len(longest_split.rstrip()):
+                return [Error('implementation_improper_alignment', 
+                    element, file, repr(element))]
 
             for a in element.attributes:
                 first_line = a.code.split("\n")[0]
