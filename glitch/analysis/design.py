@@ -171,8 +171,8 @@ class DesignVisitor(RuleVisitor):
             if DesignVisitor.__VAR_REFER_SYMBOL is not None:
                 # FIXME could be improved if we considered strings as part of the model
                 for i, l in enumerate(code_lines):
-                    for tuple in re.findall(r'(\".*\")|(\'.*\')', l):
-                        for string in tuple:
+                    for tuple in re.findall(r'(\'([^\\]|(\\(\n|.)))*?\')|(\"([^\\]|(\\(\n|.)))*?\")', l):
+                        for string in (tuple[0], tuple[4]):
                             for var in self.variables_names:
                                 if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1]:
                                     error = Error('implementation_unguarded_variable', u, u.path, string)
