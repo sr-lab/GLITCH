@@ -115,7 +115,10 @@ class DesignVisitor(RuleVisitor):
         config = configparser.ConfigParser()
         config.read(config_path)
         DesignVisitor.__EXEC = json.loads(config['design']['exec_atomic_units'])
-        DesignVisitor.__VAR_REFER_SYMBOL = json.loads(config['design']['var_refer_symbol'])
+        if 'var_refer_symbol' not in config['design']:
+            DesignVisitor.__VAR_REFER_SYMBOL = None
+        else:
+            DesignVisitor.__VAR_REFER_SYMBOL = json.loads(config['design']['var_refer_symbol'])
 
     def check_module(self, m: Module) -> list[Error]:
         errors = super().check_module(m)
@@ -156,13 +159,13 @@ class DesignVisitor(RuleVisitor):
             if len(u.variables) / max(len(code_lines), 1) > 0.5:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
 
-            if DesignVisitor.__VAR_REFER_SYMBOL != "":
+            if DesignVisitor.__VAR_REFER_SYMBOL is not None:
                 # FIXME could be improved if we considered strings as part of the model
                 for i, l in enumerate(code_lines):
                     for tuple in re.findall(r'(\".*\")|(\'.*\')', l):
                         for string in tuple:
                             for var in self.variables_names:
-                                if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1].split(' '):
+                                if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1]:
                                     error = Error('implementation_unguarded_variable', u, u.path, string)
                                     error.line = i + 1
                                     errors.append(error)
