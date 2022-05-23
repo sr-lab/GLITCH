@@ -935,7 +935,7 @@ class PuppetParser(p.Parser):
         elif (isinstance(codeelement, puppetmodel.Attribute)):
             name = PuppetParser.__process_codeelement(codeelement.key, path, code)
             temp_value = PuppetParser.__process_codeelement(codeelement.value, path, code)
-            value = "" if temp_value is None else temp_value
+            value = "" if temp_value == "undef" else temp_value
             has_variable = not isinstance(value, str) or value.startswith("$")
             attribute = Attribute(name, value, has_variable)
             attribute.line, attribute.column = codeelement.line, codeelement.col
@@ -972,7 +972,7 @@ class PuppetParser(p.Parser):
             # FIXME Parameters are not yet supported
             name = PuppetParser.__process_codeelement(codeelement.name, path, code)
             temp_value = PuppetParser.__process_codeelement(codeelement.default, path, code)
-            value = "" if temp_value is None else temp_value
+            value = "" if temp_value == "undef" else temp_value
             has_variable = not isinstance(value, str) or temp_value.startswith("$") or \
                     codeelement.default is None
             attribute = Attribute(
@@ -987,7 +987,7 @@ class PuppetParser(p.Parser):
             name = PuppetParser.__process_codeelement(codeelement.name, path, code)
             temp_value = PuppetParser.__process_codeelement(codeelement.value, path, code)
             if not isinstance(temp_value, dict):
-                value = "" if temp_value is None else temp_value
+                value = "" if temp_value == "undef" else temp_value
                 has_variable = not isinstance(value, str) or value.startswith("$")
                 variable: Variable = Variable(name, value, has_variable)
                 variable.line, variable.column = codeelement.line, codeelement.col
@@ -1189,8 +1189,6 @@ class PuppetParser(p.Parser):
             return res
         elif (isinstance(codeelement, list)):
             return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement))
-        elif (codeelement is None):
-            return ""
         else:
             return codeelement
         

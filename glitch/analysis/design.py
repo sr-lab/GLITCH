@@ -85,7 +85,7 @@ class DesignVisitor(RuleVisitor):
             elif isinstance(element, UnitBlock):
                 optional = False
                 for attr in element.attributes:
-                    if attr.value != "":
+                    if attr.value is not None:
                         optional = True
                     elif optional == True:
                         return [Error('design_misplaced_attribute', element, file, repr(element))]
