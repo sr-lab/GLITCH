@@ -16,10 +16,7 @@ class DesignVisitor(RuleVisitor):
                     first_line = a.code.split("\n")[0]
                     curr_id = len(first_line) - len(first_line.lstrip())
 
-                    if ("\t" in first_line):
-                        return [Error('implementation_improper_alignment', 
-                            element, file, repr(element))]
-                    elif (identation is None):
+                    if (identation is None):
                         identation = curr_id
                     elif (identation != curr_id):
                         return [Error('implementation_improper_alignment', 
@@ -49,9 +46,6 @@ class DesignVisitor(RuleVisitor):
                 if cur_arrow_column != longest_ident:
                     return [Error('implementation_improper_alignment', 
                             element, file, repr(element))]
-                elif ("\t" in first_line):
-                    return [Error('implementation_improper_alignment', 
-                        element, file, repr(element))]
 
             return []
     
@@ -165,6 +159,13 @@ class DesignVisitor(RuleVisitor):
                 code_lines = f.readlines()
             except UnicodeDecodeError:
                 return []
+
+            for i, line in enumerate(code_lines):
+                if ("\t" in line):
+                    error = Error('implementation_improper_alignment', 
+                        u, u.path, repr(u))
+                    error.line = i + 1
+                    errors.append(error)
             
             if len(u.variables) / max(len(code_lines), 1) > 0.5:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
