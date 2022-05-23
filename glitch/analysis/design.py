@@ -3,42 +3,43 @@ import json
 import re
 import configparser
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
-from glitch.helpers import kmp_search
 from glitch.tech import Tech
 
 from glitch.repr.inter import *
 
 class DesignVisitor(RuleVisitor):
     class ImproperAlignmentSmell(SmellChecker):
-        def check(self, element: AtomicUnit, file: str):
-            identation = None
-            for a in element.attributes:
-                first_line = a.code.split("\n")[0]
-                curr_id = len(first_line) - len(first_line.lstrip())
+        def check(self, element, file: str):
+            if isinstance(element, AtomicUnit):
+                identation = None
+                for a in element.attributes:
+                    first_line = a.code.split("\n")[0]
+                    curr_id = len(first_line) - len(first_line.lstrip())
 
-                if ("\t" in first_line):
-                    return [Error('implementation_improper_alignment', 
-                        element, file, repr(element))]
-                elif (identation is None):
-                    identation = curr_id
-                elif (identation != curr_id):
-                    return [Error('implementation_improper_alignment', 
-                        element, file, repr(element))]
+                    if ("\t" in first_line):
+                        return [Error('implementation_improper_alignment', 
+                            element, file, repr(element))]
+                    elif (identation is None):
+                        identation = curr_id
+                    elif (identation != curr_id):
+                        return [Error('implementation_improper_alignment', 
+                            element, file, repr(element))]
 
-            return []
+                return []
 
     class PuppetImproperAlignmentSmell(SmellChecker):
-        def check(self, element: AtomicUnit, file: str) -> list[Error]:
+        def check(self, element, file: str) -> list[Error]:
             longest = 0
             longest_ident = 0
             longest_split = ""
             for a in element.attributes:
-                if len(a.name) > longest:
+                if len(a.name) > longest and '=>' in a.code:
                     longest = len(a.name)
                     split = a.code.split('=>')[0]
                     longest_ident = len(split)
                     longest_split = split
-            if longest_split != "" and len(longest_split) - 1 != len(longest_split.rstrip()):
+            if longest_split == "": return []
+            elif len(longest_split) - 1 != len(longest_split.rstrip()):
                 return [Error('implementation_improper_alignment', 
                     element, file, repr(element))]
 
@@ -229,6 +230,7 @@ class DesignVisitor(RuleVisitor):
             errors += self.check_comment(c, u.path)
 
         errors += self.misplaced_attr.check(u, u.path)
+        errors += self.imp_align.check(u, u.path)
 
         return errors
 

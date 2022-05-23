@@ -1,6 +1,7 @@
 import os
 import re
 import tempfile
+from attr import attrib
 from puppetparser.parser import parse as parse_puppet
 import puppetparser.model as puppetmodel
 from string import Template
@@ -974,14 +975,14 @@ class PuppetParser(p.Parser):
             value = "" if temp_value is None else temp_value
             has_variable = not isinstance(value, str) or temp_value.startswith("$") or \
                     codeelement.default is None
-            variable = Variable(
+            attribute = Attribute(
                 name,
                 value,
                 has_variable
             )
-            variable.line, variable.column = codeelement.line, codeelement.col
-            variable.code = get_code(codeelement)
-            return variable 
+            attribute.line, attribute.column = codeelement.line, codeelement.col
+            attribute.code = get_code(codeelement)
+            return attribute
         elif (isinstance(codeelement, puppetmodel.Assignment)):
             name = PuppetParser.__process_codeelement(codeelement.name, path, code)
             temp_value = PuppetParser.__process_codeelement(codeelement.value, path, code)
