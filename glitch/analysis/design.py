@@ -29,20 +29,27 @@ class DesignVisitor(RuleVisitor):
 
     class PuppetImproperAlignmentSmell(SmellChecker):
         def check(self, element: AtomicUnit, file: str) -> list[Error]:
-            arrow_column = None
+            longest = 0
+            longest_ident = 0
+            for a in element.attributes:
+                if len(a.name) > longest:
+                    longest = len(a.name)
+                    split = a.code.split('=>')[0]
+                    longest_ident = len(split)
+                    if len(split) - 1 != len(split.rstrip()):
+                        return [Error('implementation_improper_alignment', 
+                            element, file, repr(element))]
+
             for a in element.attributes:
                 first_line = a.code.split("\n")[0]
                 cur_arrow_column = len(first_line.split('=>')[0])
+                if cur_arrow_column != longest_ident:
+                    return [Error('implementation_improper_alignment', 
+                            element, file, repr(element))]
+                elif ("\t" in first_line):
+                    return [Error('implementation_improper_alignment', 
+                        element, file, repr(element))]
 
-                if ("\t" in first_line):
-                    return [Error('implementation_improper_alignment', 
-                        element, file, repr(element))]
-                elif arrow_column is None:
-                    arrow_column = cur_arrow_column
-                elif arrow_column != cur_arrow_column:
-                    return [Error('implementation_improper_alignment', 
-                        element, file, repr(element))]
-            
             return []
     
     class AnsibleImproperAlignmentSmell(SmellChecker):
