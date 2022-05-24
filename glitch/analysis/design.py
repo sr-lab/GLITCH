@@ -23,6 +23,7 @@ class DesignVisitor(RuleVisitor):
                             element, file, repr(element))]
 
                 return []
+            return []
 
     class PuppetImproperAlignmentSmell(SmellChecker):
         def check(self, element, file: str) -> list[Error]:
