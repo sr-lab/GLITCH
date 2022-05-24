@@ -182,6 +182,10 @@ class DesignVisitor(RuleVisitor):
                         u, u.path, repr(u))
                     error.line = i + 1
                     errors.append(error)
+                if len(line) > 140:
+                    error = Error('implementation_long_statement', u, u.path, line)
+                    error.line = i
+                    errors.append(error)
             
             if len(u.variables) / max(len(code_lines), 1) > 0.5:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
@@ -266,7 +270,7 @@ class DesignVisitor(RuleVisitor):
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         self.__check_code(au)
-        errors = super().check_atomicunit(au, file) + self.__check_lines(au, au.code, file)
+        errors = super().check_atomicunit(au, file)
         errors += self.imp_align.check(au, file)
         errors += self.misplaced_attr.check(au, file)
 
@@ -284,33 +288,21 @@ class DesignVisitor(RuleVisitor):
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
         self.__check_code(d)
-        return self.__check_lines(d, d.code, file)
+        return []
 
     def check_attribute(self, a: Attribute, file: str) -> list[Error]:
         self.__check_code(a)
-        return self.__check_lines(a, a.code, file)
+        return []
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
         self.variables_names.append(v.name)
         self.__check_code(v)
-        return self.__check_lines(v, v.code, file)
+        return []
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
-        errors = self.__check_lines(c, c.code, file)
+        errors = []
         if c.line >= self.first_code_line:
             errors.append(Error('design_avoid_comments', c, file, repr(c)))
-        return errors
-
-    def __check_lines(self, el, code, file):
-        errors = []
-
-        lines = code.split('\n')
-        for l, line in enumerate(lines):
-            if len(line) > 140:
-                error = Error('implementation_long_statement', el, file, line)
-                error.line = el.line + l
-                errors.append(error)
-
         return errors
 
     def __check_code(self, ce: CodeElement):
