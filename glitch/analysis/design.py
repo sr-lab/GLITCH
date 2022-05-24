@@ -184,7 +184,7 @@ class DesignVisitor(RuleVisitor):
                     errors.append(error)
                 if len(line) > 140:
                     error = Error('implementation_long_statement', u, u.path, line)
-                    error.line = i
+                    error.line = i + 1
                     errors.append(error)
             
             if len(u.variables) / max(len(code_lines), 1) > 0.5:
