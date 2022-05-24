@@ -147,6 +147,8 @@ class DesignVisitor(RuleVisitor):
             return count_resources, count_execs
 
         self.variables_names = []
+        for attr in u.attributes:
+           self.variables_names.append(attr.name)
         self.__check_code(u)
         errors = super().check_unitblock(u)
         total_resources, total_execs = count_atomic_units(u)
