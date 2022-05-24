@@ -149,7 +149,7 @@ class DesignVisitor(RuleVisitor):
 
         self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
-           self.variables_names.append("$" + attr.name)
+           self.variables_names.append(attr.name)
         self.__check_code(u)
 
         errors = []
