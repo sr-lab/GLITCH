@@ -954,6 +954,16 @@ class PuppetParser(p.Parser):
             resource.line, resource.column = codeelement.line, codeelement.col
             resource.code = get_code(codeelement)
             return resource 
+        elif (isinstance(codeelement, puppetmodel.ClassAsResource)):
+            resource: AtomicUnit = AtomicUnit(
+                PuppetParser.__process_codeelement(codeelement.title, path, code), 
+                "class"
+            )
+            for attr in codeelement.attributes:
+                resource.add_attribute(PuppetParser.__process_codeelement(attr, path, code))
+            resource.line, resource.column = codeelement.line, codeelement.col
+            resource.code = get_code(codeelement)
+            return resource 
         elif (isinstance(codeelement, puppetmodel.ResourceDeclaration)):
             unit_block: UnitBlock = UnitBlock(
                 PuppetParser.__process_codeelement(codeelement.name, path, code)

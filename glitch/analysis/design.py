@@ -108,6 +108,7 @@ class DesignVisitor(RuleVisitor):
         else:
             self.misplaced_attr = DesignVisitor.MisplacedAttribute()
 
+        self.variable_stack = []
         self.variables_names = []
         self.first_code_line = inf
 
@@ -146,11 +147,24 @@ class DesignVisitor(RuleVisitor):
 
             return count_resources, count_execs
 
-        self.variables_names = []
+        self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
-           self.variables_names.append(attr.name)
+           self.variables_names.append("$" + attr.name)
         self.__check_code(u)
-        errors = super().check_unitblock(u)
+
+        errors = []
+        # The order is important
+        for au in u.atomic_units:
+            errors += self.check_atomicunit(au, u.path)
+        for c in u.comments:
+            errors += self.check_comment(c, u.path)
+        for v in u.variables:
+            errors += self.check_variable(v, u.path)
+        for a in u.attributes:
+            errors += self.check_attribute(a, u.path)
+        for s in u.statements:
+            errors += self.check_element(s, u.path)
+
         total_resources, total_execs = count_atomic_units(u)
 
         if total_execs > 2 and (total_execs / total_resources) > 0.20:
@@ -234,6 +248,15 @@ class DesignVisitor(RuleVisitor):
 
         errors += self.misplaced_attr.check(u, u.path)
         errors += self.imp_align.check(u, u.path)
+
+        # The unit blocks inside should only be considered after in order to
+        # have the correct variables
+        for ub in u.unit_blocks:
+            errors += self.check_unitblock(ub)
+
+        variable_size = self.variable_stack.pop()
+        if (variable_size == 0): self.variables_names = []
+        else: self.variables_names = self.variables_names[:variable_size]
 
         return errors
 
