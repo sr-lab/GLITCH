@@ -187,7 +187,7 @@ class DesignVisitor(RuleVisitor):
                     error.line = i + 1
                     errors.append(error)
             
-            if len(u.variables) / max(len(code_lines), 1) > 0.5:
+            if len(u.variables) / max(len(code_lines), 1) > 0.3:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
 
             if DesignVisitor.__VAR_REFER_SYMBOL is not None:
