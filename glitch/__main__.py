@@ -75,6 +75,9 @@ def glitch(tech, type, path, config, module, csv,
             analysis.config(config)
             analyses.append(analysis)
 
+    if smells == ():
+        smells = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
+
     errors = []
     if dataset:
         if includeall != ():
