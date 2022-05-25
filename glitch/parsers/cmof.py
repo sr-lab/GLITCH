@@ -897,7 +897,7 @@ class ChefParser(p.Parser):
             if f.is_dir() and not f.is_symlink()]
         for d in subfolders:
             if os.path.basename(os.path.normpath(d)) not \
-                    in ["cookbooks", "resources", "attributes", 
+                    in ["cookbooks", "resources", "attributes", "recipes", 
                         "definitions", "libraries", "providers"]:
                 aux = self.parse_folder(d)
                 res.blocks += aux.blocks
