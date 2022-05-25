@@ -570,6 +570,7 @@ class ChefParser(p.Parser):
                 and not ast.args[0] in ["action",
                                         "include_recipe",
                                         "deprecated_property_alias"]):
+                if ast.args[0] == "define": return False
                 self.atomic_unit.type = ast.args[0]
                 return True
             return False
