@@ -64,6 +64,9 @@ def glitch(tech, type, path, config, module, csv,
         parser = PuppetParser()
     file_stats = FileStats()
 
+    if smells == ():
+        smells = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
+
     if config == "configs/default.ini":
         config = resource_filename('glitch', "configs/default.ini")
 
@@ -74,9 +77,6 @@ def glitch(tech, type, path, config, module, csv,
             analysis = r(tech)
             analysis.config(config)
             analyses.append(analysis)
-
-    if smells == ():
-        smells = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
 
     errors = []
     if dataset:
