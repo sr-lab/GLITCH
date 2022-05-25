@@ -148,6 +148,7 @@ class DesignVisitor(RuleVisitor):
 
             return count_resources, count_execs
 
+        self.first_code_line = inf
         self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
            self.variables_names.append(attr.name)
@@ -157,8 +158,6 @@ class DesignVisitor(RuleVisitor):
         # The order is important
         for au in u.atomic_units:
             errors += self.check_atomicunit(au, u.path)
-        for c in u.comments:
-            errors += self.check_comment(c, u.path)
         for v in u.variables:
             errors += self.check_variable(v, u.path)
         for a in u.attributes:
@@ -248,16 +247,23 @@ class DesignVisitor(RuleVisitor):
         #             len(u.attributes) == 0):
         #     errors.append(Error('design_unnecessary_abstraction', u, u.path, repr(u)))
 
-        for c in u.comments:
-            errors += self.check_comment(c, u.path)
+
 
         errors += self.misplaced_attr.check(u, u.path)
         errors += self.imp_align.check(u, u.path)
 
         # The unit blocks inside should only be considered after in order to
         # have the correct variables
+        previous_first_line = self.first_code_line
         for ub in u.unit_blocks:
             errors += self.check_unitblock(ub)
+            previous_first_line = min(self.first_code_line, previous_first_line)
+        self.first_code_line = previous_first_line
+
+        # After defining what is the first line of code, we can check
+        # the comments.
+        for c in u.comments:
+            errors += self.check_comment(c, u.path)
 
         variable_size = self.variable_stack.pop()
         if (variable_size == 0): self.variables_names = []
