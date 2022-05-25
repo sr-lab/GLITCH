@@ -892,6 +892,16 @@ class ChefParser(p.Parser):
             for cookbook in cookbooks:
                 res.add_module(self.parse_module(cookbook))
 
+        subfolders = [f.path for f in os.scandir(f"{path}") 
+            if f.is_dir() and not f.is_symlink()]
+        for d in subfolders:
+            if os.path.basename(os.path.normpath(d)) not \
+                    in ["cookbooks", "resources", "attributes", 
+                        "definitions", "libraries", "providers"]:
+                aux = self.parse_folder(d)
+                res.blocks += aux.blocks
+                res.modules += aux.modules
+
         return res
 
 class PuppetParser(p.Parser):
