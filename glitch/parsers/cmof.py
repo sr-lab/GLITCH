@@ -1,7 +1,6 @@
 import os
 import re
 import tempfile
-from attr import attrib
 from puppetparser.parser import parse as parse_puppet
 import puppetparser.model as puppetmodel
 from string import Template
