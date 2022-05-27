@@ -12,7 +12,7 @@ setup(
     install_requires=[
         "ruamel.yaml",
         "ply",
-        "click",
+        "click==7.1.2",
         "alive-progress",
         "prettytable",
         "pandas"
