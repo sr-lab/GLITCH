@@ -399,7 +399,6 @@ class ChefParser(p.Parser):
         def is_bounds(l):
             return (isinstance(l, list) and len(l) == 2 and isinstance(l[0], int)
                     and isinstance(l[1], int))
-                    
         start_line, start_column = float('inf'), float('inf')
         end_line, end_column = 0, 0
         bounded_structures = \
@@ -416,6 +415,8 @@ class ChefParser(p.Parser):
             if (ChefParser._check_id(ast, ["@ident"])
                 and source[start_line - 1][start_column - 1] == ":"):
                 start_column -= 1
+            elif ChefParser._check_id(ast, ["@tstring_content"]):
+                end_line += ast.args[0].count('\\n')
 
         elif isinstance(ast, (list, ChefParser.Node)):
             for arg in ast:

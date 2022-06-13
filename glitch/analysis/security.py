@@ -39,8 +39,7 @@ class SecurityVisitor(RuleVisitor):
             else: value = repr(a.value).strip().lower()
 
             for item in SecurityVisitor.__DOWNLOAD:
-                if re.match(r'(http|https|www).*{text}$'
-                        .format(text = item), value):
+                if re.search(r'(http|https|www).*{text}'.format(text = item), value):
                     integrity_check = False
                     for other in au.attributes:
                         name = other.name.strip().lower()
