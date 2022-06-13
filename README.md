@@ -11,6 +11,8 @@ python3 -m pip install -e .
 
 To use the tool for Chef you also need Ruby and its Ripper package installed.
 
+You should also install the package [puppetparser](https://github.com/Nfsaavedra/puppetparser).
+
 ## Usage
 
 You can use the command to see all options:
