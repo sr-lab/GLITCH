@@ -5,7 +5,7 @@ from prettytable import PrettyTable
 def print_stats(errors, smells, file_stats, format):
     total_files = len(file_stats.files)
     occurrences = {}
-    files_with_the_smell = {}
+    files_with_the_smell = {'Combined': set()}
     for smell_type in smells:
         for code in Error.ERRORS[smell_type].keys():
             occurrences[code] = 0
@@ -14,12 +14,23 @@ def print_stats(errors, smells, file_stats, format):
     for error in errors:
         occurrences[error.code] += 1
         files_with_the_smell[error.code].add(error.path)
+        files_with_the_smell['Combined'].add(error.path)
         
     stats_info = []
+    total_occur = 0
+    total_smell_density = 0
     for code, n in occurrences.items():
+        total_occur += n
+        total_smell_density += round(n / (file_stats.loc / 1000), 2)
         stats_info.append([Error.ALL_ERRORS[code], n, 
             round(n / (file_stats.loc / 1000), 2), 
             round((len(files_with_the_smell[code]) / total_files) * 100, 1)])
+    stats_info.append([
+        "Combined", 
+        total_occur,
+        total_smell_density,
+        round((len(files_with_the_smell['Combined']) / total_files) * 100, 1)
+    ])
 
     if (format == "prettytable"):
         table = PrettyTable()
@@ -29,10 +40,20 @@ def print_stats(errors, smells, file_stats, format):
         table.align["Occurrences"] = 'l'
         table.align["Smell density (Smell/KLoC)"] = 'l'
         table.align["Proportion of scripts (%)"] = 'l'
-        table.sortby = "Smell"
+        smells_info = stats_info[:-1]
+        smells_info = sorted(smells_info, key=lambda x: x[0])
 
-        for stats in stats_info:
+        biggest_value = [len(name) for name in table.field_names]
+        for stats in smells_info:
+            for i, s in enumerate(stats):
+                if len(str(s)) > biggest_value[i]:
+                    biggest_value[i] = len(str(s))
+
             table.add_row(stats)
+        
+        div_row = [i * "-" for i in biggest_value]
+        table.add_row(div_row)
+        table.add_row(stats_info[-1])
         print(table)
 
         attributes = PrettyTable()
@@ -40,9 +61,15 @@ def print_stats(errors, smells, file_stats, format):
         attributes.add_row([total_files, file_stats.loc])
         print(attributes)
     elif (format == "latex"):
-        table = pd.DataFrame(stats_info, columns = ["\\textbf{Smell}", "\\textbf{Occurrences}", 
+        smells_info = stats_info[:-1]
+        smells_info = sorted(smells_info, key=lambda x: x[0])
+        smells_info.append(stats_info[-1])
+        table = pd.DataFrame(smells_info, columns = ["\\textbf{Smell}", "\\textbf{Occurrences}", 
             "\\textbf{Smell density (Smell/KLoC)}", "\\textbf{Proportion of scripts (\%)}"])
-        print(table.to_latex(index=False, escape=False))
+        latex = table.to_latex(index=False, escape=False)
+        combined = latex[:latex.rfind('\\\\')].rfind('\\\\')
+        latex = latex[:combined] + "\\\\\n\midrule\n" + latex[combined + 3:]
+        print(latex)
 
         attributes = pd.DataFrame([[total_files, file_stats.loc]], columns=
             ["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"])
