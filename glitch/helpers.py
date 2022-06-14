@@ -16,25 +16,24 @@ class RulesListOption(click.Option):
             type=None, help=None, 
             hidden=False, 
             show_choices=True, 
-            show_envvar=False, 
-            **attrs):
+            show_envvar=False
+        ):
         super().__init__(
-            param_decls, 
-            show_default, 
-            prompt, 
-            confirmation_prompt, 
-            hide_input, 
-            is_flag, 
-            flag_value, 
-            multiple, 
-            count, 
-            allow_from_autoenv, 
-            type, 
-            help, 
-            hidden, 
-            show_choices, 
-            show_envvar, 
-            **attrs
+            param_decls = param_decls,
+            show_default = show_default,
+            prompt = prompt,
+            confirmation_prompt = confirmation_prompt,
+            hide_input = hide_input,
+            is_flag = is_flag,
+            flag_value = flag_value,
+            multiple = multiple,
+            count = count,
+            allow_from_autoenv = allow_from_autoenv,
+            type = type,
+            help = help,
+            hidden = hidden,
+            show_choices = show_choices,
+            show_envvar = show_envvar,
         )
         rules = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
         self.type = click.Choice(rules, case_sensitive=False)
