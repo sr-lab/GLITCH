@@ -1,0 +1,12 @@
+postgresql_databases:
+- name: idr
+  owner: omero
+  restrict: True
+postgresql_users:
+- user: {{ idr_omero_readonly_database.user }}
+  password: "{{ idr_secret_postgresql_password | default('omero') }}"
+  databases: [idr]
+# TODO: Currently OMERO read-only may need a read-write database user
+- user: "{{ idr_omero_readonly_database.user }}"
+  password:  "{{ idr_omero_readonly_database.password }}"
+  databases: [idr]
