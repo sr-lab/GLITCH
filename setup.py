@@ -15,6 +15,7 @@ setup(
         "click",
         "alive-progress",
         "prettytable",
-        "pandas"
+        "pandas",
+        "configparser"
     ],
 )
