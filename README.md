@@ -33,6 +33,10 @@ If you want to consider the module structure you can add the flag ```--module```
 
 New configs can be created with the same structure as the ones found in the folder ```configs```.
 
+## Documentation
+
+More information can be found in [GLITCH's documentation](https://github.com/sr-lab/GLITCH/wiki).
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
