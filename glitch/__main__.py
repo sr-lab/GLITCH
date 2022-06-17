@@ -39,6 +39,8 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
     help="Use this flag if the folder you are going to analyze is a module (e.g. Chef cookbook).")
 @click.option('--dataset', is_flag=True, default=False,
     help="Use this flag if the folder being analyzed is a dataset. A dataset is a folder with subfolders to be analyzed.")
+@click.option('--nostats', is_flag=True, default=False,
+    help="Use this flag if you do not want to print the stats about the run.")
 @click.option('--includeall', multiple=True,
     help="Some files are ignored when analyzing a folder. For instance, sometimes only some" 
          "folders in the folder structure are considered. Use this option if"
@@ -54,7 +56,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.argument('path', type=click.Path(exists=True), required=True)
 @click.argument('output', type=click.Path(), required=False)
 def glitch(tech, type, path, config, module, csv, 
-        dataset, autodetect, includeall, smells, output, tableformat):
+        dataset, autodetect, includeall, smells, output, tableformat, nostats):
     parser = None
     if tech == Tech.ansible:
         parser = AnsibleParser()
@@ -140,6 +142,7 @@ def glitch(tech, type, path, config, module, csv,
             print(error, file = f)
 
     if f != sys.stdout: f.close()
-    print_stats(errors, smells, file_stats, tableformat)
+    if not nostats:
+        print_stats(errors, smells, file_stats, tableformat)
 
 glitch(prog_name='glitch')
