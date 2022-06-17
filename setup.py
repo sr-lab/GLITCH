@@ -18,4 +18,9 @@ setup(
         "pandas",
         "configparser"
     ],
+    entry_points={
+        "console_scripts": [
+            "glitch = glitch.__main__:main",
+        ]
+    }
 )

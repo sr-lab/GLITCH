@@ -148,4 +148,7 @@ def glitch(tech, type, path, config, module, csv,
     if not linter:
         print_stats(errors, smells, file_stats, tableformat)
 
-glitch(prog_name='glitch')
+def main():
+    glitch(prog_name='glitch')
+
+main()
