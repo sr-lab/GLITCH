@@ -19,12 +19,12 @@ You should also install the package [puppetparser](https://github.com/Nfsaavedra
 
 You can use the command to see all options:
 ```
-python3 -m glitch --help
+glitch --help
 ```
 
 To analyze a file or folder and get the csv results you can run:
 ```
-python3 -m glitch --tech (chef|puppet|ansible) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
+glitch --tech (chef|puppet|ansible) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
 ```
 
 If you want to consider the module structure you can add the flag ```--module```.
