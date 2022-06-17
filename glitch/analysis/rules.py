@@ -5,17 +5,17 @@ from abc import ABC, abstractmethod
 class Error():
     ERRORS = {
         'security': {
-            'sec_https': "Use of HTTP without TLS",
-            'sec_susp_comm': "Suspicious comment",
-            'sec_def_admin': "Admin by default",
-            'sec_empty_pass': "Empty password",
-            'sec_weak_crypt': "Weak Crypto Algorithm",
-            'sec_hard_secr': "Hard-coded secret",
-            'sec_hard_pass': "Hard-coded password",
-            'sec_hard_user': "Hard-coded user",
-            'sec_invalid_bind': "Invalid IP address binding",
-            'sec_no_int_check': "No integrity check",
-            'sec_no_default_switch': "Missing default case statement"
+            'sec_https': "Use of HTTP without TLS (CWE-319)",
+            'sec_susp_comm': "Suspicious comment (CWE-546)",
+            'sec_def_admin': "Admin by default (CWE-250)",
+            'sec_empty_pass': "Empty password (CWE-258)",
+            'sec_weak_crypt': "Weak Crypto Algorithm (CWE-326, CWE-327)",
+            'sec_hard_secr': "Hard-coded secret (CWE-798)",
+            'sec_hard_pass': "Hard-coded password (CWE-259)",
+            'sec_hard_user': "Hard-coded user (CWE-798)",
+            'sec_invalid_bind': "Invalid IP address binding (CWE-284)",
+            'sec_no_int_check': "No integrity check (CWE-353)",
+            'sec_no_default_switch': "Missing default case statement (CWE-478)"
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction",
