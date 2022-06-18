@@ -15,23 +15,44 @@
 	"onLanguage:yaml"
   ],
   "contributes": {
-	"languages": [
-		{
-			"id": "puppet",
-			"extensions": [ ".pp"],
-			"aliases": ["Puppet"]
-		},
-		{
-			"id": "yaml",
-			"extensions": [ ".yaml", ".yml"],
-			"aliases": ["YAML"]
-		},
-		{
-			"id": "ruby",
-			"extensions": [ ".rb"],
-			"aliases": ["Ruby"]
-		}
-	]
+    "languages": [
+      {
+        "id": "puppet",
+        "extensions": [ ".pp"],
+        "aliases": ["Puppet"]
+      },
+      {
+        "id": "yaml",
+        "extensions": [ ".yaml", ".yml"],
+        "aliases": ["YAML"]
+      },
+      {
+        "id": "ruby",
+        "extensions": [ ".rb"],
+        "aliases": ["Ruby"]
+      }
+    ],
+    "configuration": {
+      "title": "Glitch",
+      "properties": {
+        "glitch.configurationPath": {
+          "type": "string",
+          "default": "",
+          "description": "The path for the configuration INI file used by GLITCH"
+        },
+        "glitch.tech": {
+          "type": "string",
+          "default": "",
+          "description": "Choose the technology to which you will apply GLITCH. The value should be a valid string for the command line tool's tech option. If you do not define the value, the extension will use the default for the file extension of the current file."
+        },
+        "glitch.smells": {
+          "type": "array",
+          "items" : {"type": "string"},
+          "default": [],
+          "description": "Select a subset of the type of smells to analyze. The values should be contained in the possible choices for the smells option of the command-line tool. If you do not define any value, it will default to run every analyses."
+        }
+      }
+    }
   },
   "main": "./out/extension.js",
   "scripts": {

@@ -49,14 +49,23 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.option('--csv', is_flag=True, default=False,
     help="Use this flag if you want the output to be in CSV format.")
 @click.option('--autodetect', is_flag=True, default=False,
-    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible and when "
-         "you are using the dataset flag.")
+    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible.")
 @click.option('--smells', cls=RulesListOption, multiple=True, 
     help="The type of smells being analyzed.")
 @click.argument('path', type=click.Path(exists=True), required=True)
 @click.argument('output', type=click.Path(), required=False)
 def glitch(tech, type, path, config, module, csv, 
         dataset, autodetect, includeall, smells, output, tableformat, linter):
+    def __check_type(file):
+        if "vars" in file or "default" in file:
+            type = "vars"
+        elif "tasks" in file:
+            type = "tasks"
+        else:
+            type = "script"
+
+        return type
+    
     parser = None
     if tech == Tech.ansible:
         parser = AnsibleParser()
@@ -96,12 +105,7 @@ def glitch(tech, type, path, config, module, csv,
                     title=f"ANALYZING ALL FILES WITH EXTENSIONS {includeall}") as bar:
                 for file in iac_files:
                     if (autodetect):
-                        if "vars" in file or "default" in file:
-                            type = "vars"
-                        elif "tasks" in file:
-                            type = "tasks"
-                        else:
-                            type = "script"
+                        type = __check_type(file)
 
                     parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                     bar()
@@ -117,15 +121,14 @@ def glitch(tech, type, path, config, module, csv,
         with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:
             for file in files:
                 if (autodetect):
-                    if "vars" in file or "default" in file:
-                        type = "vars"
-                    elif "tasks" in file:
-                        type = "tasks"
-                    else:
-                        type = "script"
+                    type = __check_type(file)
+
                 parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                 bar()
-    else:
+    else:         
+        if (autodetect):
+            type = __check_type(path)  
+             
         parse_and_check(type, path, module, parser, analyses, errors, file_stats)
     errors = sorted(set(errors), key=lambda e: (e.path, e.line))
     
@@ -136,7 +139,7 @@ def glitch(tech, type, path, config, module, csv,
 
     if linter:
         for error in errors:
-            print(error.to_csv() + "," + Error.ALL_ERRORS[error.code], file = f)
+            print(Error.ALL_ERRORS[error.code] + "," + error.to_csv(), file = f)
     elif csv:
         for error in errors:
             print(error.to_csv(), file = f)
