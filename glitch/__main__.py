@@ -49,7 +49,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.option('--csv', is_flag=True, default=False,
     help="Use this flag if you want the output to be in CSV format.")
 @click.option('--autodetect', is_flag=True, default=False,
-    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible and when"
+    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible and when "
          "you are using the dataset flag.")
 @click.option('--smells', cls=RulesListOption, multiple=True, 
     help="The type of smells being analyzed.")
