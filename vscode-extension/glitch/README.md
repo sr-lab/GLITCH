@@ -6,7 +6,7 @@ GLITCH is a technology-agnostic framework that enables automated detection of Ia
 
 The extension runs GLITCH in the background and provides visual feedback for the detected smells:
 
-![](images/feature.png)
+![](https://raw.githubusercontent.com/sr-lab/GLITCH/main/vscode-extension/glitch/images/feature.png)
 
 ## Requirements
 

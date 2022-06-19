@@ -1,18 +1,28 @@
 {
   "name": "glitch",
-  "displayName": "glitch",
+  "displayName": "GLITCH",
+  "publisher": "Software Reliability Lab",
   "description": "GLITCH extension for VSCode",
+  "icon": "images/logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sr-lab/GLITCH.git"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.68.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "puppet", "ansible", "chef", "IaC", "infrastruture"
   ],
   "activationEvents": [
     "onLanguage:ruby",
-	"onLanguage:puppet",
-	"onLanguage:yaml"
+	  "onLanguage:puppet",
+	  "onLanguage:yaml"
   ],
   "contributes": {
     "languages": [
