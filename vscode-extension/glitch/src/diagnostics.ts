@@ -6,7 +6,7 @@ const execShell = (cmd: string) =>
     new Promise<string>((resolve, reject) => {
         cp.exec(cmd, (err, out) => {
             if (err) {
-                return reject(err);
+                return reject(err.message);
             }
             return resolve(out);
         });
@@ -46,12 +46,9 @@ export async function refreshDiagnostics(doc: vscode.TextDocument,
 		options += " --smells " + smells![i];
 	}
 
-	let csv;
-	csv = await execShell(
+	execShell(
 		'glitch --linter ' + options + " " + doc.fileName,
-	);
-	
-	if (csv != undefined) {
+	).then(csv => {
 		let lines = csv.split('\n');
 		lines = lines.filter(line => line.includes(','));
 		for (let l = 0; l < lines.length; l++) {
@@ -69,9 +66,12 @@ export async function refreshDiagnostics(doc: vscode.TextDocument,
 				)
 			);
 		}
-	}
 
-	glitchDiagnostics.set(doc.uri, diagnostics);
+		glitchDiagnostics.set(doc.uri, diagnostics);
+	})
+	.catch(reason => {
+		vscode.window.showErrorMessage(reason.split('Error:')[1]);
+	});
 }
 
 export function subscribeToDocumentChanges(context: vscode.ExtensionContext,
