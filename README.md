@@ -37,6 +37,10 @@ New configs can be created with the same structure as the ones found in the fold
 
 More information can be found in [GLITCH's documentation](https://github.com/sr-lab/GLITCH/wiki).
 
+## VSCode extension
+
+GLITCH has a Visual Studio Code extension which is available [here](https://github.com/sr-lab/GLITCH/tree/main/vscode-extension/glitch).
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
