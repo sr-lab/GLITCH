@@ -33,7 +33,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.option('--type',
     type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script',
     help="The type of scripts being analyzed. Currently this choice only makes a difference for Ansible.")
-@click.option('--config', type=click.Path(), default="configs/default.ini",
+@click.option('--config', type=click.Path(exists=True), default="configs/default.ini",
     help="The path for a config file. Otherwise the default config will be used.")
 @click.option('--module', is_flag=True, default=False,
     help="Use this flag if the folder you are going to analyze is a module (e.g. Chef cookbook).")
