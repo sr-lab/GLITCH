@@ -43,7 +43,7 @@
       }
     ],
     "configuration": {
-      "title": "Glitch",
+      "title": "GLITCH",
       "properties": {
         "glitch.enable": {
           "type": "boolean",
