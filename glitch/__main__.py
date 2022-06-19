@@ -33,7 +33,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.option('--type',
     type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script',
     help="The type of scripts being analyzed. Currently this choice only makes a difference for Ansible.")
-@click.option('--config', type=click.Path(exists=True), default="configs/default.ini",
+@click.option('--config', type=click.Path(), default="configs/default.ini",
     help="The path for a config file. Otherwise the default config will be used.")
 @click.option('--module', is_flag=True, default=False,
     help="Use this flag if the folder you are going to analyze is a module (e.g. Chef cookbook).")
@@ -65,7 +65,14 @@ def glitch(tech, type, path, config, module, csv,
             type = "script"
 
         return type
-    
+
+    if config != "configs/default.ini" and not os.path.exists(config):
+        raise click.BadOptionUsage('config', f"Path '{config}' does not exist.")
+    elif os.path.isdir(config):
+        raise click.BadOptionUsage('config', f"Path '{config}' should be a file.")
+    elif config == "configs/default.ini":
+        config = resource_filename('glitch', "configs/default.ini")
+
     parser = None
     if tech == Tech.ansible:
         parser = AnsibleParser()
@@ -77,9 +84,6 @@ def glitch(tech, type, path, config, module, csv,
 
     if smells == ():
         smells = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
-
-    if config == "configs/default.ini":
-        config = resource_filename('glitch', "configs/default.ini")
 
     analyses = []
     rules = RuleVisitor.__subclasses__()
