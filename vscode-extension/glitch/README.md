@@ -16,6 +16,7 @@ You should install GLITCH before you use this extension. To install GLITCH follo
 
 This extension contributes the following settings:
 
+* `glitch.enable`: Enables/disables the extension.
 * `glitch.configurationPath`: Defines the path of the configuration INI file to be used by GLITCH (--config option).
 * `glitch.tech`: Defines the technology GLITCH will be considering (--tech option).
 * `glitch.smells`: Defines a list of types of smells to be considered by GLITCH (--smells option).

@@ -17,10 +17,14 @@ export async function refreshDiagnostics(doc: vscode.TextDocument,
 	const configuration = vscode.workspace.getConfiguration('glitch');
 	const diagnostics: vscode.Diagnostic[] = [];
 
+	if (!configuration.get('enable')) {
+		glitchDiagnostics.set(doc.uri, []);
+		return;
+	}
+
 	let options = ""
 	
 	let config = configuration.get('configurationPath');
-	console.log(config);
 	if (config != "") {
 		options += " --config " + config;
 	}

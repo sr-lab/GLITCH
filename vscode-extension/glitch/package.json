@@ -45,10 +45,15 @@
     "configuration": {
       "title": "Glitch",
       "properties": {
+        "glitch.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enables/disables the extension."
+        },
         "glitch.configurationPath": {
           "type": "string",
           "default": "",
-          "description": "The path for the configuration INI file used by GLITCH"
+          "description": "The path for the configuration INI file used by GLITCH."
         },
         "glitch.tech": {
           "type": "string",
