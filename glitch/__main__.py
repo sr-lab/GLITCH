@@ -67,9 +67,9 @@ def glitch(tech, type, path, config, module, csv,
         return type
 
     if config != "configs/default.ini" and not os.path.exists(config):
-        raise click.BadOptionUsage('config', f"Path '{config}' does not exist.")
+        raise click.BadOptionUsage('config', f"Invalid value for 'config': Path '{config}' does not exist.")
     elif os.path.isdir(config):
-        raise click.BadOptionUsage('config', f"Path '{config}' should be a file.")
+        raise click.BadOptionUsage('config', f"Invalid value for 'config': Path '{config}' should be a file.")
     elif config == "configs/default.ini":
         config = resource_filename('glitch', "configs/default.ini")
 
