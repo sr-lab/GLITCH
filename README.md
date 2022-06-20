@@ -8,6 +8,8 @@
 
 GLITCH is a technology-agnostic framework that enables automated detection of IaC smells. GLITCH allows polyglot smell detection by transforming IaC scripts into an intermediate representation, on which different smell detectors can be defined. GLITCH currently supports the detection of nine different security smells [1, 2] and nine design & implementation smells [3] in scripts written in Puppet, Ansible, or Chef.
 
+"[GLITCH: an Intermediate-Representation-Based Security Analysis for Infrastructure as Code Scripts](https://arxiv.org/abs/2205.14371)" is a paper that describes the implementation of security smells in GLITCH and the results of an empirical study using our framework.
+
 ## Installation
 
 To install run:
