@@ -1,7 +1,7 @@
 {
   "name": "glitch",
   "displayName": "GLITCH",
-  "publisher": "Software Reliability Lab",
+  "publisher": "sr-lab",
   "description": "GLITCH extension for VSCode",
   "icon": "images/logo.png",
   "repository": {
