@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Saavedra"
+  given-names: "Nuno"
+  orcid: "https://orcid.org/0000-0003-4148-5991"
+- family-names: "Ferreira"
+  given-names: "João F."
+  orcid: " https://orcid.org/0000-0002-6612-9013"
+title: "GLITCH"
+version: 1.0.0
+doi: 10.5281/zenodo.6670081
+date-released: 2022-06-20
+url: "https://github.com/sr-lab/GLITCH"

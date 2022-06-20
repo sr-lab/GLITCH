@@ -1,8 +1,14 @@
 # GLITCH
 
+[![DOI](https://zenodo.org/badge/453066827.svg)](https://zenodo.org/badge/latestdoi/453066827)
+[![License: GPL-3.0](https://badgen.net/github/license/sr-lab/GLITCH)](https://www.gnu.org/licenses/gpl-3.0)
+[![Last release](https://badgen.net/github/release/sr-lab/GLITCH/)](https://github.com/sr-lab/GLITCH/releases)
+
 ![alt text](https://github.com/sr-lab/GLITCH/blob/main/logo.png?raw=true)
 
 GLITCH is a technology-agnostic framework that enables automated detection of IaC smells. GLITCH allows polyglot smell detection by transforming IaC scripts into an intermediate representation, on which different smell detectors can be defined. GLITCH currently supports the detection of nine different security smells [1, 2] and nine design & implementation smells [3] in scripts written in Puppet, Ansible, or Chef.
+
+"[GLITCH: an Intermediate-Representation-Based Security Analysis for Infrastructure as Code Scripts](https://arxiv.org/abs/2205.14371)" is a paper that describes the implementation of security smells in GLITCH and the results of an empirical study using our framework.
 
 ## Installation
 
@@ -36,6 +42,10 @@ New configs can be created with the same structure as the ones found in the fold
 ## Documentation
 
 More information can be found in [GLITCH's documentation](https://github.com/sr-lab/GLITCH/wiki).
+
+## VSCode extension
+
+GLITCH has a Visual Studio Code extension which is available [here](https://github.com/sr-lab/GLITCH/tree/main/vscode-extension/glitch).
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
