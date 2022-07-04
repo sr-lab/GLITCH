@@ -83,13 +83,13 @@ class AnsibleParser(p.Parser):
             v.line = token.start_mark.line + 1
             v.code = ''.join(code[token.start_mark.line : token.end_mark.line + 1])
             unit_block.add_variable(v)
-        
+
         if isinstance(token, MappingNode):
             for key, v in token.value:
                 if hasattr(key, "value") and isinstance(key.value, str):
                     AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", v, code)
-                else:
-                    AnsibleParser.__parse_vars(unit_block, cur_name, v, code)
+                elif isinstance(key.value, MappingNode):
+                    AnsibleParser.__parse_vars(unit_block, cur_name, key.value[0][0], code)
         elif isinstance(token, SequenceNode):
             value = []
             for i, v in enumerate(token.value):
@@ -130,6 +130,7 @@ class AnsibleParser(p.Parser):
 
             if len(value) > 0:
                 create_attribute(token, cur_name, str(value))
+
         return attributes
 
     @staticmethod
