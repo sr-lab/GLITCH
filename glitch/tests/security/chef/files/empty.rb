@@ -1,0 +1,1 @@
+default[:zabbix][:database][:password] = nil

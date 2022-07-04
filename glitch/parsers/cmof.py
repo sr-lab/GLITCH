@@ -840,7 +840,9 @@ class ChefParser(p.Parser):
                 tmp.flush()
 
                 try:
-                    script_ast = os.popen('ruby ' + tmp.name).read()
+                    p = os.popen('ruby ' + tmp.name)
+                    script_ast = p.read()
+                    p.close()
                     comments, _ = parser_yacc(script_ast)
                     if comments is not None: comments.reverse()
 
@@ -853,8 +855,10 @@ class ChefParser(p.Parser):
                     throw_exception(EXCEPTIONS["CHEF_COULD_NOT_PARSE"], os.path.join(path, file))
 
             try:
-                script_ast = os.popen('ruby -r ripper -e \'file = \
-                    File.open(\"' + os.path.join(path, file) + '\")\npp Ripper.sexp(file)\'').read()
+                p = os.popen('ruby -r ripper -e \'file = \
+                    File.open(\"' + os.path.join(path, file) + '\")\npp Ripper.sexp(file)\'')
+                script_ast = p.read()
+                p.close()
                 _, program = parser_yacc(script_ast)
                 ast = ChefParser.__create_ast(program)
                 ChefParser.__transverse_ast(ast, unit_block, source)
