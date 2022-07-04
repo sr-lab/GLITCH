@@ -1,0 +1,4 @@
+---
+- name: Install serverspec
+  become_user: root
+  command: gem install serverspec
