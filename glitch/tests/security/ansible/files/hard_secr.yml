@@ -1,0 +1,14 @@
+---
+- name: login, get SID
+  uri:
+    url: "https://{{ hostvars[inventory_hostname|regex_replace('ansible-1', 'checkpoint_mgmt')]['private_ip'] }}/web_api/login"
+    method: POST
+    body:
+      user: test
+      password: 123
+    body_format: json
+    validate_certs: false
+  register: login_data
+  until: (login_data.status == 200) and (login_data.json is defined)
+  retries: 30
+  delay: 10

@@ -44,3 +44,33 @@ class TestSecurity(unittest.TestCase):
             "tasks",
             3, ["sec_empty_pass", "sec_hard_pass", "sec_hard_secr"], [8, 8, 8]
         )
+
+    def test_weak_crypt(self):
+        self.__help_test(
+            "tests/security/ansible/files/weak_crypt.yml",
+            "tasks",
+            2, ["sec_weak_crypt", "sec_weak_crypt"], [4, 7]
+        )
+
+    def test_hard_secr(self):
+        self.__help_test(
+            "tests/security/ansible/files/hard_secr.yml",
+            "tasks",
+            4, 
+            ["sec_hard_secr", "sec_hard_user", "sec_hard_pass", "sec_hard_secr"]
+            , [7, 7, 8, 8]
+        )
+
+    def test_invalid_bind(self):
+        self.__help_test(
+            "tests/security/ansible/files/inv_bind.yml",
+            "tasks",
+            1, ["sec_invalid_bind"], [7]
+        )
+
+    def test_int_check(self):
+        self.__help_test(
+            "tests/security/ansible/files/int_check.yml",
+            "tasks",
+            1, ["sec_no_int_check"], [5]
+        )

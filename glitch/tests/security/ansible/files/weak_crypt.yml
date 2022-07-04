@@ -1,0 +1,12 @@
+---
+- name: Generate the {{ db_username }} MD5 password
+  set_fact:
+    db_password_md5: "md5{{ (db_password~db_username) | hash('md5') }}"
+
+- name: Create the {{ db_username }} database user ({{ database }})
+  shell: su - postgres -c "psql -c \"CREATE ROLE {{ db_username }} ENCRYPTED PASSWORD 
+    '{{ db_password_md5 }}' NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN;\""
+  args:
+    warn: false
+  register: createuser_results
+  ignore_errors: true
