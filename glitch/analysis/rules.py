@@ -6,10 +6,10 @@ class Error():
     ERRORS = {
         'security': {
             'sec_https': "Use of HTTP without TLS - The developers should always favor the usage of HTTPS. (CWE-319)",
-            'sec_susp_comm': "Suspicious comment - Comments with keywords such as TODO, HACK, FIXME may reveal problems possibly exploitable. (CWE-546)",
+            'sec_susp_comm': "Suspicious comment - Comments with keywords such as TODO HACK or FIXME may reveal problems possibly exploitable. (CWE-546)",
             'sec_def_admin': "Admin by default - Developers should always try to give the least privileges possible. Admin privileges may indicate a security problem. (CWE-250)",
             'sec_empty_pass': "Empty password - An empty password is indicative of a weak password which may lead to a security breach. (CWE-258)",
-            'sec_weak_crypt': "Weak Crypto Algorithm - Weak crypto algorithms should be avoided since they are susceptible to security issues. (CWE-326, CWE-327)",
+            'sec_weak_crypt': "Weak Crypto Algorithm - Weak crypto algorithms should be avoided since they are susceptible to security issues. (CWE-326 | CWE-327)",
             'sec_hard_secr': "Hard-coded secret - Developers should not reveal sensitive information in the source code. (CWE-798)",
             'sec_hard_pass': "Hard-coded password - Developers should not reveal sensitive information in the source code. (CWE-259)",
             'sec_hard_user': "Hard-coded user - Developers should not reveal sensitive information in the source code. (CWE-798)",
