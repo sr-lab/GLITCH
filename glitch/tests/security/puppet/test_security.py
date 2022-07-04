@@ -66,3 +66,9 @@ class TestSecurity(unittest.TestCase):
             "tests/security/puppet/files/int_check.pp",
             1, ["sec_no_int_check"], [5]
         )
+
+    def test_puppet_missing_default(self):
+        self.__help_test(
+            "tests/security/puppet/files/missing_default.pp",
+            1, ["sec_no_default_switch"], [1]
+        )

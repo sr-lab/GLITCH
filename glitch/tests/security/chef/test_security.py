@@ -66,3 +66,9 @@ class TestSecurity(unittest.TestCase):
             "tests/security/chef/files/int_check.rb",
             1, ["sec_no_int_check"], [1]
         )
+
+    def test_chef_missing_default(self):
+        self.__help_test(
+            "tests/security/chef/files/missing_default.rb",
+            1, ["sec_no_default_switch"], [1]
+        )
