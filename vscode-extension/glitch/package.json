@@ -1,0 +1,97 @@
+{
+  "name": "glitch-iac",
+  "displayName": "GLITCH",
+  "publisher": "sr-lab",
+  "description": "GLITCH extension for VSCode",
+  "icon": "images/logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sr-lab/GLITCH.git"
+  },
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.68.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "puppet", "ansible", "chef", "IaC", "infrastruture"
+  ],
+  "activationEvents": [
+    "onLanguage:ruby",
+	  "onLanguage:puppet",
+	  "onLanguage:yaml"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "puppet",
+        "extensions": [ ".pp"],
+        "aliases": ["Puppet"]
+      },
+      {
+        "id": "yaml",
+        "extensions": [ ".yaml", ".yml"],
+        "aliases": ["YAML"]
+      },
+      {
+        "id": "ruby",
+        "extensions": [ ".rb"],
+        "aliases": ["Ruby"]
+      }
+    ],
+    "configuration": {
+      "title": "GLITCH",
+      "properties": {
+        "glitch.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enables/disables the extension."
+        },
+        "glitch.configurationPath": {
+          "type": "string",
+          "default": "",
+          "description": "The path for the configuration INI file used by GLITCH."
+        },
+        "glitch.tech": {
+          "type": "string",
+          "default": "",
+          "description": "Choose the technology to which you will apply GLITCH. The value should be a valid string for the command line tool's tech option. If you do not define the value, the extension will use the default for the file extension of the current file."
+        },
+        "glitch.smells": {
+          "type": "array",
+          "items" : {"type": "string"},
+          "default": [],
+          "description": "Select a subset of the type of smells to analyze. The values should be contained in the possible choices for the smells option of the command-line tool. If you do not define any value, it will default to run every analyses."
+        }
+      }
+    }
+  },
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.68.0",
+    "@typescript-eslint/eslint-plugin": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.0",
+    "@vscode/test-electron": "^2.1.3",
+    "eslint": "^8.16.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.0.0",
+    "typescript": "^4.7.2"
+  },
+  "dependencies": {
+    "child_process": "^1.0.2"
+  }
+}

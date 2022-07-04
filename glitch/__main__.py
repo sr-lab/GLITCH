@@ -1,5 +1,5 @@
 import click, os, sys
-from glitch.analysis.rules import RuleVisitor
+from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import RulesListOption
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
@@ -39,6 +39,8 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
     help="Use this flag if the folder you are going to analyze is a module (e.g. Chef cookbook).")
 @click.option('--dataset', is_flag=True, default=False,
     help="Use this flag if the folder being analyzed is a dataset. A dataset is a folder with subfolders to be analyzed.")
+@click.option('--linter', is_flag=True, default=False,
+    help="This flag changes the output to be more usable for other interfaces, such as, extensions for code editors.")
 @click.option('--includeall', multiple=True,
     help="Some files are ignored when analyzing a folder. For instance, sometimes only some" 
          "folders in the folder structure are considered. Use this option if"
@@ -47,14 +49,30 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.option('--csv', is_flag=True, default=False,
     help="Use this flag if you want the output to be in CSV format.")
 @click.option('--autodetect', is_flag=True, default=False,
-    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible and when"
-         "you are using the dataset flag.")
+    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible.")
 @click.option('--smells', cls=RulesListOption, multiple=True, 
     help="The type of smells being analyzed.")
 @click.argument('path', type=click.Path(exists=True), required=True)
 @click.argument('output', type=click.Path(), required=False)
 def glitch(tech, type, path, config, module, csv, 
-        dataset, autodetect, includeall, smells, output, tableformat):
+        dataset, autodetect, includeall, smells, output, tableformat, linter):
+    def __check_type(file):
+        if "vars" in file or "default" in file:
+            type = "vars"
+        elif "tasks" in file:
+            type = "tasks"
+        else:
+            type = "script"
+
+        return type
+
+    if config != "configs/default.ini" and not os.path.exists(config):
+        raise click.BadOptionUsage('config', f"Invalid value for 'config': Path '{config}' does not exist.")
+    elif os.path.isdir(config):
+        raise click.BadOptionUsage('config', f"Invalid value for 'config': Path '{config}' should be a file.")
+    elif config == "configs/default.ini":
+        config = resource_filename('glitch', "configs/default.ini")
+
     parser = None
     if tech == Tech.ansible:
         parser = AnsibleParser()
@@ -66,9 +84,6 @@ def glitch(tech, type, path, config, module, csv,
 
     if smells == ():
         smells = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
-
-    if config == "configs/default.ini":
-        config = resource_filename('glitch', "configs/default.ini")
 
     analyses = []
     rules = RuleVisitor.__subclasses__()
@@ -94,12 +109,7 @@ def glitch(tech, type, path, config, module, csv,
                     title=f"ANALYZING ALL FILES WITH EXTENSIONS {includeall}") as bar:
                 for file in iac_files:
                     if (autodetect):
-                        if "vars" in file or "default" in file:
-                            type = "vars"
-                        elif "tasks" in file:
-                            type = "tasks"
-                        else:
-                            type = "script"
+                        type = __check_type(file)
 
                     parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                     bar()
@@ -115,15 +125,14 @@ def glitch(tech, type, path, config, module, csv,
         with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:
             for file in files:
                 if (autodetect):
-                    if "vars" in file or "default" in file:
-                        type = "vars"
-                    elif "tasks" in file:
-                        type = "tasks"
-                    else:
-                        type = "script"
+                    type = __check_type(file)
+
                 parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                 bar()
-    else:
+    else:         
+        if (autodetect):
+            type = __check_type(path)  
+             
         parse_and_check(type, path, module, parser, analyses, errors, file_stats)
     errors = sorted(set(errors), key=lambda e: (e.path, e.line))
     
@@ -132,7 +141,10 @@ def glitch(tech, type, path, config, module, csv,
     else:
         f = open(output, "w")
 
-    if csv:
+    if linter:
+        for error in errors:
+            print(Error.ALL_ERRORS[error.code] + "," + error.to_csv(), file = f)
+    elif csv:
         for error in errors:
             print(error.to_csv(), file = f)
     else:
@@ -140,6 +152,10 @@ def glitch(tech, type, path, config, module, csv,
             print(error, file = f)
 
     if f != sys.stdout: f.close()
-    print_stats(errors, smells, file_stats, tableformat)
+    if not linter:
+        print_stats(errors, smells, file_stats, tableformat)
 
-glitch(prog_name='glitch')
+def main():
+    glitch(prog_name='glitch')
+
+main()

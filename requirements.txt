@@ -4,3 +4,4 @@ click
 alive-progress
 prettytable
 pandas
+configparser

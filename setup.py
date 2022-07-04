@@ -15,6 +15,12 @@ setup(
         "click",
         "alive-progress",
         "prettytable",
-        "pandas"
+        "pandas",
+        "configparser"
     ],
+    entry_points={
+        "console_scripts": [
+            "glitch = glitch.__main__:main",
+        ]
+    }
 )
