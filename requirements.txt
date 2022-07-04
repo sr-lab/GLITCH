@@ -5,3 +5,5 @@ alive-progress
 prettytable
 pandas
 configparser
+pytest
+puppetparser

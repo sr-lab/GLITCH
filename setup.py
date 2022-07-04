@@ -16,7 +16,9 @@ setup(
         "alive-progress",
         "prettytable",
         "pandas",
-        "configparser"
+        "configparser",
+        "pytest",
+        "puppetparser"
     ],
     entry_points={
         "console_scripts": [
