@@ -86,17 +86,20 @@ class AnsibleParser(p.Parser):
         
         if isinstance(token, MappingNode):
             for key, v in token.value:
-                AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", v, code)
+                if hasattr(key, "value") and isinstance(key.value, str):
+                    AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", v, code)
+                else:
+                    AnsibleParser.__parse_vars(unit_block, cur_name, v, code)
         elif isinstance(token, SequenceNode):
             value = []
             for i, v in enumerate(token.value):
                 if isinstance(v, CollectionNode):
-                    AnsibleParser.__parse_vars(unit_block, f"{cur_name}[{i}].", v, code)
+                    AnsibleParser.__parse_vars(unit_block, f"{cur_name[:-1]}[{i}].", v, code)
                 else:
                     value.append(v.value)
 
             if (len(value) > 0):
-                create_variable(cur_name, str(value))
+                create_variable(cur_name[:-1], str(value))
         else:
             create_variable(cur_name[:-1], str(token.value))
 
