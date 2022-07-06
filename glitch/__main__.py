@@ -57,9 +57,9 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 def glitch(tech, type, path, config, module, csv, 
         dataset, autodetect, includeall, smells, output, tableformat, linter):
     def __check_type(file):
-        if "vars" in file or "default" in file:
+        if "/vars/" in file or "/defaults/" in file:
             type = "vars"
-        elif "tasks" in file:
+        elif "/tasks/" in file:
             type = "tasks"
         else:
             type = "script"

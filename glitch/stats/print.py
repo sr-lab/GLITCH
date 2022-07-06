@@ -41,6 +41,8 @@ def print_stats(errors, smells, file_stats, format):
         table.align["Smell density (Smell/KLoC)"] = 'l'
         table.align["Proportion of scripts (%)"] = 'l'
         smells_info = stats_info[:-1]
+        for smell in smells_info:
+            smell[0] = smell[0].split(' - ')[0]
         smells_info = sorted(smells_info, key=lambda x: x[0])
 
         biggest_value = [len(name) for name in table.field_names]

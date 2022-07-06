@@ -100,7 +100,7 @@ class AnsibleParser(p.Parser):
 
             if (len(value) > 0):
                 create_variable(cur_name[:-1], str(value))
-        else:
+        elif cur_name != "":
             create_variable(cur_name[:-1], str(token.value))
 
     @staticmethod

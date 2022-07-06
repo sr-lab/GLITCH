@@ -21,7 +21,7 @@ class Error():
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
             'design_unnecessary_abstraction': "Unnecessary abstraction - Blocks should contain declarations or statements, otherwise they are unnecessary.",
             'implementation_long_statement': "Long statement - Long statements may decrease the readability and maintainability of the code.",
-            'implementation_improper_alignment': "Improper alignment - The developers should try to follow the languages' style guides. These style guides define how the attributes in an atomic unit should be aligned.",
+            'implementation_improper_alignment': "Improper alignment - The developers should try to follow the languages' style guides. These style guides define how the attributes in an atomic unit should be aligned. The developers should also avoid the use of tabs.",
             'implementation_too_many_variables': "Too many variables - The existence of too many variables in a single IaC script may reveal that the script is being used for too many purposes.",
             'design_duplicate_block': "Duplicate block - Duplicates blocks may reveal a missing abstraction.",
             'implementation_unguarded_variable': "Unguarded variable - Variables should be guarded for readability and maintainability of the code.",
