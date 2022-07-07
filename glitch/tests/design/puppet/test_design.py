@@ -61,7 +61,7 @@ class TestDesign(unittest.TestCase):
             ], [1]
         )
 
-    def test_multifaceted_abstraction(self):
+    def test_puppet_multifaceted_abstraction(self):
         self.__help_test(
             "tests/design/puppet/files/multifaceted_abstraction.pp",
             2, 
@@ -69,4 +69,22 @@ class TestDesign(unittest.TestCase):
                 "design_multifaceted_abstraction", 
                 "implementation_long_statement"
             ], [1, 2]
+        )
+
+    def test_puppet_unguarded_variable(self):
+        self.__help_test(
+            "tests/design/puppet/files/unguarded_variable.pp",
+            1, 
+            [
+                "implementation_unguarded_variable", 
+            ], [12]
+        )
+
+    def test_puppet_misplaced_attribute(self):
+        self.__help_test(
+            "tests/design/puppet/files/misplaced_attribute.pp",
+            1, 
+            [
+                "design_misplaced_attribute", 
+            ], [1]
         )

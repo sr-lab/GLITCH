@@ -63,7 +63,7 @@ class TestDesign(unittest.TestCase):
             ], [1]
         )
 
-    def test_multifaceted_abstraction(self):
+    def test_chef_multifaceted_abstraction(self):
         self.__help_test(
             "tests/design/chef/files/multifaceted_abstraction.rb",
             1, 
@@ -71,3 +71,13 @@ class TestDesign(unittest.TestCase):
                 "design_multifaceted_abstraction", 
             ], [1]
         )
+
+    def test_chef_misplaced_attribute(self):
+        self.__help_test(
+            "tests/design/chef/files/misplaced_attribute.rb",
+            1, 
+            [
+                "design_misplaced_attribute", 
+            ], [1]
+        )
+
