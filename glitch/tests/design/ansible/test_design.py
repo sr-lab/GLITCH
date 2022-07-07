@@ -39,7 +39,7 @@ class TestDesign(unittest.TestCase):
             ], [2, 4, 5, 6]
         )
 
-    def test_duplicate_block(self):
+    def test_ansible_duplicate_block(self):
         self.__help_test(
             "tests/design/ansible/files/duplicate_block.yml",
             "tasks",
@@ -52,7 +52,7 @@ class TestDesign(unittest.TestCase):
             ], [2, 10, 25, 33]
         )
 
-    def test_avoid_comments(self):
+    def test_ansible_avoid_comments(self):
         self.__help_test(
             "tests/design/ansible/files/avoid_comments.yml",
             "tasks",
@@ -62,7 +62,7 @@ class TestDesign(unittest.TestCase):
             ], [11]
         )
 
-    def test_long_resource(self):
+    def test_ansible_long_resource(self):
         self.__help_test(
             "tests/design/ansible/files/long_resource.yml",
             "tasks",
@@ -73,7 +73,7 @@ class TestDesign(unittest.TestCase):
             ], [2, 2]
         )
 
-    def test_multifaceted_abstraction(self):
+    def test_ansible_multifaceted_abstraction(self):
         self.__help_test(
             "tests/design/ansible/files/multifaceted_abstraction.yml",
             "tasks",
