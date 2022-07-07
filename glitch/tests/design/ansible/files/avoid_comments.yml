@@ -1,0 +1,11 @@
+# TEST
+- name: (Windows) PRE-CHECK GitLab Runner exists
+  block:
+  - name: (Windows) Check gitlab-runner executable exists
+    win_stat:
+      path: "{{ gitlab_runner_executable }}"
+    register: gitlab_runner_exists
+
+  - name: (Windows) Set fact -> gitlab_runner_exists
+    set_fact:
+      gitlab_runner_exists: "{{ gitlab_runner_exists.stat.exists }}" # TEST

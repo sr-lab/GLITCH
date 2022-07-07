@@ -1,0 +1,42 @@
+---
+- name: (MacOS) INSTALL GitLab Runner for macOS
+  block:
+    - name: (MacOS) Download GitLab Runner
+      get_url:
+        url: "{{ gitlab_runner_download_url }}"
+        dest: "{{ gitlab_runner_executable }}"
+        force: yes
+
+    - name: (MacOS) Setting Permissions for gitlab-runner executable
+      file:
+        path: "{{ gitlab_runner_executable }}"
+        owner: "{{ ansible_user_id | string }}"
+        group: "{{ ansible_user_gid | string }}"
+        mode: '+x'
+
+    - name: (MacOS) Install GitLab Runner
+      command: "{{ gitlab_runner_executable }} install"
+
+    - name: (MacOS) Start GitLab Runner
+      command: "{{ gitlab_runner_executable }} start"
+
+  when: (not gitlab_runner_exists)
+
+- name: (MacOS) UPGRADE GitLab Runner for macOS
+  block:
+    - name: (MacOS) Download GitLab Runner
+      get_url:
+        url: "{{ gitlab_runner_download_url }}"
+        dest: "{{ gitlab_runner_executable }}"
+        force: yes
+
+    - name: (MacOS) Setting Permissions for gitlab-runner executable
+      file:
+        path: "{{ gitlab_runner_executable }}"
+        owner: "{{ ansible_user_id | string }}"
+        group: "{{ ansible_user_gid | string }}"
+        mode: '+x'
+      become: yes
+  when:
+    - gitlab_runner_exists
+    - gitlab_runner_existing_version != gitlab_runner_wanted_version or gitlab_runner_wanted_version == 'latest'

@@ -134,7 +134,7 @@ def glitch(tech, type, path, config, module, csv,
             type = __check_type(path)  
              
         parse_and_check(type, path, module, parser, analyses, errors, file_stats)
-    errors = sorted(set(errors), key=lambda e: (e.path, e.line))
+    errors = sorted(set(errors), key=lambda e: (e.path, e.line, e.code))
     
     if output is None:
         f = sys.stdout
