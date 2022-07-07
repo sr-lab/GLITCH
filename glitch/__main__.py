@@ -1,9 +1,10 @@
+from email.policy import default
 import click, os, sys
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import RulesListOption
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
-from glitch.tech import Tech
+from glitch.tech import ScriptType, Tech
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
 from alive_progress import alive_bar
@@ -31,8 +32,8 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
         type=click.Choice(("prettytable", "latex")), required=False, default="prettytable",
         help="The presentation format of the tables that show stats about the run.")
 @click.option('--type',
-    type=click.Choice(['script', 'tasks', 'vars'], case_sensitive=False), default='script',
-    help="The type of scripts being analyzed. Currently this choice only makes a difference for Ansible.")
+        type=click.Choice(ScriptType), default=ScriptType.script,
+        help="The type of scripts being analyzed.")
 @click.option('--config', type=click.Path(), default="configs/default.ini",
     help="The path for a config file. Otherwise the default config will be used.")
 @click.option('--module', is_flag=True, default=False,
@@ -58,12 +59,12 @@ def glitch(tech, type, path, config, module, csv,
         dataset, autodetect, includeall, smells, output, tableformat, linter):
     def __check_type(file):
         if "/vars/" in file or "/defaults/" in file:
-            type = "vars"
+            type = ScriptType.vars
         elif "/tasks/" in file:
-            type = "tasks"
+            type = ScriptType.tasks
         else:
-            type = "script"
-
+            type = ScriptType.script
+        
         return type
 
     if config != "configs/default.ini" and not os.path.exists(config):

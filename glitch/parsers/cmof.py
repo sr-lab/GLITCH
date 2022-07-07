@@ -14,6 +14,7 @@ import glitch.parsers.parser as p
 from glitch.repr.inter import *
 from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
+from glitch.tech import ScriptType
 
 class AnsibleParser(p.Parser):
     def __get_yaml_comments(self, d, file):
@@ -348,13 +349,13 @@ class AnsibleParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, type: str) -> UnitBlock:
+    def parse_file(self, path: str, type: ScriptType) -> UnitBlock:
         with open(path) as f:
-            if (type == "script"):
+            if (type == ScriptType.script):
                 return self.__parse_playbook(path, f)
-            elif (type == "tasks"):
+            elif (type == ScriptType.tasks):
                 return self.__parse_tasks_file(path, f)
-            elif (type == "vars"):
+            elif (type == ScriptType.vars):
                 return self.__parse_vars_file(path, f)
 
 class ChefParser(p.Parser):
@@ -887,7 +888,7 @@ class ChefParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, type: str) -> UnitBlock:
+    def parse_file(self, path: str, type: ScriptType) -> UnitBlock:
         return self.__parse_recipe(os.path.dirname(path), os.path.basename(path))
 
     def parse_folder(self, path: str) -> Project:
@@ -1244,7 +1245,7 @@ class PuppetParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, type: str) -> UnitBlock:
+    def parse_file(self, path: str, type: ScriptType) -> UnitBlock:
         unit_block: UnitBlock = UnitBlock(os.path.basename(path))
         unit_block.path = path
         
