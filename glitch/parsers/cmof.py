@@ -14,7 +14,6 @@ import glitch.parsers.parser as p
 from glitch.repr.inter import *
 from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
-from glitch.tech import ScriptType
 
 class AnsibleParser(p.Parser):
     def __get_yaml_comments(self, d, file):
@@ -205,14 +204,14 @@ class AnsibleParser(p.Parser):
     def __parse_playbook(self, name, file) -> UnitBlock:
         try:
             parsed_file = yaml.YAML().compose(file)
-            unit_block = UnitBlock(name)
+            unit_block = UnitBlock(name, UnitBlockType.script)
             unit_block.path = file.name
             file.seek(0, 0)
             code = file.readlines()
 
             for p in parsed_file.value:
                 # Plays are unit blocks inside a unit block
-                play = UnitBlock("")
+                play = UnitBlock("", UnitBlockType.block)
                 play.path = file.name
 
                 for key, value in p.value:
@@ -241,7 +240,7 @@ class AnsibleParser(p.Parser):
     def __parse_tasks_file(self, name, file) -> UnitBlock:
         try:
             parsed_file = yaml.YAML().compose(file)
-            unit_block = UnitBlock(name)
+            unit_block = UnitBlock(name, UnitBlockType.tasks)
             unit_block.path = file.name
             file.seek(0, 0)
             code = file.readlines()
@@ -264,7 +263,7 @@ class AnsibleParser(p.Parser):
     def __parse_vars_file(self, name, file) -> UnitBlock:
         try:
             parsed_file = yaml.YAML().compose(file)
-            unit_block = UnitBlock(name)
+            unit_block = UnitBlock(name, UnitBlockType.vars)
             unit_block.path = file.name
             file.seek(0, 0)
             code = file.readlines()
@@ -349,13 +348,21 @@ class AnsibleParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, type: ScriptType) -> UnitBlock:
+    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
         with open(path) as f:
-            if (type == ScriptType.script):
+            if type == UnitBlockType.unknown:
+                if "/vars/" in path or "/defaults/" in path:
+                    type = UnitBlockType.vars
+                elif "/tasks/" in path:
+                    type = UnitBlockType.tasks
+                else:
+                    type = UnitBlockType.script
+        
+            if (type == UnitBlockType.script):
                 return self.__parse_playbook(path, f)
-            elif (type == ScriptType.tasks):
+            elif (type == UnitBlockType.tasks):
                 return self.__parse_tasks_file(path, f)
-            elif (type == ScriptType.vars):
+            elif (type == UnitBlockType.vars):
                 return self.__parse_vars_file(path, f)
 
 class ChefParser(p.Parser):
@@ -828,7 +835,7 @@ class ChefParser(p.Parser):
             ripper.close()
             ripper_script = ripper_script.substitute({'path': '\"' + os.path.join(path, file)+ '\"'})
 
-            unit_block: UnitBlock = UnitBlock(file)
+            unit_block: UnitBlock = UnitBlock(file, UnitBlockType.script)
             unit_block.path = os.path.join(path, file)
             
             try:
@@ -888,7 +895,7 @@ class ChefParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, type: ScriptType) -> UnitBlock:
+    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
         return self.__parse_recipe(os.path.dirname(path), os.path.basename(path))
 
     def parse_folder(self, path: str) -> Project:
@@ -986,7 +993,8 @@ class PuppetParser(p.Parser):
             return resource 
         elif (isinstance(codeelement, puppetmodel.ResourceDeclaration)):
             unit_block: UnitBlock = UnitBlock(
-                PuppetParser.__process_codeelement(codeelement.name, path, code)
+                PuppetParser.__process_codeelement(codeelement.name, path, code),
+                UnitBlockType.block
             )
             unit_block.path = path
 
@@ -1042,7 +1050,8 @@ class PuppetParser(p.Parser):
         elif (isinstance(codeelement, puppetmodel.PuppetClass)):
             # FIXME there are components of the class that are not considered
             unit_block: UnitBlock = UnitBlock(
-                PuppetParser.__process_codeelement(codeelement.name, path, code)
+                PuppetParser.__process_codeelement(codeelement.name, path, code),
+                UnitBlockType.block
             )
             unit_block.path = path
 
@@ -1245,8 +1254,8 @@ class PuppetParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, type: ScriptType) -> UnitBlock:
-        unit_block: UnitBlock = UnitBlock(os.path.basename(path))
+    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
+        unit_block: UnitBlock = UnitBlock(os.path.basename(path), UnitBlockType.script)
         unit_block.path = path
         
         try:

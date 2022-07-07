@@ -1,10 +1,10 @@
-from email.policy import default
 import click, os, sys
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import RulesListOption
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
-from glitch.tech import ScriptType, Tech
+from glitch.tech import Tech
+from glitch.repr.inter import UnitBlockType
 from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
 from pkg_resources import resource_filename
 from alive_progress import alive_bar
@@ -32,7 +32,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
         type=click.Choice(("prettytable", "latex")), required=False, default="prettytable",
         help="The presentation format of the tables that show stats about the run.")
 @click.option('--type',
-        type=click.Choice(ScriptType), default=ScriptType.script,
+        type=click.Choice(UnitBlockType), default=UnitBlockType.unknown,
         help="The type of scripts being analyzed.")
 @click.option('--config', type=click.Path(), default="configs/default.ini",
     help="The path for a config file. Otherwise the default config will be used.")
@@ -49,24 +49,12 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
          "This flag is only relevant if you are using the dataset flag.")
 @click.option('--csv', is_flag=True, default=False,
     help="Use this flag if you want the output to be in CSV format.")
-@click.option('--autodetect', is_flag=True, default=False,
-    help="This flag allows for the automatic detection of the type of script being analyzed. Only relevant for Ansible.")
 @click.option('--smells', cls=RulesListOption, multiple=True, 
     help="The type of smells being analyzed.")
 @click.argument('path', type=click.Path(exists=True), required=True)
 @click.argument('output', type=click.Path(), required=False)
 def glitch(tech, type, path, config, module, csv, 
-        dataset, autodetect, includeall, smells, output, tableformat, linter):
-    def __check_type(file):
-        if "/vars/" in file or "/defaults/" in file:
-            type = ScriptType.vars
-        elif "/tasks/" in file:
-            type = ScriptType.tasks
-        else:
-            type = ScriptType.script
-        
-        return type
-
+        dataset, includeall, smells, output, tableformat, linter):
     if config != "configs/default.ini" and not os.path.exists(config):
         raise click.BadOptionUsage('config', f"Invalid value for 'config': Path '{config}' does not exist.")
     elif os.path.isdir(config):
@@ -109,9 +97,6 @@ def glitch(tech, type, path, config, module, csv,
             with alive_bar(len(iac_files), 
                     title=f"ANALYZING ALL FILES WITH EXTENSIONS {includeall}") as bar:
                 for file in iac_files:
-                    if (autodetect):
-                        type = __check_type(file)
-
                     parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                     bar()
         else:
@@ -125,16 +110,11 @@ def glitch(tech, type, path, config, module, csv,
 
         with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:
             for file in files:
-                if (autodetect):
-                    type = __check_type(file)
-
                 parse_and_check(type, file, module, parser, analyses, errors, file_stats)
                 bar()
     else:         
-        if (autodetect):
-            type = __check_type(path)  
-             
         parse_and_check(type, path, module, parser, analyses, errors, file_stats)
+    
     errors = sorted(set(errors), key=lambda e: (e.path, e.line, e.code))
     
     if output is None:

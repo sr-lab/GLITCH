@@ -138,8 +138,15 @@ class Dependency(CodeElement):
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
 
+class UnitBlockType(str, Enum):
+    script = "script"
+    tasks = "tasks"
+    vars = "vars"
+    block = "block"
+    unknown = "unknown"
+
 class UnitBlock(Block):
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, type: UnitBlockType) -> None:
         super().__init__()
         self.dependencies: list[Dependency] = []
         self.comments: list[Comment] = []
@@ -149,6 +156,7 @@ class UnitBlock(Block):
         self.attributes: list[Attribute] = []
         self.name: str = name
         self.path: str = ""
+        self.type: UnitBlockType = type
 
     def __repr__(self) -> str:
         return self.name

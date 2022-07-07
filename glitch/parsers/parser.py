@@ -2,10 +2,10 @@ import os
 from glitch.repr.inter import *
 from abc import ABC, abstractmethod
 
-from glitch.tech import ScriptType
+from glitch.repr.inter import UnitBlockType
 
 class Parser(ABC):
-    def parse(self, path: str, type: ScriptType, is_module: bool) -> Module:
+    def parse(self, path: str, type: UnitBlockType, is_module: bool) -> Module:
         if is_module:
             return self.parse_module(path)
         elif os.path.isfile(path):
@@ -14,7 +14,7 @@ class Parser(ABC):
             return self.parse_folder(path)
 
     @abstractmethod
-    def parse_file(self, path: str, type: ScriptType) -> UnitBlock:
+    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
         pass
 
     @abstractmethod
