@@ -853,7 +853,10 @@ class ChefParser(p.Parser):
             ripper.close()
             ripper_script = ripper_script.substitute({'path': '\"' + os.path.join(path, file)+ '\"'})
 
-            unit_block: UnitBlock = UnitBlock(file, UnitBlockType.script)
+            if "/attributes/" in path:
+                unit_block: UnitBlock = UnitBlock(file, UnitBlockType.vars)
+            else:
+                unit_block: UnitBlock = UnitBlock(file, UnitBlockType.script)
             unit_block.path = os.path.join(path, file)
             
             try:

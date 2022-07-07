@@ -65,6 +65,8 @@ def print_stats(errors, smells, file_stats, format):
     elif (format == "latex"):
         smells_info = stats_info[:-1]
         smells_info = sorted(smells_info, key=lambda x: x[0])
+        for smell in smells_info:
+            smell[0] = smell[0].split(' - ')[0]
         smells_info.append(stats_info[-1])
         table = pd.DataFrame(smells_info, columns = ["\\textbf{Smell}", "\\textbf{Occurrences}", 
             "\\textbf{Smell density (Smell/KLoC)}", "\\textbf{Proportion of scripts (\%)}"])

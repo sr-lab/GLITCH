@@ -187,7 +187,9 @@ class DesignVisitor(RuleVisitor):
                     error.line = i + 1
                     errors.append(error)
             
-            if len(u.variables) / max(len(code_lines), 1) > 0.3:
+            # The UnitBlock should not be of type vars, because these files are supposed to only
+            # have variables
+            if len(u.variables) / max(len(code_lines), 1) > 0.3 and u.type != UnitBlockType.vars:
                 errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
 
             if DesignVisitor.__VAR_REFER_SYMBOL is not None:
@@ -247,8 +249,6 @@ class DesignVisitor(RuleVisitor):
         #         len(u.variables) == 0 and len(u.unit_blocks) == 0 and
         #             len(u.attributes) == 0):
         #     errors.append(Error('design_unnecessary_abstraction', u, u.path, repr(u)))
-
-
 
         errors += self.misplaced_attr.check(u, u.path)
         errors += self.imp_align.check(u, u.path)
