@@ -230,7 +230,8 @@ class DesignVisitor(RuleVisitor):
                 else:
                     blocks[hash].append(i)
 
-            checked = []
+            # Note: changing the structure to a set instead of a list increased the speed A LOT
+            checked = set()
             for _, value in blocks.items():
                 if len(value) >= 2:
                     for i in value:
@@ -239,7 +240,7 @@ class DesignVisitor(RuleVisitor):
                             error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
                             error.line = line
                             errors.append(error)
-                            checked += list(range(i, i + 150))
+                            checked.update(range(i, i + 150))
 
         # FIXME Needs to consider more things
         # if (len(u.statements) == 0 and len(u.atomic_units) == 0 and

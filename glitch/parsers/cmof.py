@@ -201,9 +201,9 @@ class AnsibleParser(p.Parser):
                     au.code = code[au.line - 1]
                 unit_block.add_atomic_unit(au)
 
-    def __parse_playbook(self, name, file) -> UnitBlock:
+    def __parse_playbook(self, name, file, parsed_file = None) -> UnitBlock:
         try:
-            parsed_file = yaml.YAML().compose(file)
+            if parsed_file is None: parsed_file = yaml.YAML().compose(file)
             unit_block = UnitBlock(name, UnitBlockType.script)
             unit_block.path = file.name
             file.seek(0, 0)
@@ -237,9 +237,9 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_PLAYBOOK"], file.name)
             return None
 
-    def __parse_tasks_file(self, name, file) -> UnitBlock:
+    def __parse_tasks_file(self, name, file, parsed_file = None) -> UnitBlock:
         try:
-            parsed_file = yaml.YAML().compose(file)
+            if parsed_file is None: parsed_file = yaml.YAML().compose(file)
             unit_block = UnitBlock(name, UnitBlockType.tasks)
             unit_block.path = file.name
             file.seek(0, 0)
@@ -260,9 +260,9 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_TASKS_FILE"], file.name)
             return None
 
-    def __parse_vars_file(self, name, file) -> UnitBlock:
+    def __parse_vars_file(self, name, file, parsed_file=None) -> UnitBlock:
         try:
-            parsed_file = yaml.YAML().compose(file)
+            if parsed_file is None: parsed_file = yaml.YAML().compose(file)
             unit_block = UnitBlock(name, UnitBlockType.vars)
             unit_block.path = file.name
             file.seek(0, 0)
@@ -348,22 +348,40 @@ class AnsibleParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
+    def parse_file(self, path: str, blocktype: UnitBlockType) -> UnitBlock:
         with open(path) as f:
-            if type == UnitBlockType.unknown:
-                if "/vars/" in path or "/defaults/" in path:
-                    type = UnitBlockType.vars
-                elif "/tasks/" in path:
-                    type = UnitBlockType.tasks
+            try:
+                parsed_file = yaml.YAML().compose(f)
+                f.seek(0, 0)
+            except:
+                throw_exception(EXCEPTIONS["ANSIBLE_COULD_NOT_PARSE"], path)
+                return None
+
+            if blocktype == UnitBlockType.unknown:
+                if isinstance(parsed_file, MappingNode):
+                    blocktype = UnitBlockType.vars
+                elif isinstance(parsed_file, SequenceNode) and len(parsed_file.value) > 0 \
+                        and isinstance(parsed_file.value[0], MappingNode):
+                    hosts = False
+
+                    for key in parsed_file.value[0].value:
+                        if key[0].value == "hosts":
+                            hosts = True
+                            break
+                    
+                    blocktype = UnitBlockType.script if hosts else UnitBlockType.tasks
+                elif isinstance(parsed_file, SequenceNode) and len(parsed_file.value) == 0:
+                    blocktype = UnitBlockType.script
                 else:
-                    type = UnitBlockType.script
+                    throw_exception(EXCEPTIONS["ANSIBLE_FILE_TYPE"], path)
+                    return None
         
-            if (type == UnitBlockType.script):
-                return self.__parse_playbook(path, f)
-            elif (type == UnitBlockType.tasks):
-                return self.__parse_tasks_file(path, f)
-            elif (type == UnitBlockType.vars):
-                return self.__parse_vars_file(path, f)
+            if (blocktype == UnitBlockType.script):
+                return self.__parse_playbook(path, f, parsed_file=parsed_file)
+            elif (blocktype == UnitBlockType.tasks):
+                return self.__parse_tasks_file(path, f, parsed_file=parsed_file)
+            elif (blocktype == UnitBlockType.vars):
+                return self.__parse_vars_file(path, f, parsed_file=parsed_file)
 
 class ChefParser(p.Parser):
     class Node:
