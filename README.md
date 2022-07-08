@@ -15,7 +15,7 @@ GLITCH is a technology-agnostic framework that enables automated detection of Ia
 
 To install run:
 ```
-python3 -m pip install -e .
+python -m pip install -e .
 ```
 
 To use the tool for Chef you also need Ruby and its Ripper package installed.
@@ -35,6 +35,13 @@ glitch --tech (chef|puppet|ansible) --csv --config PATH_TO_CONFIG PATH_TO_FILE_O
 ```
 
 If you want to consider the module structure you can add the flag ```--module```.
+
+## Tests
+
+To run the tests for GLITCH go to the folder ```glitch``` and run:
+```
+python -m unittest discover tests
+```
 
 ## Configs
 
