@@ -81,3 +81,12 @@ class TestDesign(unittest.TestCase):
             ], [1]
         )
 
+    def test_chef_too_many_variables(self):
+        self.__help_test(
+            "tests/design/chef/files/too_many_variables.rb",
+            1, 
+            [
+                "implementation_too_many_variables", 
+            ], [-1]
+        )
+

@@ -82,3 +82,13 @@ class TestDesign(unittest.TestCase):
                 "design_multifaceted_abstraction", 
             ], [2, 2]
         )
+
+    def test_ansible_too_many_variables(self):
+        self.__help_test(
+            "tests/design/ansible/files/too_many_variables.yml",
+            "script",
+            1, 
+            [
+                "implementation_too_many_variables", 
+            ], [-1]
+        )

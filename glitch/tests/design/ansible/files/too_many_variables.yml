@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    aqua_admin_password: "{{ lookup('env', 'AQUA_ADMIN_PASSWORD') }}"
+    aqua_sso_client_secret: "{{ lookup('env', 'AQUA_SSO_CLIENT_SECRET') }}"
+    aqua_sso_client: "{{ lookup('env', 'AQUA_SSO_CLIENT') }}"
+    aqua_scanner_username: "{{ lookup('env', 'AQUA_SCANNER_USERNAME') }}"
+    aqua_scanner_password: "{{ lookup('env', 'AQUA_SCANNER_PASSWORD') }}"
+    aqua_operator_username: "{{ lookup('env', 'AQUA_OPERATOR_USERNAME') }}"
+    aqua_operator_passowrd: "{{ lookup('env', 'AQUA_OPERATOR_PASSWORD') }}"
+  tasks:
+    - include_tasks: tasks/login.yaml
+    - include_tasks: tasks/enable_oidc.yaml
+    - include_tasks: tasks/create_users.yaml
+    - include_tasks: tasks/enable_enforcers.yaml
+    - include_tasks: tasks/create_registries.yaml

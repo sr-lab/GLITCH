@@ -88,3 +88,12 @@ class TestDesign(unittest.TestCase):
                 "design_misplaced_attribute", 
             ], [1]
         )
+    
+    def test_puppet_too_many_variables(self):
+        self.__help_test(
+            "tests/design/puppet/files/too_many_variables.pp",
+            1, 
+            [
+                "implementation_too_many_variables", 
+            ], [1]
+        )
