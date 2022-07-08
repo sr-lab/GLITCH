@@ -8,7 +8,7 @@
     "type": "git",
     "url": "https://github.com/sr-lab/GLITCH.git"
   },
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.68.0"
   },

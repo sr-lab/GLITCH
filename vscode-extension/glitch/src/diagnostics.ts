@@ -32,11 +32,8 @@ export async function refreshDiagnostics(doc: vscode.TextDocument,
 	let tech = configuration.get('tech');
 	if (tech != "") {
 		options += " --tech " + tech;
-		if (tech == "ansible") {
-			options += " --autodetect"
-		}
 	} else if (doc.fileName.endsWith(".yaml") || doc.fileName.endsWith(".yml")) {
-		options += " --tech ansible --autodetect"
+		options += " --tech ansible"
 	} else if (doc.fileName.endsWith(".rb")) {
 		options += " --tech chef"
 	} else if (doc.fileName.endsWith(".pp")) {
