@@ -28,3 +28,7 @@ You should define the settings above in the Workspace scope if you want differen
 ### 0.0.1
 
 First release of the GLITCH extension
+
+### 0.0.2
+
+Fix bug with autodetection option that was removed from GLITCH.
