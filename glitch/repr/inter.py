@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from enum import Enum
 
 class CodeElement(ABC):
@@ -9,6 +9,10 @@ class CodeElement(ABC):
 
     def __str__(self) -> str:
         return self.__repr__()
+
+    @abstractmethod
+    def print(self, tab):
+        pass
 
 class Block(CodeElement):
     def __init__(self) -> None:
