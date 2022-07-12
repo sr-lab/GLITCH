@@ -16,7 +16,8 @@ from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
 
 class AnsibleParser(p.Parser):
-    def __get_yaml_comments(self, d, file):
+    @staticmethod
+    def __get_yaml_comments(d, file):
         def extract_from_token(tokenlist):
             res = []
             for token in tokenlist:
@@ -226,7 +227,7 @@ class AnsibleParser(p.Parser):
 
                 unit_block.add_unit_block(play)
 
-            for comment in self.__get_yaml_comments(parsed_file, file):
+            for comment in AnsibleParser.__get_yaml_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 c.code = code[c.line - 1]
@@ -249,7 +250,7 @@ class AnsibleParser(p.Parser):
                 return unit_block
 
             AnsibleParser.__parse_tasks(unit_block, parsed_file, code)
-            for comment in self.__get_yaml_comments(parsed_file, file):
+            for comment in AnsibleParser.__get_yaml_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 c.code = code[c.line - 1]
@@ -272,7 +273,7 @@ class AnsibleParser(p.Parser):
                 return unit_block
 
             AnsibleParser.__parse_vars(unit_block, "", parsed_file, code)
-            for comment in self.__get_yaml_comments(parsed_file, file):
+            for comment in AnsibleParser.__get_yaml_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 c.code = code[c.line - 1]
