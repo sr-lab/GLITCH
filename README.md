@@ -9,7 +9,24 @@
 
 GLITCH is a technology-agnostic framework that enables automated detection of IaC smells. GLITCH allows polyglot smell detection by transforming IaC scripts into an intermediate representation, on which different smell detectors can be defined. GLITCH currently supports the detection of nine different security smells [1, 2] and nine design & implementation smells [3] in scripts written in Puppet, Ansible, or Chef.
 
-"[GLITCH: an Intermediate-Representation-Based Security Analysis for Infrastructure as Code Scripts](https://arxiv.org/abs/2205.14371)" is a paper that describes the implementation of security smells in GLITCH and the results of an empirical study using our framework.
+
+
+## Paper and Academic Usage
+"[GLITCH: Automated Polyglot Security Smell Detection in Infrastructure as Code](https://arxiv.org/abs/2205.14371)" is the main paper that describes the implementation of security smells in GLITCH. It also presents a large-scale empirical study  that analyzes security smells on three large datasets containing 196,755 IaC scripts and 12,281,251 LOC.
+
+If you use GLITCH or any of its datasets, please cite:
+
+ - Nuno Saavedra and João F. Ferreira. 2022. [GLITCH: Automated Polyglot Security Smell Detection in Infrastructure as Code](https://arxiv.org/abs/2205.14371). In 37th IEEE/ACM International Conference on Automated Software Engineering (ASE ’22), October 10–14, 2022, Rochester, MI, USA. ACM, New York NY, USA, 12 pages. https://doi.org/10.1145/3551349.3556945  
+ 
+
+ ```
+ @inproceedings{saavedraferreira22glitch,
+  title={{GLITCH}: Automated Polyglot Security Smell Detection in Infrastructure as Code},
+  author={Saavedra, Nuno and Ferreira, Jo{\~a}o F},
+  booktitle={Proceedings of the 37th IEEE/ACM International Conference on Automated Software Engineering},
+  year={2022}
+}
+ ```
 
 ## Installation
 
