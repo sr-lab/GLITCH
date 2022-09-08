@@ -89,7 +89,7 @@ def glitch(tech, type, path, config, module, csv,
             for root, _, files in os.walk(path):
                 for name in files:
                     name_split = name.split('.')
-                    if len(name_split) == 2 and name_split[-1] in includeall \
+                    if name_split[-1] in includeall \
                             and not Path(os.path.join(root, name)).is_symlink():
                         iac_files.append(os.path.join(root, name))
             iac_files = set(iac_files)
