@@ -39,7 +39,7 @@ class SecurityVisitor(RuleVisitor):
             else: value = repr(a.value).strip().lower()
 
             for item in SecurityVisitor.__DOWNLOAD:
-                if re.search(r'(http|https|www).*{text}'.format(text = item), value):
+                if re.search(r'(http|https|www)[^ ,]*\.{text}'.format(text = item), value):
                     integrity_check = False
                     for other in au.attributes:
                         name = other.name.strip().lower()
@@ -129,7 +129,7 @@ class SecurityVisitor(RuleVisitor):
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         for item in SecurityVisitor.__MISC_SECRETS:
-            if (re.match(r'[_A-Za-z0-9$-]*{text}([-_].*)?$'.format(text=item), name) 
+            if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name) 
                     and len(value) > 0 and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
