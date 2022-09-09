@@ -1,3 +1,4 @@
+from glob import escape
 import pandas as pd
 from glitch.analysis.rules import Error
 from prettytable import PrettyTable
@@ -24,12 +25,12 @@ def print_stats(errors, smells, file_stats, format):
         total_smell_density += round(n / (file_stats.loc / 1000), 2)
         stats_info.append([Error.ALL_ERRORS[code], n, 
             round(n / (file_stats.loc / 1000), 2), 
-            round((len(files_with_the_smell[code]) / total_files) * 100, 1)])
+            round((len(files_with_the_smell[code]) / total_files) * 100, 2)])
     stats_info.append([
         "Combined", 
         total_occur,
         total_smell_density,
-        round((len(files_with_the_smell['Combined']) / total_files) * 100, 1)
+        round((len(files_with_the_smell['Combined']) / total_files) * 100, 2)
     ])
 
     if (format == "prettytable"):
@@ -70,11 +71,13 @@ def print_stats(errors, smells, file_stats, format):
         smells_info.append(stats_info[-1])
         table = pd.DataFrame(smells_info, columns = ["\\textbf{Smell}", "\\textbf{Occurrences}", 
             "\\textbf{Smell density (Smell/KLoC)}", "\\textbf{Proportion of scripts (\%)}"])
-        latex = table.to_latex(index=False, escape=False)
+        latex = table.style.hide_index().format(escape=None, 
+                precision=2, thousands=',').to_latex()
         combined = latex[:latex.rfind('\\\\')].rfind('\\\\')
         latex = latex[:combined] + "\\\\\n\midrule\n" + latex[combined + 3:]
         print(latex)
 
         attributes = pd.DataFrame([[total_files, file_stats.loc]], columns=
             ["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"])
-        print(attributes.to_latex(index=False, escape=False))
+        print(attributes.style.hide_index().format(escape=None, 
+                precision=2, thousands=',').to_latex())

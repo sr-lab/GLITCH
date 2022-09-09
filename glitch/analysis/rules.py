@@ -56,9 +56,10 @@ class Error():
 
     def __repr__(self) -> str:
         with open(self.path) as f:
+            line = f.readlines()[self.line - 1].strip() if self.line != -1 else self.repr
             return \
                 f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n" + \
-                    f"{f.readlines()[self.line - 1].strip()}\n" 
+                    f"{line}\n" 
 
     def __hash__(self):
         return hash((self.code, self.path, self.line))
