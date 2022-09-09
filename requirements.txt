@@ -7,3 +7,4 @@ pandas
 configparser
 pytest
 puppetparser
+jinja2

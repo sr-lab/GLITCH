@@ -18,7 +18,8 @@ setup(
         "pandas",
         "configparser",
         "pytest",
-        "puppetparser"
+        "puppetparser",
+        "jinja2"
     ],
     entry_points={
         "console_scripts": [
