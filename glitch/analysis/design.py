@@ -162,6 +162,8 @@ class DesignVisitor(RuleVisitor):
             errors += self.check_variable(v, u.path)
         for a in u.attributes:
             errors += self.check_attribute(a, u.path)
+        for d in u.dependencies:
+            errors += self.check_dependency(d, u.path)
         for s in u.statements:
             errors += self.check_element(s, u.path)
 
