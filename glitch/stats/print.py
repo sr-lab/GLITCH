@@ -71,7 +71,7 @@ def print_stats(errors, smells, file_stats, format):
         smells_info.append(stats_info[-1])
         table = pd.DataFrame(smells_info, columns = ["\\textbf{Smell}", "\\textbf{Occurrences}", 
             "\\textbf{Smell density (Smell/KLoC)}", "\\textbf{Proportion of scripts (\%)}"])
-        latex = table.style.hide_index().format(escape=None, 
+        latex = table.style.hide(axis='index').format(escape=None, 
                 precision=2, thousands=',').to_latex()
         combined = latex[:latex.rfind('\\\\')].rfind('\\\\')
         latex = latex[:combined] + "\\\\\n\midrule\n" + latex[combined + 3:]
@@ -79,5 +79,5 @@ def print_stats(errors, smells, file_stats, format):
 
         attributes = pd.DataFrame([[total_files, file_stats.loc]], columns=
             ["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"])
-        print(attributes.style.hide_index().format(escape=None, 
+        print(attributes.style.hide(axis='index').format(escape=None, 
                 precision=2, thousands=',').to_latex())
