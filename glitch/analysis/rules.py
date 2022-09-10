@@ -52,11 +52,12 @@ class Error():
             self.line = -1
 
     def to_csv(self) -> str:
-        return f"{self.path},{self.line},{self.code},{self.repr.strip()}"
+        repr = self.repr.split('\n')[0].strip()
+        return f"{self.path},{self.line},{self.code},{repr}"
 
     def __repr__(self) -> str:
         with open(self.path) as f:
-            line = f.readlines()[self.line - 1].strip() if self.line != -1 else self.repr
+            line = f.readlines()[self.line - 1].strip() if self.line != -1 else self.repr.split('\n')[0]
             return \
                 f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n" + \
                     f"{line}\n" 
