@@ -149,11 +149,24 @@ class DesignVisitor(RuleVisitor):
 
             return count_resources, count_execs
 
-        self.first_code_line = inf
+        with open(u.path, "r") as f:
+            try:
+                code_lines = f.readlines()
+                f.seek(0, 0)
+                all_code = f.read()
+                code = ""
+            except UnicodeDecodeError:
+                return []
+
+        self.first_non_comm_line = inf
+        for i, line in enumerate(code_lines):
+            if not line.startswith("#"): 
+                self.first_non_comm_line = i + 1
+                break 
+
         self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
            self.variables_names.append(attr.name)
-        self.__check_code(u)
 
         errors = []
         # The order is important
@@ -167,85 +180,77 @@ class DesignVisitor(RuleVisitor):
             errors += self.check_dependency(d, u.path)
         for s in u.statements:
             errors += self.check_element(s, u.path)
+        for c in u.comments:
+            errors += self.check_comment(c, u.path)
 
         total_resources, total_execs = count_atomic_units(u)
 
         if total_execs > 2 and (total_execs / total_resources) > 0.20:
             errors.append(Error('design_imperative_abstraction', u, u.path, repr(u)))
 
-        with open(u.path, "r") as f:
-            try:
-                code_lines = f.readlines()
-            except UnicodeDecodeError:
-                return []
+        for i, line in enumerate(code_lines):
+            if ("\t" in line):
+                error = Error('implementation_improper_alignment', 
+                    u, u.path, repr(u))
+                error.line = i + 1
+                errors.append(error)
+            if len(line) > 140:
+                error = Error('implementation_long_statement', u, u.path, line)
+                error.line = i + 1
+                errors.append(error)
+        
+        # The UnitBlock should not be of type vars, because these files are supposed to only
+        # have variables
+        if len(u.variables) / max(len(code_lines), 1) > 0.3 and u.type != UnitBlockType.vars:
+            errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
 
-            for i, line in enumerate(code_lines):
-                if ("\t" in line):
-                    error = Error('implementation_improper_alignment', 
-                        u, u.path, repr(u))
-                    error.line = i + 1
-                    errors.append(error)
-                if len(line) > 140:
-                    error = Error('implementation_long_statement', u, u.path, line)
-                    error.line = i + 1
-                    errors.append(error)
-            
-            # The UnitBlock should not be of type vars, because these files are supposed to only
-            # have variables
-            if len(u.variables) / max(len(code_lines), 1) > 0.3 and u.type != UnitBlockType.vars:
-                errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
+        if DesignVisitor.__VAR_REFER_SYMBOL is not None:
+            # FIXME could be improved if we considered strings as part of the model
+            for i, l in enumerate(code_lines):
+                for tuple in re.findall(r'(\'([^\\]|(\\(\n|.)))*?\')|(\"([^\\]|(\\(\n|.)))*?\")', l):
+                    for string in (tuple[0], tuple[4]):
+                        for var in self.variables_names + DesignVisitor.__DEFAULT_VARIABLES:
+                            if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1]:
+                                error = Error('implementation_unguarded_variable', u, u.path, string)
+                                error.line = i + 1
+                                errors.append(error)
 
-            if DesignVisitor.__VAR_REFER_SYMBOL is not None:
-                # FIXME could be improved if we considered strings as part of the model
-                for i, l in enumerate(code_lines):
-                    for tuple in re.findall(r'(\'([^\\]|(\\(\n|.)))*?\')|(\"([^\\]|(\\(\n|.)))*?\")', l):
-                        for string in (tuple[0], tuple[4]):
-                            for var in self.variables_names + DesignVisitor.__DEFAULT_VARIABLES:
-                                if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1]:
-                                    error = Error('implementation_unguarded_variable', u, u.path, string)
-                                    error.line = i + 1
-                                    errors.append(error)
+        def get_line(i ,lines):
+            for j, line in lines:
+                if i < j:
+                    return line
 
-            def get_line(i ,lines):
-                for j, line in lines:
-                    if i < j:
-                        return line
-            
-            f.seek(0, 0)
-            all_code = f.read()
-            code = ""
+        lines = []
+        current_line = 1
+        i = 0
+        for c in all_code:
+            if c == '\n':
+                lines.append((i, current_line))
+                current_line += 1
+            elif not c.isspace():
+                code += c
+                i += 1
+        lines.append((i, current_line))
 
-            lines = []
-            current_line = 1
-            i = 0
-            for c in all_code:
-                if c == '\n':
-                    lines.append((i, current_line))
-                    current_line += 1
-                elif not c.isspace():
-                    code += c
-                    i += 1
-            lines.append((i, current_line))
+        blocks = {}
+        for i in range(len(code) - 150):
+            hash = code[i : i + 150].__hash__()
+            if hash not in blocks:
+                blocks[hash] = [i]
+            else:
+                blocks[hash].append(i)
 
-            blocks = {}
-            for i in range(len(code) - 150):
-                hash = code[i : i + 150].__hash__()
-                if hash not in blocks:
-                    blocks[hash] = [i]
-                else:
-                    blocks[hash].append(i)
-
-            # Note: changing the structure to a set instead of a list increased the speed A LOT
-            checked = set()
-            for _, value in blocks.items():
-                if len(value) >= 2:
-                    for i in value:
-                        if i not in checked:
-                            line = get_line(i, lines)
-                            error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
-                            error.line = line
-                            errors.append(error)
-                            checked.update(range(i, i + 150))
+        # Note: changing the structure to a set instead of a list increased the speed A LOT
+        checked = set()
+        for _, value in blocks.items():
+            if len(value) >= 2:
+                for i in value:
+                    if i not in checked:
+                        line = get_line(i, lines)
+                        error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
+                        error.line = line
+                        errors.append(error)
+                        checked.update(range(i, i + 150))
 
         # FIXME Needs to consider more things
         # if (len(u.statements) == 0 and len(u.atomic_units) == 0 and
@@ -258,16 +263,8 @@ class DesignVisitor(RuleVisitor):
 
         # The unit blocks inside should only be considered after in order to
         # have the correct variables
-        previous_first_line = self.first_code_line
         for ub in u.unit_blocks:
             errors += self.check_unitblock(ub)
-            previous_first_line = min(self.first_code_line, previous_first_line)
-        self.first_code_line = previous_first_line
-
-        # After defining what is the first line of code, we can check
-        # the comments.
-        for c in u.comments:
-            errors += self.check_comment(c, u.path)
 
         variable_size = self.variable_stack.pop()
         if (variable_size == 0): self.variables_names = []
@@ -276,11 +273,9 @@ class DesignVisitor(RuleVisitor):
         return errors
 
     def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
-        self.__check_code(c)
         return super().check_condition(c, file)
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
-        self.__check_code(au)
         errors = super().check_atomicunit(au, file)
         errors += self.imp_align.check(au, file)
         errors += self.misplaced_attr.check(au, file)
@@ -298,24 +293,17 @@ class DesignVisitor(RuleVisitor):
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
-        self.__check_code(d)
         return []
 
     def check_attribute(self, a: Attribute, file: str) -> list[Error]:
-        self.__check_code(a)
         return []
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
         self.variables_names.append(v.name)
-        self.__check_code(v)
         return []
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
-        if c.line >= self.first_code_line:
+        if c.line >= self.first_non_comm_line:
             errors.append(Error('design_avoid_comments', c, file, repr(c)))
         return errors
-
-    def __check_code(self, ce: CodeElement):
-        if ce.line != -1 and ce.line < self.first_code_line:
-            self.first_code_line = ce.line
