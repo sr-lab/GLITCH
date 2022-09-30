@@ -1130,7 +1130,8 @@ class PuppetParser(p.Parser):
             res = res[:-1]
             res += ")"
             lamb = PuppetParser.__process_codeelement(codeelement.lamb, path, code)
-            return [res, lamb]
+            if lamb != "": return [res, lamb] 
+            else: return res
         elif (isinstance(codeelement, puppetmodel.If)):
             # FIXME Conditionals are not yet supported
             res = list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), 
