@@ -1119,7 +1119,11 @@ class PuppetParser(p.Parser):
         elif (isinstance(codeelement, puppetmodel.Lambda)):
             # FIXME Lambdas are not yet supported
             if (codeelement.block is not None):
-                return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement.block))
+                args = []
+                for arg in codeelement.parameters:
+                    attr = PuppetParser.__process_codeelement(arg, path, code)
+                    args.append(Variable(attr.name, "", True))
+                return list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement.block)) + args
             else:
                 return []
         elif (isinstance(codeelement, puppetmodel.FunctionCall)):
@@ -1130,7 +1134,7 @@ class PuppetParser(p.Parser):
             res = res[:-1]
             res += ")"
             lamb = PuppetParser.__process_codeelement(codeelement.lamb, path, code)
-            if lamb != "": return [res, lamb] 
+            if lamb != "": return [res] + lamb 
             else: return res
         elif (isinstance(codeelement, puppetmodel.If)):
             # FIXME Conditionals are not yet supported
