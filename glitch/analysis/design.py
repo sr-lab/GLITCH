@@ -281,11 +281,14 @@ class DesignVisitor(RuleVisitor):
         errors += self.misplaced_attr.check(au, file)
 
         if au.type in DesignVisitor.__EXEC:
-            for attribute in au.attributes:
-                value = repr(attribute.value)
-                if ("&&" in value or ";" in value or "|" in value):
-                    errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
-                    break
+            if ("&&" in au.name or ";" in au.name or "|" in au.name):
+                errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
+            else:
+                for attribute in au.attributes:
+                    value = repr(attribute.value)
+                    if ("&&" in value or ";" in value or "|" in value):
+                        errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
+                        break
 
         if au.type in DesignVisitor.__EXEC and au.code.count('\n') > 7:
             errors.append(Error("design_long_resource", au, file, repr(au)))
