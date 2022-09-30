@@ -121,6 +121,7 @@ class DesignVisitor(RuleVisitor):
         config = configparser.ConfigParser()
         config.read(config_path)
         DesignVisitor.__EXEC = json.loads(config['design']['exec_atomic_units'])
+        DesignVisitor.__DEFAULT_VARIABLES = json.loads(config['design']['default_variables'])
         if 'var_refer_symbol' not in config['design']:
             DesignVisitor.__VAR_REFER_SYMBOL = None
         else:
@@ -199,7 +200,7 @@ class DesignVisitor(RuleVisitor):
                 for i, l in enumerate(code_lines):
                     for tuple in re.findall(r'(\'([^\\]|(\\(\n|.)))*?\')|(\"([^\\]|(\\(\n|.)))*?\")', l):
                         for string in (tuple[0], tuple[4]):
-                            for var in self.variables_names:
+                            for var in self.variables_names + DesignVisitor.__DEFAULT_VARIABLES:
                                 if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1]:
                                     error = Error('implementation_unguarded_variable', u, u.path, string)
                                     error.line = i + 1
