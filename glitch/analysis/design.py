@@ -290,8 +290,14 @@ class DesignVisitor(RuleVisitor):
                         errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
                         break
 
-        if au.type in DesignVisitor.__EXEC and au.code.count('\n') > 7:
-            errors.append(Error("design_long_resource", au, file, repr(au)))
+
+        if au.type in DesignVisitor.__EXEC:
+            lines = 0
+            for line in au.code.split('\n')[1:-1]:
+                if line.strip() != "": lines += 1
+
+            if lines > 7: 
+                errors.append(Error("design_long_resource", au, file, repr(au)))
 
         return errors
 
