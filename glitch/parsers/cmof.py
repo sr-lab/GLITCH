@@ -520,7 +520,7 @@ class ChefParser(p.Parser):
                 res += source[l]
 
         if ((ast.id == "method_add_block") and (ast.args[1].id == "do_block")):
-            res += "end"
+            res += "\nend"
 
         res = res.strip()
         if res.startswith(('"', "'")) and res.endswith(('"', "'")):
@@ -599,6 +599,7 @@ class ChefParser(p.Parser):
         def is_resource_type(self, ast):
             if (isinstance(ast.args[0], str) and isinstance(ast.args[1], list) \
                 and not ast.args[0] in ["action",
+                                        "converge_by",
                                         "include_recipe",
                                         "deprecated_property_alias"]):
                 if ast.args[0] == "define": return False
