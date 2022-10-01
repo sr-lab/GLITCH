@@ -109,6 +109,11 @@ class DesignVisitor(RuleVisitor):
         else:
             self.misplaced_attr = DesignVisitor.MisplacedAttribute()
 
+        if tech in [Tech.chef, Tech.puppet, Tech.ansible]:
+            self.comment = "#"
+        else:
+            self.comment = "//"
+
         self.variable_stack = []
         self.variables_names = []
         self.first_code_line = inf
@@ -160,7 +165,7 @@ class DesignVisitor(RuleVisitor):
 
         self.first_non_comm_line = inf
         for i, line in enumerate(code_lines):
-            if not line.startswith("#"): 
+            if not line.startswith(self.comment): 
                 self.first_non_comm_line = i + 1
                 break 
 
