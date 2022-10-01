@@ -230,6 +230,7 @@ class AnsibleParser(p.Parser):
             unit_block.path = file.name
             file.seek(0, 0)
             code = file.readlines()
+            code.append("")  # HACK allows to parse code in the end of the file
 
             for p in parsed_file.value:
                 # Plays are unit blocks inside a unit block
@@ -266,6 +267,7 @@ class AnsibleParser(p.Parser):
             unit_block.path = file.name
             file.seek(0, 0)
             code = file.readlines()
+            code.append("") # HACK allows to parse code in the end of the file
 
             if parsed_file is None:
                 return unit_block
@@ -289,6 +291,7 @@ class AnsibleParser(p.Parser):
             unit_block.path = file.name
             file.seek(0, 0)
             code = file.readlines()
+            code.append("")  # HACK allows to parse code in the end of the file
 
             if parsed_file is None:
                 return unit_block
