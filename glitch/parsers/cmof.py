@@ -76,12 +76,33 @@ class AnsibleParser(p.Parser):
         return set(comments)
 
     @staticmethod
+    def __get_element_code(start_token, end_token, code):
+        if isinstance(end_token, list) and len(end_token) > 0:
+            end_token = end_token[-1]
+        elif isinstance(end_token, list) or isinstance(end_token, str):
+            end_token = start_token
+
+        if start_token.start_mark.line == end_token.end_mark.line:
+            res = code[start_token.start_mark.line][start_token.start_mark.column : end_token.end_mark.column]
+        else:
+            res = code[start_token.start_mark.line]
+        
+        for line in range(start_token.start_mark.line + 1, end_token.end_mark.line):
+            res += code[line]
+        
+        if start_token.start_mark.line != end_token.end_mark.line:
+            res += code[end_token.end_mark.line][:end_token.end_mark.column]
+
+        return res
+
+    @staticmethod
     def __parse_vars(unit_block, cur_name, token, code):
         def create_variable(name, value):
             has_variable = ("{{" in value) and ("}}" in value)
             if (value in ["null", "~"]): value = ""
             v = Variable(name, value, has_variable)
             v.line = token.start_mark.line + 1
+            v.code = AnsibleParser.__get_element_code(token, value, code)
             v.code = ''.join(code[token.start_mark.line : token.end_mark.line + 1])
             unit_block.add_variable(v)
 
@@ -111,7 +132,7 @@ class AnsibleParser(p.Parser):
             if (value in ["null", "~"]): value = ""
             a = Attribute(name, value, has_variable)
             a.line = token.start_mark.line + 1
-            a.code = ''.join(code[token.start_mark.line : token.end_mark.line + 1])
+            a.code = AnsibleParser.__get_element_code(token, val, code)
             attributes.append(a)
 
         attributes = []
@@ -966,7 +987,18 @@ class PuppetParser(p.Parser):
     @staticmethod
     def __process_codeelement(codeelement, path, code):
         def get_code(ce):
-            return ''.join(code[ce.line - 1 : ce.end_line])
+            if ce.line == ce.end_line:
+                res = code[ce.line - 1][ce.col - 1 : ce.end_col - 1]
+            else:
+                res = code[ce.line - 1]
+            
+            for line in range(ce.line, ce.end_line - 1):
+                res += code[line]
+            
+            if ce.line != ce.end_line:
+                res += code[ce.end_line - 1][:ce.end_col - 1]
+
+            return res
         
         if (isinstance(codeelement, puppetmodel.Value)):
             if isinstance(codeelement, puppetmodel.Hash):

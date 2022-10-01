@@ -26,14 +26,23 @@ class DesignVisitor(RuleVisitor):
             return []
 
     class PuppetImproperAlignmentSmell(SmellChecker):
+        cached_file = ""
+        lines = []
+
         def check(self, element, file: str) -> list[Error]:
+            if DesignVisitor.PuppetImproperAlignmentSmell.cached_file != file:
+                with open(file, "r") as f:
+                    DesignVisitor.PuppetImproperAlignmentSmell.lines = f.readlines()
+                    DesignVisitor.PuppetImproperAlignmentSmell.cached_file = file
+            lines = DesignVisitor.PuppetImproperAlignmentSmell.lines
+
             longest = 0
             longest_ident = 0
             longest_split = ""
             for a in element.attributes:
                 if len(a.name) > longest and '=>' in a.code:
                     longest = len(a.name)
-                    split = a.code.split('=>')[0]
+                    split = lines[a.line - 1].split('=>')[0]
                     longest_ident = len(split)
                     longest_split = split
             if longest_split == "": return []
@@ -42,7 +51,7 @@ class DesignVisitor(RuleVisitor):
                     element, file, repr(element))]
 
             for a in element.attributes:
-                first_line = a.code.split("\n")[0]
+                first_line = lines[a.line - 1]
                 cur_arrow_column = len(first_line.split('=>')[0])
                 if cur_arrow_column != longest_ident:
                     return [Error('implementation_improper_alignment', 
@@ -298,8 +307,9 @@ class DesignVisitor(RuleVisitor):
 
         if au.type in DesignVisitor.__EXEC:
             lines = 0
-            for line in au.code.split('\n'):
-                if line.strip() != "": lines += 1
+            for attr in au.attributes:
+                for line in attr.code.split('\n'):
+                    if line.strip() != "": lines += 1
 
             if lines > 7: 
                 errors.append(Error("design_long_resource", au, file, repr(au)))
