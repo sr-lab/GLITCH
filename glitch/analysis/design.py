@@ -298,7 +298,7 @@ class DesignVisitor(RuleVisitor):
 
         if au.type in DesignVisitor.__EXEC:
             lines = 0
-            for line in au.code.split('\n')[1:-1]:
+            for line in au.code.split('\n'):
                 if line.strip() != "": lines += 1
 
             if lines > 7: 
