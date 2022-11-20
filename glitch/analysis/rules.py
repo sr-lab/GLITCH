@@ -182,6 +182,7 @@ class RuleVisitor(ABC):
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         pass
 Error.agglomerate_errors()
+
 class SmellChecker(ABC):
     @abstractmethod
     def check(self, element, file: str) -> list[Error]:
