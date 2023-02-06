@@ -212,10 +212,19 @@ class DesignVisitor(RuleVisitor):
                 error = Error('implementation_long_statement', u, u.path, line)
                 error.line = i + 1
                 errors.append(error)
+
+        def count_variables(vars: list[Variable]):
+            count = 0
+            for var in vars:
+                if isinstance(var.value, type(None)):
+                    count += count_variables(var.variables)
+                else:
+                    count += 1
+            return count
         
         # The UnitBlock should not be of type vars, because these files are supposed to only
         # have variables
-        if len(u.variables) / max(len(code_lines), 1) > 0.3 and u.type != UnitBlockType.vars:
+        if count_variables(u.variables) / max(len(code_lines), 1) > 0.3 and u.type != UnitBlockType.vars:
             errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
 
         if DesignVisitor.__VAR_REFER_SYMBOL is not None:

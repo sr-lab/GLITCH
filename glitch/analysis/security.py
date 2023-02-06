@@ -61,8 +61,16 @@ class SecurityVisitor(RuleVisitor):
     def __check_keyvalue(self, c: CodeElement, name: str, 
             value: str, has_variable: bool, file: str):
         errors = []
-        name = name.split('.')[-1].strip().lower()
-        if (isinstance(value, str)):
+        name = name.strip().lower()
+        if (isinstance(value, type(None))):
+            if (isinstance(c, Attribute)):
+                for attribute in c.attributes:
+                    errors += self.check_element(attribute, file)
+            elif (isinstance(c, Variable)):
+                for variable in c.variables:
+                    errors += self.check_element(variable, file)
+            return errors
+        elif (isinstance(value, str)):
             value = value.strip().lower()
         else:
             errors += self.check_element(value, file)
