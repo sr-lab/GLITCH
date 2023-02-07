@@ -152,6 +152,8 @@ class DockerParser(p.Parser):
         download_units = [a for a in unit_block.atomic_units if DockerParser.__is_download(a)]
         for d in download_units:
             file = DockerParser.__get_atomic_file_name(d)
+            d.add_attribute(Attribute("url", d.name, False))
+            d.name = ""
             f_manipulations = [au for au in unit_block.atomic_units if DockerParser.__get_atomic_file_name(au) == file]
 
             for au in f_manipulations:
