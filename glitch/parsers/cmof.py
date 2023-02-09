@@ -15,6 +15,9 @@ from glitch.repr.inter import *
 from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
 
+import hcl2
+import hcl
+
 class AnsibleParser(p.Parser):
     @staticmethod
     def __get_yaml_comments(d, file):
@@ -1451,3 +1454,109 @@ class PuppetParser(p.Parser):
                 res.modules += aux.modules
 
         return res
+
+class TerraformParser(p.Parser):
+    @staticmethod
+    def __get_element_code(start_line, end_line, code):
+        lines = code[start_line-1:end_line]
+        res = ''
+        for line in lines:
+            res += line
+        return res
+
+
+    def parse_attributes(self, attributes, code):
+        def create_attribute(start_line, end_line, name: str, value: str, code):
+            #has_variable = ("{{" in value) and ("}}" in value)
+            #if (value in ["null", "~"]): value = ""
+            a = Attribute(name, value, False)
+            a.line = start_line
+            a.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return a
+
+        def process_list(name, value, start_line, end_line, code):
+            for i, v in enumerate(value):
+                if isinstance(v, dict):
+                    a = create_attribute(start_line, end_line, name + f"[{i}]", None, code)
+                    a.attributes = self.parse_attributes(v, code)
+                    attrs.append(a)
+                elif isinstance(v, list):
+                    process_list(name + f"[{i}]", v, start_line, end_line, code)
+                else:
+                    a = create_attribute(start_line, end_line, name + f"[{i}]", v, code)
+                    attrs.append(a)
+
+        attrs = []
+        for name, attribute in attributes.items():
+            if name == "__start_line__" or name == "__end_line__": 
+                continue
+            if isinstance(attribute, dict):
+                value = attribute["value"]
+                #block (ex: labels = {})
+                if isinstance(value, dict):
+                    a = create_attribute(attribute["__start_line__"], attribute["__end_line__"], name, None, code)
+                    a.attributes = self.parse_attributes(value, code)
+                    attrs.append(a)
+                # (ex: x = [1,2,3])
+                elif isinstance(value, list):
+                    process_list(name, value, attribute["__start_line__"], attribute["__end_line__"], code)
+                #(ex: x = 'test')
+                else:
+                    a = create_attribute(attribute["__start_line__"], attribute["__end_line__"], name, value, code)
+                    attrs.append(a)
+            #block (ex: access {})        
+            elif isinstance(attribute, list):
+                for block in attribute:
+                    a = create_attribute(block["__start_line__"], block["__end_line__"], name, None, code)
+                    a.attributes = self.parse_attributes(block, code)
+                    attrs.append(a)
+                    
+        return attrs
+
+
+    def parse_resource(self, dict, code):
+        #print("\n code: " + f"{code}")
+        def create_atomic_unit(start_line, end_line, type: str, name: str, code) -> AtomicUnit:
+            au = AtomicUnit(name, type)
+            au.line = start_line
+            au.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return au
+
+        for type, resource in dict.items():
+            for name, attributes in resource.items():
+                au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], type, name, code)
+                au.attributes = self.parse_attributes(attributes, code)
+                print("\n" + au.print(0) + "\n")
+
+
+
+    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
+        with open(path) as f:
+            try:
+                parsed_hcl = hcl2.load(f, True)
+                f.seek(0, 0)
+                parsed_hcl_comments = hcl.load(f, export_comments='ALL')
+                f.seek(0, 0)
+                code = f.readlines()
+            except:
+                throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+                return None
+
+            print(f"\nparsed_hcl: {parsed_hcl}")
+            #print(f"\nparsed_hcl_comments: {parsed_hcl_comments}")
+
+            for key, value in parsed_hcl.items():
+                if key == "resource":
+                    if not isinstance(value, list):
+                        value = [value]
+                    for resource in value:
+                        self.parse_resource(resource, code)
+                #elif key == "variable":
+                #    self.parse_input_variables(value)
+
+
+    def parse_folder(self, path: str) -> Project:
+        return
+
+    def parse_module(self, path: str) -> Module:
+        return
