@@ -86,7 +86,7 @@ class Variable(CodeElement):
             return (tab * "\t") + self.name + "->" + self.value + \
                 " (on line " + str(self.line) + f" {self.has_variable})"
         elif isinstance(self.value, type(None)):
-            return (tab * "\t") + self.name + "->" + None + \
+            return (tab * "\t") + self.name + "->" + "None" + \
                 " variables:" + f" {self.variables}" + \
                 " (on line " + str(self.line) + f" {self.has_variable})"
         else:
@@ -115,7 +115,7 @@ class Attribute(CodeElement):
             return (tab * "\t") + self.name + "->" + self.value + \
                 " (on line " + str(self.line) + f" {self.has_variable})"
         elif isinstance(self.value, type(None)):
-            return (tab * "\t") + self.name + "->" + None + \
+            return (tab * "\t") + self.name + "->" + "None" + \
                 " attributes:" + f" {self.attributes}" + \
                 " (on line " + str(self.line) + f" {self.has_variable})"
         else:
