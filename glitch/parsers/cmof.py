@@ -1464,7 +1464,6 @@ class TerraformParser(p.Parser):
             res += line
         return res
 
-
     def parse_attributes(self, attributes, code):
         def create_attribute(start_line, end_line, name: str, value: str, code):
             #has_variable = ("{{" in value) and ("}}" in value)
@@ -1515,7 +1514,6 @@ class TerraformParser(p.Parser):
 
 
     def parse_resource(self, dict, code):
-        #print("\n code: " + f"{code}")
         def create_atomic_unit(start_line, end_line, type: str, name: str, code) -> AtomicUnit:
             au = AtomicUnit(name, type)
             au.line = start_line
@@ -1528,15 +1526,25 @@ class TerraformParser(p.Parser):
                 au.attributes = self.parse_attributes(attributes, code)
                 print("\n" + au.print(0) + "\n")
 
+    def parse_input_variable(self, dict, code):
+        def create_atomic_unit(start_line, end_line, type: str, name: str, code) -> AtomicUnit:
+            au = AtomicUnit(name, type)
+            au.line = start_line
+            au.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return au
 
+        for name, attributes in dict.items():
+            au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], "variable", name, code)
+            au.attributes = self.parse_attributes(attributes, code)
+            print("\n" + au.print(0) + "\n")
 
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
         with open(path) as f:
-            try:
+            try:    
                 parsed_hcl = hcl2.load(f, True)
                 f.seek(0, 0)
-                parsed_hcl_comments = hcl.load(f, export_comments='ALL')
-                f.seek(0, 0)
+                #parsed_hcl_comments = hcl.load(f, export_comments='ALL')
+                #f.seek(0, 0)
                 code = f.readlines()
             except:
                 throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
@@ -1546,13 +1554,14 @@ class TerraformParser(p.Parser):
             #print(f"\nparsed_hcl_comments: {parsed_hcl_comments}")
 
             for key, value in parsed_hcl.items():
-                if key == "resource":
+                if key == "resource" or key == "data":
                     if not isinstance(value, list):
                         value = [value]
                     for resource in value:
                         self.parse_resource(resource, code)
-                #elif key == "variable":
-                #    self.parse_input_variables(value)
+                elif key == "variable":
+                    for input_variable in value:
+                        self.parse_input_variable(input_variable, code)
 
 
     def parse_folder(self, path: str) -> Project:
