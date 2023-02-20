@@ -1,4 +1,5 @@
 import ast
+import os.path
 from dataclasses import dataclass, field
 
 import bashlex
@@ -40,10 +41,40 @@ class DockerParser(p.Parser):
             return main_block
 
     def parse_folder(self, path: str) -> Project:
-        pass
+        project = Project(os.path.basename(os.path.normpath(path)))
+        blocks, modules = self._parse_folder(path)
+        project.blocks = blocks
+        project.modules = modules
+
+        return project
 
     def parse_module(self, path: str) -> Module:
-        pass
+        module = Module(os.path.basename(os.path.normpath(path)), path)
+        blocks, modules = self._parse_folder(path)
+        module.blocks = blocks
+        module.modules = modules
+        return module
+
+    def _parse_folder(self, path: str) -> tuple[list[UnitBlock], list[Module]]:
+        files = [os.path.join(path, f) for f in os.listdir(path)]
+        dockerfiles = [f for f in files if os.path.isfile(f) and "Dockerfile" in os.path.basename(f)]
+        modules = [f for f in files if os.path.isdir(f) and DockerParser._contains_dockerfiles(f)]
+
+        blocks = [self.parse_file(f, UnitBlockType.script) for f in dockerfiles]
+        modules = [self.parse_module(f) for f in modules]
+        return blocks, modules
+
+    @staticmethod
+    def _contains_dockerfiles(path: str) -> bool:
+        if not os.path.exists(path):
+            return False
+        if not os.path.isdir(path):
+            return "Dockerfile" in os.path.basename(path)
+        for f in os.listdir(path):
+            contains_dockerfiles = DockerParser._contains_dockerfiles(os.path.join(path, f))
+            if contains_dockerfiles:
+                return True
+        return False
 
     @staticmethod
     def __parse_stage(name: str, path: str, unit_type: UnitBlockType, structure: list[DFPStructure]) -> UnitBlock:
