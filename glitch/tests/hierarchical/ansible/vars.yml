@@ -1,0 +1,15 @@
+---
+test:
+  - test1:
+    - [1, 2]
+  - [3, 4]
+  - x
+  - y
+  - 23
+
+test2:
+  - [2, 5, 6]
+
+vars:
+  factorial_of: 5
+  factorial_value: 1

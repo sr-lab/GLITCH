@@ -217,7 +217,7 @@ class DesignVisitor(RuleVisitor):
             count = 0
             for var in vars:
                 if isinstance(var.value, type(None)):
-                    count += count_variables(var.variables)
+                    count += count_variables(var.keyvalues)
                 else:
                     count += 1
             return count
