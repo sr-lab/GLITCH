@@ -1507,6 +1507,8 @@ class TerraformParser(p.Parser):
                     process_list(name, value, attribute["__start_line__"], attribute["__end_line__"], code)
                 #(ex: x = 'test')
                 else:
+                    if value == None:   # (ex: x = null)
+                        value = ""
                     a = create_attribute(attribute["__start_line__"], attribute["__end_line__"], name, value, code)
                     attrs.append(a)
             #block (ex: access {})        
@@ -1519,31 +1521,38 @@ class TerraformParser(p.Parser):
         return attrs
 
 
-    def parse_resource(self, unit_block: UnitBlock, dict, code):
+    def parse_atomic_unit(self, type: str, unit_block: UnitBlock, dict, code):
         def create_atomic_unit(start_line, end_line, type: str, name: str, code) -> AtomicUnit:
             au = AtomicUnit(name, type)
             au.line = start_line
             au.code = TerraformParser.__get_element_code(start_line, end_line, code)
             return au
 
-        for type, resource in dict.items():
-            for name, attributes in resource.items():
-                au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], type, name, code)
+        def parse_resource():
+            for type, resource in dict.items():
+                for name, attributes in resource.items():
+                    au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], type, name, code)
+                    au.attributes = self.parse_attributes(unit_block, attributes, code)
+                    unit_block.add_atomic_unit(au)
+
+        def parse_input_variable():
+            for name, attributes in dict.items():
+                au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], "variable", name, code)
                 au.attributes = self.parse_attributes(unit_block, attributes, code)
                 unit_block.add_atomic_unit(au)
-        
 
-    def parse_input_variable(self, unit_block: UnitBlock, dict, code):
-        def create_atomic_unit(start_line, end_line, type: str, name: str, code) -> AtomicUnit:
-            au = AtomicUnit(name, type)
-            au.line = start_line
-            au.code = TerraformParser.__get_element_code(start_line, end_line, code)
-            return au
+        def parse_module_unit():
+            for name, attributes in dict.items():
+                au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], "module", name, code)
+                au.attributes = self.parse_attributes(unit_block, attributes, code)
+                unit_block.add_atomic_unit(au)
 
-        for name, attributes in dict.items():
-            au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], "variable", name, code)
-            au.attributes = self.parse_attributes(unit_block, attributes, code)
-            unit_block.add_atomic_unit(au)
+        if type == "resource" or type == "data":
+            parse_resource()
+        elif type == "input_variable":
+            parse_input_variable()
+        elif type == "module":
+            parse_module_unit()
 
 
     def parse_comments(self, unit_block: UnitBlock, comments, code):
@@ -1555,6 +1564,55 @@ class TerraformParser(p.Parser):
         
         for comment in comments:
             unit_block.add_comment(create_comment(comment["value"], comment["__start_line__"], comment["__end_line__"], code))
+
+
+    def parse_variables(self, unit_block: UnitBlock, variables, code):
+        def create_variable(start_line, end_line, name: str, value: str, code):
+            #has_variable = ("{{" in value) and ("}}" in value)
+            #if (value in ["null", "~"]): value = ""
+            v = Variable(name, value, False)
+            v.line = start_line
+            v.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return v
+
+        def process_list(name, value, start_line, end_line, code):
+            for i, v in enumerate(value):
+                if isinstance(v, dict):
+                    if "__comments__" in v:
+                        self.parse_variables(unit_block, v, code)
+                    else:
+                        var = create_variable(start_line, end_line, name + f"[{i}]", None, code)
+                        var.variables = self.parse_variables(unit_block, v, code)
+                        vars.append(var)
+                elif isinstance(v, list):
+                    process_list(name + f"[{i}]", v, start_line, end_line, code)
+                else:
+                    var = create_variable(start_line, end_line, name + f"[{i}]", v, code)
+                    vars.append(var)
+        
+        vars = []
+        for name, variable in variables.items():
+            if name == "__start_line__" or name == "__end_line__":
+                continue
+            elif name == "__comments__":
+                self.parse_comments(unit_block, variable, code)
+                continue
+            
+            value = variable["value"]
+            if isinstance(value, dict):
+                var = create_variable(variable["__start_line__"], variable["__end_line__"], name, None, code)
+                var.variables = self.parse_variables(unit_block, value, code)
+                vars.append(var)
+            elif isinstance(value, list):
+                process_list(name, value, variable["__start_line__"], variable["__end_line__"], code)
+            else:
+                if value == None:
+                    value = ""
+                var = create_variable(variable["__start_line__"], variable["__end_line__"], name, value, code)
+                vars.append(var)
+
+        return vars
+
 
 
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
@@ -1569,22 +1627,52 @@ class TerraformParser(p.Parser):
 
             #print(f"\nparsed_hcl: {parsed_hcl}\n")
             unit_block = UnitBlock(path, type)
+            unit_block.path = path
             for key, value in parsed_hcl.items():
                 if key == "resource" or key == "data":
                     if not isinstance(value, list):
                         value = [value]
                     for resource in value:
-                        self.parse_resource(unit_block, resource, code)
+                        self.parse_atomic_unit(key, unit_block, resource, code)
                 elif key == "variable":
                     for input_variable in value:
-                        self.parse_input_variable(unit_block, input_variable, code)
+                        self.parse_atomic_unit(key, unit_block, input_variable, code)
+                elif key == 'module':
+                    for module_unit in value:
+                        self.parse_atomic_unit(key, unit_block, module_unit, code)
                 elif key == "__comments__":
                     self.parse_comments(unit_block, value, code)
+                elif key == "locals":
+                    for local in value:
+                        unit_block.variables += self.parse_variables(unit_block, local, code)
 
-            print(unit_block.print(0))
+            #print(unit_block.print(0))
+            return unit_block
 
-    def parse_folder(self, path: str) -> Project:
-        return
 
     def parse_module(self, path: str) -> Module:
-        return
+        res: Module = Module(os.path.basename(os.path.normpath(path)), path)
+        super().parse_file_structure(res.folder, path)
+
+        files = [f.path for f in os.scandir(f"{path}") 
+            if f.is_file() and not f.is_symlink()]
+        for f in files:
+            unit_block = self.parse_file(f, "unknown")
+            res.add_block(unit_block)
+        
+        return res
+
+
+    def parse_folder(self, path: str) -> Project:
+        res: Project = Project(os.path.basename(os.path.normpath(path)))
+        res.add_module(self.parse_module(path))
+
+        subfolders = [f.path for f in os.scandir(f"{path}") 
+            if f.is_dir() and not f.is_symlink()]
+        for d in subfolders:
+            aux = self.parse_folder(d)
+            res.blocks += aux.blocks
+            res.modules += aux.modules
+
+        #print(res.print(0))
+        return res
