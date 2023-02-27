@@ -20,7 +20,7 @@ setup(
         "pytest",
         "puppetparser",
         "jinja2",
-        "glitch-python-hcl2",
+        "glitch-python-hcl2"
     ],
     entry_points={
         "console_scripts": [
