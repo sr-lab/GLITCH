@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import configparser
@@ -31,6 +32,13 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__CRYPT = json.loads(config['security']['weak_crypt'])
         SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
+        self._load_non_official_images()
+
+    def _load_non_official_images(self):
+        folder_path = os.path.dirname(os.path.realpath(__file__))
+        with open(f"{folder_path}/official_docker_images") as f:
+            images = f.readlines()
+            SecurityVisitor.__OFFICIAL_IMAGES = [image.strip() for image in images]
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -134,6 +142,10 @@ class SecurityVisitor(RuleVisitor):
             if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name)
                     and len(value) > 0 and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
+
+        if isinstance(c, Attribute) and name == "image" and \
+                value.split(":")[0] not in SecurityVisitor.__OFFICIAL_IMAGES:
+            errors.append(Error('sec_non_official_image', c, file, repr(c)))
 
         return errors
 
