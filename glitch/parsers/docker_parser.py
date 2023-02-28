@@ -143,7 +143,7 @@ class DockerParser(p.Parser):
     def __create_variable_block(element: DFPStructure) -> Variable:
         v: Variable
         if element.instruction == 'USER':
-            v = Variable("user", element.value, False)
+            v = Variable("user-profile", element.value, False)
         elif element.instruction == 'ARG':
             value = element.value.split("=")
             arg = value[0]
