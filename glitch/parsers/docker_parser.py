@@ -30,7 +30,7 @@ class DockerParser(p.Parser):
 
             stage_indexes = [i for i, e in enumerate(structure) if e.instruction == 'FROM']
             if len(stage_indexes) > 1:
-                main_block = UnitBlock("", type)
+                main_block = UnitBlock(os.path.basename(path), type)
                 stages = self.__get_stages(stage_indexes, structure)
                 for name, s in stages.items():
                     main_block.add_unit_block(self.__parse_stage(name, path, UnitBlockType.block, s))
@@ -92,9 +92,9 @@ class DockerParser(p.Parser):
         if instruction in ['ENV', 'USER', 'ARG', 'LABEL']:
             unit_block.add_variable(DockerParser.__create_variable_block(element))
         elif instruction == 'FROM':
-            au = AtomicUnit(element.value.split(" ")[0], "image")
-            au.line = element.startline + 1
-            unit_block.add_atomic_unit(au)
+            attr = Attribute("image", element.value.split(" ")[0], False)
+            attr.line = element.startline + 1
+            unit_block.add_attribute(attr)
         elif instruction == 'COMMENT':
             c = Comment(element.value)
             c.line = element.startline + 1
@@ -102,8 +102,8 @@ class DockerParser(p.Parser):
         elif instruction in ['RUN', 'CMD', 'ENTRYPOINT']:
             c_parser = CommandParser(element.value)
             aus = c_parser.parse_command()
-            for au in aus:
-                au.line = element.startline
+            for attr in aus:
+                attr.line = element.startline
             unit_block.atomic_units += aus
         elif instruction == 'ONBUILD':
             dfp = DockerfileParser()
@@ -111,11 +111,11 @@ class DockerParser(p.Parser):
             element = DFPStructure(**dfp.structure[0])
             DockerParser.__parse_instruction(element, unit_block)
         elif instruction == 'COPY':
-            au = AtomicUnit("", "copy")
+            attr = AtomicUnit("", "copy")
             src, dest = [v for v in element.value.split(" ") if not v.startswith("--")]
-            au.add_attribute(Attribute('src', src, False))
-            au.add_attribute(Attribute('dest', dest, False))
-            unit_block.add_atomic_unit(au)
+            attr.add_attribute(Attribute('src', src, False))
+            attr.add_attribute(Attribute('dest', dest, False))
+            unit_block.add_atomic_unit(attr)
         elif instruction in ['ADD', 'VOLUME', 'WORKDIR']:
             pass
         elif instruction in ['STOPSIGNAL', 'HEALTHCHECK', 'SHELL']:
@@ -145,7 +145,7 @@ class DockerParser(p.Parser):
         if element.instruction == 'USER':
             v = Variable("user", element.value, False)
         elif element.instruction == 'ARG':
-            value = element.value.split(",")
+            value = element.value.split("=")
             arg = value[0]
             default = value[1] if len(value) == 2 else None
             v = Variable(arg, default if default else "ARG", True)
@@ -260,6 +260,7 @@ class CommandParser:
     @staticmethod
     def __parse_general_command(command: ShellCommand):
         args = command.args.copy()
+        # TODO: Solve issue where last argument is part of a parameter
         main_arg_index = -1 if not args[-1].startswith("-") else 0
         main_arg = args[main_arg_index]
         del args[main_arg_index]
