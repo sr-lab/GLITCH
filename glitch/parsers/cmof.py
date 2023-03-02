@@ -98,7 +98,7 @@ class AnsibleParser(p.Parser):
         return res
 
     @staticmethod
-    def __parse_vars(unit_block, cur_name, token, code):
+    def __parse_vars(unit_block, cur_name, token, code, child=False):
         def create_variable(token, name, value, child=False) -> Variable:
             has_variable = (("{{" in value) and ("}}" in value)) if value != None else False
             if (value in ["null", "~"]): value = ""
@@ -115,43 +115,33 @@ class AnsibleParser(p.Parser):
                 unit_block.add_variable(v)
             return v
 
-        def process_var(key, v, child: bool = False):
-            if isinstance(v,  MappingNode):
-                var = create_variable(v, key.value, None, child)
-                aux_vars = []
-                aux_vars += AnsibleParser.__parse_vars(
-                    unit_block, key.value, v, code)
-                var.variables = aux_vars
-            elif isinstance(v, ScalarNode):
-                create_variable(v, key.value, str(v.value), child)
-            elif isinstance(v, SequenceNode):
-                value = []
-                for i, val in enumerate(v.value):
-                    if isinstance(val, CollectionNode):
-                        var = create_variable(val,
-                                              f"{key.value}[{i}]", None, child)
-                        aux_vars = []
-                        aux_vars += AnsibleParser.__parse_vars(
-                            unit_block, f"{key.value}[{i}]", val, code)
-                        var.variables = aux_vars
-                    else:
-                        value.append(val.value)
-
-                if (len(value) > 0):
-                    create_variable(v, key.value, str(value), child)
 
         variables = []
         if isinstance(token, MappingNode):
-            for key, v in token.value:
-                if hasattr(key, "value") and isinstance(key.value, str):
-                    if cur_name == "":
-                        process_var(key, v)
-                    else:
-                        process_var(key, v, True)
-                elif isinstance(key.value, MappingNode):
-                    AnsibleParser.__parse_vars(unit_block, cur_name, key.value[0][0], code)
-        elif isinstance(token, SequenceNode) or isinstance(token, ScalarNode):
-            pass  # can't happen, if it happens is not syntatically right so it ignores
+            if cur_name == "":
+                for key, v in token.value:
+                    if hasattr(key, "value") and isinstance(key.value, str):
+                        AnsibleParser.__parse_vars(unit_block, key.value, v, code, child)
+                    elif isinstance(key.value, MappingNode):
+                        AnsibleParser.__parse_vars(unit_block, cur_name, key.value[0][0], code, child)
+            else:
+                var = create_variable(token, cur_name, None, child)
+                for key, v in token.value:
+                    if hasattr(key, "value") and isinstance(key.value, str):
+                        var.keyvalues += AnsibleParser.__parse_vars(unit_block, key.value, v, code, True)
+                    elif isinstance(key.value, MappingNode):
+                        var.keyvalues += AnsibleParser.__parse_vars(unit_block, cur_name, key.value[0][0], code, True)
+        elif isinstance(token, ScalarNode):
+            create_variable(token, cur_name, str(token.value), child)
+        elif isinstance(token, SequenceNode):
+            value = []
+            for i, val in enumerate(token.value):
+                if isinstance(val, CollectionNode):
+                    variables += AnsibleParser.__parse_vars(unit_block, f"{cur_name}[{i}]", val, code, child)
+                else:
+                    value.append(val.value)
+            if value:
+                create_variable(val, cur_name, str(value), child)
 
         return variables
 
@@ -177,7 +167,7 @@ class AnsibleParser(p.Parser):
             for aux, aux_val in val.value:
                 aux_attributes += AnsibleParser.__parse_attribute(f"{aux.value}",
                                                                   aux, aux_val, code)
-            attribute.attributes = aux_attributes
+            attribute.keyvalues = aux_attributes
         elif isinstance(val, ScalarNode):
             create_attribute(token, cur_name, str(val.value))
         elif isinstance(val, SequenceNode):
@@ -744,7 +734,7 @@ class ChefParser(p.Parser):
                     if parent == None:
                         self.variables.append(variable)
                     else:
-                        parent.variables.append(variable)
+                        parent.keyvalues.append(variable)
                     parent = variable
                     for assoc in value_ast.args[0].args[0]:
                         parse_variable(parent, ast, assoc.args[0], ChefParser._get_content(
@@ -763,15 +753,9 @@ class ChefParser(p.Parser):
                     if parent == None:
                         self.variables.append(variable)
                     else:
-                        parent.variables.append(variable)
+                        parent.keyvalues.append(variable)
 
             if ChefParser._check_node(ast, ["assign"], 2):
-                def get_parent(parent_name, vars):
-                    for var in vars:
-                        if var.name == parent_name:
-                            return var
-                    return None
-
                 name = ""
                 names = ChefParser._get_content(
                     ast.args[0], self.source).split("[")
@@ -791,24 +775,12 @@ class ChefParser(p.Parser):
                         parse_variable(
                             parent, ast, ast.args[0], name, ast.args[1])
                     else:
+                        variable = create_variable(ast.args[0], name, None, False)
                         if i == 0:
-                            parent = get_parent(name, self.variables)
-                            if parent == None:
-                                variable = create_variable(
-                                    ast.args[0], name, None, False)
-                                self.variables.append(variable)
-                                parent = variable
-                            else:
-                                pass
+                            self.variables.append(variable)
                         else:
-                            next_parent = get_parent(name, parent.variables)
-                            if next_parent == None:
-                                variable = create_variable(
-                                    ast.args[0], name, None, False)
-                                parent.variables.append(variable)
-                                parent = variable
-                            else:
-                                parent = next_parent
+                            parent.keyvalues.append(variable)
+                        parent = variable
                 return True
 
             return False
@@ -919,6 +891,22 @@ class ChefParser(p.Parser):
 
     @staticmethod
     def __transverse_ast(ast, unit_block, source):
+        def get_var(parent_name, vars):
+            for var in vars:
+                if var.name == parent_name:
+                    return var
+            return None
+        
+        def add_variable_to_unit_block(variable, unit_block_vars):
+            var_name = variable.name
+            var = get_var(var_name, unit_block_vars)
+            if var and var.value == None:
+                for v in variable.keyvalues:
+                    add_variable_to_unit_block(v, var.keyvalues)
+            else:
+                unit_block_vars.append(variable)
+
+
         if isinstance(ast, list):
             for arg in ast:
                 if isinstance(arg, (ChefParser.Node, list)):
@@ -932,7 +920,7 @@ class ChefParser(p.Parser):
             variable_checker = ChefParser.VariableChecker(source, ast)
             if variable_checker.check_all():
                 for variable in variable_checker.variables:
-                    unit_block.add_variable(variable)
+                    add_variable_to_unit_block(variable, unit_block.variables)
                 # variables might have resources associated to it
                 ChefParser.__transverse_ast(ast.args[1], unit_block, source)
                 return
@@ -1186,10 +1174,10 @@ class PuppetParser(p.Parser):
                 variable.line, variable.column = codeelement.line, codeelement.col
                 variable.code = get_code(codeelement) 
                 for key, value in temp_value.items():
-                    variable.variables.append(PuppetParser.__process_codeelement(
+                    variable.keyvalues.append(PuppetParser.__process_codeelement(
                         puppetmodel.Assignment(codeelement.line, codeelement.col,
                                                codeelement.end_line, codeelement.end_col, key, value), path, code))
-                
+                                               
                 return variable
         elif (isinstance(codeelement, puppetmodel.PuppetClass)):
             # FIXME there are components of the class that are not considered

@@ -63,12 +63,8 @@ class SecurityVisitor(RuleVisitor):
         errors = []
         name = name.strip().lower()
         if (isinstance(value, type(None))):
-            if (isinstance(c, Attribute)):
-                for attribute in c.attributes:
-                    errors += self.check_element(attribute, file)
-            elif (isinstance(c, Variable)):
-                for variable in c.variables:
-                    errors += self.check_element(variable, file)
+            for child in c.keyvalues:
+                errors += self.check_element(child, file)
             return errors
         elif (isinstance(value, str)):
             value = value.strip().lower()
