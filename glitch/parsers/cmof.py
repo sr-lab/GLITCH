@@ -1451,65 +1451,67 @@ class TerraformParser(p.Parser):
             res += line
         return res
 
-    def parse_attributes(self, unit_block: UnitBlock, attributes, code):
-        def create_attribute(start_line, end_line, name: str, value: str, code):
+
+    def parse_keyvalues(self, unit_block: UnitBlock, keyvalues, code, type: str):
+        def create_keyvalue(start_line, end_line, name: str, value: str):
             has_variable = ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
             if value == "null": value = ""
-            a = Attribute(name, value, has_variable)
-            a.line = start_line
-            a.code = TerraformParser.__get_element_code(start_line, end_line, code)
-            return a
 
-        def process_list(name, value, start_line, end_line, code):
+            if type == "attribute":
+                keyvalue = Attribute(name, value, has_variable)
+            elif type == "variable":
+                keyvalue = Variable(name, value, has_variable)
+            keyvalue.line = start_line
+            keyvalue.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return keyvalue
+        
+        def process_list(name, value, start_line, end_line):
             for i, v in enumerate(value):
                 if isinstance(v, dict):
-                    a = create_attribute(start_line, end_line, name + f"[{i}]", None, code)
-                    a.attributes = self.parse_attributes(unit_block, v, code)
-                    attrs.append(a)
+                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", None)
+                    k.keyvalues = self.parse_keyvalues(unit_block, v, code, type)
+                    k_values.append(k)
                 elif isinstance(v, list):
-                    process_list(name + f"[{i}]", v, start_line, end_line, code)
+                    process_list(name + f"[{i}]", v, start_line, end_line)
                 else:
-                    a = create_attribute(start_line, end_line, name + f"[{i}]", v, code)
-                    attrs.append(a)
+                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", v)
+                    k_values.append(k)
 
-        attrs = []
-        for name, attribute in attributes.items():
+        k_values = []
+        for name, keyvalue in keyvalues.items():
             if name == "__start_line__" or name == "__end_line__": 
                 continue
 
-            if isinstance(attribute, dict):
-                value = attribute["value"]
-                #block (ex: labels = {})
-                if isinstance(value, dict):
-                    a = create_attribute(attribute["__start_line__"], attribute["__end_line__"], name, None, code)
-                    a.attributes = self.parse_attributes(unit_block, value, code)
-                    attrs.append(a)
-                # (ex: x = [1,2,3])
-                elif isinstance(value, list):
-                    process_list(name, value, attribute["__start_line__"], attribute["__end_line__"], code)
-                #(ex: x = 'test')
-                else:
+            if isinstance(keyvalue, dict):          #Note: local values (variables) can only enter here
+                value = keyvalue["value"]
+                if isinstance(value, dict):     # (ex: labels = {})
+                    k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, None)
+                    k.keyvalues = self.parse_keyvalues(unit_block, value, code, type)
+                    k_values.append(k)
+                elif isinstance(value, list):   # (ex: x = [1,2,3])
+                    process_list(name, value, keyvalue["__start_line__"], keyvalue["__end_line__"])
+                else:   #(ex: x = 'test')
                     if value == None:   # (ex: x = null)
                         value = "null"
-                    a = create_attribute(attribute["__start_line__"], attribute["__end_line__"], name, value, code)
-                    attrs.append(a)
-            #block (ex: access {} or dynamic setting {})       
-            elif isinstance(attribute, list):
+                    k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, value)
+                    k_values.append(k)    
+            elif isinstance(keyvalue, list) and type == "attribute":
+            #block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
                 if name == "dynamic":
-                    for block in attribute:
+                    for block in keyvalue:
                         for block_name, block_attributes in block.items():
-                            a = create_attribute(block_attributes["__start_line__"], 
-                                    block_attributes["__end_line__"], f"dynamic.{block_name}", None, code)
-                            a.attributes = self.parse_attributes(unit_block, block_attributes, code)
-                            attrs.append(a)
+                            k = create_keyvalue(block_attributes["__start_line__"], 
+                                    block_attributes["__end_line__"], f"dynamic.{block_name}", None)
+                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                            k_values.append(k)
                 else:
-                    for block_attributes in attribute:
-                        a = create_attribute(block_attributes["__start_line__"], 
-                                block_attributes["__end_line__"], name, None, code)
-                        a.attributes = self.parse_attributes(unit_block, block_attributes, code)
-                        attrs.append(a)
+                    for block_attributes in keyvalue:
+                        k = create_keyvalue(block_attributes["__start_line__"], 
+                                block_attributes["__end_line__"], name, None)
+                        k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                        k_values.append(k)
                     
-        return attrs
+        return k_values
 
 
     def parse_atomic_unit(self, type: str, unit_block: UnitBlock, dict, code):
@@ -1524,13 +1526,13 @@ class TerraformParser(p.Parser):
                 for name, attributes in resource.items():
                     au = create_atomic_unit(attributes['__start_line__'], 
                             attributes['__end_line__'], f"{type}.{resource_type}", name, code)
-                    au.attributes = self.parse_attributes(unit_block, attributes, code)
+                    au.attributes = self.parse_keyvalues(unit_block, attributes, code, "attribute")
                     unit_block.add_atomic_unit(au)
 
         def parse_simple_unit():
             for name, attributes in dict.items():
                 au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], type, name, code)
-                au.attributes = self.parse_attributes(unit_block, attributes, code)
+                au.attributes = self.parse_keyvalues(unit_block, attributes, code, "attribute")
                 unit_block.add_atomic_unit(au)
 
         if type in ["resource", "data"]:
@@ -1548,48 +1550,6 @@ class TerraformParser(p.Parser):
         
         for comment in comments:
             unit_block.add_comment(create_comment(comment["value"], comment["__start_line__"], comment["__end_line__"], code))
-
-
-    def parse_variables(self, unit_block: UnitBlock, variables, code):
-        def create_variable(start_line, end_line, name: str, value: str, code):
-            has_variable = ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
-            if value == "null": value = ""
-            v = Variable(name, value, has_variable)
-            v.line = start_line
-            v.code = TerraformParser.__get_element_code(start_line, end_line, code)
-            return v
-
-        def process_list(name, value, start_line, end_line, code):
-            for i, v in enumerate(value):
-                if isinstance(v, dict):
-                    var = create_variable(start_line, end_line, name + f"[{i}]", None, code)
-                    var.variables = self.parse_variables(unit_block, v, code)
-                    vars.append(var)
-                elif isinstance(v, list):
-                    process_list(name + f"[{i}]", v, start_line, end_line, code)
-                else:
-                    var = create_variable(start_line, end_line, name + f"[{i}]", v, code)
-                    vars.append(var)
-        
-        vars = []
-        for name, variable in variables.items():
-            if name == "__start_line__" or name == "__end_line__":
-                continue
-            
-            value = variable["value"]
-            if isinstance(value, dict):
-                var = create_variable(variable["__start_line__"], variable["__end_line__"], name, None, code)
-                var.variables = self.parse_variables(unit_block, value, code)
-                vars.append(var)
-            elif isinstance(value, list):
-                process_list(name, value, variable["__start_line__"], variable["__end_line__"], code)
-            else:
-                if value == None:
-                    value = "null"
-                var = create_variable(variable["__start_line__"], variable["__end_line__"], name, value, code)
-                vars.append(var)
-
-        return vars
 
 
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
@@ -1610,7 +1570,7 @@ class TerraformParser(p.Parser):
                         self.parse_comments(unit_block, value, code)
                     elif key == "locals":
                         for local in value:
-                            unit_block.variables += self.parse_variables(unit_block, local, code)
+                            unit_block.variables += self.parse_keyvalues(unit_block, local, code, "variable")
                     elif key == "provider":
                         continue
                     else:
@@ -1620,8 +1580,6 @@ class TerraformParser(p.Parser):
             except:
                 throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
                 return None
-
-            
 
 
     def parse_module(self, path: str) -> Module:
