@@ -20,9 +20,6 @@ class DFPStructure:
 
 
 class DockerParser(p.Parser):
-    __FILE_EXTENSIONS = ["iso", "tar", "tar.gz", "tar.bzip2", "zip",
-                         "rar", "gzip", "gzip2", "deb", "rpm", "sh", "run", "bin"]
-
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
         with open(path) as f:
             dfp = DockerfileParser()
@@ -84,8 +81,6 @@ class DockerParser(p.Parser):
                 DockerParser.__parse_instruction(s, u)
             except NotImplementedError:
                 throw_exception(EXCEPTIONS['DOCKER_NOT_IMPLEMENTED'].format(s.content))
-
-        DockerParser.__merge_download_commands(u)
         return u
 
     @staticmethod
@@ -178,32 +173,6 @@ class DockerParser(p.Parser):
                 line = s.startline
                 break
         structure.insert(index + 1, DFPStructure("USER root", line, "USER", line, "root"))
-
-    @staticmethod
-    def __merge_download_commands(unit_block: UnitBlock):
-        download_units = [a for a in unit_block.atomic_units if DockerParser.__is_download(a)]
-        for d in download_units:
-            file = DockerParser.__get_atomic_file_name(d)
-            d.add_attribute(Attribute("url", d.name, False))
-            d.name = ""
-            f_manipulations = [au for au in unit_block.atomic_units if DockerParser.__get_atomic_file_name(au) == file]
-
-            for au in f_manipulations:
-                if au.type in ["gpg", "checksum", "md5sum"]:
-                    d.add_attribute(Attribute(au.type, "true", False))
-                    unit_block.atomic_units.remove(au)
-
-    @staticmethod
-    def __is_download(a: AtomicUnit) -> bool:
-        # TODO: Improve download verification
-        return a.type in ["wget"]
-
-    @staticmethod
-    def __get_atomic_file_name(a: AtomicUnit):
-        file_name = a.name.split("/")[-1]
-        if file_name.split(".")[-1] not in DockerParser.__FILE_EXTENSIONS:
-            return None
-        return file_name
 
 
 @dataclass
