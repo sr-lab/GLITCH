@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from glitch.analysis.rules import Error, RuleVisitor
 
 from glitch.repr.inter import *
+from glitch.tech import Tech
 
 
 class SecurityVisitor(RuleVisitor):
@@ -143,10 +144,6 @@ class SecurityVisitor(RuleVisitor):
                     and len(value) > 0 and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-        if isinstance(c, Attribute) and name == "image" and \
-                value.split(":")[0] not in SecurityVisitor.__OFFICIAL_IMAGES:
-            errors.append(Error('sec_non_official_image', c, file, repr(c)))
-
         return errors
 
     def check_attribute(self, a: Attribute, file: str) -> list[Error]:
@@ -182,5 +179,15 @@ class SecurityVisitor(RuleVisitor):
 
         if not has_default:
             return errors + [Error('sec_no_default_switch', c, file, repr(c))]
+
+        return errors
+
+    def check_unitblock(self, u: UnitBlock) -> list[Error]:
+        errors = super().check_unitblock(u)
+
+        if self.tech == Tech.docker and 'Dockerfile' not in u.name:
+            image = u.name.split(":")
+            if image[0] not in SecurityVisitor.__OFFICIAL_IMAGES:
+                errors.append(Error('sec_non_official_image', u, u.path, repr(u)))
 
         return errors
