@@ -6,7 +6,8 @@ import bashlex
 from dockerfile_parse import DockerfileParser
 
 import glitch.parsers.parser as p
-from glitch.repr.inter import Module, Project, UnitBlockType, UnitBlock, Variable, AtomicUnit, Comment, Attribute
+from glitch.exceptions import throw_exception, EXCEPTIONS
+from glitch.repr.inter import *
 
 
 @dataclass
@@ -32,27 +33,25 @@ class DockerParser(p.Parser):
             if len(stage_indexes) > 1:
                 main_block = UnitBlock(os.path.basename(path), type)
                 stages = self.__get_stages(stage_indexes, structure)
-                for name, s in stages.items():
-                    main_block.add_unit_block(self.__parse_stage(name, path, UnitBlockType.block, s))
+                for i, (name, s) in enumerate(stages.items()):
+                    unit_block = self.__parse_stage(name, path, UnitBlockType.block, s)
+                    unit_block.line = structure[stage_indexes[i]].startline + 1
+                    main_block.add_unit_block(unit_block)
             else:
                 self.__add_user_tag(structure)
                 main_block = self.__parse_stage(dfp.baseimage, path, type, structure)
+                main_block.line = structure[stage_indexes[0]].startline + 1
             main_block.path = path
             return main_block
 
     def parse_folder(self, path: str) -> Project:
         project = Project(os.path.basename(os.path.normpath(path)))
-        blocks, modules = self._parse_folder(path)
-        project.blocks = blocks
-        project.modules = modules
-
+        project.blocks, project.modules = self._parse_folder(path)
         return project
 
     def parse_module(self, path: str) -> Module:
         module = Module(os.path.basename(os.path.normpath(path)), path)
-        blocks, modules = self._parse_folder(path)
-        module.blocks = blocks
-        module.modules = modules
+        module.blocks, module.modules = self._parse_folder(path)
         return module
 
     def _parse_folder(self, path: str) -> tuple[list[UnitBlock], list[Module]]:
@@ -81,7 +80,10 @@ class DockerParser(p.Parser):
         u = UnitBlock(name, unit_type)
         u.path = path
         for s in structure:
-            DockerParser.__parse_instruction(s, u)
+            try:
+                DockerParser.__parse_instruction(s, u)
+            except NotImplementedError:
+                throw_exception(EXCEPTIONS['DOCKER_NOT_IMPLEMENTED'].format(s.content))
 
         DockerParser.__merge_download_commands(u)
         return u
@@ -91,10 +93,6 @@ class DockerParser(p.Parser):
         instruction = element.instruction
         if instruction in ['ENV', 'USER', 'ARG', 'LABEL']:
             unit_block.add_variable(DockerParser.__create_variable_block(element))
-        elif instruction == 'FROM':
-            attr = Attribute("image", element.value.split(" ")[0], False)
-            attr.line = element.startline + 1
-            unit_block.add_attribute(attr)
         elif instruction == 'COMMENT':
             c = Comment(element.value)
             c.line = element.startline + 1
@@ -116,6 +114,7 @@ class DockerParser(p.Parser):
             attr.add_attribute(Attribute('src', src, False))
             attr.add_attribute(Attribute('dest', dest, False))
             unit_block.add_atomic_unit(attr)
+        # TODO: Investigate keywords and parse them
         elif instruction in ['ADD', 'VOLUME', 'WORKDIR']:
             pass
         elif instruction in ['STOPSIGNAL', 'HEALTHCHECK', 'SHELL']:
@@ -149,9 +148,11 @@ class DockerParser(p.Parser):
             arg = value[0]
             default = value[1] if len(value) == 2 else None
             v = Variable(arg, default if default else "ARG", True)
-        elif element.instruction == 'ENV':  # ENV Missing support for multiple values
+        elif element.instruction == 'ENV':
+            # TODO: Add support for multiple values
             split_char = "=" if "=" in element.value else " "
-            assert len(element.value.split(split_char)) == 2
+            if len(element.value.split(split_char)) == 2:
+                raise NotImplementedError()
             env, value = element.value.split(split_char)
             v = Variable(env, value, "$" in value)
         else:  # LABEL
@@ -237,7 +238,7 @@ class CommandParser:
             try:
                 aus.append(self.__parse_single_command(c))
             except IndexError:
-                pass
+                throw_exception(EXCEPTIONS['SHELL_COULD_NOT_PARSE'].format(" ".join(c)))
         return aus
 
     @staticmethod
