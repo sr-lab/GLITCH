@@ -34,13 +34,18 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
         SecurityVisitor.__FILE_COMMANDS = json.loads(config['security']['file_commands'])
-        self._load_non_official_images()
+        self._load_data_files()
 
-    def _load_non_official_images(self):
-        folder_path = os.path.dirname(os.path.realpath(__file__))
-        with open(f"{folder_path}/official_docker_images") as f:
-            images = f.readlines()
-            SecurityVisitor.__OFFICIAL_IMAGES = [image.strip() for image in images]
+    @staticmethod
+    def _load_data_files():
+        def load_file(file: str) -> list[str]:
+            folder_path = os.path.dirname(os.path.realpath(__file__))
+            with open(os.path.join(folder_path, file)) as f:
+                content = f.readlines()
+                return [c.strip() for c in content]
+
+        SecurityVisitor.__OFFICIAL_IMAGES = load_file("official_docker_images")
+        SecurityVisitor.__OBSOLETE_COMMANDS = load_file("obsolete_commands")
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -68,6 +73,9 @@ class SecurityVisitor(RuleVisitor):
             for a in au.attributes:
                 if a.name == "mode" and re.search(r'(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})', a.value):
                     errors.append(Error('sec_full_permission_filesystem', au, file, repr(a)))
+
+        if au.type in SecurityVisitor.__OBSOLETE_COMMANDS:
+            errors.append(Error('sec_obsolete_command', au, file, repr(au)))
 
         return errors
 

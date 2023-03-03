@@ -144,7 +144,7 @@ class DockerParser(p.Parser):
         elif element.instruction == 'ENV':
             # TODO: Add support for multiple values
             split_char = "=" if "=" in element.value else " "
-            if len(element.value.split(split_char)) == 2:
+            if len(element.value.split(split_char)) != 2:
                 raise NotImplementedError()
             env, value = element.value.split(split_char)
             v = Variable(env, value, "$" in value)
