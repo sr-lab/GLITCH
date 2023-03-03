@@ -33,6 +33,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__CRYPT = json.loads(config['security']['weak_crypt'])
         SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
+        SecurityVisitor.__FILE_COMMANDS = json.loads(config['security']['file_commands'])
         self._load_non_official_images()
 
     def _load_non_official_images(self):
@@ -61,6 +62,12 @@ class SecurityVisitor(RuleVisitor):
                         errors.append(Error('sec_no_int_check', au, file, repr(a)))
 
                     break
+        for item in SecurityVisitor.__FILE_COMMANDS:
+            if item not in au.type:
+                continue
+            for a in au.attributes:
+                if a.name == "mode" and re.search(r'(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})', a.value):
+                    errors.append(Error('sec_full_permission_filesystem', au, file, repr(a)))
 
         return errors
 

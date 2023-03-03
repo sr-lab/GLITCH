@@ -93,10 +93,8 @@ class DockerParser(p.Parser):
             c.line = element.startline + 1
             unit_block.add_comment(c)
         elif instruction in ['RUN', 'CMD', 'ENTRYPOINT']:
-            c_parser = CommandParser(element.value)
+            c_parser = CommandParser(element)
             aus = c_parser.parse_command()
-            for attr in aus:
-                attr.line = element.startline
             unit_block.atomic_units += aus
         elif instruction == 'ONBUILD':
             dfp = DockerfileParser()
@@ -182,9 +180,11 @@ class ShellCommand:
     args: list[str]
     options: dict[str, str | bool | int | float] = field(default_factory=dict)
     main_arg: str | None = None
+    line: int = -1
 
     def to_atomic_unit(self) -> AtomicUnit:
         au = AtomicUnit(self.main_arg, self.command)
+        au.line = self.line
         if self.sudo:
             au.add_attribute(Attribute("sudo", "True", False))
         for key, value in self.options.items():
@@ -194,11 +194,13 @@ class ShellCommand:
 
 
 class CommandParser:
-    def __init__(self, command: str):
-        if command.startswith("["):
-            c_list = ast.literal_eval(command)
-            command = " ".join(c_list)
-        self.command = command
+    def __init__(self, command:  DFPStructure):
+        value = command.value
+        if value.startswith("["):
+            c_list = ast.literal_eval(value)
+            value = " ".join(c_list)
+        self.command = value
+        self.line = command.startline + 1
 
     def parse_command(self) -> list[AtomicUnit]:
         commands = self.__get_sub_commands()
@@ -210,12 +212,11 @@ class CommandParser:
                 throw_exception(EXCEPTIONS['SHELL_COULD_NOT_PARSE'].format(" ".join(c)))
         return aus
 
-    @staticmethod
-    def __parse_single_command(command: list[str]) -> AtomicUnit:
+    def __parse_single_command(self, command: list[str]) -> AtomicUnit:
         sudo = command[0] == "sudo"
         name_index = 0 if not sudo else 1
         command_type = command[name_index]
-        c = ShellCommand(sudo=sudo, command=command_type, args=command[name_index + 1:])
+        c = ShellCommand(sudo=sudo, command=command_type, args=command[name_index + 1:], line=self.line)
         CommandParser.__parse_shell_command(c)
         return c.to_atomic_unit()
 
