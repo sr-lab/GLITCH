@@ -34,6 +34,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
         SecurityVisitor.__FILE_COMMANDS = json.loads(config['security']['file_commands'])
+        SecurityVisitor.__DOWNLOAD_COMMANDS = json.loads(config['security']['download_commands'])
         self._load_data_files()
 
     @staticmethod
@@ -49,24 +50,7 @@ class SecurityVisitor(RuleVisitor):
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
-        # Check integrity check
-        for a in au.attributes:
-            if isinstance(a.value, str): value = a.value.strip().lower()
-            else: value = repr(a.value).strip().lower()
 
-            for item in SecurityVisitor.__DOWNLOAD:
-                if re.search(r'(http|https|www)[^ ,]*\.{text}'.format(text = item), value):
-                    integrity_check = False
-                    for other in au.attributes:
-                        name = other.name.strip().lower()
-                        if any([check in name for check in SecurityVisitor.__CHECKSUM]):
-                            integrity_check = True
-                            break
-
-                    if not integrity_check:
-                        errors.append(Error('sec_no_int_check', au, file, repr(a)))
-
-                    break
         for item in SecurityVisitor.__FILE_COMMANDS:
             if item not in au.type:
                 continue
@@ -200,9 +184,62 @@ class SecurityVisitor(RuleVisitor):
     def check_unitblock(self, u: UnitBlock) -> list[Error]:
         errors = super().check_unitblock(u)
 
+        missing_integrity_checks = {}
+        for au in u.atomic_units:
+            result = self.check_integrity_check(au, u.path)
+            if result:
+                missing_integrity_checks[result[0]] = result[1]
+                continue
+
+            if file := SecurityVisitor.check_has_checksum(au):
+                if file in missing_integrity_checks:
+                    del missing_integrity_checks[file]
+
+        errors += missing_integrity_checks.values()
+
         if self.tech == Tech.docker and 'Dockerfile' not in u.name:
             image = u.name.split(":")
             if image[0] not in SecurityVisitor.__OFFICIAL_IMAGES:
                 errors.append(Error('sec_non_official_image', u, u.path, repr(u)))
 
         return errors
+
+    @staticmethod
+    def check_integrity_check(au: AtomicUnit, path: str) -> tuple[str, Error] | None:
+        for item in SecurityVisitor.__DOWNLOAD:
+            if not re.search(r'(http|https|www)[^ ,]*\.{text}'.format(text=item), au.name):
+                continue
+            if SecurityVisitor.__has_integrity_check(au.attributes):
+                return None
+            return os.path.basename(au.name), Error('sec_no_int_check', au, path, repr(au))
+
+        for a in au.attributes:
+            value = a.value.strip().lower() if isinstance(a.value, str) else repr(a.value).strip().lower()
+
+            for item in SecurityVisitor.__DOWNLOAD:
+                if not re.search(r'(http|https|www)[^ ,]*\.{text}'.format(text=item), value):
+                    continue
+                if SecurityVisitor.__has_integrity_check(au.attributes):
+                    return None
+                return os.path.basename(a.value), Error('sec_no_int_check', au, path, repr(a))
+        return None
+
+    @staticmethod
+    def check_has_checksum(au: AtomicUnit) -> str | None:
+        if au.type not in SecurityVisitor.__CHECKSUM:
+            return None
+        if any(d in au.name for d in SecurityVisitor.__DOWNLOAD):
+            return os.path.basename(au.name)
+
+        for a in au.attributes:
+            value = a.value.strip().lower() if isinstance(a.value, str) else repr(a.value).strip().lower()
+            if any(d in value for d in SecurityVisitor.__DOWNLOAD):
+                return os.path.basename(au.name)
+        return None
+
+    @staticmethod
+    def __has_integrity_check(attributes: list[Attribute]) -> bool:
+        for attr in attributes:
+            name = attr.name.strip().lower()
+            if any([check in name for check in SecurityVisitor.__CHECKSUM]):
+                return True

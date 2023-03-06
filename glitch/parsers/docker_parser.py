@@ -195,7 +195,7 @@ class ShellCommand:
 
 class CommandParser:
     def __init__(self, command:  DFPStructure):
-        value = command.value
+        value = command.content.replace("RUN ", "") if command.instruction == "RUN" else command.value
         if value.startswith("["):
             c_list = ast.literal_eval(value)
             value = " ".join(c_list)
@@ -205,18 +205,19 @@ class CommandParser:
     def parse_command(self) -> list[AtomicUnit]:
         commands = self.__get_sub_commands()
         aus = []
-        for c in commands:
+        for line, c in commands:
             try:
-                aus.append(self.__parse_single_command(c))
+                aus.append(self.__parse_single_command(c, line))
             except IndexError:
                 throw_exception(EXCEPTIONS['SHELL_COULD_NOT_PARSE'].format(" ".join(c)))
         return aus
 
-    def __parse_single_command(self, command: list[str]) -> AtomicUnit:
+    @staticmethod
+    def __parse_single_command(command: list[str], line: int) -> AtomicUnit:
         sudo = command[0] == "sudo"
         name_index = 0 if not sudo else 1
         command_type = command[name_index]
-        c = ShellCommand(sudo=sudo, command=command_type, args=command[name_index + 1:], line=self.line)
+        c = ShellCommand(sudo=sudo, command=command_type, args=command[name_index + 1:], line=line)
         CommandParser.__parse_shell_command(c)
         return c.to_atomic_unit()
 
@@ -252,14 +253,18 @@ class CommandParser:
             else:
                 command.options[o] = args[i + 1]
 
-    def __get_sub_commands(self) -> list[list[str]]:
+    def __get_sub_commands(self) -> list[tuple[int, list[str]]]:
         commands = []
         tmp = []
-        for part in bashlex.split(self.command):
-            if part in ['&&', '&', '|']:
-                commands.append(tmp)
-                tmp = []
-                continue
-            tmp.append(part)
-        commands.append(tmp)
+        lines = self.command.split('\n')
+        current_line = self.line
+        for i, line in enumerate(lines):
+            for part in bashlex.split(line):
+                if part in ['&&', '&', '|']:
+                    commands.append((current_line, tmp))
+                    current_line += i
+                    tmp = []
+                    continue
+                tmp.append(part)
+        commands.append((current_line, tmp))
         return commands
