@@ -190,20 +190,26 @@ class ShellCommand:
     sudo: bool
     command: str
     args: list[str]
-    options: dict[str, str | bool | int | float] = field(default_factory=dict)
+    code: str
+    options: dict[str, tuple[str | bool | int | float, str]] = field(default_factory=dict)
     main_arg: str | None = None
     line: int = -1
 
     def to_atomic_unit(self) -> AtomicUnit:
         au = AtomicUnit(self.main_arg, self.command)
         au.line = self.line
+        au.code = self.code
         if self.sudo:
-            au.add_attribute(Attribute("sudo", "True", False))
-        for key, value in self.options.items():
-            has_variable = "$" in value if type(value) is str else False
-            au.add_attribute(Attribute(key, value, has_variable))
-        for attr in au.attributes:
-            attr.line = au.line
+            sudo = Attribute("sudo", "True", False)
+            sudo.code = "sudo"
+            sudo.line = self.line
+            au.add_attribute(sudo)
+        for key, (value, code) in self.options.items():
+            has_variable = "$" in value if isinstance(value, str) else False
+            attr = Attribute(key, value, has_variable)
+            attr.code = code
+            attr.line = self.line
+            au.add_attribute(attr)
         return au
 
 
@@ -213,6 +219,7 @@ class CommandParser:
         if value.startswith("["):
             c_list = ast.literal_eval(value)
             value = " ".join(c_list)
+        self.dfp_structure = command
         self.command = value
         self.line = command.startline + 1
 
@@ -231,7 +238,9 @@ class CommandParser:
         sudo = command[0] == "sudo"
         name_index = 0 if not sudo else 1
         command_type = command[name_index]
-        c = ShellCommand(sudo=sudo, command=command_type, args=command[name_index + 1:], line=line)
+        c = ShellCommand(
+            sudo=sudo, command=command_type, args=command[name_index + 1:], line=line, code=" ".join(command)
+        )
         CommandParser.__parse_shell_command(c)
         return c.to_atomic_unit()
 
@@ -239,7 +248,7 @@ class CommandParser:
     def __parse_shell_command(command: ShellCommand):
         if command.command == "chmod":
             command.main_arg = command.args[-1]
-            command.options["mode"] = command.args[0]
+            command.options["mode"] = command.args[0], command.args[0]
         else:
             CommandParser.__parse_general_command(command)
 
@@ -256,16 +265,17 @@ class CommandParser:
             if not o.startswith("-"):
                 continue
 
+            code = o
             o = o.lstrip("-")
             if "=" in o:
                 option = o.split("=")
-                command.options[option[0]] = option[1]
+                command.options[option[0]] = option[1], code
                 continue
 
             if len(args) == i + 1 or args[i + 1].startswith("-"):
-                command.options[o] = True
+                command.options[o] = True, code
             else:
-                command.options[o] = args[i + 1]
+                command.options[o] = args[i + 1], f"{code} {args[i+1]}"
 
     def __get_sub_commands(self) -> list[tuple[int, list[str]]]:
         commands = []
