@@ -3,6 +3,8 @@ import re
 import json
 import configparser
 from urllib.parse import urlparse
+
+import glitch
 from glitch.analysis.rules import Error, RuleVisitor
 
 from glitch.repr.inter import *
@@ -40,8 +42,8 @@ class SecurityVisitor(RuleVisitor):
     @staticmethod
     def _load_data_files():
         def load_file(file: str) -> list[str]:
-            folder_path = os.path.dirname(os.path.realpath(__file__))
-            with open(os.path.join(folder_path, file)) as f:
+            folder_path = os.path.dirname(os.path.realpath(glitch.__file__))
+            with open(os.path.join(folder_path, "files", file)) as f:
                 content = f.readlines()
                 return [c.strip() for c in content]
 
