@@ -1,0 +1,7 @@
+---
+- name: create app with full permission
+  file:
+    path: /app
+    owner: foo
+    group: foo
+    mode: 0777

@@ -19,11 +19,15 @@ class SecurityVisitor(RuleVisitor):
             return []
 
     class DockerNonOfficialImageSmell(SmellChecker):
+        def __init__(self, official_images: list[str]):
+            super().__init__()
+            self.off_images = official_images
+
         def check(self, element, file: str) -> list[Error]:
             if not isinstance(element, UnitBlock) or "Dockerfile" in element.name:
                 return []
             image = element.name.split(":")
-            if image[0] not in SecurityVisitor.__OFFICIAL_IMAGES:
+            if image[0] not in self.off_images:
                 return [Error('sec_non_official_image', element, file, repr(element))]
             return []
 
@@ -31,7 +35,8 @@ class SecurityVisitor(RuleVisitor):
         super().__init__(tech)
 
         if tech == Tech.docker:
-            self.non_off_img = SecurityVisitor.DockerNonOfficialImageSmell()
+            self.non_off_img = SecurityVisitor.DockerNonOfficialImageSmell(
+                self._load_data_file('official_docker_images'))
         else:
             self.non_off_img = SecurityVisitor.NonOfficialImageSmell()
 
@@ -58,18 +63,15 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
         SecurityVisitor.__FILE_COMMANDS = json.loads(config['security']['file_commands'])
         SecurityVisitor.__DOWNLOAD_COMMANDS = json.loads(config['security']['download_commands'])
-        self._load_data_files()
+        SecurityVisitor.__SHELL_RESOURCES = json.loads(config['security']['shell_resources'])
+        SecurityVisitor.__OBSOLETE_COMMANDS = self._load_data_file("obsolete_commands")
 
     @staticmethod
-    def _load_data_files():
-        def load_file(file: str) -> list[str]:
-            folder_path = os.path.dirname(os.path.realpath(glitch.__file__))
-            with open(os.path.join(folder_path, "files", file)) as f:
-                content = f.readlines()
-                return [c.strip() for c in content]
-
-        SecurityVisitor.__OFFICIAL_IMAGES = load_file("official_docker_images")
-        SecurityVisitor.__OBSOLETE_COMMANDS = load_file("obsolete_commands")
+    def _load_data_file(file: str) -> list[str]:
+        folder_path = os.path.dirname(os.path.realpath(glitch.__file__))
+        with open(os.path.join(folder_path, "files", file)) as f:
+            content = f.readlines()
+            return [c.strip() for c in content]
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -79,10 +81,14 @@ class SecurityVisitor(RuleVisitor):
                 continue
             for a in au.attributes:
                 if a.name == "mode" and re.search(r'(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})', a.value):
-                    errors.append(Error('sec_full_permission_filesystem', au, file, repr(a)))
+                    errors.append(Error('sec_full_permission_filesystem', a, file, repr(a)))
 
         if au.type in SecurityVisitor.__OBSOLETE_COMMANDS:
             errors.append(Error('sec_obsolete_command', au, file, repr(au)))
+        elif any(au.type.endswith(res) for res in SecurityVisitor.__SHELL_RESOURCES):
+            for attr in au.attributes:
+                if isinstance(attr.value, str) and attr.value.split(" ")[0] in SecurityVisitor.__OBSOLETE_COMMANDS:
+                    errors.append(Error('sec_obsolete_command', attr, file, repr(attr)))
 
         return errors
 

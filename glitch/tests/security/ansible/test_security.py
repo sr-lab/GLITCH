@@ -74,3 +74,17 @@ class TestSecurity(unittest.TestCase):
             "tasks",
             1, ["sec_no_int_check"], [5]
         )
+
+    def test_ansible_full_perm(self):
+        self.__help_test(
+            "tests/security/ansible/files/full_permission.yml",
+            "tasks",
+            1, ["sec_full_permission_filesystem"], [7]
+        )
+
+    def test_ansible_full_perm(self):
+        self.__help_test(
+            "tests/security/ansible/files/obs_command.yml",
+            "tasks",
+            1, ["sec_obsolete_command"], [2]
+        )

@@ -190,6 +190,8 @@ class ShellCommand:
         for key, value in self.options.items():
             has_variable = "$" in value if type(value) is str else False
             au.add_attribute(Attribute(key, value, has_variable))
+        for attr in au.attributes:
+            attr.line = au.line
         return au
 
 
