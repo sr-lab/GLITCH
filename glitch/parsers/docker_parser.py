@@ -152,6 +152,9 @@ class DockerParser(p.Parser):
             label, value = element.value.split("=")
             v = Variable(label, value, False)
 
+        if v.value == "\"\"" or v.value == "''":
+            v.value = ""
+
         v.line = element.startline + 1
         return v
 
