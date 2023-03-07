@@ -5,7 +5,7 @@ import configparser
 from urllib.parse import urlparse
 
 import glitch
-from glitch.analysis.rules import Error, RuleVisitor
+from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
 
 from glitch.repr.inter import *
 from glitch.tech import Tech
@@ -13,6 +13,27 @@ from glitch.tech import Tech
 
 class SecurityVisitor(RuleVisitor):
     __URL_REGEX = r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
+
+    class NonOfficialImageSmell(SmellChecker):
+        def check(self, element, file: str) -> list[Error]:
+            return []
+
+    class DockerNonOfficialImageSmell(SmellChecker):
+        def check(self, element, file: str) -> list[Error]:
+            if not isinstance(element, UnitBlock) or "Dockerfile" in element.name:
+                return []
+            image = element.name.split(":")
+            if image[0] not in SecurityVisitor.__OFFICIAL_IMAGES:
+                return [Error('sec_non_official_image', element, file, repr(element))]
+            return []
+
+    def __init__(self, tech: Tech) -> None:
+        super().__init__(tech)
+
+        if tech == Tech.docker:
+            self.non_off_img = SecurityVisitor.DockerNonOfficialImageSmell()
+        else:
+            self.non_off_img = SecurityVisitor.NonOfficialImageSmell()
 
     @staticmethod
     def get_name() -> str:
@@ -186,6 +207,10 @@ class SecurityVisitor(RuleVisitor):
     def check_unitblock(self, u: UnitBlock) -> list[Error]:
         errors = super().check_unitblock(u)
 
+        """
+        Missing integrity check changed to unit block since in Docker the integrity check is not an attribute of the
+        atomic unit but can be another atomic unit inside the same unit block.
+        """
         missing_integrity_checks = {}
         for au in u.atomic_units:
             result = self.check_integrity_check(au, u.path)
@@ -198,11 +223,7 @@ class SecurityVisitor(RuleVisitor):
                     del missing_integrity_checks[file]
 
         errors += missing_integrity_checks.values()
-
-        if self.tech == Tech.docker and 'Dockerfile' not in u.name:
-            image = u.name.split(":")
-            if image[0] not in SecurityVisitor.__OFFICIAL_IMAGES:
-                errors.append(Error('sec_non_official_image', u, u.path, repr(u)))
+        errors += self.non_off_img.check(u, u.path)
 
         return errors
 
