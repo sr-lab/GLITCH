@@ -72,3 +72,15 @@ class TestSecurity(unittest.TestCase):
             "tests/security/puppet/files/missing_default.pp",
             1, ["sec_no_default_switch"], [1]
         )
+
+    def test_puppet_full_perm(self):
+        self.__help_test(
+            "tests/security/puppet/files/full_permission.pp",
+            1, ["sec_full_permission_filesystem"], [4]
+        )
+
+    def test_puppet_obs_command(self):
+        self.__help_test(
+            "tests/security/puppet/files/obs_command.pp",
+            1, ["sec_obsolete_command"], [2]
+        )

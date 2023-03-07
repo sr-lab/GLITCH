@@ -82,7 +82,7 @@ class TestSecurity(unittest.TestCase):
             1, ["sec_full_permission_filesystem"], [7]
         )
 
-    def test_ansible_full_perm(self):
+    def test_ansible_obs_command(self):
         self.__help_test(
             "tests/security/ansible/files/obs_command.yml",
             "tasks",
