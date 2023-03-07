@@ -33,11 +33,13 @@ class DockerParser(p.Parser):
                 for i, (name, s) in enumerate(stages.items()):
                     unit_block = self.__parse_stage(name, path, UnitBlockType.block, s)
                     unit_block.line = structure[stage_indexes[i]].startline + 1
+                    unit_block.code = "".join([struct.content for struct in s])
                     main_block.add_unit_block(unit_block)
             else:
                 self.__add_user_tag(structure)
                 main_block = self.__parse_stage(dfp.baseimage, path, type, structure)
                 main_block.line = structure[stage_indexes[0]].startline + 1
+                main_block.code = "".join([struct.content for struct in structure])
             main_block.path = path
             return main_block
 
@@ -91,12 +93,14 @@ class DockerParser(p.Parser):
         elif instruction == 'COMMENT':
             c = Comment(element.value)
             c.line = element.startline + 1
+            c.code = element.content
             unit_block.add_comment(c)
         elif instruction in ['RUN', 'CMD', 'ENTRYPOINT']:
             c_parser = CommandParser(element.value)
             aus = c_parser.parse_command()
-            for attr in aus:
-                attr.line = element.startline
+            for au in aus:
+                au.line = element.startline + 1
+                au.code = element.content
             unit_block.atomic_units += aus
         elif instruction == 'ONBUILD':
             dfp = DockerfileParser()
@@ -104,11 +108,16 @@ class DockerParser(p.Parser):
             element = DFPStructure(**dfp.structure[0])
             DockerParser.__parse_instruction(element, unit_block)
         elif instruction == 'COPY':
-            attr = AtomicUnit("", "copy")
+            au = AtomicUnit("", "copy")
             src, dest = [v for v in element.value.split(" ") if not v.startswith("--")]
-            attr.add_attribute(Attribute('src', src, False))
-            attr.add_attribute(Attribute('dest', dest, False))
-            unit_block.add_atomic_unit(attr)
+            au.add_attribute(Attribute('src', src, False))
+            au.add_attribute(Attribute('dest', dest, False))
+            for attr in au.attributes:
+                attr.code = element.content
+                attr.line = element.startline + 1
+            au.code = element.content
+            au.line = element.startline + 1
+            unit_block.add_atomic_unit(au)
         # TODO: Investigate keywords and parse them
         elif instruction in ['ADD', 'VOLUME', 'WORKDIR']:
             pass
@@ -155,6 +164,7 @@ class DockerParser(p.Parser):
             v = Variable(label, value, False)
 
         v.line = element.startline + 1
+        v.code = element.content
         return v
 
     @staticmethod
