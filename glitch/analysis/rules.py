@@ -15,7 +15,9 @@ class Error():
             'sec_hard_user': "Hard-coded user - Developers should not reveal sensitive information in the source code. (CWE-798)",
             'sec_invalid_bind': "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issues. (CWE-284)",
             'sec_no_int_check': "No integrity check - The content of files downloaded from the internet should be checked. (CWE-353)",
-            'sec_no_default_switch': "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)"
+            'sec_no_default_switch': "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)",
+            'sec_integrity_policy': "Integrity Policy - Image tag is prone to be mutable or integrity monitoring is disabled.",
+            'sec_ssl_tls_policy': "SSL/TLS/mTLS Policy - Developers should use SSL/TLS/mTLS protocols and their secure versions."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
@@ -40,11 +42,12 @@ class Error():
             for k,v in error_list.items():
                 Error.ALL_ERRORS[k] = v
 
-    def __init__(self, code: str, el, path: str, repr: str) -> None:
+    def __init__(self, code: str, el, path: str, repr: str, opt_msg: str = None) -> None:
         self.code: str = code
         self.el = el
         self.path = path
         self.repr = repr
+        self.opt_msg = opt_msg
 
         if isinstance(self.el, CodeElement):
             self.line = self.el.line
@@ -58,6 +61,8 @@ class Error():
     def __repr__(self) -> str:
         with open(self.path) as f:
             line = f.readlines()[self.line - 1].strip() if self.line != -1 else self.repr.split('\n')[0]
+            if self.opt_msg:
+                line += f"\n-> {self.opt_msg}"
             return \
                 f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n" + \
                     f"{line}\n" 
@@ -76,8 +81,10 @@ class RuleVisitor(ABC):
     def __init__(self, tech: Tech) -> None:
         super().__init__()
         self.tech = tech
+        self.code = None
 
     def check(self, code) -> list[Error]:
+        self.code = code
         if isinstance(code, Project):
             return self.check_project(code)
         elif isinstance(code, Module):
@@ -85,13 +92,13 @@ class RuleVisitor(ABC):
         elif isinstance(code, UnitBlock):
             return self.check_unitblock(code)
 
-    def check_element(self, c, file: str) -> list[Error]:
+    def check_element(self, c, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
         if isinstance(c, AtomicUnit):
             return self.check_atomicunit(c, file)
         elif isinstance(c, Dependency):
             return self.check_dependency(c, file)
         elif isinstance(c, Attribute):
-            return self.check_attribute(c, file)
+            return self.check_attribute(c, file, au, parent_name)
         elif isinstance(c, Variable):
             return self.check_variable(c, file)
         elif isinstance(c, ConditionStatement):
@@ -151,7 +158,7 @@ class RuleVisitor(ABC):
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = []
         for a in au.attributes:
-            errors += self.check_attribute(a, file)
+            errors += self.check_attribute(a, file, au)
 
         for s in au.statements:
             errors += self.check_element(s, file)
@@ -163,7 +170,7 @@ class RuleVisitor(ABC):
         pass
 
     @abstractmethod
-    def check_attribute(self, a: Attribute, file: str) -> list[Error]:
+    def check_attribute(self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
         pass
 
     @abstractmethod

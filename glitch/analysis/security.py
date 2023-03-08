@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import configparser
@@ -30,6 +31,13 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__CRYPT = json.loads(config['security']['weak_crypt'])
         SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
+        SecurityVisitor.__SENSITIVE_DATA = json.loads(config['security']['sensitive_data'])
+        SecurityVisitor.__KEY_ASSIGN = json.loads(config['security']['key_value_assign'])
+        SecurityVisitor.__GITHUB_ACTIONS = json.loads(config['security']['github_actions_resources'])
+        SecurityVisitor.__INTEGRITY_POLICY = json.loads(config['security']['integrity_policy'])
+        SecurityVisitor.__SECRETS_WHITELIST = json.loads(config['security']['secrets_white_list'])
+        SecurityVisitor.__HTTPS_CONFIGS = json.loads(config['security']['ensure_https'])
+        SecurityVisitor.__SSL_TLS_POLICY = json.loads(config['security']['ssl_tls_policy'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -51,6 +59,45 @@ class SecurityVisitor(RuleVisitor):
                         errors.append(Error('sec_no_int_check', au, file, repr(a)))
 
                     break
+            
+        global tf_check
+        tf_check = False
+        def check_required_attribute(attributes, parents, name):
+            for a in attributes:
+                if a.name in parents:
+                    check_required_attribute(a.keyvalues, [""], name)
+                elif a.keyvalues != []:
+                    check_required_attribute(a.keyvalues, parents, name)
+                elif a.name == name and parents == [""]:
+                    global tf_check
+                    tf_check = True
+                    return
+        
+        for policy in SecurityVisitor.__INTEGRITY_POLICY:
+            if (policy["required"] == "yes" and au.type in policy["au_type"]):
+                check_required_attribute(au.attributes, policy["parents"], policy["attribute"])
+                if not tf_check:
+                    errors.append(Error('sec_integrity_policy', au, file, repr(au),
+                        f"Suggestion: check for a required attribute with name '{policy['attribute']}'."))
+                    break
+
+        tf_check = False
+        for config in SecurityVisitor.__HTTPS_CONFIGS:
+            if (config["required"] == "yes" and au.type in config["au_type"]):
+                check_required_attribute(au.attributes, config["parents"], config["attribute"])
+                if not tf_check:
+                    errors.append(Error('sec_https', au, file, repr(au),
+                        f"Suggestion: check for a required attribute with name '{config['attribute']}'."))
+                    break
+            
+        tf_check = False
+        for policy in SecurityVisitor.__SSL_TLS_POLICY:
+            if (policy["required"] == "yes" and au.type in policy["au_type"]):
+                check_required_attribute(au.attributes, policy["parents"], policy["attribute"])
+                if not tf_check:
+                    errors.append(Error('sec_ssl_tls_policy', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name '{policy['attribute']}'."))
+                    break
 
         return errors
 
@@ -59,12 +106,12 @@ class SecurityVisitor(RuleVisitor):
 
     # FIXME attribute and variables need to have superclass
     def __check_keyvalue(self, c: CodeElement, name: str, 
-            value: str, has_variable: bool, file: str):
+            value: str, has_variable: bool, file: str, atomic_unit: AtomicUnit = None, parent_name: str = ""):
         errors = []
         name = name.strip().lower()
         if (isinstance(value, type(None))):
             for child in c.keyvalues:
-                errors += self.check_element(child, file)
+                errors += self.check_element(child, file, atomic_unit, name)
             return errors
         elif (isinstance(value, str)):
             value = value.strip().lower()
@@ -84,6 +131,12 @@ class SecurityVisitor(RuleVisitor):
         except:
             # The url is not valid
             pass
+
+        for config in SecurityVisitor.__HTTPS_CONFIGS:
+            if (name == config["attribute"] and atomic_unit.type in config["au_type"] 
+                and parent_name in config["parents"] and value.lower() not in config["values"]):
+                errors.append(Error('sec_https', c, file, repr(c)))
+                break
 
         if re.match(r'^0.0.0.0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
@@ -112,20 +165,79 @@ class SecurityVisitor(RuleVisitor):
                             errors.append(Error('sec_def_admin', c, file, repr(c)))
                             break
 
+        def get_au(c, name: str, type: str):
+            if isinstance(c, Project):
+                module_name = os.path.basename(os.path.dirname(file))
+                for m in self.code.modules:
+                    if m.name == module_name:
+                        return get_au(m, name, type)
+            elif isinstance(c, Module):
+                for ub in c.blocks:
+                    return get_au(ub, name, type)
+            else:
+                for au in c.atomic_units:
+                    if au.type == type and au.name == name:
+                        return au
+                return None
+
+        def get_module_var(c, name: str):
+            if isinstance(c, Project):
+                module_name = os.path.basename(os.path.dirname(file))
+                for m in self.code.modules:
+                    if m.name == module_name:
+                        return get_module_var(m, name)
+            elif isinstance(c, Module):
+                for ub in c.blocks:
+                    return get_module_var(ub, name)
+            else:
+                for var in c.variables:
+                    if var.name == name:
+                        return var
+                return None
+
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), name) and not has_variable):
-                errors.append(Error('sec_hard_secr', c, file, repr(c)))
+            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), name) 
+                and name not in SecurityVisitor.__SECRETS_WHITELIST):
+                if not has_variable:
+                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-                if (item in SecurityVisitor.__PASSWORDS):
-                    errors.append(Error('sec_hard_pass', c, file, repr(c)))
-                elif (item in SecurityVisitor.__USERS):
-                    errors.append(Error('sec_hard_user', c, file, repr(c)))
+                    if (item in SecurityVisitor.__PASSWORDS):
+                        errors.append(Error('sec_hard_pass', c, file, repr(c)))
+                    elif (item in SecurityVisitor.__USERS):
+                        errors.append(Error('sec_hard_user', c, file, repr(c)))
 
-                if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
-                    errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                    if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
+                        errors.append(Error('sec_empty_pass', c, file, repr(c)))
+
+                    break
+                else:
+                    value = re.sub(r'^\${(.*)}$', r'\1', value)
+                    aux = None
+                    if value.startswith("var."):   # input variable (atomic unit with type variable)
+                        au = get_au(self.code, value.strip("var."), "variable")
+                        if au != None:
+                            for attribute in au.attributes:
+                                if attribute.name == "default":
+                                    aux = attribute
+                    elif value.startswith("local."):    # local value (variable)
+                        aux = get_module_var(self.code, value.strip("local."))
                     
-                break
+                    print(f"{aux}")
+                    if aux != None:
+                        errors.append(Error('sec_hard_secr', c, file, repr(c)))
+
+                        if (item in SecurityVisitor.__PASSWORDS):
+                            errors.append(Error('sec_hard_pass', c, file, repr(c)))
+                        elif (item in SecurityVisitor.__USERS):
+                            errors.append(Error('sec_hard_user', c, file, repr(c)))
+
+                        if (item in SecurityVisitor.__PASSWORDS and aux.value != None and len(aux.value) == 0):
+                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                            
+                        break
+                
+                #TODO if value is using module blocks, resources/data attributes, instead of input_variable/local_value
 
         for item in SecurityVisitor.__SSH_DIR:
             if item.lower() in name:
@@ -134,16 +246,41 @@ class SecurityVisitor(RuleVisitor):
 
         for item in SecurityVisitor.__MISC_SECRETS:
             if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name) 
-                    and len(value) > 0 and not has_variable):
+                    and name not in SecurityVisitor.__SECRETS_WHITELIST and len(value) > 0 and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
+
+        for item in SecurityVisitor.__SENSITIVE_DATA:
+            if item.lower() in name:
+                for item_value in (SecurityVisitor.__KEY_ASSIGN + SecurityVisitor.__PASSWORDS + 
+                    SecurityVisitor.__SECRETS):
+                    if item_value in value.lower():
+                        errors.append(Error('sec_hard_secr', c, file, repr(c)))
+
+                        if (item_value in SecurityVisitor.__PASSWORDS):
+                            errors.append(Error('sec_hard_pass', c, file, repr(c)))
+
+        if atomic_unit.type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value":
+            errors.append(Error('sec_hard_secr', c, file, repr(c)))
+        
+        for policy in SecurityVisitor.__INTEGRITY_POLICY:
+            if (name == policy["attribute"] and atomic_unit.type in policy["au_type"] 
+                and parent_name in policy["parents"] and value.lower() not in policy["values"]):
+                errors.append(Error('sec_integrity_policy', c, file, repr(c)))
+                break
+        
+        for policy in SecurityVisitor.__SSL_TLS_POLICY:
+            if (name == policy["attribute"] and atomic_unit.type in policy["au_type"]
+                and parent_name in policy["parents"] and value.lower() not in policy["values"]):
+                errors.append(Error('sec_ssl_tls_policy', c, file, repr(c)))
+                break
 
         return errors
 
-    def check_attribute(self, a: Attribute, file: str) -> list[Error]:
-        return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file)
+    def check_attribute(self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
+        return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file, au, parent_name)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
-        return self.__check_keyvalue(v, v.name, v.value, v.has_variable, file) #FIXME
+        return self.__check_keyvalue(None, v, v.name, v.value, v.has_variable, file) #FIXME
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []

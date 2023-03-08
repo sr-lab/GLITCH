@@ -1559,6 +1559,7 @@ class TerraformParser(p.Parser):
                 f.seek(0, 0)
                 code = f.readlines()
         
+                print(f"\nparsed_hcl: {parsed_hcl}\n")
                 unit_block = UnitBlock(path, type)
                 unit_block.path = path
                 for key, value in parsed_hcl.items():
@@ -1574,6 +1575,7 @@ class TerraformParser(p.Parser):
                         continue
                     else:
                         throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+                print(unit_block.print(0))
                 return unit_block
             except:
                 throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
@@ -1604,4 +1606,5 @@ class TerraformParser(p.Parser):
             res.blocks += aux.blocks
             res.modules += aux.modules
 
+        print(res.print(0))
         return res
