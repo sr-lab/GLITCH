@@ -90,6 +90,11 @@ class SecurityVisitor(RuleVisitor):
                 if isinstance(attr.value, str) and attr.value.split(" ")[0] in SecurityVisitor.__OBSOLETE_COMMANDS:
                     errors.append(Error('sec_obsolete_command', attr, file, repr(attr)))
 
+        if self.__is_http_url(au.name):
+            errors.append(Error('sec_https', au, file, repr(au)))
+        if self.__is_weak_crypt(au.type, au.name):
+            errors.append(Error('sec_weak_crypt', au, file, repr(au)))
+
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
@@ -106,32 +111,14 @@ class SecurityVisitor(RuleVisitor):
             errors += self.check_element(value, file)
             value = repr(value)
 
-        try:
-            if (re.match(SecurityVisitor.__URL_REGEX, value) and
-                ('http' in value or 'www' in value) and 'https' not in value):
-                errors.append(Error('sec_https', c, file, repr(c)))
-
-            parsed_url = urlparse(value)
-            if parsed_url.scheme == 'http' and \
-                    parsed_url.hostname not in SecurityVisitor.__URL_WHITELIST:
-                errors.append(Error('sec_https', c, file, repr(c)))
-        except:
-            # The url is not valid
-            pass
+        if self.__is_http_url(value):
+            errors.append(Error('sec_https', c, file, repr(c)))
 
         if re.match(r'^0.0.0.0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
 
-        for crypt in SecurityVisitor.__CRYPT:
-            if crypt in value:
-                whitelist = False
-                for word in SecurityVisitor.__CRYPT_WHITELIST:
-                    if word in name or word in value:
-                        whitelist = True
-                        break
-
-                if not whitelist:
-                    errors.append(Error('sec_weak_crypt', c, file, repr(c)))
+        if self.__is_weak_crypt(value, name):
+            errors.append(Error('sec_weak_crypt', c, file, repr(c)))
 
         for check in SecurityVisitor.__CHECKSUM:
             if (check in name and (value == 'no' or value == 'false')):
@@ -272,3 +259,19 @@ class SecurityVisitor(RuleVisitor):
             name = attr.name.strip().lower()
             if any([check in name for check in SecurityVisitor.__CHECKSUM]):
                 return True
+
+    @staticmethod
+    def __is_http_url(value: str) -> bool:
+        if (re.match(SecurityVisitor.__URL_REGEX, value) and
+                ('http' in value or 'www' in value) and 'https' not in value):
+            return True
+        parsed_url = urlparse(value)
+        return parsed_url.scheme == 'http' and \
+                parsed_url.hostname not in SecurityVisitor.__URL_WHITELIST
+
+    @staticmethod
+    def __is_weak_crypt(value: str, name: str) -> bool:
+        if any(crypt in value for crypt in SecurityVisitor.__CRYPT):
+            whitelist = any(word in name or word in value for word in SecurityVisitor.__CRYPT_WHITELIST)
+            return not whitelist
+        return False

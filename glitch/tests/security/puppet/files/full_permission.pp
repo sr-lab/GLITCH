@@ -1,5 +1,5 @@
 file { '/etc/foo':
   ensure => file,
   target => '/etc/foo',
-  mode   => 0777,
+  mode   => '0777',
 }
