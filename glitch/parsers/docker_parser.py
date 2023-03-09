@@ -29,8 +29,9 @@ class DockerParser(p.Parser):
             stage_indexes = [i for i, e in enumerate(structure) if e.instruction == 'FROM']
             if len(stage_indexes) > 1:
                 main_block = UnitBlock(os.path.basename(path), type)
+                main_block.code = dfp.content
                 stages = self.__get_stages(stage_indexes, structure)
-                for i, (name, s) in enumerate(stages.items()):
+                for i, (name, s) in enumerate(stages):
                     unit_block = self.__parse_stage(name, path, UnitBlockType.block, s)
                     unit_block.line = structure[stage_indexes[i]].startline + 1
                     unit_block.code = "".join([struct.content for struct in s])
@@ -124,13 +125,13 @@ class DockerParser(p.Parser):
             pass
 
     @staticmethod
-    def __get_stages(stage_indexes: list[int], structure: list[DFPStructure]) -> dict[str, list[DFPStructure]]:
-        stages = {}
+    def __get_stages(stage_indexes: list[int], structure: list[DFPStructure]) -> list[tuple[str, list[DFPStructure]]]:
+        stages = []
         for i, stage_i in enumerate(stage_indexes):
             stage_image = structure[stage_i].value.split(" ")[0]
             stage_start = stage_i if i != 0 else 0
             stage_end = len(structure) if i == len(stage_indexes) - 1 else stage_indexes[i + 1]
-            stages[stage_image] = DockerParser.__get_stage_structure(structure, stage_start, stage_end)
+            stages.append((stage_image, DockerParser.__get_stage_structure(structure, stage_start, stage_end)))
         return stages
 
     @staticmethod
