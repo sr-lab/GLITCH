@@ -64,41 +64,47 @@ class Comment(CodeElement):
     def print(self, tab) -> str:
         return (tab * "\t") + self.content + ' (on line ' + str(self.line) + ')'
 
-class Variable(CodeElement):
-    def __init__(self, name: str, value: str, has_variable: bool) -> None:
-        super().__init__()
+class KeyValue(CodeElement):
+    def __init__(self, name: str, value: str, has_variable: bool):
         self.name: str = name
         self.value: str = value
         self.has_variable: bool = has_variable
+        self.keyvalues: list = []
 
     def __repr__(self) -> str:
         value = repr(self.value).split('\n')[0]
-        name = self.name.split('.')[-1]
-        return f"{name}:{value}"
+        if value == "None":
+            return f"{self.name}:{value}:{self.keyvalues}"
+        else:
+            return f"{self.name}:{value}"
+
+class Variable(KeyValue):
+    def __init__(self, name: str, value: str, has_variable: bool) -> None:
+        super().__init__(name, value, has_variable)
 
     def print(self, tab) -> str:
         if isinstance(self.value, str):
             return (tab * "\t") + self.name + "->" + self.value + \
+                " (on line " + str(self.line) + f" {self.has_variable})"
+        elif isinstance(self.value, type(None)):
+            return (tab * "\t") + self.name + "->" + "None" + \
+                " variables:" + f" {self.keyvalues}" + \
                 " (on line " + str(self.line) + f" {self.has_variable})"
         else:
             return (tab * "\t") + self.name + "->" + repr(self.value) + \
                 " (on line " + str(self.line) + f" {self.has_variable})"
 
-class Attribute(CodeElement):
+class Attribute(KeyValue):
     def __init__(self, name: str, value: str, has_variable: bool) -> None:
-        super().__init__()
-        self.name: str = name
-        self.value: str = value
-        self.has_variable: bool = has_variable
-
-    def __repr__(self) -> str:
-        value = repr(self.value).split('\n')[0]
-        name = self.name.split('.')[-1]
-        return f"{name}:{value}"
+        super().__init__(name, value, has_variable)
 
     def print(self, tab) -> str:
         if isinstance(self.value, str):
             return (tab * "\t") + self.name + "->" + self.value + \
+                " (on line " + str(self.line) + f" {self.has_variable})"
+        elif isinstance(self.value, type(None)):
+            return (tab * "\t") + self.name + "->" + "None" + \
+                " attributes:" + f" {self.keyvalues}" + \
                 " (on line " + str(self.line) + f" {self.has_variable})"
         else:
             return (tab * "\t") + self.name + "->" + repr(self.value) + \
