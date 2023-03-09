@@ -898,7 +898,7 @@ class ChefParser(p.Parser):
         def add_variable_to_unit_block(variable, unit_block_vars):
             var_name = variable.name
             var = get_var(var_name, unit_block_vars)
-            if var and var.value == None:
+            if var and var.value == None and variable.value == None:
                 for v in variable.keyvalues:
                     add_variable_to_unit_block(v, var.keyvalues)
             else:
@@ -1040,10 +1040,25 @@ class ChefParser(p.Parser):
 class PuppetParser(p.Parser):
     @staticmethod
     def __process_unitblock_component(ce, unit_block: UnitBlock):
+        def get_var(parent_name, vars):
+            for var in vars:
+                if var.name == parent_name:
+                    return var
+            return None
+    
+        def add_variable_to_unit_block(variable, unit_block_vars):
+            var_name = variable.name
+            var = get_var(var_name, unit_block_vars)
+            if var and var.value == None and variable.value == None:
+                for v in variable.keyvalues:
+                    add_variable_to_unit_block(v, var.keyvalues)
+            else:
+                unit_block_vars.append(variable)
+        
         if isinstance(ce, Dependency):
             unit_block.add_dependency(ce)
         elif isinstance(ce, Variable):
-            unit_block.add_variable(ce)
+            add_variable_to_unit_block(ce, unit_block.variables)
         elif isinstance(ce, AtomicUnit):
             unit_block.add_atomic_unit(ce)
         elif isinstance(ce, UnitBlock):
@@ -1071,6 +1086,23 @@ class PuppetParser(p.Parser):
                 res += code[ce.end_line - 1][:ce.end_col - 1]
 
             return res
+        
+        def process_hash_value(name: str, temp_value):
+            if '[' in name and ']' in name:
+                start = name.find('[') + 1
+                end = name.find(']')
+                key_name = name[start:end]
+                name_without_key = name[:start-1] + name[end+1:]
+                n, d = process_hash_value(name_without_key, temp_value)
+                if d == {}:
+                    d[key_name] = temp_value
+                    return n, d
+                else:
+                    new_d : dict = {}
+                    new_d[key_name] = d
+                    return n, new_d
+            else:
+                return name, {}
         
         if (isinstance(codeelement, puppetmodel.Value)):
             if isinstance(codeelement, puppetmodel.Hash):
@@ -1157,6 +1189,8 @@ class PuppetParser(p.Parser):
         elif (isinstance(codeelement, puppetmodel.Assignment)):
             name = PuppetParser.__process_codeelement(codeelement.name, path, code)
             temp_value = PuppetParser.__process_codeelement(codeelement.value, path, code)
+            if '[' in name and ']' in name:
+                name, temp_value = process_hash_value(name, temp_value)
             if not isinstance(temp_value, dict):
                 if codeelement.value is not None:
                     value = "" if temp_value == "undef" else temp_value
@@ -1412,7 +1446,6 @@ class PuppetParser(p.Parser):
                 )
         except:
            throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
-
         return unit_block
 
     def parse_folder(self, path: str) -> Project:
