@@ -61,4 +61,3 @@ class TestDesign(unittest.TestCase):
                 "implementation_too_many_variables", 
             ], [-1]
         )
-

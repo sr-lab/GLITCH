@@ -60,6 +60,3 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/inv_bind.tf",
             1, ["sec_invalid_bind"], [14]
         )
-
-if __name__ == '__main__':
-    unittest.main()

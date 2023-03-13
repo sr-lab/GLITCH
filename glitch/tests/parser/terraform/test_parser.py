@@ -42,6 +42,3 @@ class TestTerraform(unittest.TestCase):
     def test_terraform_comments(self):
         comments = "[#comment1\n, //comment2\n, /*comment3\n     default_table_expiration_ms = 3600000\n    \n    finish comment3 */, #comment4\n, #comment5\n, #comment inside dict\n, //comment2 inside dict\n]"
         self.__help_test_comments("tests/parser/terraform/files/comments.tf", comments)
-
-if __name__ == '__main__':
-    unittest.main()
