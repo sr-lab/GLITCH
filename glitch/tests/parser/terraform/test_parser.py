@@ -39,6 +39,11 @@ class TestTerraform(unittest.TestCase):
         attributes =  "[keys[0]:'value1', keys[1][0]:1, keys[1][1]:None:[key2:'value2'], keys[2]:None:[key3:'value3']]"
         self.__help_test("tests/parser/terraform/files/list_value_assign.tf", attributes)
 
+    def test_terraform_dynamic_block(self):
+        attributes =  "[dynamic.setting:None:[content:None:[namespace:'${setting.value[\"namespace\"]}']]]"
+        self.__help_test("tests/parser/terraform/files/dynamic_block.tf", attributes)
+
     def test_terraform_comments(self):
         comments = "[#comment1\n, //comment2\n, /*comment3\n     default_table_expiration_ms = 3600000\n    \n    finish comment3 */, #comment4\n, #comment5\n, #comment inside dict\n, //comment2 inside dict\n]"
         self.__help_test_comments("tests/parser/terraform/files/comments.tf", comments)
+        
