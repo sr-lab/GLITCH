@@ -38,6 +38,12 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__SECRETS_WHITELIST = json.loads(config['security']['secrets_white_list'])
         SecurityVisitor.__HTTPS_CONFIGS = json.loads(config['security']['ensure_https'])
         SecurityVisitor.__SSL_TLS_POLICY = json.loads(config['security']['ssl_tls_policy'])
+        SecurityVisitor.__DNSSEC_CONFIGS = json.loads(config['security']['ensure_dnssec'])
+        SecurityVisitor.__PUBLIC_IP_CONFIGS = json.loads(config['security']['use_public_ip'])
+        SecurityVisitor.__POLICY_KEYWORDS = json.loads(config['security']['policy_keywords'])
+        SecurityVisitor.__ACCESS_KEYWORDS = json.loads(config['security']['access_keywords'])
+        SecurityVisitor.__ACCESS_VALUES = json.loads(config['security']['access_values'])
+        SecurityVisitor.__ACCESS_CONTROL_CONFIGS = json.loads(config['security']['insecure_access_control'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -60,44 +66,137 @@ class SecurityVisitor(RuleVisitor):
 
                     break
             
-        global tf_check
-        tf_check = False
-        def check_required_attribute(attributes, parents, name):
+        def check_required_attribute(attributes, parents, name, value = None):
+            aux = None
             for a in attributes:
-                if a.name in parents:
-                    check_required_attribute(a.keyvalues, [""], name)
+                if a.name.split('dynamic')[-1] == name and parents == [""]:
+                    if value and a.value == value:
+                        return a
+                    elif value and a.value != value:
+                        return None
+                    elif not value:
+                        return a
+                elif a.name.split('dynamic.')[-1] in parents:
+                    aux = check_required_attribute(a.keyvalues, [""], name, value)
                 elif a.keyvalues != []:
-                    check_required_attribute(a.keyvalues, parents, name)
-                elif a.name == name and parents == [""]:
-                    global tf_check
-                    tf_check = True
-                    return
+                    aux = check_required_attribute(a.keyvalues, parents, name, value)
+                if aux: return aux
+            return None
+
+        def get_associated_au(c, type: str, attribute_name: str , attribute_value: str, attribute_parents: list):
+            if isinstance(c, Project):
+                module_name = os.path.basename(os.path.dirname(file))
+                for m in self.code.modules:
+                    if m.name == module_name:
+                        return get_associated_au(m, type, attribute_name, attribute_value, attribute_parents)
+            elif isinstance(c, Module):
+                for ub in c.blocks:
+                    au = get_associated_au(ub, type, attribute_name, attribute_value, attribute_parents)
+                    if au:
+                        return au
+            else:
+                for au in c.atomic_units:
+                    if (au.type == type and check_required_attribute(
+                            au.attributes, attribute_parents, attribute_name, attribute_value)):
+                        return au
+            return None
         
         for policy in SecurityVisitor.__INTEGRITY_POLICY:
-            if (policy["required"] == "yes" and au.type in policy["au_type"]):
-                check_required_attribute(au.attributes, policy["parents"], policy["attribute"])
-                if not tf_check:
+            if (policy['required'] == "yes" and au.type in policy['au_type']):
+                a = check_required_attribute(au.attributes, policy['parents'], policy['attribute'])
+                if not a:
                     errors.append(Error('sec_integrity_policy', au, file, repr(au),
                         f"Suggestion: check for a required attribute with name '{policy['attribute']}'."))
                     break
 
-        tf_check = False
         for config in SecurityVisitor.__HTTPS_CONFIGS:
-            if (config["required"] == "yes" and au.type in config["au_type"]):
-                check_required_attribute(au.attributes, config["parents"], config["attribute"])
-                if not tf_check:
+            if (config["required"] == "yes" and au.type in config['au_type']):
+                if not check_required_attribute(au.attributes, config["parents"], config['attribute']):
                     errors.append(Error('sec_https', au, file, repr(au),
                         f"Suggestion: check for a required attribute with name '{config['attribute']}'."))
                     break
             
-        tf_check = False
         for policy in SecurityVisitor.__SSL_TLS_POLICY:
-            if (policy["required"] == "yes" and au.type in policy["au_type"]):
-                check_required_attribute(au.attributes, policy["parents"], policy["attribute"])
-                if not tf_check:
+            if (policy['required'] == "yes" and au.type in policy['au_type']):
+                if not check_required_attribute(au.attributes, policy['parents'], policy['attribute']):
                     errors.append(Error('sec_ssl_tls_policy', au, file, repr(au), 
                         f"Suggestion: check for a required attribute with name '{policy['attribute']}'."))
                     break
+        
+        for config in SecurityVisitor.__DNSSEC_CONFIGS:
+            if (config['required'] == "yes" and au.type in config['au_type']):
+                if not check_required_attribute(au.attributes, config['parents'], config['attribute']):
+                    errors.append(Error('sec_dnssec', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name '{config['attribute']}'."))
+                    break
+
+        for config in SecurityVisitor.__PUBLIC_IP_CONFIGS:
+            if ((config['required'] == "yes" or config['required'] == "must_not_exist")
+                and au.type in config['au_type']):
+                a = check_required_attribute(au.attributes, config['parents'], config['attribute'])
+                if (not a and config['required'] == "yes"):
+                    errors.append(Error('sec_public_ip', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name '{config['attribute']}'."))
+                    break
+                elif (a and config['required'] == "must_not_exist"):
+                    errors.append(Error('sec_public_ip', a, file, repr(a)))
+                    break
+
+        #insecure access control
+        if (au.type == "resource.aws_api_gateway_method"):
+            http_method = check_required_attribute(au.attributes, [""], 'http_method')
+            authorization = check_required_attribute(au.attributes, [""], 'authorization')
+            if (http_method and authorization):
+                if (http_method.value.lower() == 'get' and authorization.value.lower() == 'none'):
+                    api_key_required = check_required_attribute(au.attributes, [""], 'api_key_required')
+                    if api_key_required and f"{api_key_required.value}".lower() != 'true':
+                        errors.append(Error('sec_access_control', api_key_required, file, repr(api_key_required)))
+                    elif not api_key_required:
+                        errors.append(Error('sec_access_control', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name 'api_key_required'."))
+            elif (http_method and not authorization):
+                    errors.append(Error('sec_access_control', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name 'authorization'."))
+        elif (au.type == "resource.github_repository"):
+            visibility = check_required_attribute(au.attributes, [""], 'visibility')
+            if visibility:
+                if visibility.value.lower() not in ["private", "internal"]:
+                    errors.append(Error('sec_access_control', visibility, file, repr(visibility)))
+            else:
+                private = check_required_attribute(au.attributes, [""], 'private')
+                if private:
+                    if f"{private.value}".lower() != "true":
+                        errors.append(Error('sec_access_control', private, file, repr(private)))
+                else:
+                    errors.append(Error('sec_access_control', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name 'visibility' or 'private'."))
+        elif (au.type == "resource.google_sql_database_instance"):
+            database_flags = check_required_attribute(au.attributes, ["settings"], "database_flags")
+            name = check_required_attribute(au.attributes, ["database_flags"], "name", "cross db ownership chaining")
+            if database_flags and name:
+                    value = check_required_attribute(au.attributes, ["database_flags"], "value")
+                    if value and value.value.lower() != "off":
+                        errors.append(Error('sec_access_control', value, file, repr(value)))
+                    elif not value:
+                        errors.append(Error('sec_access_control', au, file, repr(au), 
+                            f"Suggestion: check for a required attribute with name 'value'."))
+            else:
+                errors.append(Error('sec_access_control', au, file, repr(au), 
+                    f"Suggestion: check for a required flag 'cross db ownership chaining'."))
+        elif (au.type == "resource.aws_s3_bucket"):
+            block = get_associated_au(self.code, "resource.aws_s3_bucket_public_access_block", "bucket",
+                "${aws_s3_bucket." + f"{au.name}" + ".id}", [""])
+            if not block:
+                errors.append(Error('sec_access_control', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'aws_s3_bucket_public_access_block' associated to an 'aws_s3_bucket' resource."))
+
+        for config in SecurityVisitor.__ACCESS_CONTROL_CONFIGS:
+            if (config['required'] == "yes" and au.type in config['au_type']):
+                if not check_required_attribute(au.attributes, config['parents'], config['attribute']):
+                    errors.append(Error('sec_access_control', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name '{config['attribute'].split('[')[0]}'."))
+                    break
+
 
         return errors
 
@@ -173,12 +272,14 @@ class SecurityVisitor(RuleVisitor):
                         return get_au(m, name, type)
             elif isinstance(c, Module):
                 for ub in c.blocks:
-                    return get_au(ub, name, type)
+                    au = get_au(ub, name, type)
+                    if au:
+                        return au
             else:
                 for au in c.atomic_units:
-                    if au.type == type and au.name == name:
+                    if (au.type == type and au.name == name):
                         return au
-                return None
+            return None
 
         def get_module_var(c, name: str):
             if isinstance(c, Project):
@@ -188,12 +289,14 @@ class SecurityVisitor(RuleVisitor):
                         return get_module_var(m, name)
             elif isinstance(c, Module):
                 for ub in c.blocks:
-                    return get_module_var(ub, name)
+                    var = get_module_var(ub, name)
+                    if var:
+                        return var
             else:
                 for var in c.variables:
                     if var.name == name:
                         return var
-                return None
+            return None
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
@@ -222,9 +325,9 @@ class SecurityVisitor(RuleVisitor):
                                     aux = attribute
                     elif value.startswith("local."):    # local value (variable)
                         aux = get_module_var(self.code, value.strip("local."))
+                    #FIXME value can also use module blocks, resources/data attributes, not only input_variable/local_value
                     
-                    print(f"{aux}")
-                    if aux != None:
+                    if aux:
                         errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
                         if (item in SecurityVisitor.__PASSWORDS):
@@ -236,8 +339,6 @@ class SecurityVisitor(RuleVisitor):
                             errors.append(Error('sec_empty_pass', c, file, repr(c)))
                             
                         break
-                
-                #TODO if value is using module blocks, resources/data attributes, instead of input_variable/local_value
 
         for item in SecurityVisitor.__SSH_DIR:
             if item.lower() in name:
@@ -263,15 +364,45 @@ class SecurityVisitor(RuleVisitor):
             errors.append(Error('sec_hard_secr', c, file, repr(c)))
         
         for policy in SecurityVisitor.__INTEGRITY_POLICY:
-            if (name == policy["attribute"] and atomic_unit.type in policy["au_type"] 
-                and parent_name in policy["parents"] and value.lower() not in policy["values"]):
+            if (name == policy['attribute'] and atomic_unit.type in policy['au_type'] 
+                and parent_name in policy['parents'] and value.lower() not in policy['values']):
                 errors.append(Error('sec_integrity_policy', c, file, repr(c)))
                 break
         
         for policy in SecurityVisitor.__SSL_TLS_POLICY:
-            if (name == policy["attribute"] and atomic_unit.type in policy["au_type"]
-                and parent_name in policy["parents"] and value.lower() not in policy["values"]):
+            if (name == policy['attribute'] and atomic_unit.type in policy['au_type']
+                and parent_name in policy['parents'] and value.lower() not in policy['values']):
                 errors.append(Error('sec_ssl_tls_policy', c, file, repr(c)))
+                break
+
+        for config in SecurityVisitor.__DNSSEC_CONFIGS:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and value.lower() not in config['values']
+                and config['values'] != [""]):
+                errors.append(Error('sec_dnssec', c, file, repr(c)))
+                break
+
+        for config in SecurityVisitor.__PUBLIC_IP_CONFIGS:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and value.lower() not in config['values']):
+                errors.append(Error('sec_public_ip', c, file, repr(c)))
+                break
+
+        for item in SecurityVisitor.__POLICY_KEYWORDS:
+            if item.lower() in name:
+                for access_keyword in SecurityVisitor.__ACCESS_KEYWORDS:
+                    for access_value in SecurityVisitor.__ACCESS_VALUES:
+                        expr = access_keyword.lower() + "\s*" + access_value.lower()
+                        pattern = re.compile(rf"{expr}")
+                        match = re.search(pattern, value)
+                        if match:
+                            errors.append(Error('sec_access_control', c, file, repr(c)))
+
+        for config in SecurityVisitor.__ACCESS_CONTROL_CONFIGS:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and value.lower() not in config['values']
+                and config['values'] != [""]):
+                errors.append(Error('sec_access_control', c, file, repr(c)))
                 break
 
         return errors

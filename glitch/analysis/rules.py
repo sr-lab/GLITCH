@@ -17,7 +17,10 @@ class Error():
             'sec_no_int_check': "No integrity check - The content of files downloaded from the internet should be checked. (CWE-353)",
             'sec_no_default_switch': "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)",
             'sec_integrity_policy': "Integrity Policy - Image tag is prone to be mutable or integrity monitoring is disabled.",
-            'sec_ssl_tls_policy': "SSL/TLS/mTLS Policy - Developers should use SSL/TLS/mTLS protocols and their secure versions."
+            'sec_ssl_tls_policy': "SSL/TLS/mTLS Policy - Developers should use SSL/TLS/mTLS protocols and their secure versions.",
+            'sec_dnssec': "Use of DNS without DNSSEC - Developers should favor the usage of DNSSEC while using DNS.",
+            'sec_public_ip': "Associated Public IP address - Associating Public IP addresses allows connections from public internet.",
+            'sec_access_control': "Insecure Access Control - Developers should be aware of possible unauthorized access."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
