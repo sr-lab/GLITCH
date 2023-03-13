@@ -1482,7 +1482,7 @@ class TerraformParser(p.Parser):
             if name == "__start_line__" or name == "__end_line__": 
                 continue
 
-            if isinstance(keyvalue, dict):          #Note: local values (variables) can only enter here
+            if isinstance(keyvalue, dict):          # Note: local values (variables) can only enter here
                 value = keyvalue["value"]
                 if isinstance(value, dict):     # (ex: labels = {})
                     k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, None)
@@ -1490,13 +1490,13 @@ class TerraformParser(p.Parser):
                     k_values.append(k)
                 elif isinstance(value, list):   # (ex: x = [1,2,3])
                     process_list(name, value, keyvalue["__start_line__"], keyvalue["__end_line__"])
-                else:   #(ex: x = 'test')
+                else:   # (ex: x = 'test')
                     if value == None:   # (ex: x = null)
                         value = "null"
                     k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, value)
                     k_values.append(k)    
             elif isinstance(keyvalue, list) and type == "attribute":
-            #block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
+            # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
                 if name == "dynamic":
                     for block in keyvalue:
                         for block_name, block_attributes in block.items():
