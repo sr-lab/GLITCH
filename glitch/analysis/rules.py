@@ -22,7 +22,8 @@ class Error():
             'sec_public_ip': "Associated Public IP address - Associating Public IP addresses allows connections from public internet.",
             'sec_access_control': "Insecure Access Control - Developers should be aware of possible unauthorized access.",
             'sec_authentication': "Disabled/Weak Authentication - Developers should guarantee that authentication is enabled.",
-            'sec_missing_encryption': "Missing Encryption - Developers should ensure encryption of sensitive and critical data. (CWE-311)" 
+            'sec_missing_encryption': "Missing Encryption - Developers should ensure encryption of sensitive and critical data. (CWE-311)",
+            'sec_firewall_misconfig': "Firewall Misconfiguration - Developers should favor the usage of a well configured waf. (CWE-693)"
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
