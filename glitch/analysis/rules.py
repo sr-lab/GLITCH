@@ -16,7 +16,7 @@ class Error():
             'sec_invalid_bind': "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issues. (CWE-284)",
             'sec_no_int_check': "No integrity check - The content of files downloaded from the internet should be checked. (CWE-353)",
             'sec_no_default_switch': "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)",
-            'sec_non_official_image': "Use of non-official Docker image - Use of non-official images should be avoided or taken into careful consideration.",
+            'sec_non_official_image': "Use of non-official Docker image - Use of non-official images should be avoided or taken into careful consideration. (CWE-829)",
             'sec_full_permission_filesystem': "Full permission to the filesystem - Files should not have full permissions to every user. (CWE-732)",
             'sec_obsolete_command': "Use of obsolete command or function - Avoid using obsolete or deprecated commands and functions. (CWE-477)"
         },

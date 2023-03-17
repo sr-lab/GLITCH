@@ -202,7 +202,7 @@ class SecurityVisitor(RuleVisitor):
 
         """
         Missing integrity check changed to unit block since in Docker the integrity check is not an attribute of the
-        atomic unit but can be another atomic unit inside the same unit block.
+        atomic unit but can be done on another atomic unit inside the same unit block.
         """
         missing_integrity_checks = {}
         for au in u.atomic_units:
