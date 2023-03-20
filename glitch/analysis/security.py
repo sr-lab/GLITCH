@@ -49,6 +49,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__CONFIGURATION_KEYWORDS = json.loads(config['security']['configuration_keywords'])
         SecurityVisitor.__ENCRYPT_CONFIG = json.loads(config['security']['encrypt_configuration'])
         SecurityVisitor.__FIREWALL_CONFIGS = json.loads(config['security']['firewall'])
+        SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS = json.loads(config['security']['missing_threats_detection_alerts'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -253,6 +254,19 @@ class SecurityVisitor(RuleVisitor):
                 errors.append(Error('sec_firewall_misconfig', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
                 break
+
+        # check missing threats detection and alerts
+        for config in SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS:
+            if (config['required'] == "yes" and au.type in config['au_type']
+                and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
+                errors.append(Error('sec_threats_detection_alerts', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{config['msg']}'."))
+                break
+            elif (config['required'] == "must_not_exist" and au.type in config['au_type']):
+                a = check_required_attribute(au.attributes, config['parents'], config['attribute'])
+                if a:
+                    errors.append(Error('sec_threats_detection_alerts', a, file, repr(a)))
+                    break 
 
         return errors
 
@@ -502,6 +516,16 @@ class SecurityVisitor(RuleVisitor):
                     break
                 elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
                     errors.append(Error('sec_firewall_misconfig', c, file, repr(c)))
+                    break
+
+        for config in SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]):
+                if ("any_not_empty" in config['values'] and value.lower() == ""):
+                    errors.append(Error('sec_threats_detection_alerts', c, file, repr(c)))
+                    break
+                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                    errors.append(Error('sec_threats_detection_alerts', c, file, repr(c)))
                     break
 
         return errors
