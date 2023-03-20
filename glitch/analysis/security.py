@@ -50,6 +50,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__ENCRYPT_CONFIG = json.loads(config['security']['encrypt_configuration'])
         SecurityVisitor.__FIREWALL_CONFIGS = json.loads(config['security']['firewall'])
         SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS = json.loads(config['security']['missing_threats_detection_alerts'])
+        SecurityVisitor.__PASSWORD_KEY_POLICY = json.loads(config['security']['password_key_policy'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -267,6 +268,14 @@ class SecurityVisitor(RuleVisitor):
                 if a:
                     errors.append(Error('sec_threats_detection_alerts', a, file, repr(a)))
                     break 
+
+        # check weak password/key policy
+        for policy in SecurityVisitor.__PASSWORD_KEY_POLICY:
+            if (policy['required'] == "yes" and au.type in policy['au_type'] 
+                and not check_required_attribute(au.attributes, policy['parents'], policy['attribute'])):
+                errors.append(Error('sec_weak_password_key_policy', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{policy['msg']}'."))
+                break
 
         return errors
 
@@ -526,6 +535,25 @@ class SecurityVisitor(RuleVisitor):
                     break
                 elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
                     errors.append(Error('sec_threats_detection_alerts', c, file, repr(c)))
+                    break
+
+        for policy in SecurityVisitor.__PASSWORD_KEY_POLICY:
+            if (name == policy['attribute'] and atomic_unit.type in policy['au_type']
+                and parent_name in policy['parents'] and policy['values'] != [""]):
+                if (policy['logic'] == "equal"):
+                    if ("any_not_empty" in policy['values'] and value.lower() == ""):
+                        errors.append(Error('sec_weak_password_key_policy', c, file, repr(c)))
+                        break
+                    elif ("any_not_empty" not in policy['values'] and value.lower() not in policy['values']):
+                        errors.append(Error('sec_weak_password_key_policy', c, file, repr(c)))
+                        break
+                elif ((policy['logic'] == "gte" and not value.isnumeric()) or
+                    (policy['logic'] == "gte" and value.isnumeric() and int(value) < int(policy['values'][0]))):
+                    errors.append(Error('sec_weak_password_key_policy', c, file, repr(c)))
+                    break
+                elif ((policy['logic'] == "lte" and not value.isnumeric()) or
+                    (policy['logic'] == "lte" and value.isnumeric() and int(value) > int(policy['values'][0]))):
+                    errors.append(Error('sec_weak_password_key_policy', c, file, repr(c)))
                     break
 
         return errors

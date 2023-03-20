@@ -24,7 +24,8 @@ class Error():
             'sec_authentication': "Disabled/Weak Authentication - Developers should guarantee that authentication is enabled.",
             'sec_missing_encryption': "Missing Encryption - Developers should ensure encryption of sensitive and critical data. (CWE-311)",
             'sec_firewall_misconfig': "Firewall Misconfiguration - Developers should favor the usage of a well configured waf. (CWE-693)",
-            'sec_threats_detection_alerts': "Missing Threats Detection/Alerts - Developers should enable threats detection and alerts when it is possible."
+            'sec_threats_detection_alerts': "Missing Threats Detection/Alerts - Developers should enable threats detection and alerts when it is possible.",
+            'sec_weak_password_key_policy': "Weak Password/Key Policy - Developers should favor the usage of strong password/key requirements and configurations. (CWE-521)."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
