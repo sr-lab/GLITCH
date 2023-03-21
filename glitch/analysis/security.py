@@ -277,6 +277,31 @@ class SecurityVisitor(RuleVisitor):
                     f"Suggestion: check for a required attribute with name '{policy['msg']}'."))
                 break
 
+        # check sensitive action by IAM
+        if (au.type == "data.aws_iam_policy_document"):
+            allow = check_required_attribute(au.attributes, "statement", "effect")
+            if ((allow and allow.value.lower() == "allow") or (not allow)):
+                sensitive_action = False
+                i = 0
+                action = check_required_attribute(au.attributes, "statement", f"actions[{i}]")
+                while action:
+                    if action.value.lower() in ["s3:*", "s3:getobject"]:
+                        sensitive_action = True
+                        break
+                    i += 1
+                    action = check_required_attribute(au.attributes, "statement", f"actions[{i}]")
+                sensitive_resource = False
+                i = 0
+                resource = check_required_attribute(au.attributes, "statement", f"resources[{i}]")
+                while resource:
+                    if resource.value.lower() in ["*"]:
+                        sensitive_resource = True
+                        break
+                    i += 1
+                    resource = check_required_attribute(au.attributes, "statement", f"resources[{i}]")
+                if (sensitive_action and sensitive_resource):
+                    errors.append(Error('sec_sensitive_iam_action', action, file, repr(action)))
+
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:

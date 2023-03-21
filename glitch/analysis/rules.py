@@ -25,7 +25,8 @@ class Error():
             'sec_missing_encryption': "Missing Encryption - Developers should ensure encryption of sensitive and critical data. (CWE-311)",
             'sec_firewall_misconfig': "Firewall Misconfiguration - Developers should favor the usage of a well configured waf. (CWE-693)",
             'sec_threats_detection_alerts': "Missing Threats Detection/Alerts - Developers should enable threats detection and alerts when it is possible.",
-            'sec_weak_password_key_policy': "Weak Password/Key Policy - Developers should favor the usage of strong password/key requirements and configurations. (CWE-521)."
+            'sec_weak_password_key_policy': "Weak Password/Key Policy - Developers should favor the usage of strong password/key requirements and configurations. (CWE-521).",
+            'sec_sensitive_iam_action': "Sensitive Action by IAM - Developers should use the principle of least privilege when defining IAM policies."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
