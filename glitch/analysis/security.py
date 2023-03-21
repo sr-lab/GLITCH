@@ -473,7 +473,9 @@ class SecurityVisitor(RuleVisitor):
                 for config in SecurityVisitor.__POLICY_ACCESS_CONTROL:
                     expr = config['keyword'].lower() + "\s*" + config['value'].lower()
                     pattern = re.compile(rf"{expr}")
-                    if re.search(pattern, value):
+                    allow_expr = "\"effect\":" + "\s*" + "\"allow\""
+                    allow_pattern = re.compile(rf"{allow_expr}")
+                    if re.search(pattern, value) and re.search(allow_pattern, value):
                         errors.append(Error('sec_access_control', c, file, repr(c)))
                 for config in SecurityVisitor.__POLICY_AUTHENTICATION:
                     if atomic_unit.type in config['au_type']:
@@ -481,6 +483,18 @@ class SecurityVisitor(RuleVisitor):
                         pattern = re.compile(rf"{expr}")
                         if not re.search(pattern, value):
                             errors.append(Error('sec_authentication', c, file, repr(c)))
+
+        if (re.search(r"actions\[\d+\]", name) and parent_name == "permissions" 
+            and atomic_unit.type == "resource.azurerm_role_definition" and value == "*"):
+            errors.append(Error('sec_access_control', c, file, repr(c)))
+        elif (((re.search(r"members\[\d+\]", name) and atomic_unit.type == "resource.google_storage_bucket_iam_binding")
+            or (name == "member" and atomic_unit.type == "resource.google_storage_bucket_iam_member"))
+            and (value == "allusers" or value == "allauthenticatedusers")):
+            errors.append(Error('sec_access_control', c, file, repr(c)))
+        elif (name == "email" and parent_name == "service_account" 
+            and atomic_unit.type == "resource.google_compute_instance"
+            and re.search(r"\d+-compute@developer.gserviceaccount.com", value)):
+            errors.append(Error('sec_access_control', c, file, repr(c)))
 
         for config in SecurityVisitor.__ACCESS_CONTROL_CONFIGS:
             if (name == config['attribute'] and atomic_unit.type in config['au_type']
