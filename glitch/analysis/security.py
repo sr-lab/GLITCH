@@ -52,6 +52,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS = json.loads(config['security']['missing_threats_detection_alerts'])
         SecurityVisitor.__PASSWORD_KEY_POLICY = json.loads(config['security']['password_key_policy'])
         SecurityVisitor.__KEY_MANAGEMENT = json.loads(config['security']['key_management'])
+        SecurityVisitor.__NETWORK_SECURITY_RULES = json.loads(config['security']['network_security_rules'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -141,7 +142,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, policy['parents'], policy['attribute'])):
                 errors.append(Error('sec_integrity_policy', au, file, repr(au),
                     f"Suggestion: check for a required attribute with name '{policy['msg']}'."))
-                break
 
         # check http without tls
         for config in SecurityVisitor.__HTTPS_CONFIGS:
@@ -149,7 +149,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config["parents"], config['attribute'])):
                 errors.append(Error('sec_https', au, file, repr(au),
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
             
         # check ssl/tls policy
         for policy in SecurityVisitor.__SSL_TLS_POLICY:
@@ -157,7 +156,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, policy['parents'], policy['attribute'])):
                 errors.append(Error('sec_ssl_tls_policy', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{policy['msg']}'."))
-                break
         
         # check dns without dnssec
         for config in SecurityVisitor.__DNSSEC_CONFIGS:
@@ -165,7 +163,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_dnssec', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
 
         # check public ip
         for config in SecurityVisitor.__PUBLIC_IP_CONFIGS:
@@ -173,12 +170,10 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_public_ip', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
             elif (config['required'] == "must_not_exist" and au.type in config['au_type']):
                 a = check_required_attribute(au.attributes, config['parents'], config['attribute'])
                 if a:
                     errors.append(Error('sec_public_ip', a, file, repr(a)))
-                    break 
 
         # check insecure access control
         if (au.type == "resource.aws_api_gateway_method"):
@@ -222,7 +217,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_access_control', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
 
         # check authentication
         if (au.type == "resource.google_sql_database_instance"):
@@ -239,7 +233,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_authentication', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
         
         # check missing encryption
         if (au.type == "resource.aws_s3_bucket"):
@@ -269,7 +262,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_missing_encryption', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
 
         # check firewall misconfiguration
         for config in SecurityVisitor.__FIREWALL_CONFIGS:
@@ -277,7 +269,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_firewall_misconfig', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
 
         # check missing threats detection and alerts
         for config in SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS:
@@ -285,12 +276,10 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_threats_detection_alerts', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
             elif (config['required'] == "must_not_exist" and au.type in config['au_type']):
                 a = check_required_attribute(au.attributes, config['parents'], config['attribute'])
                 if a:
                     errors.append(Error('sec_threats_detection_alerts', a, file, repr(a)))
-                    break 
 
         # check weak password/key policy
         for policy in SecurityVisitor.__PASSWORD_KEY_POLICY:
@@ -298,7 +287,6 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, policy['parents'], policy['attribute'])):
                 errors.append(Error('sec_weak_password_key_policy', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{policy['msg']}'."))
-                break
 
         # check sensitive action by IAM
         if (au.type == "data.aws_iam_policy_document"):
@@ -361,8 +349,53 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
                 errors.append(Error('sec_key_management', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
-                break
 
+        # check network security rules
+        if (au.type == "resource.azurerm_network_security_rule"):
+            access = check_required_attribute(au.attributes, [""], "access")
+            if (access and access.value.lower() == "allow"):
+                protocol = check_required_attribute(au.attributes, [""], "protocol")
+                if (protocol and protocol.value.lower() == "udp"):
+                    errors.append(Error('sec_network_security_rules', access, file, repr(access)))
+                elif (protocol and protocol.value.lower() == "tcp"):
+                    dest_port_range = check_required_attribute(au.attributes, [""], "destination_port_range")
+                    dest_port_ranges = check_required_attribute(au.attributes, [""], "destination_port_ranges[0]")
+                    port = False
+                    if (dest_port_range and dest_port_range.value.lower() in ["22", "3389", "*"]):
+                        port = True
+                    if dest_port_ranges:
+                        i = 1
+                        while dest_port_ranges:
+                            if dest_port_ranges.value.lower() in ["22", "3389", "*"]:
+                                port = True
+                                break
+                            i += 1
+                            dest_port_ranges = check_required_attribute(au.attributes, [""], f"destination_port_ranges[{i}]")
+                    if port:
+                        source_address_prefix = check_required_attribute(au.attributes, [""], "source_address_prefix")
+                        if (source_address_prefix and (source_address_prefix.value.lower() in ["*", "/0", "internet", "any"] 
+                            or re.match(r'^0.0.0.0', source_address_prefix.value.lower()))):
+                            errors.append(Error('sec_network_security_rules', source_address_prefix, file, repr(source_address_prefix)))
+        elif (au.type == "resource.azurerm_network_security_group"):
+            access = check_required_attribute(au.attributes, ["security_rule"], "access")
+            if (access and access.value.lower() == "allow"):
+                protocol = check_required_attribute(au.attributes, ["security_rule"], "protocol")
+                if (protocol and protocol.value.lower() == "udp"):
+                    errors.append(Error('sec_network_security_rules', access, file, repr(access)))
+                elif (protocol and protocol.value.lower() == "tcp"):
+                    dest_port_range = check_required_attribute(au.attributes, ["security_rule"], "destination_port_range")
+                    if (dest_port_range and dest_port_range.value.lower() in ["22", "3389", "*"]):
+                        source_address_prefix = check_required_attribute(au.attributes, [""], "source_address_prefix")
+                        if (source_address_prefix and (source_address_prefix.value.lower() in ["*", "/0", "internet", "any"] 
+                            or re.match(r'^0.0.0.0', source_address_prefix.value.lower()))):
+                            errors.append(Error('sec_network_security_rules', source_address_prefix, file, repr(source_address_prefix)))
+
+        for rule in SecurityVisitor.__NETWORK_SECURITY_RULES:
+            if (rule['required'] == "yes" and au.type in rule['au_type'] 
+                and not check_required_attribute(au.attributes, rule['parents'], rule['attribute'])):
+                errors.append(Error('sec_network_security_rules', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{rule['msg']}'."))
+            
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
@@ -466,7 +499,7 @@ class SecurityVisitor(RuleVisitor):
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
             if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), name) 
-                and name not in SecurityVisitor.__SECRETS_WHITELIST):
+                and name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST):
                 if not has_variable:
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
@@ -512,7 +545,7 @@ class SecurityVisitor(RuleVisitor):
 
         for item in SecurityVisitor.__MISC_SECRETS:
             if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name) 
-                    and name not in SecurityVisitor.__SECRETS_WHITELIST and len(value) > 0 and not has_variable):
+                    and name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST and len(value) > 0 and not has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         for item in SecurityVisitor.__SENSITIVE_DATA:
@@ -678,6 +711,13 @@ class SecurityVisitor(RuleVisitor):
             and value == "alias/aws/sqs") or  (atomic_unit.type == "resource.aws_sns_queue"
             and value == "alias/aws/sns"))):
             errors.append(Error('sec_key_management', c, file, repr(c)))
+
+        for rule in SecurityVisitor.__NETWORK_SECURITY_RULES:
+            if (name == rule['attribute'] and atomic_unit.type in rule['au_type']
+                and parent_name in rule['parents'] and value.lower() not in rule['values']
+                and rule['values'] != [""]):
+                errors.append(Error('sec_network_security_rules', c, file, repr(c)))
+                break
 
         return errors
 

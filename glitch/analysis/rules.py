@@ -27,7 +27,8 @@ class Error():
             'sec_threats_detection_alerts': "Missing Threats Detection/Alerts - Developers should enable threats detection and alerts when it is possible.",
             'sec_weak_password_key_policy': "Weak Password/Key Policy - Developers should favor the usage of strong password/key requirements and configurations. (CWE-521).",
             'sec_sensitive_iam_action': "Sensitive Action by IAM - Developers should use the principle of least privilege when defining IAM policies.",
-            'sec_key_management': "Key Management - Developers should use well configured Customer Managed Keys (CMK) for encryption."
+            'sec_key_management': "Key Management - Developers should use well configured Customer Managed Keys (CMK) for encryption.",
+            'sec_network_security_rules': "Network Security Rules - Developers should enforce that only secure network rules are being used."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
@@ -78,7 +79,7 @@ class Error():
                     f"{line}\n" 
 
     def __hash__(self):
-        return hash((self.code, self.path, self.line))
+        return hash((self.code, self.path, self.line, self.opt_msg))
 
     def __eq__(self, other):
         if not isinstance(other, type(self)): return NotImplemented
