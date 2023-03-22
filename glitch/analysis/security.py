@@ -51,6 +51,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__FIREWALL_CONFIGS = json.loads(config['security']['firewall'])
         SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS = json.loads(config['security']['missing_threats_detection_alerts'])
         SecurityVisitor.__PASSWORD_KEY_POLICY = json.loads(config['security']['password_key_policy'])
+        SecurityVisitor.__KEY_MANAGEMENT = json.loads(config['security']['key_management'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -241,6 +242,28 @@ class SecurityVisitor(RuleVisitor):
                 break
         
         # check missing encryption
+        if (au.type == "resource.aws_s3_bucket"):
+            r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", "bucket",
+                "${aws_s3_bucket." + f"{au.name}" + ".id}", [""])
+            if not r:
+                errors.append(Error('sec_missing_encryption', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
+                        f"associated to an 'aws_s3_bucket' resource."))
+            else:
+                server_side_encryption = check_required_attribute(r.attributes, ["rule"], "apply_server_side_encryption_by_default") 
+                if server_side_encryption:
+                    sse_algorithm = check_required_attribute(server_side_encryption.keyvalues, [""], "sse_algorithm")
+                    if not sse_algorithm:
+                        errors.append(Error('sec_missing_encryption', au, file, repr(au), 
+                            f"Suggestion: check for a required attribute with name " + 
+                            f"'rule.apply_server_side_encryption_by_default.sse_algorithm'."))
+                    elif (sse_algorithm and sse_algorithm.value.lower() not in ["aes256", "aws:kms"]):
+                        errors.append(Error('sec_missing_encryption', sse_algorithm, file, repr(sse_algorithm)))
+                else:
+                    errors.append(Error('sec_missing_encryption', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name " + 
+                        f"'rule.apply_server_side_encryption_by_default.sse_algorithm'."))
+
         for config in SecurityVisitor.__MISSING_ENCRYPTION:
             if (config['required'] == "yes" and au.type in config['au_type']
                 and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
@@ -279,28 +302,66 @@ class SecurityVisitor(RuleVisitor):
 
         # check sensitive action by IAM
         if (au.type == "data.aws_iam_policy_document"):
-            allow = check_required_attribute(au.attributes, "statement", "effect")
+            allow = check_required_attribute(au.attributes, ["statement"], "effect")
             if ((allow and allow.value.lower() == "allow") or (not allow)):
                 sensitive_action = False
                 i = 0
-                action = check_required_attribute(au.attributes, "statement", f"actions[{i}]")
+                action = check_required_attribute(au.attributes, ["statement"], f"actions[{i}]")
                 while action:
                     if action.value.lower() in ["s3:*", "s3:getobject"]:
                         sensitive_action = True
                         break
                     i += 1
-                    action = check_required_attribute(au.attributes, "statement", f"actions[{i}]")
+                    action = check_required_attribute(au.attributes, ["statement"], f"actions[{i}]")
                 sensitive_resource = False
                 i = 0
-                resource = check_required_attribute(au.attributes, "statement", f"resources[{i}]")
+                resource = check_required_attribute(au.attributes, ["statement"], f"resources[{i}]")
                 while resource:
                     if resource.value.lower() in ["*"]:
                         sensitive_resource = True
                         break
                     i += 1
-                    resource = check_required_attribute(au.attributes, "statement", f"resources[{i}]")
+                    resource = check_required_attribute(au.attributes, ["statement"], f"resources[{i}]")
                 if (sensitive_action and sensitive_resource):
                     errors.append(Error('sec_sensitive_iam_action', action, file, repr(action)))
+
+        # check key management
+        if (au.type == "resource.aws_s3_bucket"):
+            r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", "bucket",
+                "${aws_s3_bucket." + f"{au.name}" + ".id}", [""])
+            if not r:
+                errors.append(Error('sec_key_management', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
+                        f"associated to an 'aws_s3_bucket' resource."))
+            else:
+                server_side_encryption = check_required_attribute(r.attributes, ["rule"], "apply_server_side_encryption_by_default") 
+                if server_side_encryption:
+                    print(f"keyvalues: {server_side_encryption.keyvalues}")
+                    key_id = check_required_attribute(server_side_encryption.keyvalues, [""], "kms_master_key_id")
+                    print(f"key_id: {key_id}")
+                    if not key_id:
+                        errors.append(Error('sec_key_management', au, file, repr(au), 
+                            f"Suggestion: check for a required attribute with name " + 
+                            f"'rule.apply_server_side_encryption_by_default.kms_master_key_id'."))
+                    elif (key_id and key_id.value.lower() == ""):
+                        errors.append(Error('sec_key_management', key_id, file, repr(key_id)))
+                else:
+                    errors.append(Error('sec_key_management', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name " + 
+                        f"'rule.apply_server_side_encryption_by_default.kms_master_key_id'."))
+        elif (au.type == "resource.azurerm_storage_account"):
+            if not get_associated_au(self.code, "resource.azurerm_storage_account_customer_managed_key", "storage_account_id",
+                "${azurerm_storage_account." + f"{au.name}" + ".id}", [""]):
+                errors.append(Error('sec_key_management', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'azurerm_storage_account_customer_managed_key' " + 
+                        f"associated to an 'azurerm_storage_account' resource."))
+
+        for config in SecurityVisitor.__KEY_MANAGEMENT:
+            if (config['required'] == "yes" and au.type in config['au_type'] 
+                and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
+                errors.append(Error('sec_key_management', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{config['msg']}'."))
+                break
 
         return errors
 
@@ -594,6 +655,29 @@ class SecurityVisitor(RuleVisitor):
                     (policy['logic'] == "lte" and value.isnumeric() and int(value) > int(policy['values'][0]))):
                     errors.append(Error('sec_weak_password_key_policy', c, file, repr(c)))
                     break
+
+        for config in SecurityVisitor.__KEY_MANAGEMENT:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]):
+                if ("any_not_empty" in config['values'] and value.lower() == ""):
+                    errors.append(Error('sec_key_management', c, file, repr(c)))
+                    break
+                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                    errors.append(Error('sec_key_management', c, file, repr(c)))
+                    break
+
+        if (name == "rotation_period" and atomic_unit.type == "resource.google_kms_crypto_key"):
+            expr1 = r'\d+\.\d{0,9}s'
+            expr2 = r'\d+s'
+            if (re.search(expr1, value) or re.search(expr2, value)):
+                if (int(value.split("s")[0]) > 7776000):
+                    errors.append(Error('sec_key_management', c, file, repr(c)))
+            else:
+                errors.append(Error('sec_key_management', c, file, repr(c)))
+        elif (name == "kms_master_key_id" and ((atomic_unit.type == "resource.aws_sqs_queue"
+            and value == "alias/aws/sqs") or  (atomic_unit.type == "resource.aws_sns_queue"
+            and value == "alias/aws/sns"))):
+            errors.append(Error('sec_key_management', c, file, repr(c)))
 
         return errors
 
