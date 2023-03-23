@@ -28,7 +28,8 @@ class Error():
             'sec_weak_password_key_policy': "Weak Password/Key Policy - Developers should favor the usage of strong password/key requirements and configurations. (CWE-521).",
             'sec_sensitive_iam_action': "Sensitive Action by IAM - Developers should use the principle of least privilege when defining IAM policies.",
             'sec_key_management': "Key Management - Developers should use well configured Customer Managed Keys (CMK) for encryption.",
-            'sec_network_security_rules': "Network Security Rules - Developers should enforce that only secure network rules are being used."
+            'sec_network_security_rules': "Network Security Rules - Developers should enforce that only secure network rules are being used.",
+            'sec_permission_iam_policies': "Permission of IAM Policies - Developers should be aware of unwanted permissions of IAM policies."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",

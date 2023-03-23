@@ -53,6 +53,8 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__PASSWORD_KEY_POLICY = json.loads(config['security']['password_key_policy'])
         SecurityVisitor.__KEY_MANAGEMENT = json.loads(config['security']['key_management'])
         SecurityVisitor.__NETWORK_SECURITY_RULES = json.loads(config['security']['network_security_rules'])
+        SecurityVisitor.__PERMISSION_IAM_POLICIES = json.loads(config['security']['permission_iam_policies'])
+        SecurityVisitor.__GOOGLE_IAM_MEMBER = json.loads(config['security']['google_iam_member_resources'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -75,42 +77,42 @@ class SecurityVisitor(RuleVisitor):
 
                     break
 
-        def get_associated_au(c, type: str, attribute_name: str , attribute_value: str, attribute_parents: list):
+        def get_associated_au(c, type: str, attribute_name: str , pattern, attribute_parents: list):
             if isinstance(c, Project):
                 module_name = os.path.basename(os.path.dirname(file))
                 for m in self.code.modules:
                     if m.name == module_name:
-                        return get_associated_au(m, type, attribute_name, attribute_value, attribute_parents)
+                        return get_associated_au(m, type, attribute_name, pattern, attribute_parents)
             elif isinstance(c, Module):
                 for ub in c.blocks:
-                    au = get_associated_au(ub, type, attribute_name, attribute_value, attribute_parents)
+                    au = get_associated_au(ub, type, attribute_name, pattern, attribute_parents)
                     if au:
                         return au
             else:
                 for au in c.atomic_units:
                     if (au.type == type and check_required_attribute(
-                            au.attributes, attribute_parents, attribute_name, attribute_value)):
+                            au.attributes, attribute_parents, attribute_name, None, pattern)):
                         return au
             return None
 
-        def get_attributes_with_name_and_value(attributes, parents, name, value = None):
+        def get_attributes_with_name_and_value(attributes, parents, name, value = None, pattern = None):
             aux = []
             for a in attributes:
                 if a.name.split('dynamic')[-1] == name and parents == [""]:
-                    if value and a.value.lower() == value:
+                    if ((value and a.value.lower() == value) or (pattern and re.match(pattern, a.value.lower()))):
                         aux.append(a)
-                    elif value and a.value.lower() != value:
+                    elif ((value and a.value.lower() != value) or (pattern and not re.match(pattern, a.value.lower()))):
                         continue
-                    elif not value:
+                    elif (not value and not pattern):
                         aux.append(a)
                 elif a.name.split('dynamic.')[-1] in parents:
-                    aux += get_attributes_with_name_and_value(a.keyvalues, [""], name, value)
+                    aux += get_attributes_with_name_and_value(a.keyvalues, [""], name, value, pattern)
                 elif a.keyvalues != []:
-                    aux += get_attributes_with_name_and_value(a.keyvalues, parents, name, value)
+                    aux += get_attributes_with_name_and_value(a.keyvalues, parents, name, value, pattern)
             return aux
 
-        def check_required_attribute(attributes, parents, name, value = None):
-            attributes = get_attributes_with_name_and_value(attributes, parents, name, value)
+        def check_required_attribute(attributes, parents, name, value = None, pattern = None):
+            attributes = get_attributes_with_name_and_value(attributes, parents, name, value, pattern)
             if attributes != []:
                 return attributes[0]
             else:
@@ -206,8 +208,9 @@ class SecurityVisitor(RuleVisitor):
         elif (au.type == "resource.google_sql_database_instance"):
             check_database_flags('sec_access_control', "cross db ownership chaining", "off")
         elif (au.type == "resource.aws_s3_bucket"):
-            if not get_associated_au(self.code, "resource.aws_s3_bucket_public_access_block", "bucket",
-                "${aws_s3_bucket." + f"{au.name}" + ".id}", [""]):
+            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
+            if not get_associated_au(self.code, "resource.aws_s3_bucket_public_access_block", "bucket", pattern, [""]):
                 errors.append(Error('sec_access_control', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'aws_s3_bucket_public_access_block' " + 
                         f"associated to an 'aws_s3_bucket' resource."))
@@ -222,8 +225,9 @@ class SecurityVisitor(RuleVisitor):
         if (au.type == "resource.google_sql_database_instance"):
             check_database_flags('sec_authentication', "contained database authentication", "off")
         elif (au.type == "resource.aws_iam_group"):
-            if not get_associated_au(self.code, "resource.aws_iam_group_policy", "group",
-                "${aws_iam_group." + f"{au.name}" + ".name}", [""]):
+            expr = "\${aws_iam_group\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
+            if not get_associated_au(self.code, "resource.aws_iam_group_policy", "group", pattern, [""]):
                 errors.append(Error('sec_authentication', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'aws_iam_group_policy' associated to an " +
                         f"'aws_iam_group' resource."))
@@ -236,8 +240,10 @@ class SecurityVisitor(RuleVisitor):
         
         # check missing encryption
         if (au.type == "resource.aws_s3_bucket"):
-            r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", "bucket",
-                "${aws_s3_bucket." + f"{au.name}" + ".id}", [""])
+            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
+            r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", 
+                "bucket", pattern, [""])
             if not r:
                 errors.append(Error('sec_missing_encryption', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
@@ -315,8 +321,10 @@ class SecurityVisitor(RuleVisitor):
 
         # check key management
         if (au.type == "resource.aws_s3_bucket"):
+            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
             r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", "bucket",
-                "${aws_s3_bucket." + f"{au.name}" + ".id}", [""])
+                pattern, [""])
             if not r:
                 errors.append(Error('sec_key_management', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
@@ -338,8 +346,10 @@ class SecurityVisitor(RuleVisitor):
                         f"Suggestion: check for a required attribute with name " + 
                         f"'rule.apply_server_side_encryption_by_default.kms_master_key_id'."))
         elif (au.type == "resource.azurerm_storage_account"):
+            expr = "\${azurerm_storage_account\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
             if not get_associated_au(self.code, "resource.azurerm_storage_account_customer_managed_key", "storage_account_id",
-                "${azurerm_storage_account." + f"{au.name}" + ".id}", [""]):
+                pattern, [""]):
                 errors.append(Error('sec_key_management', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'azurerm_storage_account_customer_managed_key' " + 
                         f"associated to an 'azurerm_storage_account' resource."))
@@ -395,13 +405,21 @@ class SecurityVisitor(RuleVisitor):
                 and not check_required_attribute(au.attributes, rule['parents'], rule['attribute'])):
                 errors.append(Error('sec_network_security_rules', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{rule['msg']}'."))
+        
+        # check permission of IAM policies
+        if (au.type == "resource.aws_iam_user"):
+            expr = "\${aws_iam_user\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
+            assoc_au = get_associated_au(self.code, "resource.aws_iam_user_policy", "user", pattern, [""])
+            if assoc_au:
+                a = check_required_attribute(assoc_au.attributes, [""], "user", None, pattern) 
+                errors.append(Error('sec_permission_iam_policies', a, file, repr(a)))
             
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
         return []
 
-    # FIXME attribute and variables need to have superclass
     def __check_keyvalue(self, c: CodeElement, name: str, 
             value: str, has_variable: bool, file: str, atomic_unit: AtomicUnit = None, parent_name: str = ""):
         errors = []
@@ -612,7 +630,7 @@ class SecurityVisitor(RuleVisitor):
             errors.append(Error('sec_access_control', c, file, repr(c)))
         elif (name == "email" and parent_name == "service_account" 
             and atomic_unit.type == "resource.google_compute_instance"
-            and re.search(r"\d+-compute@developer.gserviceaccount.com", value)):
+            and re.search(r".-compute@developer.gserviceaccount.com", value)):
             errors.append(Error('sec_access_control', c, file, repr(c)))
 
         for config in SecurityVisitor.__ACCESS_CONTROL_CONFIGS:
@@ -718,6 +736,21 @@ class SecurityVisitor(RuleVisitor):
                 and rule['values'] != [""]):
                 errors.append(Error('sec_network_security_rules', c, file, repr(c)))
                 break
+
+        if ((name == "member" or name.split('[')[0] == "members") 
+            and atomic_unit.type in SecurityVisitor.__GOOGLE_IAM_MEMBER
+            and (re.search(r".-compute@developer.gserviceaccount.com", value) or 
+                 re.search(r".@appspot.gserviceaccount.com", value) or
+                 re.search(r"user:", value))):
+            errors.append(Error('sec_permission_iam_policies', c, file, repr(c)))
+
+        for config in SecurityVisitor.__PERMISSION_IAM_POLICIES:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]):
+                if ((config['logic'] == "equal" and value.lower() not in config['values'])
+                    or (config['logic'] == "diff" and value.lower() in config['values'])):
+                    errors.append(Error('sec_permission_iam_policies', c, file, repr(c)))
+                    break
 
         return errors
 
