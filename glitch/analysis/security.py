@@ -55,6 +55,8 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__NETWORK_SECURITY_RULES = json.loads(config['security']['network_security_rules'])
         SecurityVisitor.__PERMISSION_IAM_POLICIES = json.loads(config['security']['permission_iam_policies'])
         SecurityVisitor.__GOOGLE_IAM_MEMBER = json.loads(config['security']['google_iam_member_resources'])
+        SecurityVisitor.__LOGGING = json.loads(config['security']['logging'])
+        SecurityVisitor.__GOOGLE_SQL_DATABASE_LOG_FLAGS = json.loads(config['security']['google_sql_database_log_flags'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -98,7 +100,7 @@ class SecurityVisitor(RuleVisitor):
         def get_attributes_with_name_and_value(attributes, parents, name, value = None, pattern = None):
             aux = []
             for a in attributes:
-                if a.name.split('dynamic')[-1] == name and parents == [""]:
+                if a.name.split('dynamic.')[-1] == name and parents == [""]:
                     if ((value and a.value.lower() == value) or (pattern and re.match(pattern, a.value.lower()))):
                         aux.append(a)
                     elif ((value and a.value.lower() != value) or (pattern and not re.match(pattern, a.value.lower()))):
@@ -118,7 +120,7 @@ class SecurityVisitor(RuleVisitor):
             else:
                 return None
 
-        def check_database_flags(smell: str, flag_name: str, safe_value: str):
+        def check_database_flags(smell: str, flag_name: str, safe_value: str, required_flag = True):
             database_flags = get_attributes_with_name_and_value(au.attributes, ["settings"], "database_flags")
             found_flag = False
             if database_flags != []:
@@ -130,11 +132,11 @@ class SecurityVisitor(RuleVisitor):
                         if value and value.value.lower() != safe_value:
                             errors.append(Error(smell, value, file, repr(value)))
                             break
-                        elif not value:
-                            errors.append(Error(smell, au, file, repr(au), 
+                        elif not value and required_flag:
+                            errors.append(Error(smell, flag, file, repr(flag), 
                                 f"Suggestion: check for a required attribute with name 'value'."))
                             break
-            if not found_flag:
+            if not found_flag and required_flag:
                 errors.append(Error(smell, au, file, repr(au), 
                     f"Suggestion: check for a required flag '{flag_name}'."))
         
@@ -414,6 +416,120 @@ class SecurityVisitor(RuleVisitor):
             if assoc_au:
                 a = check_required_attribute(assoc_au.attributes, [""], "user", None, pattern) 
                 errors.append(Error('sec_permission_iam_policies', a, file, repr(a)))
+
+        # check logging
+        if (au.type == "resource.aws_eks_cluster"):
+            enabled_cluster_log_types = check_required_attribute(au.attributes, [""], "enabled_cluster_log_types[0]")
+            types = ["api", "authenticator", "audit", "scheduler", "controllermanager"]
+            if enabled_cluster_log_types:
+                i = 0
+                while enabled_cluster_log_types:
+                    a = enabled_cluster_log_types
+                    if enabled_cluster_log_types.value.lower() in types:
+                        types.remove(enabled_cluster_log_types.value.lower())
+                    i += 1
+                    enabled_cluster_log_types = check_required_attribute(au.attributes, [""], f"enabled_cluster_log_types[{i}]")
+                if types != []:
+                    errors.append(Error('sec_logging', a, file, repr(a), 
+                    f"Suggestion: check for additional log type(s) {types}."))
+            else:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'enabled_cluster_log_types'."))
+        elif (au.type == "resource.aws_msk_cluster"):
+            broker_logs = check_required_attribute(au.attributes, ["logging_info"], "broker_logs")
+            if broker_logs:
+                active = False
+                logs_type = ["cloudwatch_logs", "firehose", "s3"]
+                a_list = []
+                for type in logs_type:
+                    log = check_required_attribute(broker_logs.keyvalues, [""], type)
+                    if log:
+                        enabled = check_required_attribute(log.keyvalues, [""], "enabled")
+                        if enabled and f"{enabled.value}".lower() == "true":
+                            active = True
+                        elif enabled and f"{enabled.value}".lower() != "true":
+                            a_list.append(enabled)
+                if not active and a_list == []:
+                    errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name " +
+                    f"'logging_info.broker_logs.[cloudwatch_logs/firehose/s3].enabled'."))
+                if not active and a_list != []:
+                    for a in a_list:
+                        errors.append(Error('sec_logging', a, file, repr(a)))
+            else:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name " +
+                    f"'logging_info.broker_logs.[cloudwatch_logs/firehose/s3].enabled'."))
+        elif (au.type == "resource.aws_neptune_cluster"):
+            active = False
+            enable_cloudwatch_logs_exports = check_required_attribute(au.attributes, [""], f"enable_cloudwatch_logs_exports[0]")
+            if enable_cloudwatch_logs_exports:
+                i = 0
+                while enable_cloudwatch_logs_exports:
+                    a = enable_cloudwatch_logs_exports
+                    if enable_cloudwatch_logs_exports.value.lower() == "audit":
+                        active  = True
+                        break
+                    i += 1
+                    enable_cloudwatch_logs_exports = check_required_attribute(au.attributes, [""], f"enable_cloudwatch_logs_exports[{i}]")
+                if not active:
+                    errors.append(Error('sec_logging', a, file, repr(a)))
+            else:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'enable_cloudwatch_logs_exports'."))
+        elif (au.type == "resource.azurerm_mssql_server"):
+            expr = "\${azurerm_mssql_server\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
+            assoc_au = get_associated_au(self.code, "resource.azurerm_mssql_server_extended_auditing_policy", 
+                "server_id", pattern, [""])
+            if not assoc_au:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'azurerm_mssql_server_extended_auditing_policy' " + 
+                        f"associated to an 'azurerm_mssql_server' resource."))
+        elif (au.type == "resource.azurerm_mssql_database"):
+            expr = "\${azurerm_mssql_database\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
+            assoc_au = get_associated_au(self.code, "resource.azurerm_mssql_database_extended_auditing_policy", 
+                "database_id", pattern, [""])
+            if not assoc_au:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'azurerm_mssql_database_extended_auditing_policy' " + 
+                        f"associated to an 'azurerm_mssql_database' resource."))
+        elif (au.type == "resource.azurerm_postgresql_configuration"):
+            name = check_required_attribute(au.attributes, [""], "name")
+            value = check_required_attribute(au.attributes, [""], "value")
+            if (name and name.value.lower() in ["log_connections", "connection_throttling", "log_checkpoints"] 
+                and value and value.value.lower() != "on"):
+                errors.append(Error('sec_logging', value, file, repr(value)))
+        elif (au.type == "resource.azurerm_monitor_log_profile"):
+            categories = check_required_attribute(au.attributes, [""], "categories[0]")
+            activities = [ "action", "delete", "write"]
+            if categories:
+                i = 0
+                while categories:
+                    a = categories
+                    if categories.value.lower() in activities:
+                        activities.remove(categories.value.lower())
+                    i += 1
+                    categories = check_required_attribute(au.attributes, [""], f"categories[{i}]")
+                if activities != []:
+                    errors.append(Error('sec_logging', a, file, repr(a), 
+                    f"Suggestion: check for additional activity type(s) {activities}."))
+            else:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'categories'."))
+        elif (au.type == "resource.google_sql_database_instance"):
+            for flag in SecurityVisitor.__GOOGLE_SQL_DATABASE_LOG_FLAGS:
+                required_flag = True
+                if flag['required'] == "no":
+                    required_flag = False
+                check_database_flags('sec_logging', flag['flag_name'], flag['value'], required_flag)
+
+        for config in SecurityVisitor.__LOGGING:
+            if (config['required'] == "yes" and au.type in config['au_type'] 
+                and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{config['msg']}'."))
             
         return errors
 
@@ -750,6 +866,35 @@ class SecurityVisitor(RuleVisitor):
                 if ((config['logic'] == "equal" and value.lower() not in config['values'])
                     or (config['logic'] == "diff" and value.lower() in config['values'])):
                     errors.append(Error('sec_permission_iam_policies', c, file, repr(c)))
+                    break
+
+        if (name == "cloud_watch_logs_group_arn" and atomic_unit.type == "resource.aws_cloudtrail"):
+            if re.match(r"^${aws_cloudwatch_log_group\..", value):
+                aws_cloudwatch_log_group_name = value.split('.')[1]
+                if not get_au(aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
+                    errors.append(Error('sec_logging', c, file, repr(c)))
+            else:
+                errors.append(Error('sec_logging', c, file, repr(c)))
+        elif (((name == "retention_in_days" and parent_name == "" 
+            and atomic_unit.type in ["resource.azurerm_mssql_database_extended_auditing_policy", 
+            "resource.azurerm_mssql_server_extended_auditing_policy"]) 
+            or (name == "days" and parent_name == "retention_policy" 
+            and atomic_unit.type == "resource.azurerm_network_watcher_flow_log")) 
+            and ((not value.isnumeric()) or (value.isnumeric() and int(value) < 90))):
+            errors.append(Error('sec_logging', c, file, repr(c)))
+        elif (name == "days" and parent_name == "retention_policy" 
+            and atomic_unit.type == "resource.azurerm_monitor_log_profile" 
+            and (not value.isnumeric() or (value.isnumeric() and int(value) < 365))):
+            errors.append(Error('sec_logging', c, file, repr(c)))
+
+        for config in SecurityVisitor.__LOGGING:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]):
+                if ("any_not_empty" in config['values'] and value.lower() == ""):
+                    errors.append(Error('sec_logging', c, file, repr(c)))
+                    break
+                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                    errors.append(Error('sec_logging', c, file, repr(c)))
                     break
 
         return errors
