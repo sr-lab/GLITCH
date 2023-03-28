@@ -57,6 +57,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__GOOGLE_IAM_MEMBER = json.loads(config['security']['google_iam_member_resources'])
         SecurityVisitor.__LOGGING = json.loads(config['security']['logging'])
         SecurityVisitor.__GOOGLE_SQL_DATABASE_LOG_FLAGS = json.loads(config['security']['google_sql_database_log_flags'])
+        SecurityVisitor.__POSSIBLE_ATTACHED_RESOURCES = json.loads(config['security']['possible_attached_resources_aws_route53'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -78,6 +79,23 @@ class SecurityVisitor(RuleVisitor):
                         errors.append(Error('sec_no_int_check', au, file, repr(a)))
 
                     break
+
+        def get_au(c, name: str, type: str):
+            if isinstance(c, Project):
+                module_name = os.path.basename(os.path.dirname(file))
+                for m in self.code.modules:
+                    if m.name == module_name:
+                        return get_au(m, name, type)
+            elif isinstance(c, Module):
+                for ub in c.blocks:
+                    au = get_au(ub, name, type)
+                    if au:
+                        return au
+            else:
+                for au in c.atomic_units:
+                    if (au.type == type and au.name == name):
+                        return au
+            return None
 
         def get_associated_au(c, type: str, attribute_name: str , pattern, attribute_parents: list):
             if isinstance(c, Project):
@@ -531,6 +549,27 @@ class SecurityVisitor(RuleVisitor):
                 errors.append(Error('sec_logging', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
             
+        # check attached resource
+        def check_attached_resource(attributes, resource_types):
+            for a in attributes:
+                if a.value != None:
+                    for resource_type in resource_types:
+                        if (f"{a.value}".lower().startswith("${" + f"{resource_type}.") 
+                            or f"{a.value}".lower().startswith(f"{resource_type}.")):
+                            resource_name = a.value.lower().split(".")[1]
+                            if get_au(self.code, resource_name, f"resource.{resource_type}"):
+                                return True
+                elif a.value == None:
+                    attached = check_attached_resource(a.keyvalues, resource_types)
+                    if attached:
+                        return True
+            return False
+
+        if (au.type == "resource.aws_route53_record"):
+            type_A = check_required_attribute(au.attributes, [""], "type", "a")
+            if type_A and not check_attached_resource(au.attributes, SecurityVisitor.__POSSIBLE_ATTACHED_RESOURCES):
+                errors.append(Error('sec_attached_resource', au, file, repr(au)))
+        
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:

@@ -30,7 +30,8 @@ class Error():
             'sec_key_management': "Key Management - Developers should use well configured Customer Managed Keys (CMK) for encryption.",
             'sec_network_security_rules': "Network Security Rules - Developers should enforce that only secure network rules are being used.",
             'sec_permission_iam_policies': "Permission of IAM Policies - Developers should be aware of unwanted permissions of IAM policies.",
-            'sec_logging': "Logging - Logs should be enabled and securely configured to help monitoring and preventing security problems."
+            'sec_logging': "Logging - Logs should be enabled and securely configured to help monitoring and preventing security problems.",
+            'sec_attached_resource': "Attached Resource - Ensure that Route53 A records point to resources part of your Account rather than just random IP addresses."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
