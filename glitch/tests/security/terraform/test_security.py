@@ -186,5 +186,63 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_access_control", "sec_access_control"], [37, 44]
         )
 
+    def test_terraform_invalid_ip_binding(self):
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/aws-ec2-vpc-no-public-egress-sgr.tf",
+            2, ["sec_invalid_bind", "sec_invalid_bind"], [5, 20]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/aws-ec2-vpc-no-public-ingress-acl.tf",
+            1, ["sec_invalid_bind"], [7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/aws-ec2-vpc-no-public-ingress-sgr.tf",
+            2, ["sec_invalid_bind", "sec_invalid_bind"], [4, 17]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/azure-network-no-public-egress.tf",
+            1, ["sec_invalid_bind"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/azure-network-no-public-ingress.tf",
+            1, ["sec_invalid_bind"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/cloud-sql-database-publicly-exposed.tf",
+            1, ["sec_invalid_bind"], [14]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/compute-firewall-inbound-rule-public-ip.tf",
+            1, ["sec_invalid_bind"], [9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/compute-firewall-outbound-rule-public-ip.tf",
+            1, ["sec_invalid_bind"], [9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/eks-cluster-open-cidr-range.tf",
+            1, ["sec_invalid_bind"], [11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/gke-control-plane-publicly-accessible.tf",
+            1, ["sec_invalid_bind"], [8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/openstack-networking-no-public-egress.tf",
+            1, ["sec_invalid_bind"], [8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/openstack-networking-no-public-ingress.tf",
+            1, ["sec_invalid_bind"], [8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/public-egress-network-policy.tf",
+            1, ["sec_invalid_bind"], [27]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/invalid-ip-binding/public-ingress-network-policy.tf",
+            1, ["sec_invalid_bind"], [27]
+        )
+
 if __name__ == '__main__':
     unittest.main()
