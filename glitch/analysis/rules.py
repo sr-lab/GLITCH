@@ -31,7 +31,10 @@ class Error():
             'sec_network_security_rules': "Network Security Rules - Developers should enforce that only secure network rules are being used.",
             'sec_permission_iam_policies': "Permission of IAM Policies - Developers should be aware of unwanted permissions of IAM policies.",
             'sec_logging': "Logging - Logs should be enabled and securely configured to help monitoring and preventing security problems.",
-            'sec_attached_resource': "Attached Resource - Ensure that Route53 A records point to resources part of your Account rather than just random IP addresses."
+            'sec_attached_resource': "Attached Resource - Ensure that Route53 A records point to resources part of your account rather than just random IP addresses.",
+            'sec_versioning': "Versioning - Ensure that versioning is enabled so that users can retrieve and restore previous versions.",
+            'sec_naming': "Naming - Ensure storage accounts adhere to the naming rules and every security groups and rules have a description.",
+            'sec_replication': "Replication - Ensure that cross-region replication is enabled to allow copying objects across S3 buckets."
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",

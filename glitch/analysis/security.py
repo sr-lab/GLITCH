@@ -58,6 +58,9 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__LOGGING = json.loads(config['security']['logging'])
         SecurityVisitor.__GOOGLE_SQL_DATABASE_LOG_FLAGS = json.loads(config['security']['google_sql_database_log_flags'])
         SecurityVisitor.__POSSIBLE_ATTACHED_RESOURCES = json.loads(config['security']['possible_attached_resources_aws_route53'])
+        SecurityVisitor.__VERSIONING = json.loads(config['security']['versioning'])
+        SecurityVisitor.__NAMING = json.loads(config['security']['naming'])
+        SecurityVisitor.__REPLICATION = json.loads(config['security']['replication'])
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
@@ -570,6 +573,46 @@ class SecurityVisitor(RuleVisitor):
             if type_A and not check_attached_resource(au.attributes, SecurityVisitor.__POSSIBLE_ATTACHED_RESOURCES):
                 errors.append(Error('sec_attached_resource', au, file, repr(au)))
         
+        # check versioning
+        for config in SecurityVisitor.__VERSIONING:
+            if (config['required'] == "yes" and au.type in config['au_type'] 
+                and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
+                errors.append(Error('sec_versioning', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{config['msg']}'."))
+                
+        # check naming
+        if (au.type == "resource.aws_security_group"):
+            ingress = check_required_attribute(au.attributes, [""], "ingress")
+            egress = check_required_attribute(au.attributes, [""], "egress")
+            if ingress and not check_required_attribute(ingress.keyvalues, [""], "description"):
+                errors.append(Error('sec_naming', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'ingress.description'."))
+            if egress and not check_required_attribute(egress.keyvalues, [""], "description"):
+                errors.append(Error('sec_naming', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'egress.description'."))
+
+        for config in SecurityVisitor.__NAMING:
+            if (config['required'] == "yes" and au.type in config['au_type'] 
+                and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
+                errors.append(Error('sec_naming', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{config['msg']}'."))
+                
+        # check replication
+        if (au.type == "resource.aws_s3_bucket"):
+            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            pattern = re.compile(rf"{expr}")
+            if not get_associated_au(self.code, "resource.aws_s3_bucket_replication_configuration", 
+                "bucket", pattern, [""]):
+                errors.append(Error('sec_replication', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'aws_s3_bucket_replication_configuration' " + 
+                        f"associated to an 'aws_s3_bucket' resource."))
+
+        for config in SecurityVisitor.__REPLICATION:
+            if (config['required'] == "yes" and au.type in config['au_type'] 
+                and not check_required_attribute(au.attributes, config['parents'], config['attribute'])):
+                errors.append(Error('sec_replication', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name '{config['msg']}'."))
+
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
@@ -935,6 +978,35 @@ class SecurityVisitor(RuleVisitor):
                 elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
                     errors.append(Error('sec_logging', c, file, repr(c)))
                     break
+
+        for config in SecurityVisitor.__VERSIONING:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]
+                and value.lower() not in config['values']):
+                errors.append(Error('sec_versioning', c, file, repr(c)))
+                break
+                
+        if (name == "name" and atomic_unit.type in ["resource.azurerm_storage_account"]):
+            pattern = r'^[a-z0-9]{3,24}$'
+            if not re.match(pattern, value):
+                errors.append(Error('sec_naming', c, file, repr(c)))
+
+        for config in SecurityVisitor.__NAMING:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]):
+                if ("any_not_empty" in config['values'] and value.lower() == ""):
+                    errors.append(Error('sec_naming', c, file, repr(c)))
+                    break
+                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                    errors.append(Error('sec_naming', c, file, repr(c)))
+                    break
+
+        for config in SecurityVisitor.__REPLICATION:
+            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]
+                and value.lower() not in config['values']):
+                errors.append(Error('sec_replication', c, file, repr(c)))
+                break
 
         return errors
 
