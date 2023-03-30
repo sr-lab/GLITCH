@@ -506,7 +506,7 @@ class SecurityVisitor(RuleVisitor):
             if not assoc_au:
                 errors.append(Error('sec_logging', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'azurerm_mssql_server_extended_auditing_policy' " + 
-                        f"associated to an 'azurerm_mssql_server' resource."))
+                    f"associated to an 'azurerm_mssql_server' resource."))
         elif (au.type == "resource.azurerm_mssql_database"):
             expr = "\${azurerm_mssql_database\." + f"{au.name}"
             pattern = re.compile(rf"{expr}")
@@ -515,7 +515,7 @@ class SecurityVisitor(RuleVisitor):
             if not assoc_au:
                 errors.append(Error('sec_logging', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'azurerm_mssql_database_extended_auditing_policy' " + 
-                        f"associated to an 'azurerm_mssql_database' resource."))
+                    f"associated to an 'azurerm_mssql_database' resource."))
         elif (au.type == "resource.azurerm_postgresql_configuration"):
             name = check_required_attribute(au.attributes, [""], "name")
             value = check_required_attribute(au.attributes, [""], "value")
@@ -545,6 +545,44 @@ class SecurityVisitor(RuleVisitor):
                 if flag['required'] == "no":
                     required_flag = False
                 check_database_flags('sec_logging', flag['flag_name'], flag['value'], required_flag)
+        elif (au.type == "resource.azurerm_storage_container"):
+            storage_account_name = check_required_attribute(au.attributes, [""], "storage_account_name")
+            if storage_account_name.value.lower().startswith("${azurerm_storage_account."):
+                name = storage_account_name.value.lower().split('.')[1]
+                storage_account_au = get_au(self.code, name, "resource.azurerm_storage_account")
+                if storage_account_au:
+                    expr = "\${azurerm_storage_account\." + f"{name}"
+                    pattern = re.compile(rf"{expr}")
+                    assoc_au = get_associated_au(self.code, "resource.azurerm_log_analytics_storage_insights",
+                        "storage_account_id", pattern, [""])
+                    if assoc_au:
+                        blob_container_names = check_required_attribute(assoc_au.attributes, [""], "blob_container_names[0]")
+                        if blob_container_names:
+                            i = 0
+                            contains_blob_name = False
+                            while blob_container_names:
+                                a = blob_container_names
+                                if blob_container_names.value:
+                                    contains_blob_name = True
+                                    break
+                                i += 1
+                                blob_container_names = check_required_attribute(assoc_au.attributes, [""], f"blob_container_names[{i}]")
+                            if not contains_blob_name:
+                                errors.append(Error('sec_logging', a, file, repr(a)))
+                        else:
+                            errors.append(Error('sec_logging', assoc_au, file, repr(assoc_au), 
+                            f"Suggestion: check for a required attribute with name 'blob_container_names'."))
+                    else:
+                        errors.append(Error('sec_logging', storage_account_au, file, repr(storage_account_au), 
+                            f"Suggestion: check for a required resource 'azurerm_log_analytics_storage_insights' " + 
+                            f"associated to an 'azurerm_storage_account' resource."))
+                else:
+                    errors.append(Error('sec_logging', au, file, repr(au), 
+                        f"Suggestion: 'azurerm_storage_container' resource has to be associated to an " + 
+                        f"'azurerm_storage_account' resource in order to enable logging."))
+            container_access_type = check_required_attribute(au.attributes, [""], "container_access_type")
+            if container_access_type and container_access_type.value.lower() not in ["blob", "private"]:
+                errors.append(Error('sec_logging', container_access_type, file, repr(container_access_type)))
 
         for config in SecurityVisitor.__LOGGING:
             if (config['required'] == "yes" and au.type in config['au_type'] 
