@@ -231,7 +231,7 @@ class SecurityVisitor(RuleVisitor):
         elif (au.type == "resource.google_sql_database_instance"):
             check_database_flags('sec_access_control', "cross db ownership chaining", "off")
         elif (au.type == "resource.aws_s3_bucket"):
-            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            expr = "\${aws_s3_bucket\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             if not get_associated_au(self.code, "resource.aws_s3_bucket_public_access_block", "bucket", pattern, [""]):
                 errors.append(Error('sec_access_control', au, file, repr(au), 
@@ -248,7 +248,7 @@ class SecurityVisitor(RuleVisitor):
         if (au.type == "resource.google_sql_database_instance"):
             check_database_flags('sec_authentication', "contained database authentication", "off")
         elif (au.type == "resource.aws_iam_group"):
-            expr = "\${aws_iam_group\." + f"{au.name}"
+            expr = "\${aws_iam_group\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             if not get_associated_au(self.code, "resource.aws_iam_group_policy", "group", pattern, [""]):
                 errors.append(Error('sec_authentication', au, file, repr(au), 
@@ -263,7 +263,7 @@ class SecurityVisitor(RuleVisitor):
         
         # check missing encryption
         if (au.type == "resource.aws_s3_bucket"):
-            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            expr = "\${aws_s3_bucket\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", 
                 "bucket", pattern, [""])
@@ -347,7 +347,7 @@ class SecurityVisitor(RuleVisitor):
 
         # check key management
         if (au.type == "resource.aws_s3_bucket"):
-            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            expr = "\${aws_s3_bucket\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", "bucket",
                 pattern, [""])
@@ -356,7 +356,7 @@ class SecurityVisitor(RuleVisitor):
                     f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
                         f"associated to an 'aws_s3_bucket' resource."))
         elif (au.type == "resource.azurerm_storage_account"):
-            expr = "\${azurerm_storage_account\." + f"{au.name}"
+            expr = "\${azurerm_storage_account\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             if not get_associated_au(self.code, "resource.azurerm_storage_account_customer_managed_key", "storage_account_id",
                 pattern, [""]):
@@ -418,7 +418,7 @@ class SecurityVisitor(RuleVisitor):
         
         # check permission of IAM policies
         if (au.type == "resource.aws_iam_user"):
-            expr = "\${aws_iam_user\." + f"{au.name}"
+            expr = "\${aws_iam_user\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             assoc_au = get_associated_au(self.code, "resource.aws_iam_user_policy", "user", pattern, [""])
             if assoc_au:
@@ -485,8 +485,25 @@ class SecurityVisitor(RuleVisitor):
             else:
                 errors.append(Error('sec_logging', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name 'enable_cloudwatch_logs_exports'."))
+        elif (au.type == "resource.aws_docdb_cluster"):
+            active = False
+            enabled_cloudwatch_logs_exports = check_required_attribute(au.attributes, [""], f"enabled_cloudwatch_logs_exports[0]")
+            if enabled_cloudwatch_logs_exports:
+                i = 0
+                while enabled_cloudwatch_logs_exports:
+                    a = enabled_cloudwatch_logs_exports
+                    if enabled_cloudwatch_logs_exports.value.lower() in ["audit", "profiler"]:
+                        active  = True
+                        break
+                    i += 1
+                    enabled_cloudwatch_logs_exports = check_required_attribute(au.attributes, [""], f"enabled_cloudwatch_logs_exports[{i}]")
+                if not active:
+                    errors.append(Error('sec_logging', a, file, repr(a)))
+            else:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'enabled_cloudwatch_logs_exports'."))
         elif (au.type == "resource.azurerm_mssql_server"):
-            expr = "\${azurerm_mssql_server\." + f"{au.name}"
+            expr = "\${azurerm_mssql_server\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             assoc_au = get_associated_au(self.code, "resource.azurerm_mssql_server_extended_auditing_policy", 
                 "server_id", pattern, [""])
@@ -495,7 +512,7 @@ class SecurityVisitor(RuleVisitor):
                     f"Suggestion: check for a required resource 'azurerm_mssql_server_extended_auditing_policy' " + 
                     f"associated to an 'azurerm_mssql_server' resource."))
         elif (au.type == "resource.azurerm_mssql_database"):
-            expr = "\${azurerm_mssql_database\." + f"{au.name}"
+            expr = "\${azurerm_mssql_database\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             assoc_au = get_associated_au(self.code, "resource.azurerm_mssql_database_extended_auditing_policy", 
                 "database_id", pattern, [""])
@@ -538,7 +555,7 @@ class SecurityVisitor(RuleVisitor):
                 name = storage_account_name.value.lower().split('.')[1]
                 storage_account_au = get_au(self.code, name, "resource.azurerm_storage_account")
                 if storage_account_au:
-                    expr = "\${azurerm_storage_account\." + f"{name}"
+                    expr = "\${azurerm_storage_account\." + f"{name}\."
                     pattern = re.compile(rf"{expr}")
                     assoc_au = get_associated_au(self.code, "resource.azurerm_log_analytics_storage_insights",
                         "storage_account_id", pattern, [""])
@@ -628,7 +645,7 @@ class SecurityVisitor(RuleVisitor):
                 
         # check replication
         if (au.type == "resource.aws_s3_bucket"):
-            expr = "\${aws_s3_bucket\." + f"{au.name}"
+            expr = "\${aws_s3_bucket\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             if not get_associated_au(self.code, "resource.aws_s3_bucket_replication_configuration", 
                 "bucket", pattern, [""]):

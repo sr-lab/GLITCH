@@ -266,5 +266,129 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_authentication", "sec_authentication"], [7, 53]
         )
 
+    def test_terraform_missing_encryption(self):
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/athena-enable-at-rest-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/aws-codebuild-enable-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [3, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/aws-ecr-encrypted.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/aws-neptune-at-rest-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/documentdb-storage-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/dynamodb-rest-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/ecs-task-definitions-in-transit-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 29]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/efs-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/eks-encryption-secrets-enabled.tf",
+            5, ["sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption",
+                "sec_missing_encryption"], [1, 1, 9, 23, 34]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/elasticache-enable-at-rest-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/elasticache-enable-in-transit-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/elasticsearch-domain-encrypted.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 17]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/elasticsearch-in-transit-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 16]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/emr-enable-at-rest-encryption.tf",
+            1, ["sec_missing_encryption"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/emr-enable-in-transit-encryption.tf",
+            1, ["sec_missing_encryption"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/emr-enable-local-disk-encryption.tf",
+            1, ["sec_missing_encryption"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/emr-s3encryption-mode-sse-kms.tf",
+            1, ["sec_missing_encryption"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/enable-cache-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/encrypted-ebs-volume.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/encrypted-root-block-device.tf",
+            3, ["sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption"], [1, 13, 23]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/instance-encrypted-block-device.tf",
+            1, ["sec_missing_encryption"], [14]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/kinesis-stream-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/msk-enable-in-transit-encryption.tf",
+            3, ["sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption"], [1, 14, 15]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/rds-encrypt-cluster-storage-data.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/rds-encrypt-instance-storage-data.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/redshift-cluster-rest-encryption.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/unencrypted-s3-bucket.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [25, 64]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/unencrypted-sns-topic.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/unencrypted-sqs-queue.tf",
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-encryption/workspaces-disk-encryption.tf",
+            6, ["sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption", 
+                "sec_missing_encryption", "sec_missing_encryption"], [1, 1, 4, 8, 13, 14]
+        )
+
 if __name__ == '__main__':
     unittest.main()

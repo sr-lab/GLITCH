@@ -30,7 +30,7 @@ resource "azurerm_storage_container" "good_example" {
   storage_account_name   = azurerm_storage_account.good_example.name
 }
 
-resource "azurerm_storage_container" "bad_example" {
+resource "azurerm_storage_container" "good_example2" {
   storage_account_name   = azurerm_storage_account.good_example.name
   container_access_type = "private"
 }
