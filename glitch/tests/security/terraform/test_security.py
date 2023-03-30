@@ -17,6 +17,7 @@ class TestSecurity(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])  
 
+    # testing previous implemented code smells
     def test_terraform_http(self):
         self.__help_test(
             "tests/security/terraform/files/http.tf",
@@ -58,5 +59,132 @@ class TestSecurity(unittest.TestCase):
     def test_terraform_invalid_bind(self):
         self.__help_test(
             "tests/security/terraform/files/inv_bind.tf",
-            1, ["sec_invalid_bind"], [14]
+            1, ["sec_invalid_bind"], [19]
         )
+
+    # testing new implemented code smells, or previous ones with new rules for Terraform
+
+    def test_terraform_insecure_access_control(self):
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/access-to-bigquery-dataset.tf",
+            1, ["sec_access_control"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/aks-ip-ranges-enabled.tf",
+            1, ["sec_access_control"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/associated-access-block-to-s3-bucket.tf",
+            1, ["sec_access_control"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/aws-database-instance-publicly-accessible.tf",
+            2, ["sec_access_control", "sec_access_control"], [2, 16]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/aws-sqs-no-wildcards-in-policy.tf",
+            1, ["sec_access_control"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/azure-authorization-wildcard-action.tf",
+            1, ["sec_access_control"], [7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/azure-container-use-rbac-permissions.tf",
+            1, ["sec_access_control"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/azure-database-not-publicly-accessible.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/bucket-public-read-acl.tf",
+            3, ["sec_access_control", "sec_access_control", "sec_access_control"], [1, 8, 25]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/cidr-range-public-access-eks-cluster.tf",
+            1, ["sec_access_control"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/cross-db-ownership-chaining.tf",
+            3, ["sec_access_control", "sec_access_control", "sec_access_control"], [1, 50, 97]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/data-factory-public-access.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/google-compute-no-default-service-account.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 19]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/google-gke-use-rbac-permissions.tf",
+            1, ["sec_access_control"], [14]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/google-storage-enable-ubla.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/google-storage-no-public-access.tf",
+            3, ["sec_access_control", "sec_access_control", "sec_access_control"], [4, 10, 22]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/mq-broker-publicly-exposed.tf",
+            1, ["sec_access_control"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/prevent-client-disable-encryption.tf",
+            1, ["sec_access_control"], [13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/private-cluster-nodes.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 16]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/public-access-eks-cluster.tf",
+            1, ["sec_access_control"], [10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/public-access-policy.tf",
+            1, ["sec_access_control"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/public-github-repo.tf",
+            3, ["sec_access_control", "sec_access_control", "sec_access_control"], [1, 6, 18]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/s3-access-through-acl.tf",
+            1, ["sec_access_control"], [7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/s3-block-public-acl.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/s3-block-public-policy.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/s3-ignore-public-acl.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/s3-restrict-public-bucket.tf",
+            2, ["sec_access_control", "sec_access_control"], [1, 12]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/specify-source-lambda-permission.tf",
+            1, ["sec_access_control"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/storage-containers-public-access.tf",
+            1, ["sec_access_control"], [26]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/insecure-access-control/unauthorized-access-api-gateway-methods.tf",
+            2, ["sec_access_control", "sec_access_control"], [37, 44]
+        )
+
+if __name__ == '__main__':
+    unittest.main()

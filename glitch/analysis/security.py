@@ -271,20 +271,23 @@ class SecurityVisitor(RuleVisitor):
                 errors.append(Error('sec_missing_encryption', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
                         f"associated to an 'aws_s3_bucket' resource."))
+        elif (au.type == "resource.aws_eks_cluster"):
+            resources = check_required_attribute(au.attributes, ["encryption_config"], "resources[0]")
+            if resources:
+                i = 0
+                valid = False
+                while resources:
+                    a = resources
+                    if resources.value.lower() == "secrets":
+                        valid = True
+                        break
+                    i += 1
+                    resources = check_required_attribute(au.attributes, ["encryption_config"], f"resources[{i}]")
+                if not valid:
+                    errors.append(Error('sec_missing_encryption', a, file, repr(a)))
             else:
-                server_side_encryption = check_required_attribute(r.attributes, ["rule"], "apply_server_side_encryption_by_default") 
-                if server_side_encryption:
-                    sse_algorithm = check_required_attribute(server_side_encryption.keyvalues, [""], "sse_algorithm")
-                    if not sse_algorithm:
-                        errors.append(Error('sec_missing_encryption', au, file, repr(au), 
-                            f"Suggestion: check for a required attribute with name " + 
-                            f"'rule.apply_server_side_encryption_by_default.sse_algorithm'."))
-                    elif (sse_algorithm and sse_algorithm.value.lower() not in ["aes256", "aws:kms"]):
-                        errors.append(Error('sec_missing_encryption', sse_algorithm, file, repr(sse_algorithm)))
-                else:
-                    errors.append(Error('sec_missing_encryption', au, file, repr(au), 
-                        f"Suggestion: check for a required attribute with name " + 
-                        f"'rule.apply_server_side_encryption_by_default.sse_algorithm'."))
+                errors.append(Error('sec_missing_encryption', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'encryption_config.resources'."))
 
         for config in SecurityVisitor.__MISSING_ENCRYPTION:
             if (config['required'] == "yes" and au.type in config['au_type']
@@ -352,22 +355,6 @@ class SecurityVisitor(RuleVisitor):
                 errors.append(Error('sec_key_management', au, file, repr(au), 
                     f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
                         f"associated to an 'aws_s3_bucket' resource."))
-            else:
-                server_side_encryption = check_required_attribute(r.attributes, ["rule"], "apply_server_side_encryption_by_default") 
-                if server_side_encryption:
-                    print(f"keyvalues: {server_side_encryption.keyvalues}")
-                    key_id = check_required_attribute(server_side_encryption.keyvalues, [""], "kms_master_key_id")
-                    print(f"key_id: {key_id}")
-                    if not key_id:
-                        errors.append(Error('sec_key_management', au, file, repr(au), 
-                            f"Suggestion: check for a required attribute with name " + 
-                            f"'rule.apply_server_side_encryption_by_default.kms_master_key_id'."))
-                    elif (key_id and key_id.value.lower() == ""):
-                        errors.append(Error('sec_key_management', key_id, file, repr(key_id)))
-                else:
-                    errors.append(Error('sec_key_management', au, file, repr(au), 
-                        f"Suggestion: check for a required attribute with name " + 
-                        f"'rule.apply_server_side_encryption_by_default.kms_master_key_id'."))
         elif (au.type == "resource.azurerm_storage_account"):
             expr = "\${azurerm_storage_account\." + f"{au.name}"
             pattern = re.compile(rf"{expr}")
@@ -547,7 +534,7 @@ class SecurityVisitor(RuleVisitor):
                 check_database_flags('sec_logging', flag['flag_name'], flag['value'], required_flag)
         elif (au.type == "resource.azurerm_storage_container"):
             storage_account_name = check_required_attribute(au.attributes, [""], "storage_account_name")
-            if storage_account_name.value.lower().startswith("${azurerm_storage_account."):
+            if storage_account_name and storage_account_name.value.lower().startswith("${azurerm_storage_account."):
                 name = storage_account_name.value.lower().split('.')[1]
                 storage_account_au = get_au(self.code, name, "resource.azurerm_storage_account")
                 if storage_account_au:
@@ -580,6 +567,10 @@ class SecurityVisitor(RuleVisitor):
                     errors.append(Error('sec_logging', au, file, repr(au), 
                         f"Suggestion: 'azurerm_storage_container' resource has to be associated to an " + 
                         f"'azurerm_storage_account' resource in order to enable logging."))
+            else:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: 'azurerm_storage_container' resource has to be associated to an " + 
+                    f"'azurerm_storage_account' resource in order to enable logging."))
             container_access_type = check_required_attribute(au.attributes, [""], "container_access_type")
             if container_access_type and container_access_type.value.lower() not in ["blob", "private"]:
                 errors.append(Error('sec_logging', container_access_type, file, repr(container_access_type)))
@@ -777,7 +768,6 @@ class SecurityVisitor(RuleVisitor):
                                     aux = attribute
                     elif value.startswith("local."):    # local value (variable)
                         aux = get_module_var(self.code, value.strip("local."))
-                    #FIXME value can also use module blocks, resources/data attributes, not only input_variable/local_value
                     
                     if aux:
                         errors.append(Error('sec_hard_secr', c, file, repr(c)))
