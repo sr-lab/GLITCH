@@ -244,5 +244,27 @@ class TestSecurity(unittest.TestCase):
             1, ["sec_invalid_bind"], [27]
         )
 
+    def test_terraform_disabled_authentication(self):
+        self.__help_test(
+            "tests/security/terraform/files/disabled-authentication/azure-app-service-authentication-activated.tf",
+            2, ["sec_authentication", "sec_authentication"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/disabled-authentication/contained-database-disabled.tf",
+            1, ["sec_authentication"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/disabled-authentication/disable-password-authentication.tf",
+            3, ["sec_authentication", "sec_authentication", "sec_authentication"], [2, 13, 18]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/disabled-authentication/gke-basic-auth.tf",
+            1, ["sec_authentication"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/disabled-authentication/iam-group-with-mfa.tf",
+            2, ["sec_authentication", "sec_authentication"], [7, 53]
+        )
+
 if __name__ == '__main__':
     unittest.main()
