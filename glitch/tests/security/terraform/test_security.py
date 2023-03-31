@@ -520,5 +520,44 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_dnssec", "sec_dnssec"], [1, 6]
         )
 
+    def test_terraform_firewall_misconfiguration(self):
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/alb-drop-invalid-headers.tf",
+            2, ["sec_firewall_misconfig", "sec_firewall_misconfig"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/alb-exposed-to-internet.tf",
+            2, ["sec_firewall_misconfig", "sec_firewall_misconfig"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/azure-keyvault-specify-network-acl.tf",
+            3, ["sec_firewall_misconfig", "sec_firewall_misconfig", "sec_firewall_misconfig"], [1, 1, 13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/cloudfront-use-waf.tf",
+            2, ["sec_firewall_misconfig", "sec_firewall_misconfig"], [1, 14]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/config-master-authorized-networks.tf",
+            1, ["sec_firewall_misconfig"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/google-compute-inbound-rule-traffic.tf",
+            1, ["sec_firewall_misconfig"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/google-compute-no-ip-forward.tf",
+            1, ["sec_firewall_misconfig"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/google-compute-outbound-rule-traffic.tf",
+            1, ["sec_firewall_misconfig"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/firewall-misconfiguration/openstack-compute-no-public-access.tf",
+            3, ["sec_firewall_misconfig", "sec_firewall_misconfig", "sec_firewall_misconfig"], [1, 1, 10]
+        )
+
+
 if __name__ == '__main__':
     unittest.main()
