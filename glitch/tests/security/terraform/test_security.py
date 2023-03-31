@@ -584,5 +584,43 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_threats_detection_alerts", "sec_threats_detection_alerts"], [1, 16]
         )
 
+    def test_terraform_weak_password_key_policy(self):
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/aws-iam-no-password-reuse.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/aws-iam-require-lowercase-in-passwords.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/aws-iam-require-numbers-in-passwords.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/aws-iam-require-symbols-in-passwords.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/aws-iam-require-uppercase-in-passwords.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/aws-iam-set-max-password-age.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/aws-iam-set-minimum-password-length.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/azure-keyvault-ensure-secret-expiry.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/azure-keyvault-no-purge.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
+        )
+
 if __name__ == '__main__':
     unittest.main()
