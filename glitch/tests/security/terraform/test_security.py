@@ -558,6 +558,31 @@ class TestSecurity(unittest.TestCase):
             3, ["sec_firewall_misconfig", "sec_firewall_misconfig", "sec_firewall_misconfig"], [1, 1, 10]
         )
 
+    def test_terraform_missing_threats_detection_and_alerts(self):
+        self.__help_test(
+            "tests/security/terraform/files/missing-threats-detection-and-alerts/azure-database-disabled-alerts.tf",
+            1, ["sec_threats_detection_alerts"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-threats-detection-and-alerts/azure-database-email-admin.tf",
+            2, ["sec_threats_detection_alerts", "sec_threats_detection_alerts"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-threats-detection-and-alerts/azure-database-email-for-alerts.tf",
+            1, ["sec_threats_detection_alerts"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-threats-detection-and-alerts/azure-security-center-alert-notifications.tf",
+            2, ["sec_threats_detection_alerts", "sec_threats_detection_alerts"], [5, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-threats-detection-and-alerts/azure-security-require-contact-phone.tf",
+            2, ["sec_threats_detection_alerts", "sec_threats_detection_alerts"], [1, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/missing-threats-detection-and-alerts/github-repo-vulnerability-alerts.tf",
+            2, ["sec_threats_detection_alerts", "sec_threats_detection_alerts"], [1, 16]
+        )
 
 if __name__ == '__main__':
     unittest.main()
