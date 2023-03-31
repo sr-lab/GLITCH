@@ -468,6 +468,51 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_https", "sec_https"], [1, 6]
         )
 
+    def test_terraform_ssl_tls_mtls_policy(self):
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/api-gateway-secure-tls-policy.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/azure-appservice-require-client-cert.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/azure-appservice-secure-tls-policy.tf",
+            1, ["sec_ssl_tls_policy"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/azure-storage-use-secure-tls-policy.tf",
+            1, ["sec_ssl_tls_policy"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/cloudfront-secure-tls-policy.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/database-enable.ssl-eforcement.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/database-secure-tls-policy.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [2, 22]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/elastic-search-secure-tls-policy.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 20]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/elb-secure-tls-policy.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/google-compute-secure-tls-policy.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/ssl-tls-mtls-policy/sql-encrypt-in-transit-data.tf",
+            2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 45]
+        )
 
 if __name__ == '__main__':
     unittest.main()
