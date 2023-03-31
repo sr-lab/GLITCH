@@ -441,6 +441,33 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/public-ip/subnet-public-ip-address.tf",
             1, ["sec_public_ip"], [3]
         )
+        
+    def test_terraform_use_of_http_without_tls(self):
+        self.__help_test(
+            "tests/security/terraform/files/use-of-http-without-tls/azure-appservice-enforce-https.tf",
+            2, ["sec_https", "sec_https"], [1, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/use-of-http-without-tls/azure-storage-enforce-https.tf",
+            1, ["sec_https"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/use-of-http-without-tls/cloudfront-enforce-https.tf",
+            2, ["sec_https", "sec_https"], [1, 13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/use-of-http-without-tls/digitalocean-compute-enforce-https.tf",
+            1, ["sec_https"], [7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/use-of-http-without-tls/elastic-search-enforce-https.tf",
+            2, ["sec_https", "sec_https"], [1, 19]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/use-of-http-without-tls/elb-use-plain-http.tf",
+            2, ["sec_https", "sec_https"], [1, 6]
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
