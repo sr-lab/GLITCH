@@ -622,5 +622,19 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
         )
 
+    def test_terraform_integrity_policy(self):
+        self.__help_test(
+            "tests/security/terraform/files/integrity-policy/aws-ecr-immutable-repo.tf",
+            2, ["sec_integrity_policy", "sec_integrity_policy"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/integrity-policy/google-compute-enable-integrity-monitoring.tf",
+            1, ["sec_integrity_policy"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/integrity-policy/google-compute-enable-virtual-tpm.tf",
+            1, ["sec_integrity_policy"], [3]
+        )
+
 if __name__ == '__main__':
     unittest.main()
