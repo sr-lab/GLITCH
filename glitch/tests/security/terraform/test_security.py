@@ -424,5 +424,23 @@ class TestSecurity(unittest.TestCase):
             1, ["sec_hard_secr"], [9]
         )
 
+    def test_terraform_public_ip(self):
+        self.__help_test(
+            "tests/security/terraform/files/public-ip/google-compute-intance-with-public-ip.tf",
+            1, ["sec_public_ip"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/public-ip/lauch-configuration-public-ip-addr.tf",
+            1, ["sec_public_ip"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/public-ip/oracle-compute-no-public-ip.tf",
+            1, ["sec_public_ip"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/public-ip/subnet-public-ip-address.tf",
+            1, ["sec_public_ip"], [3]
+        )
+
 if __name__ == '__main__':
     unittest.main()
