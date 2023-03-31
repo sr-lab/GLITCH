@@ -819,7 +819,7 @@ class SecurityVisitor(RuleVisitor):
                         if (item_value in SecurityVisitor.__PASSWORDS):
                             errors.append(Error('sec_hard_pass', c, file, repr(c)))
 
-        if atomic_unit.type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value":
+        if (atomic_unit.type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value"):
             errors.append(Error('sec_hard_secr', c, file, repr(c)))
         
         for policy in SecurityVisitor.__INTEGRITY_POLICY:

@@ -390,5 +390,39 @@ class TestSecurity(unittest.TestCase):
                 "sec_missing_encryption", "sec_missing_encryption"], [1, 1, 4, 8, 13, 14]
         )
 
+    def test_terraform_hard_coded_secrets(self):
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/encryption-key-in-plaintext.tf",
+            1, ["sec_hard_secr"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/plaintext-password.tf",
+            2, ["sec_hard_pass", "sec_hard_secr"], [2, 2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/plaintext-value-github-actions.tf",
+            1, ["sec_hard_secr"], [5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/sensitive-credentials-in-vm-custom-data.tf",
+            2, ["sec_hard_pass", "sec_hard_secr"], [3, 3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/sensitive-data-in-plaintext.tf",
+            2, ["sec_hard_pass", "sec_hard_secr"], [8, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/sensitive-data-stored-in-user-data.tf",
+            4, ["sec_hard_pass", "sec_hard_secr", "sec_hard_pass", "sec_hard_secr"], [2, 2, 14, 14]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/sensitive-environment-variables.tf",
+            2, ["sec_hard_pass", "sec_hard_secr"], [2, 2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/hard-coded-secrets/user-data-contains-sensitive-aws-keys.tf",
+            1, ["sec_hard_secr"], [9]
+        )
+
 if __name__ == '__main__':
     unittest.main()
