@@ -514,5 +514,11 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_ssl_tls_policy", "sec_ssl_tls_policy"], [1, 45]
         )
 
+    def test_terraform_use_of_dns_without_dnssec(self):
+        self.__help_test(
+            "tests/security/terraform/files/use-of-dns-without-dnssec/cloud-dns-without-dnssec.tf",
+            2, ["sec_dnssec", "sec_dnssec"], [1, 6]
+        )
+
 if __name__ == '__main__':
     unittest.main()
