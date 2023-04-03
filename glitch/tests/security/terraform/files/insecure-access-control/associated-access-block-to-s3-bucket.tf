@@ -42,7 +42,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "good_example" {
   }
 }
 
-resource "aws_s3_bucket_replication_configuration" "bad_example" {
+resource "aws_s3_bucket_replication_configuration" "good_example" {
   bucket = aws_s3_bucket.good_example.id
   rule {
     status = "Enabled"

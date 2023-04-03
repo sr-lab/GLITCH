@@ -79,7 +79,7 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/aws-database-instance-publicly-accessible.tf",
-            2, ["sec_access_control", "sec_access_control"], [2, 16]
+            2, ["sec_access_control", "sec_access_control"], [2, 18]
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/aws-sqs-no-wildcards-in-policy.tf",
@@ -366,7 +366,7 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/rds-encrypt-instance-storage-data.tf",
-            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 7]
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 8]
         )
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/redshift-cluster-rest-encryption.tf",
@@ -375,14 +375,6 @@ class TestSecurity(unittest.TestCase):
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/unencrypted-s3-bucket.tf",
             2, ["sec_missing_encryption", "sec_missing_encryption"], [25, 64]
-        )
-        self.__help_test(
-            "tests/security/terraform/files/missing-encryption/unencrypted-sns-topic.tf",
-            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 5]
-        )
-        self.__help_test(
-            "tests/security/terraform/files/missing-encryption/unencrypted-sqs-queue.tf",
-            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 5]
         )
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/workspaces-disk-encryption.tf",
@@ -635,6 +627,107 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/integrity-policy/google-compute-enable-virtual-tpm.tf",
             1, ["sec_integrity_policy"], [3]
         )
+
+    def test_terraform_sensitive_action_by_iam(self):
+        self.__help_test(
+            "tests/security/terraform/files/sensitive-action-by-iam/aws-iam-no-policy-wildcards.tf",
+            2, ["sec_sensitive_iam_action", "sec_sensitive_iam_action"], [7, 19]
+        )
+
+    def test_terraform_key_management(self):
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-cloudtrail-encryption-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-cloudwatch-log-group-customer-key.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-documentdb-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-dynamodb-table-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-ebs-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-ecr-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 14]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-kinesis-stream-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-kms-auto-rotate-keys.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-neptune-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-sns-topic-encryption-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-sqs-queue-encryption-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/aws-ssm-secret-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/azure-keyvault-ensure-key-expiration-date.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/azure-storage-account-use-cmk.tf",
+            1, ["sec_key_management"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/google-compute-disk-encryption-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/google-compute-no-project-wide-ssh-keys.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 12]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/google-compute-vm-disk-encryption-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 12]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/google-kms-rotate-kms-keys.tf",
+            3, ["sec_key_management", "sec_key_management", "sec_key_management"], [1, 9, 15]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/rds-cluster-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/rds-instance-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/rds-performance-insights-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/redshift-cluster-use-cmk.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/s3-encryption-customer-key.tf",
+            2, ["sec_key_management", "sec_key_management"], [9, 47]
+        )
+        
 
 if __name__ == '__main__':
     unittest.main()

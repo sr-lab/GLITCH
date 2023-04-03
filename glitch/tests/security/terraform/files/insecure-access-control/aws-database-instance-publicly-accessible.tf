@@ -1,6 +1,7 @@
 resource "aws_db_instance" "bad_example" {
   publicly_accessible = true
   kms_key_id = "something"
+  performance_insights_enabled = true
   performance_insights_kms_key_id = "something"
   storage_encrypted = true
 }
@@ -8,14 +9,15 @@ resource "aws_db_instance" "bad_example" {
 resource "aws_db_instance" "good_example" {
   publicly_accessible = false
   kms_key_id = "something"
+  performance_insights_enabled = true
   performance_insights_kms_key_id = "something"
   storage_encrypted = true
 }
 
 resource "aws_rds_cluster_instance" "bad_example" {
   publicly_accessible = true
-  performance_insights_kms_key_id = "something"
   performance_insights_enabled = true
+  performance_insights_kms_key_id = "something"
   storage_encrypted = true
 }
 
@@ -26,8 +28,9 @@ resource "aws_rds_cluster_instance" "good_example" {
   storage_encrypted = true
 }
 
-resource "aws_db_instance" "bad_example2" {
+resource "aws_db_instance" "good_example2" {
   kms_key_id = "something"
+  performance_insights_enabled = true
   performance_insights_kms_key_id = "something"
   storage_encrypted = true
 }

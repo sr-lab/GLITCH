@@ -996,10 +996,12 @@ class SecurityVisitor(RuleVisitor):
                     break
 
         if (name == "cloud_watch_logs_group_arn" and atomic_unit.type == "resource.aws_cloudtrail"):
-            if re.match(r"^${aws_cloudwatch_log_group\..", value):
+            if re.match(r"^\${aws_cloudwatch_log_group\..", value):
                 aws_cloudwatch_log_group_name = value.split('.')[1]
-                if not get_au(aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
-                    errors.append(Error('sec_logging', c, file, repr(c)))
+                if not get_au(self.code, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
+                    errors.append(Error('sec_logging', c, file, repr(c),
+                        f"Suggestion: check for a required resource 'aws_cloudwatch_log_group' " +
+                        f"with name '{aws_cloudwatch_log_group_name}'."))
             else:
                 errors.append(Error('sec_logging', c, file, repr(c)))
         elif (((name == "retention_in_days" and parent_name == "" 
