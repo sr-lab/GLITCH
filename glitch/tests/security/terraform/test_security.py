@@ -728,6 +728,43 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_key_management", "sec_key_management"], [9, 47]
         )
         
+    def test_terraform_network_security_rules(self):
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/aws-vpc-ec2-use-tcp.tf",
+            1, ["sec_network_security_rules"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/azure-container-configured-network-policy.tf",
+            2, ["sec_network_security_rules", "sec_network_security_rules"], [1, 15]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/azure-network-disable-rdp-from-internet.tf",
+            2, ["sec_network_security_rules", "sec_network_security_rules"], [8, 32]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/azure-network-ssh-blocked-from-internet.tf",
+            2, ["sec_network_security_rules", "sec_network_security_rules"], [8, 32]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/azure-storage-default-action-deny.tf",
+            3, ["sec_network_security_rules", "sec_network_security_rules", "sec_network_security_rules"], [1, 8, 21]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/azure-synapse-virtual-network-enabled.tf",
+            2, ["sec_network_security_rules", "sec_network_security_rules"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/google-compute-no-serial-port.tf",
+            1, ["sec_network_security_rules"], [4]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/google-gke-enable-ip-aliasing.tf",
+            1, ["sec_network_security_rules"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/google-gke-enable-network-policy.tf",
+            2, ["sec_network_security_rules", "sec_network_security_rules"], [1, 16]
+        )
 
 if __name__ == '__main__':
     unittest.main()
