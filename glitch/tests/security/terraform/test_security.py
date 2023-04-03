@@ -766,5 +766,39 @@ class TestSecurity(unittest.TestCase):
             2, ["sec_network_security_rules", "sec_network_security_rules"], [1, 16]
         )
 
+    def test_terraform_permission_of_iam_policies(self):
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/default-service-account-not-used-at-folder-level.tf",
+            2, ["sec_permission_iam_policies", "sec_permission_iam_policies"], [4, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/default-service-account-not-used-at-organization-level.tf",
+            2, ["sec_permission_iam_policies", "sec_permission_iam_policies"], [4, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/default-service-account-not-used-at-project-level.tf",
+            2, ["sec_permission_iam_policies", "sec_permission_iam_policies"], [4, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/google-iam-no-folder-level-service-account-impersonation.tf",
+            1, ["sec_permission_iam_policies"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/google-iam-no-organization-level-service-account-impersonation.tf",
+            1, ["sec_permission_iam_policies"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/google-iam-no-project-level-service-account-impersonation.tf",
+            1, ["sec_permission_iam_policies"], [3]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/google-iam-no-user-granted-permissions.tf",
+            2, ["sec_permission_iam_policies", "sec_permission_iam_policies"], [2, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/permission-of-iam-policies/iam-policies-attached-only-to-groups-or-roles.tf",
+            1, ["sec_permission_iam_policies"], [7]
+        )
+
 if __name__ == '__main__':
     unittest.main()
