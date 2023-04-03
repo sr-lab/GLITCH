@@ -800,5 +800,129 @@ class TestSecurity(unittest.TestCase):
             1, ["sec_permission_iam_policies"], [7]
         )
 
+    def test_terraform_logging(self):
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-api-gateway-enable-access-logging.tf",
+            4, ["sec_logging", "sec_logging", "sec_logging", "sec_logging"], [1, 4, 10, 17]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-api-gateway-enable-tracing.tf",
+            2, ["sec_logging", "sec_logging"], [1, 9]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-cloudfront-enable-logging.tf",
+            2, ["sec_logging", "sec_logging"], [1, 13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-cloudtrail-enable-log-validation.tf",
+            2, ["sec_logging", "sec_logging"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-cloudtrail-ensure-cloudwatch-integration.tf",
+            2, ["sec_logging", "sec_logging"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-documentdb-enable-log-export.tf",
+            2, ["sec_logging", "sec_logging"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-eks-enable-control-plane-logging.tf",
+            2, ["sec_logging", "sec_logging"], [1, 15]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-elastic-search-enable-domain-logging.tf",
+            3, ["sec_logging", "sec_logging", "sec_logging"], [1, 17, 36]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-lambda-enable-tracing.tf",
+            2, ["sec_logging", "sec_logging"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-mq-enable-audit-logging.tf",
+            2, ["sec_logging", "sec_logging"], [1, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-mq-enable-general-logging.tf",
+            2, ["sec_logging", "sec_logging"], [1, 10]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-msk-enable-logging.tf",
+            5, ["sec_logging", "sec_logging", "sec_logging", "sec_logging", "sec_logging"], [1, 14, 48, 51, 54]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-neptune-enable-log-export.tf",
+            2, ["sec_logging", "sec_logging"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-rds-enable-performance-insights.tf",
+            2, ["sec_logging", "sec_logging"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-s3-enable-bucket-logging.tf",
+            1, ["sec_logging"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-container-aks-logging-configured.tf",
+            2, ["sec_logging", "sec_logging"], [1, 13]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-monitor-activity-log-retention-set.tf",
+            2, ["sec_logging", "sec_logging"], [1, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-monitor-capture-all-activities.tf",
+            2, ["sec_logging", "sec_logging"], [1, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-mssql-database-enable-audit.tf",
+            1, ["sec_logging"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-mssql-server-and-database-retention-period-set.tf",
+            3, ["sec_logging", "sec_logging", "sec_logging"], [3, 13, 18]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-mssql-server-enable-audit.tf",
+            1, ["sec_logging"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-network-retention-policy-set.tf",
+            2, ["sec_logging", "sec_logging"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-postgres-configuration-enabled-logs.tf",
+            3, ["sec_logging", "sec_logging", "sec_logging"], [5, 12, 19]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/azure-storage-queue-services-logging-enabled.tf",
+            6, ["sec_logging", "sec_logging", "sec_logging", "sec_logging", "sec_logging", "sec_logging"], [1, 1, 1, 15, 16, 17]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/ensure-cloudwatch-log-group-specifies-retention-days.tf",
+            2, ["sec_logging", "sec_logging"], [1, 6]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/google-compute-enable-vpc-flow-logs.tf",
+            1, ["sec_logging"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/google-gke-enable-stackdriver-logging.tf",
+            1, ["sec_logging"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/google-gke-enable-stackdriver-monitoring.tf",
+            1, ["sec_logging"], [2]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/google-sql-database-log-flags.tf",
+            12, ["sec_logging", "sec_logging", "sec_logging", "sec_logging", "sec_logging", "sec_logging"
+                , "sec_logging", "sec_logging", "sec_logging", "sec_logging", "sec_logging", "sec_logging"], 
+                [1, 1, 1, 1, 1, 36, 40, 44, 48, 52, 56, 60]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/logging/storage-logging-enabled-for-blob-service-for-read-requests.tf",
+            4, ["sec_logging", "sec_logging", "sec_logging", "sec_logging"], [1, 8, 49, 79]
+        )
+
 if __name__ == '__main__':
     unittest.main()
