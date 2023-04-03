@@ -924,5 +924,49 @@ class TestSecurity(unittest.TestCase):
             4, ["sec_logging", "sec_logging", "sec_logging", "sec_logging"], [1, 8, 49, 79]
         )
 
+    def test_terraform_attached_resource(self):
+        self.__help_test(
+            "tests/security/terraform/files/attached-resource/aws_route53_attached_resource.tf",
+            2, ["sec_attached_resource", "sec_attached_resource"], [12, 16]
+        )
+
+    def test_terraform_versioning(self):
+        self.__help_test(
+            "tests/security/terraform/files/versioning/aws-s3-enable-versioning.tf",
+            2, ["sec_versioning", "sec_versioning"], [1, 8]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/versioning/digitalocean-spaces-versioning-enabled.tf",
+            2, ["sec_versioning", "sec_versioning"], [1, 7]
+        )
+
+    def test_terraform_naming(self):
+        self.__help_test(
+            "tests/security/terraform/files/naming/aws-ec2-description-to-security-group-rule.tf",
+            2, ["sec_naming", "sec_naming"], [1, 14]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/naming/aws-ec2-description-to-security-group.tf",
+            2, ["sec_naming", "sec_naming"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/naming/aws-elasticache-description-for-security-group.tf",
+            2, ["sec_naming", "sec_naming"], [1, 7]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/naming/naming-rules-storage-accounts.tf",
+            2, ["sec_naming", "sec_naming"], [2, 21]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/naming/openstack-networking-describe-security-group.tf",
+            2, ["sec_naming", "sec_naming"], [1, 5]
+        )
+
+    def test_terraform_replication(self):
+        self.__help_test(
+            "tests/security/terraform/files/replication/s3-bucket-cross-region-replication.tf",
+            2, ["sec_replication", "sec_replication"], [9, 16]
+        )
+
 if __name__ == '__main__':
     unittest.main()
