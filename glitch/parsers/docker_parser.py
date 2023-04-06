@@ -108,9 +108,9 @@ class DockerParser(p.Parser):
             DockerParser.__parse_instruction(element, unit_block)
         elif instruction == 'COPY':
             au = AtomicUnit("", "copy")
-            src, dest = [v for v in element.value.split(" ") if not v.startswith("--")]
-            au.add_attribute(Attribute('src', src, False))
-            au.add_attribute(Attribute('dest', dest, False))
+            paths = [v for v in element.value.split(" ") if not v.startswith("--")]
+            au.add_attribute(Attribute('src', str(paths[0:-1]), False))
+            au.add_attribute(Attribute('dest', paths[-1], False))
             for attr in au.attributes:
                 attr.code = element.content
                 attr.line = element.startline + 1
@@ -162,8 +162,8 @@ class DockerParser(p.Parser):
                 env, value = element.value.split(" ")
                 variables.append(Variable(env, value, value.startswith("$")))
         else:  # LABEL
-            label, value = element.value.split("=")
-            variables.append(Variable(label, value, False))
+            for label, value in DockerParser.__parse_multiple_key_value(element.value):
+                variables.append(Variable(label, value, value.startswith("$")))
 
         for v in variables:
             if v.value == "\"\"" or v.value == "''":
@@ -228,7 +228,7 @@ class ShellCommand:
 class CommandParser:
     def __init__(self, command:  DFPStructure):
         value = command.content.replace("RUN ", "") if command.instruction == "RUN" else command.value
-        if value.startswith("["):
+        if value.startswith("[") and value.endswith("]"):
             c_list = ast.literal_eval(value)
             value = " ".join(c_list)
         self.dfp_structure = command
@@ -296,7 +296,7 @@ class CommandParser:
     def __get_sub_commands(self) -> list[tuple[int, list[str]]]:
         commands = []
         tmp = []
-        lines = self.command.split('\n')
+        lines = self.command.split('\n') if not self.__contains_multi_line_values(self.command) else [self.command]
         current_line = self.line
         for i, line in enumerate(lines):
             for part in bashlex.split(line):
@@ -308,3 +308,15 @@ class CommandParser:
                 tmp.append(part)
         commands.append((current_line, tmp))
         return commands
+
+    @staticmethod
+    def __contains_multi_line_values(command: str) -> bool:
+        def is_multi_line_str(line: str) -> bool:
+            return line.count("\"") % 2 != 0 or line.count("'") % 2 != 0
+
+        def has_open_parentheses(line: str) -> bool:
+            return line.count("(") != line.count(")") or line.count("[") != line.count("]") \
+                    or line.count("{") != line.count("}")
+
+        lines = command.split("\n")
+        return any((is_multi_line_str(line) or has_open_parentheses(line)) for line in lines)
