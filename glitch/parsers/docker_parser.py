@@ -250,6 +250,10 @@ class CommandParser:
         sudo = command[0] == "sudo"
         name_index = 0 if not sudo else 1
         command_type = command[name_index]
+        if len(command) == name_index + 1:
+            return ShellCommand(
+                sudo=sudo, command=command_type, args=[], main_arg=command_type, line=line, code=" ".join(command)
+            ).to_atomic_unit()
         c = ShellCommand(
             sudo=sudo, command=command_type, args=command[name_index + 1:], line=line, code=" ".join(command)
         )
