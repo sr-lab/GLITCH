@@ -1,5 +1,6 @@
 import ast
 import os.path
+import re
 from dataclasses import dataclass, field
 
 import bashlex
@@ -90,7 +91,7 @@ class DockerParser(p.Parser):
     def __parse_instruction(element: DFPStructure, unit_block: UnitBlock):
         instruction = element.instruction
         if instruction in ['ENV', 'USER', 'ARG', 'LABEL']:
-            unit_block.add_variable(DockerParser.__create_variable_block(element))
+            unit_block.variables += DockerParser.__create_variable_block(element)
         elif instruction == 'COMMENT':
             c = Comment(element.value)
             c.line = element.startline + 1
@@ -141,32 +142,42 @@ class DockerParser(p.Parser):
         return sub_structure
 
     @staticmethod
-    def __create_variable_block(element: DFPStructure) -> Variable:
-        v: Variable
+    def __create_variable_block(element: DFPStructure) -> list[Variable]:
+        variables = []
         if element.instruction == 'USER':
-            v = Variable("user-profile", element.value, False)
+            variables.append(Variable("user-profile", element.value, False))
         elif element.instruction == 'ARG':
             value = element.value.split("=")
             arg = value[0]
             default = value[1] if len(value) == 2 else None
-            v = Variable(arg, default if default else "ARG", True)
+            variables.append(Variable(arg, default if default else "ARG", True))
         elif element.instruction == 'ENV':
-            # TODO: Add support for multiple values
-            split_char = "=" if "=" in element.value else " "
-            if len(element.value.split(split_char)) != 2:
-                raise NotImplementedError()
-            env, value = element.value.split(split_char)
-            v = Variable(env, value, "$" in value)
+            if "=" in element.value:
+                # TODO: Improve code attribution for multiple values
+                for env, value in DockerParser.__parse_multiple_key_value(element.value):
+                    variables.append(Variable(env, value, value.startswith("$")))
+            else:
+                if len(element.value.split(" ")) != 2:
+                    raise NotImplementedError()
+                env, value = element.value.split(" ")
+                variables.append(Variable(env, value, value.startswith("$")))
         else:  # LABEL
             label, value = element.value.split("=")
-            v = Variable(label, value, False)
+            variables.append(Variable(label, value, False))
 
-        if v.value == "\"\"" or v.value == "''":
-            v.value = ""
+        for v in variables:
+            if v.value == "\"\"" or v.value == "''":
+                v.value = ""
+            v.line = element.startline + 1
+            v.code = element.content
+        return variables
 
-        v.line = element.startline + 1
-        v.code = element.content
-        return v
+    @staticmethod
+    def __parse_multiple_key_value(content: str) -> list[tuple[str, str]]:
+        values = []
+        for match in re.finditer(r"([\w_]*)=(?:(?:'|\")([\w\. ]*)(?:\"|')|([\w\.]*))", content):
+            values.append((match.group(1), match.group(2) or match.group(3) or ''))
+        return values
 
     @staticmethod
     def __has_user_tag(structure: list[DFPStructure]) -> bool:
