@@ -154,16 +154,13 @@ class DockerParser(p.Parser):
         elif element.instruction == 'ENV':
             if "=" in element.value:
                 # TODO: Improve code attribution for multiple values
-                for env, value in DockerParser.__parse_multiple_key_value(element.value):
-                    variables.append(Variable(env, value, value.startswith("$")))
-            else:
-                if len(element.value.split(" ")) != 2:
-                    raise NotImplementedError()
-                env, value = element.value.split(" ")
-                variables.append(Variable(env, value, value.startswith("$")))
+                return DockerParser.__parse_multiple_key_value_variables(element.content, element.startline)
+            if len(element.value.split(" ")) != 2:
+                raise NotImplementedError()
+            env, value = element.value.split(" ")
+            variables.append(Variable(env, value, value.startswith("$")))
         else:  # LABEL
-            for label, value in DockerParser.__parse_multiple_key_value(element.value):
-                variables.append(Variable(label, value, value.startswith("$")))
+            return DockerParser.__parse_multiple_key_value_variables(element.content, element.startline)
 
         for v in variables:
             if v.value == "\"\"" or v.value == "''":
@@ -173,11 +170,16 @@ class DockerParser(p.Parser):
         return variables
 
     @staticmethod
-    def __parse_multiple_key_value(content: str) -> list[tuple[str, str]]:
-        values = []
-        for match in re.finditer(r"([\w_]*)=(?:(?:'|\")([\w\. ]*)(?:\"|')|([\w\.]*))", content):
-            values.append((match.group(1), match.group(2) or match.group(3) or ''))
-        return values
+    def __parse_multiple_key_value_variables(content: str, base_line: int) -> list[Variable]:
+        variables = []
+        for i, line in enumerate(content.split('\n')):
+            for match in re.finditer(r"([\w_]*)=(?:(?:'|\")([\w\. ]*)(?:\"|')|([\w\.]*))", content):
+                value = match.group(2) or match.group(3) or ''
+                v = Variable(match.group(1), value, value.startswith("$"))
+                v.line = base_line + i + 1
+                v.code = line
+                variables.append(v)
+        return variables
 
     @staticmethod
     def __has_user_tag(structure: list[DFPStructure]) -> bool:
