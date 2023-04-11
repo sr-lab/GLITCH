@@ -3,6 +3,10 @@ resource "aws_ecr_repository" "bad_example" {
     encryption_type = "KMS"
     kms_key = aws_kms_key.ecr_kms.key_id
   }
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
 }
 
 resource "aws_ecr_repository" "bad_example2" {
@@ -12,6 +16,10 @@ resource "aws_ecr_repository" "bad_example2" {
     encryption_type = "KMS"
     kms_key = aws_kms_key.ecr_kms.key_id
   }
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
 }
 
 resource "aws_ecr_repository" "good_example" {
@@ -20,5 +28,9 @@ resource "aws_ecr_repository" "good_example" {
   encryption_configuration {
     encryption_type = "KMS"
     kms_key = aws_kms_key.ecr_kms.key_id
+  }
+
+  image_scanning_configuration {
+    scan_on_push = true
   }
 }

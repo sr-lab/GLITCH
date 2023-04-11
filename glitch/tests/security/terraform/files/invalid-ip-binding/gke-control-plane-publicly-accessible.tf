@@ -12,6 +12,9 @@ resource "google_container_cluster" "bad_example" {
   private_cluster_config {
     enable_private_nodes = true
   }
+  resource_labels = {
+    "env" = "staging"
+  }
 }
 
 resource "google_container_cluster" "good_example" {
@@ -27,5 +30,8 @@ resource "google_container_cluster" "good_example" {
   }
   private_cluster_config {
     enable_private_nodes = true
+  }
+  resource_labels = {
+    "env" = "staging"
   }
 }

@@ -17,6 +17,9 @@ resource "google_container_cluster" "bad_example" {
   network_policy {
     enabled = true
   }
+  resource_labels = {
+    "env" = "staging"
+  }
 }
 
 resource "google_container_cluster" "good_example" {
@@ -34,6 +37,9 @@ resource "google_container_cluster" "good_example" {
   ip_allocation_policy {}
   network_policy {
     enabled = true
+  }
+  resource_labels = {
+    "env" = "staging"
   }
 }
 
@@ -55,5 +61,8 @@ resource "google_container_cluster" "good_example2" {
   ip_allocation_policy {}
   network_policy {
     enabled = true
+  }
+  resource_labels = {
+    "env" = "staging"
   }
 }

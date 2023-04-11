@@ -119,7 +119,7 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/google-gke-use-rbac-permissions.tf",
-            1, ["sec_access_control"], [14]
+            1, ["sec_access_control"], [17]
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/google-storage-enable-ubla.tf",
@@ -139,7 +139,7 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/private-cluster-nodes.tf",
-            2, ["sec_access_control", "sec_access_control"], [1, 16]
+            2, ["sec_access_control", "sec_access_control"], [1, 19]
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/public-access-eks-cluster.tf",
@@ -277,7 +277,7 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/aws-ecr-encrypted.tf",
-            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 13]
+            2, ["sec_missing_encryption", "sec_missing_encryption"], [1, 17]
         )
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/aws-neptune-at-rest-encryption.tf",
@@ -459,6 +459,10 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/use-of-http-without-tls/elb-use-plain-http.tf",
             2, ["sec_https", "sec_https"], [1, 6]
         )
+        self.__help_test(
+            "tests/security/terraform/files/use-of-http-without-tls/aws-ssm-avoid-leaks-via-http.tf",
+            1, ["sec_https"], [8]
+        )
 
     def test_terraform_ssl_tls_mtls_policy(self):
         self.__help_test(
@@ -575,6 +579,10 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/missing-threats-detection-and-alerts/github-repo-vulnerability-alerts.tf",
             2, ["sec_threats_detection_alerts", "sec_threats_detection_alerts"], [1, 16]
         )
+        self.__help_test(
+            "tests/security/terraform/files/missing-threats-detection-and-alerts/aws-ecr-enable-image-scans.tf",
+            2, ["sec_threats_detection_alerts", "sec_threats_detection_alerts"], [1, 19]
+        )
 
     def test_terraform_weak_password_key_policy(self):
         self.__help_test(
@@ -617,7 +625,7 @@ class TestSecurity(unittest.TestCase):
     def test_terraform_integrity_policy(self):
         self.__help_test(
             "tests/security/terraform/files/integrity-policy/aws-ecr-immutable-repo.tf",
-            2, ["sec_integrity_policy", "sec_integrity_policy"], [1, 9]
+            2, ["sec_integrity_policy", "sec_integrity_policy"], [1, 13]
         )
         self.__help_test(
             "tests/security/terraform/files/integrity-policy/google-compute-enable-integrity-monitoring.tf",
@@ -657,7 +665,7 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/key-management/aws-ecr-use-cmk.tf",
-            2, ["sec_key_management", "sec_key_management"], [1, 14]
+            2, ["sec_key_management", "sec_key_management"], [1, 18]
         )
         self.__help_test(
             "tests/security/terraform/files/key-management/aws-kinesis-stream-use-cmk.tf",
@@ -727,6 +735,10 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/key-management/s3-encryption-customer-key.tf",
             2, ["sec_key_management", "sec_key_management"], [9, 47]
         )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/digitalocean-compute-use-ssh-keys.tf",
+            1, ["sec_key_management"], [1]
+        )
         
     def test_terraform_network_security_rules(self):
         self.__help_test(
@@ -763,7 +775,11 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/network-security-rules/google-gke-enable-network-policy.tf",
-            2, ["sec_network_security_rules", "sec_network_security_rules"], [1, 16]
+            2, ["sec_network_security_rules", "sec_network_security_rules"], [1, 19]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/network-security-rules/google-iam-no-default-network.tf",
+            2, ["sec_network_security_rules", "sec_network_security_rules"], [1, 5]
         )
 
     def test_terraform_permission_of_iam_policies(self):
@@ -923,6 +939,10 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/logging/storage-logging-enabled-for-blob-service-for-read-requests.tf",
             4, ["sec_logging", "sec_logging", "sec_logging", "sec_logging"], [1, 8, 49, 79]
         )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-ecs-enable-container-insight.tf",
+            3, ["sec_logging", "sec_logging", "sec_logging"], [1, 7, 11]
+        )
 
     def test_terraform_attached_resource(self):
         self.__help_test(
@@ -960,6 +980,10 @@ class TestSecurity(unittest.TestCase):
         self.__help_test(
             "tests/security/terraform/files/naming/openstack-networking-describe-security-group.tf",
             2, ["sec_naming", "sec_naming"], [1, 5]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/naming/google-gke-use-cluster-labels.tf",
+            2, ["sec_naming", "sec_naming"], [1, 19]
         )
 
     def test_terraform_replication(self):

@@ -20,4 +20,7 @@ resource "google_container_cluster" "primary" {
       display_name = "external"
     }
   }
+  resource_labels = {
+    "env" = "staging"
+  }
 }

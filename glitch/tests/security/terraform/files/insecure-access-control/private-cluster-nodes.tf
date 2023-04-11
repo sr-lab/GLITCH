@@ -9,6 +9,9 @@ resource "google_container_cluster" "bad_example" {
     enabled = true
   }
   enable_legacy_abac = false
+  resource_labels = {
+    "env" = "staging"
+  }
 }
 
 resource "google_container_cluster" "bad_example" {
@@ -25,6 +28,9 @@ resource "google_container_cluster" "bad_example" {
     enabled = true
   }
   enable_legacy_abac = false
+  resource_labels = {
+    "env" = "staging"
+  }
 }
 
 resource "google_container_cluster" "good_example" {
@@ -41,4 +47,7 @@ resource "google_container_cluster" "good_example" {
     enabled = true
   }
   enable_legacy_abac = false
+  resource_labels = {
+    "env" = "staging"
+  }
 }

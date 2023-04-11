@@ -169,6 +169,15 @@ class SecurityVisitor(RuleVisitor):
                     f"Suggestion: check for a required attribute with name '{policy['msg']}'."))
 
         # check http without tls
+        if (au.type == "data.http"):
+            url = check_required_attribute(au.attributes, [""], "url")
+            if ("${" in url.value):
+                r = url.value.split("${")[1].split("}")[0]
+                resource_type = r.split(".")[0]
+                resource_name = r.split(".")[1]
+                if get_au(self.code, resource_name, "resource." + resource_type):
+                    errors.append(Error('sec_https', url, file, repr(url)))
+
         for config in SecurityVisitor.__HTTPS_CONFIGS:
             if (config["required"] == "yes" and au.type in config['au_type']
                 and not check_required_attribute(au.attributes, config["parents"], config['attribute'])):
@@ -591,6 +600,19 @@ class SecurityVisitor(RuleVisitor):
             container_access_type = check_required_attribute(au.attributes, [""], "container_access_type")
             if container_access_type and container_access_type.value.lower() not in ["blob", "private"]:
                 errors.append(Error('sec_logging', container_access_type, file, repr(container_access_type)))
+        elif (au.type == "resource.aws_ecs_cluster"):
+            name = check_required_attribute(au.attributes, ["setting"], "name", "containerinsights")
+            if name:
+                enabled = check_required_attribute(au.attributes, ["setting"], "value")
+                if enabled:
+                    if enabled.value.lower() != "enabled":
+                        errors.append(Error('sec_logging', enabled, file, repr(enabled)))
+                else:
+                    errors.append(Error('sec_logging', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name 'setting.value'."))
+            else:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    "Suggestion: check for a required attribute with name 'setting.name' and value 'containerInsights'."))
 
         for config in SecurityVisitor.__LOGGING:
             if (config['required'] == "yes" and au.type in config['au_type'] 
@@ -636,6 +658,15 @@ class SecurityVisitor(RuleVisitor):
             if egress and not check_required_attribute(egress.keyvalues, [""], "description"):
                 errors.append(Error('sec_naming', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name 'egress.description'."))
+        elif (au.type == "resource.google_container_cluster"):
+            resource_labels = check_required_attribute(au.attributes, [""], "resource_labels", None)
+            if resource_labels and resource_labels.value == None:
+                if resource_labels.keyvalues == []:
+                    errors.append(Error('sec_naming', resource_labels, file, repr(resource_labels), 
+                        f"Suggestion: check empty 'resource_labels'."))
+            else:
+                errors.append(Error('sec_naming', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'resource_labels'."))
 
         for config in SecurityVisitor.__NAMING:
             if (config['required'] == "yes" and au.type in config['au_type'] 
