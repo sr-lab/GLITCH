@@ -1497,19 +1497,20 @@ class TerraformParser(p.Parser):
                     k_values.append(k)    
             elif isinstance(keyvalue, list) and type == "attribute":
             # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
-                if name == "dynamic":
-                    for block in keyvalue:
-                        for block_name, block_attributes in block.items():
-                            k = create_keyvalue(block_attributes["__start_line__"], 
-                                    block_attributes["__end_line__"], f"dynamic.{block_name}", None)
-                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
-                            k_values.append(k)
-                else:
+                try:
                     for block_attributes in keyvalue:
                         k = create_keyvalue(block_attributes["__start_line__"], 
                                 block_attributes["__end_line__"], name, None)
                         k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
                         k_values.append(k)
+                except Exception:
+                    for block in keyvalue:
+                        for block_name, block_attributes in block.items():
+                            k = create_keyvalue(block_attributes["__start_line__"], 
+                                    block_attributes["__end_line__"], f"{name}.{block_name}", None)
+                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                            k_values.append(k)
+                    
                     
         return k_values
 
@@ -1559,7 +1560,6 @@ class TerraformParser(p.Parser):
                 f.seek(0, 0)
                 code = f.readlines()
         
-                #print(f"\nparsed_hcl: {parsed_hcl}\n")
                 unit_block = UnitBlock(path, type)
                 unit_block.path = path
                 for key, value in parsed_hcl.items():
@@ -1575,7 +1575,6 @@ class TerraformParser(p.Parser):
                         continue
                     else:
                         throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
-                #print(unit_block.print(0))
                 return unit_block
             except:
                 throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
@@ -1606,5 +1605,4 @@ class TerraformParser(p.Parser):
             res.blocks += aux.blocks
             res.modules += aux.modules
 
-        #print(res.print(0))
         return res
