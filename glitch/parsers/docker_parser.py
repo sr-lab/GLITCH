@@ -173,7 +173,7 @@ class DockerParser(p.Parser):
     def __parse_multiple_key_value_variables(content: str, base_line: int) -> list[Variable]:
         variables = []
         for i, line in enumerate(content.split('\n')):
-            for match in re.finditer(r"([\w_]*)=(?:(?:'|\")([\w\. ]*)(?:\"|')|([\w\.]*))", content):
+            for match in re.finditer(r"([\w_]*)=(?:(?:'|\")([\w\. <>@]*)(?:\"|')|([\w\.]*))", line):
                 value = match.group(2) or match.group(3) or ''
                 v = Variable(match.group(1), value, value.startswith("$"))
                 v.line = base_line + i + 1
