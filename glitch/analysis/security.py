@@ -80,7 +80,10 @@ class SecurityVisitor(RuleVisitor):
             if item not in au.type:
                 continue
             for a in au.attributes:
-                if a.name == "mode" and re.search(r'(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})', a.value):
+                if a.name in ["mode", "m"] and re.search(
+                        r'(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})',
+                        a.value
+                        ):
                     errors.append(Error('sec_full_permission_filesystem', a, file, repr(a)))
 
         if au.type in SecurityVisitor.__OBSOLETE_COMMANDS:

@@ -238,6 +238,7 @@ class CommandParser:
         self.line = command.startline + 1
 
     def parse_command(self) -> list[AtomicUnit]:
+        # TODO: Fix get commands lines for scripts with multiline values
         commands = self.__get_sub_commands()
         aus = []
         for line, c in commands:
@@ -249,6 +250,10 @@ class CommandParser:
 
     @staticmethod
     def __parse_single_command(command: list[str], line: int) -> AtomicUnit:
+        command, carriage_returns = CommandParser.__strip_shell_command(
+                command
+                )
+        line += carriage_returns
         sudo = command[0] == "sudo"
         name_index = 0 if not sudo else 1
         command_type = command[name_index]
@@ -263,10 +268,27 @@ class CommandParser:
         return c.to_atomic_unit()
 
     @staticmethod
+    def __strip_shell_command(command: list[str]) -> tuple[list[str], int]:
+        non_empty_indexes = [i for i, c in enumerate(command)
+                             if c not in ['\n', '', ' ', '\r']]
+        if not non_empty_indexes:
+            return []
+        start, end = non_empty_indexes[0], non_empty_indexes[-1]
+        return command[start:end+1], sum(1 for c in command if c == "\n")
+
+    @staticmethod
     def __parse_shell_command(command: ShellCommand):
         if command.command == "chmod":
+            reference = [arg for arg in command.args if '--reference' in arg]
+            command.args = [arg for arg in command.args
+                            if not arg.startswith('-')]
             command.main_arg = command.args[-1]
-            command.options["mode"] = command.args[0], command.args[0]
+            if reference:
+                reference[0]
+                command.options['reference'] = (reference.split('=')[1],
+                                                reference)
+            else:
+                command.options["mode"] = command.args[0], command.args[0]
         else:
             CommandParser.__parse_general_command(command)
 
