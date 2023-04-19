@@ -696,12 +696,12 @@ class SecurityVisitor(RuleVisitor):
         return []
 
     def __check_keyvalue(self, c: CodeElement, name: str, 
-            value: str, has_variable: bool, file: str, atomic_unit: AtomicUnit = None, parent_name: str = ""):
+            value: str, has_variable: bool, file: str, au_type = None, parent_name: str = ""):
         errors = []
         name = name.strip().lower()
         if (isinstance(value, type(None))):
             for child in c.keyvalues:
-                errors += self.check_element(child, file, atomic_unit, name)
+                errors += self.check_element(child, file, au_type, name)
             return errors
         elif (isinstance(value, str)):
             value = value.strip().lower()
@@ -723,7 +723,7 @@ class SecurityVisitor(RuleVisitor):
             pass
 
         for config in SecurityVisitor.__HTTPS_CONFIGS:
-            if (name == config["attribute"] and atomic_unit.type in config["au_type"] 
+            if (name == config["attribute"] and au_type in config["au_type"] 
                 and parent_name in config["parents"] and value.lower() not in config["values"]):
                 errors.append(Error('sec_https', c, file, repr(c)))
                 break
@@ -850,30 +850,30 @@ class SecurityVisitor(RuleVisitor):
                         if (item_value in SecurityVisitor.__PASSWORDS):
                             errors.append(Error('sec_hard_pass', c, file, repr(c)))
 
-        if (atomic_unit.type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value"):
+        if (au_type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value"):
             errors.append(Error('sec_hard_secr', c, file, repr(c)))
         
         for policy in SecurityVisitor.__INTEGRITY_POLICY:
-            if (name == policy['attribute'] and atomic_unit.type in policy['au_type'] 
+            if (name == policy['attribute'] and au_type in policy['au_type'] 
                 and parent_name in policy['parents'] and value.lower() not in policy['values']):
                 errors.append(Error('sec_integrity_policy', c, file, repr(c)))
                 break
         
         for policy in SecurityVisitor.__SSL_TLS_POLICY:
-            if (name == policy['attribute'] and atomic_unit.type in policy['au_type']
+            if (name == policy['attribute'] and au_type in policy['au_type']
                 and parent_name in policy['parents'] and value.lower() not in policy['values']):
                 errors.append(Error('sec_ssl_tls_policy', c, file, repr(c)))
                 break
 
         for config in SecurityVisitor.__DNSSEC_CONFIGS:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_dnssec', c, file, repr(c)))
                 break
 
         for config in SecurityVisitor.__PUBLIC_IP_CONFIGS:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_public_ip', c, file, repr(c)))
@@ -889,40 +889,40 @@ class SecurityVisitor(RuleVisitor):
                     if re.search(pattern, value) and re.search(allow_pattern, value):
                         errors.append(Error('sec_access_control', c, file, repr(c)))
                 for config in SecurityVisitor.__POLICY_AUTHENTICATION:
-                    if atomic_unit.type in config['au_type']:
+                    if au_type in config['au_type']:
                         expr = config['keyword'].lower() + "\s*" + config['value'].lower()
                         pattern = re.compile(rf"{expr}")
                         if not re.search(pattern, value):
                             errors.append(Error('sec_authentication', c, file, repr(c)))
 
         if (re.search(r"actions\[\d+\]", name) and parent_name == "permissions" 
-            and atomic_unit.type == "resource.azurerm_role_definition" and value == "*"):
+            and au_type == "resource.azurerm_role_definition" and value == "*"):
             errors.append(Error('sec_access_control', c, file, repr(c)))
-        elif (((re.search(r"members\[\d+\]", name) and atomic_unit.type == "resource.google_storage_bucket_iam_binding")
-            or (name == "member" and atomic_unit.type == "resource.google_storage_bucket_iam_member"))
+        elif (((re.search(r"members\[\d+\]", name) and au_type == "resource.google_storage_bucket_iam_binding")
+            or (name == "member" and au_type == "resource.google_storage_bucket_iam_member"))
             and (value == "allusers" or value == "allauthenticatedusers")):
             errors.append(Error('sec_access_control', c, file, repr(c)))
         elif (name == "email" and parent_name == "service_account" 
-            and atomic_unit.type == "resource.google_compute_instance"
+            and au_type == "resource.google_compute_instance"
             and re.search(r".-compute@developer.gserviceaccount.com", value)):
             errors.append(Error('sec_access_control', c, file, repr(c)))
 
         for config in SecurityVisitor.__ACCESS_CONTROL_CONFIGS:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_access_control', c, file, repr(c)))
                 break
 
         for config in SecurityVisitor.__AUTHENTICATION:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_authentication', c, file, repr(c)))
                 break
 
         for config in SecurityVisitor.__MISSING_ENCRYPTION:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_missing_encryption', c, file, repr(c)))
@@ -934,7 +934,7 @@ class SecurityVisitor(RuleVisitor):
         for item in SecurityVisitor.__CONFIGURATION_KEYWORDS:
             if item.lower() == name:
                 for config in SecurityVisitor.__ENCRYPT_CONFIG:
-                    if atomic_unit.type in config['au_type']:
+                    if au_type in config['au_type']:
                         expr = config['keyword'].lower() + "\s*" + config['value'].lower()
                         pattern = re.compile(rf"{expr}")
                         if not re.search(pattern, value) and config['required'] == "yes":
@@ -943,7 +943,7 @@ class SecurityVisitor(RuleVisitor):
                             errors.append(Error('sec_missing_encryption', c, file, repr(c)))
         
         for config in SecurityVisitor.__FIREWALL_CONFIGS:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_firewall_misconfig', c, file, repr(c)))
@@ -953,7 +953,7 @@ class SecurityVisitor(RuleVisitor):
                     break
 
         for config in SecurityVisitor.__MISSING_THREATS_DETECTION_ALERTS:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_threats_detection_alerts', c, file, repr(c)))
@@ -963,7 +963,7 @@ class SecurityVisitor(RuleVisitor):
                     break
 
         for policy in SecurityVisitor.__PASSWORD_KEY_POLICY:
-            if (name == policy['attribute'] and atomic_unit.type in policy['au_type']
+            if (name == policy['attribute'] and au_type in policy['au_type']
                 and parent_name in policy['parents'] and policy['values'] != [""]):
                 if (policy['logic'] == "equal"):
                     if ("any_not_empty" in policy['values'] and value.lower() == ""):
@@ -982,7 +982,7 @@ class SecurityVisitor(RuleVisitor):
                     break
 
         for config in SecurityVisitor.__KEY_MANAGEMENT:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_key_management', c, file, repr(c)))
@@ -991,7 +991,7 @@ class SecurityVisitor(RuleVisitor):
                     errors.append(Error('sec_key_management', c, file, repr(c)))
                     break
 
-        if (name == "rotation_period" and atomic_unit.type == "resource.google_kms_crypto_key"):
+        if (name == "rotation_period" and au_type == "resource.google_kms_crypto_key"):
             expr1 = r'\d+\.\d{0,9}s'
             expr2 = r'\d+s'
             if (re.search(expr1, value) or re.search(expr2, value)):
@@ -999,34 +999,34 @@ class SecurityVisitor(RuleVisitor):
                     errors.append(Error('sec_key_management', c, file, repr(c)))
             else:
                 errors.append(Error('sec_key_management', c, file, repr(c)))
-        elif (name == "kms_master_key_id" and ((atomic_unit.type == "resource.aws_sqs_queue"
-            and value == "alias/aws/sqs") or  (atomic_unit.type == "resource.aws_sns_queue"
+        elif (name == "kms_master_key_id" and ((au_type == "resource.aws_sqs_queue"
+            and value == "alias/aws/sqs") or  (au_type == "resource.aws_sns_queue"
             and value == "alias/aws/sns"))):
             errors.append(Error('sec_key_management', c, file, repr(c)))
 
         for rule in SecurityVisitor.__NETWORK_SECURITY_RULES:
-            if (name == rule['attribute'] and atomic_unit.type in rule['au_type']
+            if (name == rule['attribute'] and au_type in rule['au_type']
                 and parent_name in rule['parents'] and value.lower() not in rule['values']
                 and rule['values'] != [""]):
                 errors.append(Error('sec_network_security_rules', c, file, repr(c)))
                 break
 
         if ((name == "member" or name.split('[')[0] == "members") 
-            and atomic_unit.type in SecurityVisitor.__GOOGLE_IAM_MEMBER
+            and au_type in SecurityVisitor.__GOOGLE_IAM_MEMBER
             and (re.search(r".-compute@developer.gserviceaccount.com", value) or 
                  re.search(r".@appspot.gserviceaccount.com", value) or
                  re.search(r"user:", value))):
             errors.append(Error('sec_permission_iam_policies', c, file, repr(c)))
 
         for config in SecurityVisitor.__PERMISSION_IAM_POLICIES:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
                 if ((config['logic'] == "equal" and value.lower() not in config['values'])
                     or (config['logic'] == "diff" and value.lower() in config['values'])):
                     errors.append(Error('sec_permission_iam_policies', c, file, repr(c)))
                     break
 
-        if (name == "cloud_watch_logs_group_arn" and atomic_unit.type == "resource.aws_cloudtrail"):
+        if (name == "cloud_watch_logs_group_arn" and au_type == "resource.aws_cloudtrail"):
             if re.match(r"^\${aws_cloudwatch_log_group\..", value):
                 aws_cloudwatch_log_group_name = value.split('.')[1]
                 if not get_au(self.code, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
@@ -1036,19 +1036,19 @@ class SecurityVisitor(RuleVisitor):
             else:
                 errors.append(Error('sec_logging', c, file, repr(c)))
         elif (((name == "retention_in_days" and parent_name == "" 
-            and atomic_unit.type in ["resource.azurerm_mssql_database_extended_auditing_policy", 
+            and au_type in ["resource.azurerm_mssql_database_extended_auditing_policy", 
             "resource.azurerm_mssql_server_extended_auditing_policy"]) 
             or (name == "days" and parent_name == "retention_policy" 
-            and atomic_unit.type == "resource.azurerm_network_watcher_flow_log")) 
+            and au_type == "resource.azurerm_network_watcher_flow_log")) 
             and ((not value.isnumeric()) or (value.isnumeric() and int(value) < 90))):
             errors.append(Error('sec_logging', c, file, repr(c)))
         elif (name == "days" and parent_name == "retention_policy" 
-            and atomic_unit.type == "resource.azurerm_monitor_log_profile" 
+            and au_type == "resource.azurerm_monitor_log_profile" 
             and (not value.isnumeric() or (value.isnumeric() and int(value) < 365))):
             errors.append(Error('sec_logging', c, file, repr(c)))
 
         for config in SecurityVisitor.__LOGGING:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_logging', c, file, repr(c)))
@@ -1058,19 +1058,19 @@ class SecurityVisitor(RuleVisitor):
                     break
 
         for config in SecurityVisitor.__VERSIONING:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]
                 and value.lower() not in config['values']):
                 errors.append(Error('sec_versioning', c, file, repr(c)))
                 break
                 
-        if (name == "name" and atomic_unit.type in ["resource.azurerm_storage_account"]):
+        if (name == "name" and au_type in ["resource.azurerm_storage_account"]):
             pattern = r'^[a-z0-9]{3,24}$'
             if not re.match(pattern, value):
                 errors.append(Error('sec_naming', c, file, repr(c)))
 
         for config in SecurityVisitor.__NAMING:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_naming', c, file, repr(c)))
@@ -1080,7 +1080,7 @@ class SecurityVisitor(RuleVisitor):
                     break
 
         for config in SecurityVisitor.__REPLICATION:
-            if (name == config['attribute'] and atomic_unit.type in config['au_type']
+            if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]
                 and value.lower() not in config['values']):
                 errors.append(Error('sec_replication', c, file, repr(c)))
@@ -1088,11 +1088,11 @@ class SecurityVisitor(RuleVisitor):
 
         return errors
 
-    def check_attribute(self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
-        return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file, au, parent_name)
+    def check_attribute(self, a: Attribute, file: str, au_type = None, parent_name: str = "") -> list[Error]:
+        return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file, au_type, parent_name)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
-        return self.__check_keyvalue(None, v, v.name, v.value, v.has_variable, file) #FIXME
+        return self.__check_keyvalue(v, v.name, v.value, v.has_variable, file)
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []

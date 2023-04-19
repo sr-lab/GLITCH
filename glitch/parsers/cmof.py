@@ -1559,7 +1559,6 @@ class TerraformParser(p.Parser):
                 parsed_hcl = hcl2.load(f, True)
                 f.seek(0, 0)
                 code = f.readlines()
-        
                 unit_block = UnitBlock(path, type)
                 unit_block.path = path
                 for key, value in parsed_hcl.items():
@@ -1571,7 +1570,7 @@ class TerraformParser(p.Parser):
                     elif key == "locals":
                         for local in value:
                             unit_block.variables += self.parse_keyvalues(unit_block, local, code, "variable")
-                    elif key == "provider":
+                    elif key in ["provider", "terraform"]:
                         continue
                     else:
                         throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)

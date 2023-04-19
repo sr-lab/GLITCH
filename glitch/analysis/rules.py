@@ -109,13 +109,13 @@ class RuleVisitor(ABC):
         elif isinstance(code, UnitBlock):
             return self.check_unitblock(code)
 
-    def check_element(self, c, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
+    def check_element(self, c, file: str, au_type = None, parent_name: str = "") -> list[Error]:
         if isinstance(c, AtomicUnit):
             return self.check_atomicunit(c, file)
         elif isinstance(c, Dependency):
             return self.check_dependency(c, file)
         elif isinstance(c, Attribute):
-            return self.check_attribute(c, file, au, parent_name)
+            return self.check_attribute(c, file, au_type, parent_name)
         elif isinstance(c, Variable):
             return self.check_variable(c, file)
         elif isinstance(c, ConditionStatement):
@@ -175,7 +175,7 @@ class RuleVisitor(ABC):
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = []
         for a in au.attributes:
-            errors += self.check_attribute(a, file, au)
+            errors += self.check_attribute(a, file, au.type)
 
         for s in au.statements:
             errors += self.check_element(s, file)
@@ -187,7 +187,7 @@ class RuleVisitor(ABC):
         pass
 
     @abstractmethod
-    def check_attribute(self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
+    def check_attribute(self, a: Attribute, file: str, au_type: None, parent_name: str = "") -> list[Error]:
         pass
 
     @abstractmethod
