@@ -613,6 +613,15 @@ class SecurityVisitor(RuleVisitor):
             else:
                 errors.append(Error('sec_logging', au, file, repr(au), 
                     "Suggestion: check for a required attribute with name 'setting.name' and value 'containerInsights'."))
+        elif (au.type == "resource.aws_vpc"):
+            expr = "\${aws_vpc\." + f"{au.name}\."
+            pattern = re.compile(rf"{expr}")
+            assoc_au = get_associated_au(self.code, "resource.aws_flow_log",
+                        "vpc_id", pattern, [""])
+            if not assoc_au:
+                errors.append(Error('sec_logging', au, file, repr(au), 
+                    f"Suggestion: check for a required resource 'aws_flow_log' " + 
+                    f"associated to an 'aws_vpc' resource."))
 
         for config in SecurityVisitor.__LOGGING:
             if (config['required'] == "yes" and au.type in config['au_type'] 

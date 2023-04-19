@@ -943,6 +943,10 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/logging/aws-ecs-enable-container-insight.tf",
             3, ["sec_logging", "sec_logging", "sec_logging"], [1, 7, 11]
         )
+        self.__help_test(
+            "tests/security/terraform/files/logging/aws-vpc-flow-logs-enabled.tf",
+            1, ["sec_logging"], [11]
+        )
 
     def test_terraform_attached_resource(self):
         self.__help_test(
