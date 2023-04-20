@@ -5,6 +5,7 @@ import configparser
 from urllib.parse import urlparse
 from glitch.analysis.rules import Error, RuleVisitor
 
+from glitch.tech import Tech
 from glitch.repr.inter import *
 
 
@@ -185,6 +186,14 @@ class SecurityVisitor(RuleVisitor):
                     f"Suggestion: check for a required attribute with name '{config['msg']}'."))
             
         # check ssl/tls policy
+        if (au.type in ["resource.aws_alb_listener", "resource.aws_lb_listener"]):
+            protocol = check_required_attribute(au.attributes, [""], "protocol")
+            if (protocol and protocol.value.lower() in ["https", "tls"]):
+                ssl_policy = check_required_attribute(au.attributes, [""], "ssl_policy")
+                if not ssl_policy:
+                    errors.append(Error('sec_ssl_tls_policy', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'ssl_policy'."))
+        
         for policy in SecurityVisitor.__SSL_TLS_POLICY:
             if (policy['required'] == "yes" and au.type in policy['au_type']
                 and not check_required_attribute(au.attributes, policy['parents'], policy['attribute'])):
@@ -355,16 +364,7 @@ class SecurityVisitor(RuleVisitor):
                     errors.append(Error('sec_sensitive_iam_action', action, file, repr(action)))
 
         # check key management
-        if (au.type == "resource.aws_s3_bucket"):
-            expr = "\${aws_s3_bucket\." + f"{au.name}\."
-            pattern = re.compile(rf"{expr}")
-            r = get_associated_au(self.code, "resource.aws_s3_bucket_server_side_encryption_configuration", "bucket",
-                pattern, [""])
-            if not r:
-                errors.append(Error('sec_key_management', au, file, repr(au), 
-                    f"Suggestion: check for a required resource 'aws_s3_bucket_server_side_encryption_configuration' " + 
-                        f"associated to an 'aws_s3_bucket' resource."))
-        elif (au.type == "resource.azurerm_storage_account"):
+        if (au.type == "resource.azurerm_storage_account"):
             expr = "\${azurerm_storage_account\." + f"{au.name}\."
             pattern = re.compile(rf"{expr}")
             if not get_associated_au(self.code, "resource.azurerm_storage_account_customer_managed_key", "storage_account_id",
@@ -731,12 +731,6 @@ class SecurityVisitor(RuleVisitor):
             # The url is not valid
             pass
 
-        for config in SecurityVisitor.__HTTPS_CONFIGS:
-            if (name == config["attribute"] and au_type in config["au_type"] 
-                and parent_name in config["parents"] and value.lower() not in config["values"]):
-                errors.append(Error('sec_https', c, file, repr(c)))
-                break
-
         if re.match(r'^0.0.0.0', value) or re.match(r'^::/0', value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
 
@@ -798,11 +792,24 @@ class SecurityVisitor(RuleVisitor):
                         return var
             return None
 
+        # only for terraform
+        var = None
+        if (has_variable and self.tech == Tech.terraform):
+            value = re.sub(r'^\${(.*)}$', r'\1', value)
+            if value.startswith("var."):   # input variable (atomic unit with type variable)
+                au = get_au(self.code, value.strip("var."), "variable")
+                if au != None:
+                    for attribute in au.attributes:
+                        if attribute.name == "default":
+                            var = attribute
+            elif value.startswith("local."):    # local value (variable)
+                var = get_module_var(self.code, value.strip("local."))
+
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
             if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), name) 
                 and name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST):
-                if not has_variable:
+                if (not has_variable or var):
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
                     if (item in SecurityVisitor.__PASSWORDS):
@@ -810,34 +817,14 @@ class SecurityVisitor(RuleVisitor):
                     elif (item in SecurityVisitor.__USERS):
                         errors.append(Error('sec_hard_user', c, file, repr(c)))
 
-                    if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
-                        errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                    if not has_variable:
+                        if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
+                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                    elif var:
+                        if (item in SecurityVisitor.__PASSWORDS and var.value != None and len(var.value) == 0):
+                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
 
                     break
-                else:
-                    value = re.sub(r'^\${(.*)}$', r'\1', value)
-                    aux = None
-                    if value.startswith("var."):   # input variable (atomic unit with type variable)
-                        au = get_au(self.code, value.strip("var."), "variable")
-                        if au != None:
-                            for attribute in au.attributes:
-                                if attribute.name == "default":
-                                    aux = attribute
-                    elif value.startswith("local."):    # local value (variable)
-                        aux = get_module_var(self.code, value.strip("local."))
-                    
-                    if aux:
-                        errors.append(Error('sec_hard_secr', c, file, repr(c)))
-
-                        if (item in SecurityVisitor.__PASSWORDS):
-                            errors.append(Error('sec_hard_pass', c, file, repr(c)))
-                        elif (item in SecurityVisitor.__USERS):
-                            errors.append(Error('sec_hard_user', c, file, repr(c)))
-
-                        if (item in SecurityVisitor.__PASSWORDS and aux.value != None and len(aux.value) == 0):
-                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
-                            
-                        break
 
         for item in SecurityVisitor.__SSH_DIR:
             if item.lower() in name:
@@ -855,35 +842,44 @@ class SecurityVisitor(RuleVisitor):
                     SecurityVisitor.__SECRETS):
                     if item_value in value.lower():
                         errors.append(Error('sec_hard_secr', c, file, repr(c)))
-
                         if (item_value in SecurityVisitor.__PASSWORDS):
                             errors.append(Error('sec_hard_pass', c, file, repr(c)))
 
         if (au_type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value"):
             errors.append(Error('sec_hard_secr', c, file, repr(c)))
         
+        if (has_variable and var):
+            has_variable = False
+            value = var.value
+
+        for config in SecurityVisitor.__HTTPS_CONFIGS:
+            if (name == config["attribute"] and au_type in config["au_type"] 
+                and parent_name in config["parents"] and not has_variable and value.lower() not in config["values"]):
+                errors.append(Error('sec_https', c, file, repr(c)))
+                break
+
         for policy in SecurityVisitor.__INTEGRITY_POLICY:
             if (name == policy['attribute'] and au_type in policy['au_type'] 
-                and parent_name in policy['parents'] and value.lower() not in policy['values']):
+                and parent_name in policy['parents'] and not has_variable and value.lower() not in policy['values']):
                 errors.append(Error('sec_integrity_policy', c, file, repr(c)))
                 break
         
         for policy in SecurityVisitor.__SSL_TLS_POLICY:
             if (name == policy['attribute'] and au_type in policy['au_type']
-                and parent_name in policy['parents'] and value.lower() not in policy['values']):
+                and parent_name in policy['parents'] and not has_variable and value.lower() not in policy['values']):
                 errors.append(Error('sec_ssl_tls_policy', c, file, repr(c)))
                 break
 
         for config in SecurityVisitor.__DNSSEC_CONFIGS:
             if (name == config['attribute'] and au_type in config['au_type']
-                and parent_name in config['parents'] and value.lower() not in config['values']
+                and parent_name in config['parents'] and not has_variable and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_dnssec', c, file, repr(c)))
                 break
 
         for config in SecurityVisitor.__PUBLIC_IP_CONFIGS:
             if (name == config['attribute'] and au_type in config['au_type']
-                and parent_name in config['parents'] and value.lower() not in config['values']
+                and parent_name in config['parents'] and not has_variable and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_public_ip', c, file, repr(c)))
                 break
@@ -918,14 +914,14 @@ class SecurityVisitor(RuleVisitor):
 
         for config in SecurityVisitor.__ACCESS_CONTROL_CONFIGS:
             if (name == config['attribute'] and au_type in config['au_type']
-                and parent_name in config['parents'] and value.lower() not in config['values']
+                and parent_name in config['parents'] and not has_variable and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_access_control', c, file, repr(c)))
                 break
 
         for config in SecurityVisitor.__AUTHENTICATION:
             if (name == config['attribute'] and au_type in config['au_type']
-                and parent_name in config['parents'] and value.lower() not in config['values']
+                and parent_name in config['parents'] and not has_variable and value.lower() not in config['values']
                 and config['values'] != [""]):
                 errors.append(Error('sec_authentication', c, file, repr(c)))
                 break
@@ -936,7 +932,8 @@ class SecurityVisitor(RuleVisitor):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_missing_encryption', c, file, repr(c)))
                     break
-                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                elif ("any_not_empty" not in config['values'] and not has_variable 
+                    and value.lower() not in config['values']):
                     errors.append(Error('sec_missing_encryption', c, file, repr(c)))
                     break
 
@@ -957,7 +954,8 @@ class SecurityVisitor(RuleVisitor):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_firewall_misconfig', c, file, repr(c)))
                     break
-                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                elif ("any_not_empty" not in config['values'] and not has_variable and 
+                    value.lower() not in config['values']):
                     errors.append(Error('sec_firewall_misconfig', c, file, repr(c)))
                     break
 
@@ -967,7 +965,8 @@ class SecurityVisitor(RuleVisitor):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_threats_detection_alerts', c, file, repr(c)))
                     break
-                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                elif ("any_not_empty" not in config['values'] and not has_variable and 
+                    value.lower() not in config['values']):
                     errors.append(Error('sec_threats_detection_alerts', c, file, repr(c)))
                     break
 
@@ -978,7 +977,8 @@ class SecurityVisitor(RuleVisitor):
                     if ("any_not_empty" in policy['values'] and value.lower() == ""):
                         errors.append(Error('sec_weak_password_key_policy', c, file, repr(c)))
                         break
-                    elif ("any_not_empty" not in policy['values'] and value.lower() not in policy['values']):
+                    elif ("any_not_empty" not in policy['values'] and not has_variable and 
+                        value.lower() not in policy['values']):
                         errors.append(Error('sec_weak_password_key_policy', c, file, repr(c)))
                         break
                 elif ((policy['logic'] == "gte" and not value.isnumeric()) or
@@ -996,7 +996,8 @@ class SecurityVisitor(RuleVisitor):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_key_management', c, file, repr(c)))
                     break
-                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                elif ("any_not_empty" not in config['values'] and not has_variable and 
+                    value.lower() not in config['values']):
                     errors.append(Error('sec_key_management', c, file, repr(c)))
                     break
 
@@ -1014,23 +1015,22 @@ class SecurityVisitor(RuleVisitor):
             errors.append(Error('sec_key_management', c, file, repr(c)))
 
         for rule in SecurityVisitor.__NETWORK_SECURITY_RULES:
-            if (name == rule['attribute'] and au_type in rule['au_type']
-                and parent_name in rule['parents'] and value.lower() not in rule['values']
-                and rule['values'] != [""]):
+            if (name == rule['attribute'] and au_type in rule['au_type'] and parent_name in rule['parents'] 
+                and not has_variable and value.lower() not in rule['values'] and rule['values'] != [""]):
                 errors.append(Error('sec_network_security_rules', c, file, repr(c)))
                 break
 
         if ((name == "member" or name.split('[')[0] == "members") 
             and au_type in SecurityVisitor.__GOOGLE_IAM_MEMBER
             and (re.search(r".-compute@developer.gserviceaccount.com", value) or 
-                 re.search(r".@appspot.gserviceaccount.com", value) or
-                 re.search(r"user:", value))):
+                re.search(r".@appspot.gserviceaccount.com", value) or
+                re.search(r"user:", value))):
             errors.append(Error('sec_permission_iam_policies', c, file, repr(c)))
 
         for config in SecurityVisitor.__PERMISSION_IAM_POLICIES:
             if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]):
-                if ((config['logic'] == "equal" and value.lower() not in config['values'])
+                if ((config['logic'] == "equal" and not has_variable and value.lower() not in config['values'])
                     or (config['logic'] == "diff" and value.lower() in config['values'])):
                     errors.append(Error('sec_permission_iam_policies', c, file, repr(c)))
                     break
@@ -1062,14 +1062,15 @@ class SecurityVisitor(RuleVisitor):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_logging', c, file, repr(c)))
                     break
-                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                elif ("any_not_empty" not in config['values'] and not has_variable and 
+                    value.lower() not in config['values']):
                     errors.append(Error('sec_logging', c, file, repr(c)))
                     break
 
         for config in SecurityVisitor.__VERSIONING:
             if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]
-                and value.lower() not in config['values']):
+                and not has_variable and value.lower() not in config['values']):
                 errors.append(Error('sec_versioning', c, file, repr(c)))
                 break
                 
@@ -1084,14 +1085,15 @@ class SecurityVisitor(RuleVisitor):
                 if ("any_not_empty" in config['values'] and value.lower() == ""):
                     errors.append(Error('sec_naming', c, file, repr(c)))
                     break
-                elif ("any_not_empty" not in config['values'] and value.lower() not in config['values']):
+                elif ("any_not_empty" not in config['values'] and not has_variable and 
+                    value.lower() not in config['values']):
                     errors.append(Error('sec_naming', c, file, repr(c)))
                     break
 
         for config in SecurityVisitor.__REPLICATION:
             if (name == config['attribute'] and au_type in config['au_type']
                 and parent_name in config['parents'] and config['values'] != [""]
-                and value.lower() not in config['values']):
+                and not has_variable and value.lower() not in config['values']):
                 errors.append(Error('sec_replication', c, file, repr(c)))
                 break
 

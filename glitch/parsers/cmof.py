@@ -1455,6 +1455,10 @@ class TerraformParser(p.Parser):
     def parse_keyvalues(self, unit_block: UnitBlock, keyvalues, code, type: str):
         def create_keyvalue(start_line, end_line, name: str, value: str):
             has_variable = ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
+            pattern = r'^[+-]?\d+(\.\d+)?$'
+            if (has_variable and re.match(pattern, re.sub(r'^\${(.*)}$', r'\1', value))):
+                value = re.sub(r'^\${(.*)}$', r'\1', value)
+                has_variable = False
             if value == "null": value = ""
 
             if type == "attribute":
