@@ -2,6 +2,7 @@ import ast
 import os.path
 import re
 from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Optional
 
 import bashlex
 from dockerfile_parse import DockerfileParser
@@ -55,7 +56,7 @@ class DockerParser(p.Parser):
         module.blocks, module.modules = self._parse_folder(path)
         return module
 
-    def _parse_folder(self, path: str) -> tuple[list[UnitBlock], list[Module]]:
+    def _parse_folder(self, path: str) -> Tuple[List[UnitBlock], List[Module]]:
         files = [os.path.join(path, f) for f in os.listdir(path)]
         dockerfiles = [f for f in files if os.path.isfile(f) and "Dockerfile" in os.path.basename(f)]
         modules = [f for f in files if os.path.isdir(f) and DockerParser._contains_dockerfiles(f)]
@@ -77,7 +78,7 @@ class DockerParser(p.Parser):
         return False
 
     @staticmethod
-    def __parse_stage(name: str, path: str, unit_type: UnitBlockType, structure: list[DFPStructure]) -> UnitBlock:
+    def __parse_stage(name: str, path: str, unit_type: UnitBlockType, structure: List[DFPStructure]) -> UnitBlock:
         u = UnitBlock(name, unit_type)
         u.path = path
         for s in structure:
@@ -126,7 +127,7 @@ class DockerParser(p.Parser):
             pass
 
     @staticmethod
-    def __get_stages(stage_indexes: list[int], structure: list[DFPStructure]) -> list[tuple[str, list[DFPStructure]]]:
+    def __get_stages(stage_indexes: List[int], structure: List[DFPStructure]) -> List[Tuple[str, List[DFPStructure]]]:
         stages = []
         for i, stage_i in enumerate(stage_indexes):
             stage_image = structure[stage_i].value.split(" ")[0]
@@ -136,13 +137,13 @@ class DockerParser(p.Parser):
         return stages
 
     @staticmethod
-    def __get_stage_structure(structure: list[DFPStructure], stage_start: int, stage_end: int):
+    def __get_stage_structure(structure: List[DFPStructure], stage_start: int, stage_end: int):
         sub_structure = structure[stage_start:stage_end].copy()
         DockerParser.__add_user_tag(sub_structure)
         return sub_structure
 
     @staticmethod
-    def __create_variable_block(element: DFPStructure) -> list[Variable]:
+    def __create_variable_block(element: DFPStructure) -> List[Variable]:
         variables = []
         if element.instruction == 'USER':
             variables.append(Variable("user-profile", element.value, False))
@@ -170,7 +171,7 @@ class DockerParser(p.Parser):
         return variables
 
     @staticmethod
-    def __parse_multiple_key_value_variables(content: str, base_line: int) -> list[Variable]:
+    def __parse_multiple_key_value_variables(content: str, base_line: int) -> List[Variable]:
         variables = []
         for i, line in enumerate(content.split('\n')):
             for match in re.finditer(r"([\w_]*)=(?:(?:'|\")([\w\. <>@]*)(?:\"|')|([\w\.]*))", line):
@@ -182,11 +183,11 @@ class DockerParser(p.Parser):
         return variables
 
     @staticmethod
-    def __has_user_tag(structure: list[DFPStructure]) -> bool:
+    def __has_user_tag(structure: List[DFPStructure]) -> bool:
         return bool(s for s in structure if s.instruction == "USER")
 
     @staticmethod
-    def __add_user_tag(structure: list[DFPStructure]):
+    def __add_user_tag(structure: List[DFPStructure]):
         if len([s for s in structure if s.instruction == "USER"]) > 0:
             return
 
@@ -203,10 +204,10 @@ class DockerParser(p.Parser):
 class ShellCommand:
     sudo: bool
     command: str
-    args: list[str]
+    args: List[str]
     code: str
-    options: dict[str, tuple[str | bool | int | float, str]] = field(default_factory=dict)
-    main_arg: str | None = None
+    options: Dict[str, Tuple[str | bool | int | float, str]] = field(default_factory=dict)
+    main_arg: Optional[str] = None
     line: int = -1
 
     def to_atomic_unit(self) -> AtomicUnit:
@@ -237,7 +238,7 @@ class CommandParser:
         self.command = value
         self.line = command.startline + 1
 
-    def parse_command(self) -> list[AtomicUnit]:
+    def parse_command(self) -> List[AtomicUnit]:
         # TODO: Fix get commands lines for scripts with multiline values
         commands = self.__get_sub_commands()
         aus = []
@@ -249,7 +250,7 @@ class CommandParser:
         return aus
 
     @staticmethod
-    def __parse_single_command(command: list[str], line: int) -> AtomicUnit:
+    def __parse_single_command(command: List[str], line: int) -> AtomicUnit:
         command, carriage_returns = CommandParser.__strip_shell_command(
                 command
                 )
@@ -268,7 +269,7 @@ class CommandParser:
         return c.to_atomic_unit()
 
     @staticmethod
-    def __strip_shell_command(command: list[str]) -> tuple[list[str], int]:
+    def __strip_shell_command(command: List[str]) -> Tuple[List[str], int]:
         non_empty_indexes = [i for i, c in enumerate(command)
                              if c not in ['\n', '', ' ', '\r']]
         if not non_empty_indexes:
@@ -317,7 +318,7 @@ class CommandParser:
             else:
                 command.options[o] = args[i + 1], f"{code} {args[i+1]}"
 
-    def __get_sub_commands(self) -> list[tuple[int, list[str]]]:
+    def __get_sub_commands(self) -> List[Tuple[int, List[str]]]:
         commands = []
         tmp = []
         lines = self.command.split('\n') if not self.__contains_multi_line_values(self.command) else [self.command]

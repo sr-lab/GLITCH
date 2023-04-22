@@ -3,6 +3,7 @@ import re
 import json
 import configparser
 from urllib.parse import urlparse
+from typing import Tuple, List, Optional
 
 import glitch
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
@@ -15,15 +16,15 @@ class SecurityVisitor(RuleVisitor):
     __URL_REGEX = r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
 
     class NonOfficialImageSmell(SmellChecker):
-        def check(self, element, file: str) -> list[Error]:
+        def check(self, element, file: str) -> List[Error]:
             return []
 
     class DockerNonOfficialImageSmell(SmellChecker):
-        def __init__(self, official_images: list[str]):
+        def __init__(self, official_images: List[str]):
             super().__init__()
             self.off_images = official_images
 
-        def check(self, element, file: str) -> list[Error]:
+        def check(self, element, file: str) -> List[Error]:
             if not isinstance(element, UnitBlock) or "Dockerfile" in element.name:
                 return []
             image = element.name.split(":")
@@ -67,13 +68,13 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__OBSOLETE_COMMANDS = self._load_data_file("obsolete_commands")
 
     @staticmethod
-    def _load_data_file(file: str) -> list[str]:
+    def _load_data_file(file: str) -> List[str]:
         folder_path = os.path.dirname(os.path.realpath(glitch.__file__))
         with open(os.path.join(folder_path, "files", file)) as f:
             content = f.readlines()
             return [c.strip() for c in content]
 
-    def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
+    def check_atomicunit(self, au: AtomicUnit, file: str) -> List[Error]:
         errors = super().check_atomicunit(au, file)
 
         for item in SecurityVisitor.__FILE_COMMANDS:
@@ -100,7 +101,7 @@ class SecurityVisitor(RuleVisitor):
 
         return errors
 
-    def check_dependency(self, d: Dependency, file: str) -> list[Error]:
+    def check_dependency(self, d: Dependency, file: str) -> List[Error]:
         return []
 
     # FIXME attribute and variables need to have superclass
@@ -164,13 +165,13 @@ class SecurityVisitor(RuleVisitor):
 
         return errors
 
-    def check_attribute(self, a: Attribute, file: str) -> list[Error]:
+    def check_attribute(self, a: Attribute, file: str) -> List[Error]:
         return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file)
 
-    def check_variable(self, v: Variable, file: str) -> list[Error]:
+    def check_variable(self, v: Variable, file: str) -> List[Error]:
         return self.__check_keyvalue(v, v.name, v.value, v.has_variable, file) #FIXME
 
-    def check_comment(self, c: Comment, file: str) -> list[Error]:
+    def check_comment(self, c: Comment, file: str) -> List[Error]:
         errors = []
         lines = c.content.split('\n')
         stop = False
@@ -183,7 +184,7 @@ class SecurityVisitor(RuleVisitor):
                 break
         return errors
 
-    def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
+    def check_condition(self, c: ConditionStatement, file: str) -> List[Error]:
         errors = super().check_condition(c, file)
 
         condition = c
@@ -200,7 +201,7 @@ class SecurityVisitor(RuleVisitor):
 
         return errors
 
-    def check_unitblock(self, u: UnitBlock) -> list[Error]:
+    def check_unitblock(self, u: UnitBlock) -> List[Error]:
         errors = super().check_unitblock(u)
 
         """
@@ -213,8 +214,8 @@ class SecurityVisitor(RuleVisitor):
             if result:
                 missing_integrity_checks[result[0]] = result[1]
                 continue
-
-            if file := SecurityVisitor.check_has_checksum(au):
+            file = SecurityVisitor.check_has_checksum(au)
+            if file:
                 if file in missing_integrity_checks:
                     del missing_integrity_checks[file]
 
@@ -224,7 +225,7 @@ class SecurityVisitor(RuleVisitor):
         return errors
 
     @staticmethod
-    def check_integrity_check(au: AtomicUnit, path: str) -> tuple[str, Error] | None:
+    def check_integrity_check(au: AtomicUnit, path: str) -> Optional[Tuple[str, Error]]:
         for item in SecurityVisitor.__DOWNLOAD:
             if not re.search(r'(http|https|www)[^ ,]*\.{text}'.format(text=item), au.name):
                 continue
@@ -244,7 +245,7 @@ class SecurityVisitor(RuleVisitor):
         return None
 
     @staticmethod
-    def check_has_checksum(au: AtomicUnit) -> str | None:
+    def check_has_checksum(au: AtomicUnit) -> Optional[str]:
         if au.type not in SecurityVisitor.__CHECKSUM:
             return None
         if any(d in au.name for d in SecurityVisitor.__DOWNLOAD):
@@ -257,7 +258,7 @@ class SecurityVisitor(RuleVisitor):
         return None
 
     @staticmethod
-    def __has_integrity_check(attributes: list[Attribute]) -> bool:
+    def __has_integrity_check(attributes: List[Attribute]) -> bool:
         for attr in attributes:
             name = attr.name.strip().lower()
             if any([check in name for check in SecurityVisitor.__CHECKSUM]):
