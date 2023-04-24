@@ -269,9 +269,12 @@ class SecurityVisitor(RuleVisitor):
         if (re.match(SecurityVisitor.__URL_REGEX, value) and
                 ('http' in value or 'www' in value) and 'https' not in value):
             return True
-        parsed_url = urlparse(value)
-        return parsed_url.scheme == 'http' and \
-                parsed_url.hostname not in SecurityVisitor.__URL_WHITELIST
+        try:
+            parsed_url = urlparse(value)
+            return parsed_url.scheme == 'http' and \
+                    parsed_url.hostname not in SecurityVisitor.__URL_WHITELIST
+        except ValueError:
+            return False
 
     @staticmethod
     def __is_weak_crypt(value: str, name: str) -> bool:
