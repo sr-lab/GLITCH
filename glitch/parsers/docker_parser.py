@@ -2,7 +2,7 @@ import ast
 import os.path
 import re
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Union
 
 import bashlex
 from dockerfile_parse import DockerfileParser
@@ -206,7 +206,7 @@ class ShellCommand:
     command: str
     args: List[str]
     code: str
-    options: Dict[str, Tuple[str | bool | int | float, str]] = field(default_factory=dict)
+    options: Dict[str, Tuple[Union[str, bool, int, float], str]] = field(default_factory=dict)
     main_arg: Optional[str] = None
     line: int = -1
 

@@ -20,7 +20,7 @@ setup(
         "pytest",
         "puppetparser",
         "jinja2",
-        "dockerfile-parse==2.0.0"
+        "dockerfile-parse==2.0.0",
         "bashlex==0.18"
         ],
     entry_points={
