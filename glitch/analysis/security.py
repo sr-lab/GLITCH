@@ -25,7 +25,8 @@ class SecurityVisitor(RuleVisitor):
             self.off_images = official_images
 
         def check(self, element, file: str) -> List[Error]:
-            if not isinstance(element, UnitBlock) or "Dockerfile" in element.name:
+            if not isinstance(element, UnitBlock) or \
+                    element.name is None or "Dockerfile" in element.name:
                 return []
             image = element.name.split(":")
             if image[0] not in self.off_images:

@@ -41,8 +41,10 @@ class DockerParser(p.Parser):
             else:
                 self.__add_user_tag(structure)
                 main_block = self.__parse_stage(dfp.baseimage, path, type, structure)
-                main_block.line = structure[stage_indexes[0]].startline + 1
+                main_block.line = structure[stage_indexes[0]].startline + 1 \
+                    if stage_indexes else 1
                 main_block.code = "".join([struct.content for struct in structure])
+
             main_block.path = path
             return main_block
 
@@ -191,7 +193,7 @@ class DockerParser(p.Parser):
         if len([s for s in structure if s.instruction == "USER"]) > 0:
             return
 
-        index, line = -1, -1
+        index, line = -1, 0
         for i, s in enumerate(structure):
             if s.instruction == 'FROM':
                 index = i
