@@ -16,7 +16,7 @@ resource "aws_ecs_task_definition" "bad_example" {
   }
 }
 
-resource "aws_ecs_task_definition" "good_example" {
+resource "aws_ecs_task_definition" "bad_example2" {
   family                = "service"
   container_definitions = file("task-definitions/service.json")
 
@@ -51,5 +51,14 @@ resource "aws_ecs_task_definition" "good_example" {
         iam             = "ENABLED"
       }
     }
+  }
+}
+
+resource "aws_ecs_task_definition" "good_example2" {
+  family                = "service"
+  container_definitions = file("task-definitions/service.json")
+
+  volume {
+    name = "service-storage"
   }
 }

@@ -306,6 +306,23 @@ class SecurityVisitor(RuleVisitor):
             else:
                 errors.append(Error('sec_missing_encryption', au, file, repr(au), 
                     f"Suggestion: check for a required attribute with name 'encryption_config.resources'."))
+        elif (au.type in ["resource.aws_instance", "resource.aws_launch_configuration"]):
+            ebs_block_device = check_required_attribute(au.attributes, [""], "ebs_block_device")
+            if ebs_block_device:
+                encrypted = check_required_attribute(ebs_block_device.keyvalues, [""], "encrypted")
+                if not encrypted:
+                    errors.append(Error('sec_missing_encryption', au, file, repr(au), 
+                    f"Suggestion: check for a required attribute with name 'ebs_block_device.encrypted'."))
+        elif (au.type == "resource.aws_ecs_task_definition"):
+            volume = check_required_attribute(au.attributes, [""], "volume")
+            if volume:
+                efs_volume_config = check_required_attribute(volume.keyvalues, [""], "efs_volume_configuration")
+                if efs_volume_config:
+                    transit_encryption = check_required_attribute(efs_volume_config.keyvalues, [""], "transit_encryption")
+                    if not transit_encryption:
+                        errors.append(Error('sec_missing_encryption', au, file, repr(au), 
+                        f"Suggestion: check for a required attribute with name" +
+                            f"'volume.efs_volume_configuration.transit_encryption'."))
 
         for config in SecurityVisitor.__MISSING_ENCRYPTION:
             if (config['required'] == "yes" and au.type in config['au_type']

@@ -346,7 +346,8 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/encrypted-root-block-device.tf",
-            3, ["sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption"], [1, 13, 23]
+            4, ["sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption", "sec_missing_encryption"], 
+            [1, 13, 23, 27]
         )
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/instance-encrypted-block-device.tf",
