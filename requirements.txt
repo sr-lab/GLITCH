@@ -8,3 +8,4 @@ configparser
 pytest
 puppetparser
 jinja2
+glitch-python-hcl2

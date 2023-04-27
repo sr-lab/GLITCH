@@ -7,7 +7,8 @@ EXCEPTIONS = {
     "ANSIBLE_FILE_TYPE": "Ansible - Cannot detect file type: {}",
     "ANSIBLE_COULD_NOT_PARSE": "Ansible - Could not parse file: {}",
     "CHEF_COULD_NOT_PARSE": "Chef - Could not parse file: {}",
-    "PUPPET_COULD_NOT_PARSE": "Puppet - Could not parse file: {}"
+    "PUPPET_COULD_NOT_PARSE": "Puppet - Could not parse file: {}",
+    "TERRAFORM_COULD_NOT_PARSE": "Terraform - Could not parse file: {}"
 }
 
 def throw_exception(exception, *args):

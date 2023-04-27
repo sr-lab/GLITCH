@@ -5,7 +5,7 @@ from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
 from glitch.tech import Tech
 from glitch.repr.inter import UnitBlockType
-from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser
+from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser, TerraformParser
 from pkg_resources import resource_filename
 from alive_progress import alive_bar
 from pathlib import Path
@@ -69,6 +69,8 @@ def glitch(tech, type, path, config, module, csv,
         parser = ChefParser()
     elif tech == Tech.puppet:
         parser = PuppetParser()
+    elif tech == Tech.terraform:
+        parser = TerraformParser()
     file_stats = FileStats()
 
     if smells == ():

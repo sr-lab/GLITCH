@@ -46,7 +46,7 @@ glitch --help
 
 To analyze a file or folder and get the csv results you can run:
 ```
-glitch --tech (chef|puppet|ansible) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
+glitch --tech (chef|puppet|ansible|terraform) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
 ```
 
 If you want to consider the module structure you can add the flag ```--module```.
