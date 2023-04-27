@@ -251,8 +251,7 @@ class CommandParser:
                 throw_exception(EXCEPTIONS['SHELL_COULD_NOT_PARSE'].format(" ".join(c)))
         return aus
 
-    @staticmethod
-    def __parse_single_command(command: List[str], line: int) -> AtomicUnit:
+    def __parse_single_command(self, command: List[str], line: int) -> AtomicUnit:
         command, carriage_returns = CommandParser.__strip_shell_command(
                 command
                 )
@@ -262,10 +261,10 @@ class CommandParser:
         command_type = command[name_index]
         if len(command) == name_index + 1:
             return ShellCommand(
-                sudo=sudo, command=command_type, args=[], main_arg=command_type, line=line, code=" ".join(command)
+                sudo=sudo, command=command_type, args=[], main_arg=command_type, line=line, code=self.dfp_structure.content
             ).to_atomic_unit()
         c = ShellCommand(
-            sudo=sudo, command=command_type, args=command[name_index + 1:], line=line, code=" ".join(command)
+            sudo=sudo, command=command_type, args=command[name_index + 1:], line=line, code=self.dfp_structure.content
         )
         CommandParser.__parse_shell_command(c)
         return c.to_atomic_unit()
