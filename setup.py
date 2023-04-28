@@ -20,6 +20,7 @@ setup(
         "pytest",
         "puppetparser",
         "jinja2",
+        "glitch-python-hcl2",
         "dockerfile-parse==2.0.0",
         "bashlex==0.18"
         ],
