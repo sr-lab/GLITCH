@@ -1,3 +1,4 @@
+from typing import TextIO
 import ast
 import os.path
 import re
@@ -19,14 +20,21 @@ class DFPStructure:
     instruction: str
     startline: int
     value: str
+    raw_content: str
 
 
 class DockerParser(p.Parser):
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
         with open(path) as f:
+            file_lines = list(f)
+            f.seek(0)
             dfp = DockerfileParser()
             dfp.content = f.read()
-            structure = [DFPStructure(**s) for s in dfp.structure]
+            structure = [
+                    DFPStructure(
+                        raw_content="".join(file_lines[s['startline']:s['endline']+1]),
+                        **s)
+                    for s in dfp.structure]
 
             stage_indexes = [i for i, e in enumerate(structure) if e.instruction == 'FROM']
             if len(stage_indexes) > 1:
@@ -261,10 +269,10 @@ class CommandParser:
         command_type = command[name_index]
         if len(command) == name_index + 1:
             return ShellCommand(
-                sudo=sudo, command=command_type, args=[], main_arg=command_type, line=line, code=self.dfp_structure.content
+                sudo=sudo, command=command_type, args=[], main_arg=command_type, line=line, code=self.dfp_structure.raw_content
             ).to_atomic_unit()
         c = ShellCommand(
-            sudo=sudo, command=command_type, args=command[name_index + 1:], line=line, code=self.dfp_structure.content
+            sudo=sudo, command=command_type, args=command[name_index + 1:], line=line, code=self.dfp_structure.raw_content
         )
         CommandParser.__parse_shell_command(c)
         return c.to_atomic_unit()
