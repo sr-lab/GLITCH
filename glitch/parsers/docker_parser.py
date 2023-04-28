@@ -207,7 +207,8 @@ class DockerParser(p.Parser):
                 index = i
                 line = s.startline
                 break
-        structure.insert(index + 1, DFPStructure("USER root", line, "USER", line, "root"))
+        structure.insert(index + 1, DFPStructure(
+            "USER root", line, "USER", line, "root", ""))
 
 
 @dataclass
