@@ -115,7 +115,8 @@ class DockerParser(p.Parser):
         elif instruction == 'ONBUILD':
             dfp = DockerfileParser()
             dfp.content = element.value
-            element = DFPStructure(**dfp.structure[0])
+            element = DFPStructure(**dfp.structure[0],
+                                   raw_content=dfp.structure[0]['content'])
             DockerParser.__parse_instruction(element, unit_block)
         elif instruction == 'COPY':
             au = AtomicUnit("", "copy")
