@@ -234,7 +234,7 @@ class ShellCommand:
         for key, (value, code) in self.options.items():
             has_variable = "$" in value if isinstance(value, str) else False
             attr = Attribute(key, value, has_variable)
-            attr.code = code
+            attr.code = self.code
             attr.line = self.line
             au.add_attribute(attr)
         return au
