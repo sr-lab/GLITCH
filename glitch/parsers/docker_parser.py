@@ -328,7 +328,7 @@ class CommandParser:
             for part in bashlex.split(line):
                 if part in ['&&', '&', '|']:
                     commands.append((current_line, tmp))
-                    current_line += i
+                    current_line = self.line + i
                     tmp = []
                     continue
                 tmp.append(part)
