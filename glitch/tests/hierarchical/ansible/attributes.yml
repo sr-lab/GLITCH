@@ -1,0 +1,6 @@
+- name: Calculate factorial of a number
+  hosts: localhost
+  debug:
+    msg: "The factorial of 5 is {{ factorial_value }}"
+    seq: [test: "something", "y", "z"]
+    hash: {test1: "1", test2: "2"}

@@ -15,6 +15,8 @@ from glitch.repr.inter import *
 from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
 
+import hcl2
+
 class AnsibleParser(p.Parser):
     @staticmethod
     def __get_yaml_comments(d, file):
@@ -96,57 +98,83 @@ class AnsibleParser(p.Parser):
         return res
 
     @staticmethod
-    def __parse_vars(unit_block, cur_name, token, code):
-        def create_variable(name, value):
-            has_variable = ("{{" in value) and ("}}" in value)
+    def __parse_vars(unit_block, cur_name, token, code, child=False):
+        def create_variable(token, name, value, child=False) -> Variable:
+            has_variable = (("{{" in value) and ("}}" in value)) if value != None else False
             if (value in ["null", "~"]): value = ""
             v = Variable(name, value, has_variable)
             v.line = token.start_mark.line + 1
-            v.code = AnsibleParser.__get_element_code(token, value, code)
+            if value == None:
+                v.code = AnsibleParser.__get_element_code(token, token, code)
+            else:
+                v.code = AnsibleParser.__get_element_code(token, value, code)
             v.code = ''.join(code[token.start_mark.line : token.end_mark.line + 1])
-            unit_block.add_variable(v)
 
+            variables.append(v)
+            if not child:
+                unit_block.add_variable(v)
+            return v
+
+
+        variables = []
         if isinstance(token, MappingNode):
-            for key, v in token.value:
-                if hasattr(key, "value") and isinstance(key.value, str):
-                    AnsibleParser.__parse_vars(unit_block, cur_name + key.value + ".", v, code)
-                elif isinstance(key.value, MappingNode):
-                    AnsibleParser.__parse_vars(unit_block, cur_name, key.value[0][0], code)
+            if cur_name == "":
+                for key, v in token.value:
+                    if hasattr(key, "value") and isinstance(key.value, str):
+                        AnsibleParser.__parse_vars(unit_block, key.value, v, code, child)
+                    elif isinstance(key.value, MappingNode):
+                        AnsibleParser.__parse_vars(unit_block, cur_name, key.value[0][0], code, child)
+            else:
+                var = create_variable(token, cur_name, None, child)
+                for key, v in token.value:
+                    if hasattr(key, "value") and isinstance(key.value, str):
+                        var.keyvalues += AnsibleParser.__parse_vars(unit_block, key.value, v, code, True)
+                    elif isinstance(key.value, MappingNode):
+                        var.keyvalues += AnsibleParser.__parse_vars(unit_block, cur_name, key.value[0][0], code, True)
+        elif isinstance(token, ScalarNode):
+            create_variable(token, cur_name, str(token.value), child)
         elif isinstance(token, SequenceNode):
             value = []
-            for i, v in enumerate(token.value):
-                if isinstance(v, CollectionNode):
-                    AnsibleParser.__parse_vars(unit_block, f"{cur_name[:-1]}[{i}].", v, code)
+            for i, val in enumerate(token.value):
+                if isinstance(val, CollectionNode):
+                    variables += AnsibleParser.__parse_vars(unit_block, f"{cur_name}[{i}]", val, code, child)
                 else:
-                    value.append(v.value)
+                    value.append(val.value)
+            if value:
+                create_variable(val, cur_name, str(value), child)
 
-            if (len(value) > 0):
-                create_variable(cur_name[:-1], str(value))
-        elif cur_name != "":
-            create_variable(cur_name[:-1], str(token.value))
+        return variables
 
     @staticmethod
     def __parse_attribute(cur_name, token, val, code):
-        def create_attribute(token, name, value):
-            has_variable = ("{{" in value) and ("}}" in value)
+        def create_attribute(token, name, value) -> Attribute:
+            has_variable = (("{{" in value) and ("}}" in value)) if value != None else False
             if (value in ["null", "~"]): value = ""
             a = Attribute(name, value, has_variable)
             a.line = token.start_mark.line + 1
-            a.code = AnsibleParser.__get_element_code(token, val, code)
+            if val == None:
+                a.code = AnsibleParser.__get_element_code(token, token, code)
+            else:
+                a.code = AnsibleParser.__get_element_code(token, val, code)
             attributes.append(a)
+
+            return a
 
         attributes = []
         if isinstance(val, MappingNode):
+            attribute = create_attribute(token, cur_name, None)
+            aux_attributes = []
             for aux, aux_val in val.value:
-                attributes += AnsibleParser.__parse_attribute(f"{cur_name}.{aux.value}", 
-                        aux, aux_val, code)
+                aux_attributes += AnsibleParser.__parse_attribute(f"{aux.value}",
+                                                                  aux, aux_val, code)
+            attribute.keyvalues = aux_attributes
         elif isinstance(val, ScalarNode):
             create_attribute(token, cur_name, str(val.value))
         elif isinstance(val, SequenceNode):
             value = []
             for i, v in enumerate(val.value):
                 if not isinstance(v, ScalarNode):
-                    attributes += AnsibleParser.__parse_attribute(f"{cur_name}[{i}]", token, v, code)
+                    attributes += AnsibleParser.__parse_attribute(f"{cur_name}[{i}]", v, v, code)
                 else:
                     value.append(v.value)
 
@@ -691,41 +719,68 @@ class ChefParser(p.Parser):
             self.push([self.is_variable], ast)
 
         def is_variable(self, ast):
-            def parse_variable(ast, key, current_name, value_ast):
+            def create_variable(key, name, value, has_variable):
+                variable = Variable(name, value, has_variable)
+                variable.line = ChefParser._get_content_bounds(key, self.source)[
+                    0]
+                variable.code = ChefParser._get_source(
+                    ast, self.source)
+                return variable
+
+            def parse_variable(parent, ast, key, current_name, value_ast):
                 if ChefParser._check_node(value_ast, ["hash"], 1) \
-                    and ChefParser._check_id(value_ast.args[0], ["assoclist_from_args"]):
-                        for assoc in value_ast.args[0].args[0]:
-                            parse_variable(ast, assoc.args[0], current_name + "." +
-                                ChefParser._get_content(assoc.args[0], self.source), 
-                                    assoc.args[1])
+                        and ChefParser._check_id(value_ast.args[0], ["assoclist_from_args"]):
+                    variable = create_variable(key, current_name, None, False)
+                    if parent == None:
+                        self.variables.append(variable)
+                    else:
+                        parent.keyvalues.append(variable)
+                    parent = variable
+                    for assoc in value_ast.args[0].args[0]:
+                        parse_variable(parent, ast, assoc.args[0], ChefParser._get_content(
+                            assoc.args[0], self.source),
+                            assoc.args[1])
                 else:
                     value = ChefParser._get_content(value_ast, self.source)
                     has_variable = ChefParser._check_has_variable(value_ast)
-                    if value == "nil": 
+                    if value == "nil":
                         value = ""
                         has_variable = False
-                    variable = Variable(current_name, value, has_variable)
-                    variable.line = ChefParser._get_content_bounds(key, self.source)[0]
-                    variable.code = ChefParser._get_source(ast, self.source)
-                    self.variables.append(variable)
+
+                    variable = create_variable(
+                        key, current_name, value, has_variable)
+
+                    if parent == None:
+                        self.variables.append(variable)
+                    else:
+                        parent.keyvalues.append(variable)
 
             if ChefParser._check_node(ast, ["assign"], 2):
                 name = ""
-                names = ChefParser._get_content(ast.args[0], self.source).split("[")
-                for n in names:
+                names = ChefParser._get_content(
+                    ast.args[0], self.source).split("[")
+                parent = None
+                for i, n in enumerate(names):
                     if n.endswith("]"):
                         n = n[:-1]
                     if (n.startswith("'") and n.endswith("'")) or \
                             (n.startswith('"') and n.endswith('"')):
-                        name += n[1:-1]
+                        name = n[1:-1]
                     elif n.startswith(":"):
-                        name += n[1:]
+                        name = n[1:]
                     else:
-                        name += n
+                        name = n
 
-                    name += "."
-                name = name[:-1]
-                parse_variable(ast, ast.args[0], name, ast.args[1])
+                    if i == len(names) - 1:
+                        parse_variable(
+                            parent, ast, ast.args[0], name, ast.args[1])
+                    else:
+                        variable = create_variable(ast.args[0], name, None, False)
+                        if i == 0:
+                            self.variables.append(variable)
+                        else:
+                            parent.keyvalues.append(variable)
+                        parent = variable
                 return True
 
             return False
@@ -836,6 +891,22 @@ class ChefParser(p.Parser):
 
     @staticmethod
     def __transverse_ast(ast, unit_block, source):
+        def get_var(parent_name, vars):
+            for var in vars:
+                if var.name == parent_name:
+                    return var
+            return None
+        
+        def add_variable_to_unit_block(variable, unit_block_vars):
+            var_name = variable.name
+            var = get_var(var_name, unit_block_vars)
+            if var and var.value == None and variable.value == None:
+                for v in variable.keyvalues:
+                    add_variable_to_unit_block(v, var.keyvalues)
+            else:
+                unit_block_vars.append(variable)
+
+
         if isinstance(ast, list):
             for arg in ast:
                 if isinstance(arg, (ChefParser.Node, list)):
@@ -849,7 +920,7 @@ class ChefParser(p.Parser):
             variable_checker = ChefParser.VariableChecker(source, ast)
             if variable_checker.check_all():
                 for variable in variable_checker.variables:
-                    unit_block.add_variable(variable)
+                    add_variable_to_unit_block(variable, unit_block.variables)
                 # variables might have resources associated to it
                 ChefParser.__transverse_ast(ast.args[1], unit_block, source)
                 return
@@ -971,10 +1042,25 @@ class ChefParser(p.Parser):
 class PuppetParser(p.Parser):
     @staticmethod
     def __process_unitblock_component(ce, unit_block: UnitBlock):
+        def get_var(parent_name, vars):
+            for var in vars:
+                if var.name == parent_name:
+                    return var
+            return None
+    
+        def add_variable_to_unit_block(variable, unit_block_vars):
+            var_name = variable.name
+            var = get_var(var_name, unit_block_vars)
+            if var and var.value == None and variable.value == None:
+                for v in variable.keyvalues:
+                    add_variable_to_unit_block(v, var.keyvalues)
+            else:
+                unit_block_vars.append(variable)
+        
         if isinstance(ce, Dependency):
             unit_block.add_dependency(ce)
         elif isinstance(ce, Variable):
-            unit_block.add_variable(ce)
+            add_variable_to_unit_block(ce, unit_block.variables)
         elif isinstance(ce, AtomicUnit):
             unit_block.add_atomic_unit(ce)
         elif isinstance(ce, UnitBlock):
@@ -1002,6 +1088,23 @@ class PuppetParser(p.Parser):
                 res += code[ce.end_line - 1][:ce.end_col - 1]
 
             return res
+        
+        def process_hash_value(name: str, temp_value):
+            if '[' in name and ']' in name:
+                start = name.find('[') + 1
+                end = name.find(']')
+                key_name = name[start:end]
+                name_without_key = name[:start-1] + name[end+1:]
+                n, d = process_hash_value(name_without_key, temp_value)
+                if d == {}:
+                    d[key_name] = temp_value
+                    return n, d
+                else:
+                    new_d : dict = {}
+                    new_d[key_name] = d
+                    return n, new_d
+            else:
+                return name, {}
         
         if (isinstance(codeelement, puppetmodel.Value)):
             if isinstance(codeelement, puppetmodel.Hash):
@@ -1088,6 +1191,8 @@ class PuppetParser(p.Parser):
         elif (isinstance(codeelement, puppetmodel.Assignment)):
             name = PuppetParser.__process_codeelement(codeelement.name, path, code)
             temp_value = PuppetParser.__process_codeelement(codeelement.value, path, code)
+            if '[' in name and ']' in name:
+                name, temp_value = process_hash_value(name, temp_value)
             if not isinstance(temp_value, dict):
                 if codeelement.value is not None:
                     value = "" if temp_value == "undef" else temp_value
@@ -1099,12 +1204,15 @@ class PuppetParser(p.Parser):
                 variable.code = get_code(codeelement)
                 return variable
             else:
-                res = []
+                variable: Variable = Variable(name, None, False)
+                variable.line, variable.column = codeelement.line, codeelement.col
+                variable.code = get_code(codeelement) 
                 for key, value in temp_value.items():
-                    res.append(PuppetParser.__process_codeelement(
-                            puppetmodel.Assignment(codeelement.line, codeelement.col, 
-                                    codeelement.end_line, codeelement.end_col, name + "." + key, value), path, code))
-                return res
+                    variable.keyvalues.append(PuppetParser.__process_codeelement(
+                        puppetmodel.Assignment(codeelement.line, codeelement.col,
+                                               codeelement.end_line, codeelement.end_col, key, value), path, code))
+                                               
+                return variable
         elif (isinstance(codeelement, puppetmodel.PuppetClass)):
             # FIXME there are components of the class that are not considered
             unit_block: UnitBlock = UnitBlock(
@@ -1340,7 +1448,6 @@ class PuppetParser(p.Parser):
                 )
         except:
            throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
-
         return unit_block
 
     def parse_folder(self, path: str) -> Project:
@@ -1365,5 +1472,169 @@ class PuppetParser(p.Parser):
                 aux = self.parse_folder(d)
                 res.blocks += aux.blocks
                 res.modules += aux.modules
+
+        return res
+
+class TerraformParser(p.Parser):
+    @staticmethod
+    def __get_element_code(start_line, end_line, code):
+        lines = code[start_line-1:end_line]
+        res = ''
+        for line in lines:
+            res += line
+        return res
+
+
+    def parse_keyvalues(self, unit_block: UnitBlock, keyvalues, code, type: str):
+        def create_keyvalue(start_line, end_line, name: str, value: str):
+            has_variable = ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
+            if value == "null": value = ""
+
+            if type == "attribute":
+                keyvalue = Attribute(name, value, has_variable)
+            elif type == "variable":
+                keyvalue = Variable(name, value, has_variable)
+            keyvalue.line = start_line
+            keyvalue.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return keyvalue
+        
+        def process_list(name, value, start_line, end_line):
+            for i, v in enumerate(value):
+                if isinstance(v, dict):
+                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", None)
+                    k.keyvalues = self.parse_keyvalues(unit_block, v, code, type)
+                    k_values.append(k)
+                elif isinstance(v, list):
+                    process_list(name + f"[{i}]", v, start_line, end_line)
+                else:
+                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", v)
+                    k_values.append(k)
+
+        k_values = []
+        for name, keyvalue in keyvalues.items():
+            if name == "__start_line__" or name == "__end_line__": 
+                continue
+
+            if isinstance(keyvalue, dict):          # Note: local values (variables) can only enter here
+                value = keyvalue["value"]
+                if isinstance(value, dict):     # (ex: labels = {})
+                    k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, None)
+                    k.keyvalues = self.parse_keyvalues(unit_block, value, code, type)
+                    k_values.append(k)
+                elif isinstance(value, list):   # (ex: x = [1,2,3])
+                    process_list(name, value, keyvalue["__start_line__"], keyvalue["__end_line__"])
+                else:   # (ex: x = 'test')
+                    if value == None:   # (ex: x = null)
+                        value = "null"
+                    k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, value)
+                    k_values.append(k)    
+            elif isinstance(keyvalue, list) and type == "attribute":
+            # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
+                if name == "dynamic":
+                    for block in keyvalue:
+                        for block_name, block_attributes in block.items():
+                            k = create_keyvalue(block_attributes["__start_line__"], 
+                                    block_attributes["__end_line__"], f"dynamic.{block_name}", None)
+                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                            k_values.append(k)
+                else:
+                    for block_attributes in keyvalue:
+                        k = create_keyvalue(block_attributes["__start_line__"], 
+                                block_attributes["__end_line__"], name, None)
+                        k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                        k_values.append(k)
+                    
+        return k_values
+
+
+    def parse_atomic_unit(self, type: str, unit_block: UnitBlock, dict, code):
+        def create_atomic_unit(start_line, end_line, type: str, name: str, code) -> AtomicUnit:
+            au = AtomicUnit(name, type)
+            au.line = start_line
+            au.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return au
+
+        def parse_resource():
+            for resource_type, resource in dict.items():
+                for name, attributes in resource.items():
+                    au = create_atomic_unit(attributes['__start_line__'], 
+                            attributes['__end_line__'], f"{type}.{resource_type}", name, code)
+                    au.attributes = self.parse_keyvalues(unit_block, attributes, code, "attribute")
+                    unit_block.add_atomic_unit(au)
+
+        def parse_simple_unit():
+            for name, attributes in dict.items():
+                au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], type, name, code)
+                au.attributes = self.parse_keyvalues(unit_block, attributes, code, "attribute")
+                unit_block.add_atomic_unit(au)
+
+        if type in ["resource", "data"]:
+            parse_resource()
+        elif type in ["variable", "module", "output"]:
+            parse_simple_unit()
+
+
+    def parse_comments(self, unit_block: UnitBlock, comments, code):
+        def create_comment(value, start_line, end_line, code):
+            c = Comment(value)
+            c.line = start_line
+            c.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            return c
+        
+        for comment in comments:
+            unit_block.add_comment(create_comment(comment["value"], comment["__start_line__"], comment["__end_line__"], code))
+
+
+    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
+        with open(path) as f:
+            try:
+                parsed_hcl = hcl2.load(f, True)
+                f.seek(0, 0)
+                code = f.readlines()
+        
+                unit_block = UnitBlock(path, type)
+                unit_block.path = path
+                for key, value in parsed_hcl.items():
+                    if key in ["resource", "data", "variable", "module", "output"]:
+                        for v in value:
+                            self.parse_atomic_unit(key, unit_block, v, code)
+                    elif key == "__comments__":
+                        self.parse_comments(unit_block, value, code)
+                    elif key == "locals":
+                        for local in value:
+                            unit_block.variables += self.parse_keyvalues(unit_block, local, code, "variable")
+                    elif key == "provider":
+                        continue
+                    else:
+                        throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+                return unit_block
+            except:
+                throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+                return None
+
+
+    def parse_module(self, path: str) -> Module:
+        res: Module = Module(os.path.basename(os.path.normpath(path)), path)
+        super().parse_file_structure(res.folder, path)
+
+        files = [f.path for f in os.scandir(f"{path}") 
+            if f.is_file() and not f.is_symlink()]
+        for f in files:
+            unit_block = self.parse_file(f, "unknown")
+            res.add_block(unit_block)
+        
+        return res
+
+
+    def parse_folder(self, path: str) -> Project:
+        res: Project = Project(os.path.basename(os.path.normpath(path)))
+        res.add_module(self.parse_module(path))
+
+        subfolders = [f.path for f in os.scandir(f"{path}") 
+            if f.is_dir() and not f.is_symlink()]
+        for d in subfolders:
+            aux = self.parse_folder(d)
+            res.blocks += aux.blocks
+            res.modules += aux.modules
 
         return res
