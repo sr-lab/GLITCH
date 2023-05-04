@@ -1,13 +1,11 @@
 resource "google_storage_bucket" "bad_example" {
-  encryption {
-    default_kms_key_name = "something"
-  }
+  uniform_bucket_level_access = true
 }
 
 resource "google_storage_bucket" "bad_example2" {
-  uniform_bucket_level_access = false
+  uniform_bucket_level_access = true
   encryption {
-    default_kms_key_name = "something"
+    default_kms_key_name = ""
   }
 }
 

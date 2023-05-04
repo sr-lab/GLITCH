@@ -123,7 +123,7 @@ class TestSecurity(unittest.TestCase):
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/google-storage-enable-ubla.tf",
-            2, ["sec_access_control", "sec_access_control"], [1, 5]
+            2, ["sec_access_control", "sec_access_control"], [1, 8]
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/google-storage-no-public-access.tf",
@@ -739,6 +739,10 @@ class TestSecurity(unittest.TestCase):
         self.__help_test(
             "tests/security/terraform/files/key-management/digitalocean-compute-use-ssh-keys.tf",
             1, ["sec_key_management"], [1]
+        )
+        self.__help_test(
+            "tests/security/terraform/files/key-management/google-storage-bucket-encryption-customer-key.tf",
+            2, ["sec_key_management", "sec_key_management"], [1, 8]
         )
         
     def test_terraform_network_security_rules(self):
