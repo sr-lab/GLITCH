@@ -622,6 +622,10 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/weak-password-key-policy/azure-keyvault-no-purge.tf",
             2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 11]
         )
+        self.__help_test(
+            "tests/security/terraform/files/weak-password-key-policy/azure-keyvault-ensure-key-expiration-date.tf",
+            2, ["sec_weak_password_key_policy", "sec_weak_password_key_policy"], [1, 5]
+        )
 
     def test_terraform_integrity_policy(self):
         self.__help_test(
@@ -691,10 +695,6 @@ class TestSecurity(unittest.TestCase):
         self.__help_test(
             "tests/security/terraform/files/key-management/aws-ssm-secret-use-cmk.tf",
             2, ["sec_key_management", "sec_key_management"], [1, 7]
-        )
-        self.__help_test(
-            "tests/security/terraform/files/key-management/azure-keyvault-ensure-key-expiration-date.tf",
-            2, ["sec_key_management", "sec_key_management"], [1, 5]
         )
         self.__help_test(
             "tests/security/terraform/files/key-management/azure-storage-account-use-cmk.tf",
