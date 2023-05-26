@@ -220,10 +220,8 @@ class SecurityVisitor(RuleVisitor):
     def check_unitblock(self, u: UnitBlock) -> List[Error]:
         errors = super().check_unitblock(u)
 
-        """
-        Missing integrity check changed to unit block since in Docker the integrity check is not an attribute of the
-        atomic unit but can be done on another atomic unit inside the same unit block.
-        """
+        # Missing integrity check changed to unit block since in Docker the integrity check is not an attribute of the
+        # atomic unit but can be done on another atomic unit inside the same unit block.
         missing_integrity_checks = {}
         for au in u.atomic_units:
             result = self.check_integrity_check(au, u.path)

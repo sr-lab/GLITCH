@@ -60,14 +60,10 @@ class Error():
 
     def __repr__(self) -> str:
         with open(self.path) as f:
-            try:
-                line = f.readlines()[self.line - 1].strip() if self.line != -1 else self.repr.split('\n')[0]
-                return \
-                    f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n" + \
-                        f"{line}\n"
-            except IndexError:
-                return \
-                    f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n"
+            line = f.readlines()[self.line - 1].strip() if self.line != -1 else self.repr.split('\n')[0]
+            return \
+                f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n" + \
+                    f"{line}\n"
 
     def __hash__(self):
         return hash((self.code, self.path, self.line))

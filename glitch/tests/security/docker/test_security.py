@@ -45,7 +45,6 @@ class TestSecurity(unittest.TestCase):
         )
 
     def test_docker_http(self):
-        # TODO: Fix smell
         self.__help_test(
             "tests/security/docker/files/http.Dockerfile",
             1, ["sec_https"], [5]
