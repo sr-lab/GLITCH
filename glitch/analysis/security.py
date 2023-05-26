@@ -89,6 +89,8 @@ class SecurityVisitor(RuleVisitor):
                         continue
                     values = statements[0].values()
                 for value in values:
+                    if not isinstance(value, str):
+                        continue
                     if a.name in ["mode", "m"] and re.search(
                             r'(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})',
                             value
@@ -130,7 +132,9 @@ class SecurityVisitor(RuleVisitor):
         if self.__is_http_url(value):
             errors.append(Error('sec_https', c, file, repr(c)))
 
-        if re.match(r'^0.0.0.0', value):
+        if re.match(r'(?:https?://|^)0.0.0.0', value) or\
+                (name == "ip" and (value =="*" or value=='::')) or\
+                (name == "bind_ip_all" and value):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
 
         if self.__is_weak_crypt(value, name):

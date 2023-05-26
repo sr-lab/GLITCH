@@ -25,34 +25,40 @@ class DFPStructure:
 
 class DockerParser(p.Parser):
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
-        with open(path) as f:
-            file_lines = list(f)
-            f.seek(0)
-            dfp = DockerfileParser()
-            dfp.content = f.read()
-            structure = [
-                    DFPStructure(
-                        raw_content="".join(file_lines[s['startline']:s['endline']+1]),
-                        **s)
-                    for s in dfp.structure]
+        try:
+            with open(path) as f:
+                file_lines = list(f)
+                f.seek(0)
+                dfp = DockerfileParser()
+                dfp.content = f.read()
+                structure = [
+                        DFPStructure(
+                            raw_content="".join(file_lines[s['startline']:s['endline']+1]),
+                            **s)
+                        for s in dfp.structure]
 
-            stage_indexes = [i for i, e in enumerate(structure) if e.instruction == 'FROM']
-            if len(stage_indexes) > 1:
-                main_block = UnitBlock(os.path.basename(path), type)
-                main_block.code = dfp.content
-                stages = self.__get_stages(stage_indexes, structure)
-                for i, (name, s) in enumerate(stages):
-                    unit_block = self.__parse_stage(name, path, UnitBlockType.block, s)
-                    unit_block.line = structure[stage_indexes[i]].startline + 1
-                    unit_block.code = "".join([struct.content for struct in s])
-                    main_block.add_unit_block(unit_block)
-            else:
-                self.__add_user_tag(structure)
-                main_block = self.__parse_stage(dfp.baseimage, path, type, structure)
-                main_block.line = structure[stage_indexes[0]].startline + 1 \
-                    if stage_indexes else 1
-                main_block.code = "".join([struct.content for struct in structure])
+                stage_indexes = [i for i, e in enumerate(structure) if e.instruction == 'FROM']
+                if len(stage_indexes) > 1:
+                    main_block = UnitBlock(os.path.basename(path), type)
+                    main_block.code = dfp.content
+                    stages = self.__get_stages(stage_indexes, structure)
+                    for i, (name, s) in enumerate(stages):
+                        unit_block = self.__parse_stage(name, path, UnitBlockType.block, s)
+                        unit_block.line = structure[stage_indexes[i]].startline + 1
+                        unit_block.code = "".join([struct.content for struct in s])
+                        main_block.add_unit_block(unit_block)
+                else:
+                    self.__add_user_tag(structure)
+                    main_block = self.__parse_stage(dfp.baseimage, path, type, structure)
+                    main_block.line = structure[stage_indexes[0]].startline + 1 \
+                        if stage_indexes else 1
+                    main_block.code = "".join([struct.content for struct in structure])
 
+                main_block.path = path
+                return main_block
+        except Exception as e:
+            throw_exception(EXCEPTIONS['DOCKER_UNKNOW_ERROR'], e)
+            main_block = UnitBlock(os.path.basename(path), type)
             main_block.path = path
             return main_block
 
@@ -95,7 +101,7 @@ class DockerParser(p.Parser):
             try:
                 DockerParser.__parse_instruction(s, u)
             except NotImplementedError:
-                throw_exception(EXCEPTIONS['DOCKER_NOT_IMPLEMENTED'].format(s.content))
+                throw_exception(EXCEPTIONS['DOCKER_NOT_IMPLEMENTED'], s.content)
         return u
 
     @staticmethod
@@ -109,9 +115,12 @@ class DockerParser(p.Parser):
             c.code = element.content
             unit_block.add_comment(c)
         elif instruction in ['RUN', 'CMD', 'ENTRYPOINT']:
-            c_parser = CommandParser(element)
-            aus = c_parser.parse_command()
-            unit_block.atomic_units += aus
+            try:
+                c_parser = CommandParser(element)
+                aus = c_parser.parse_command()
+                unit_block.atomic_units += aus
+            except Exception:
+                throw_exception(EXCEPTIONS['SHELL_COULD_NOT_PARSE'], element.content)
         elif instruction == 'ONBUILD':
             dfp = DockerfileParser()
             dfp.content = element.value
@@ -309,6 +318,10 @@ class CommandParser:
         args = command.args.copy()
         # TODO: Solve issue where last argument is part of a parameter
         main_arg_index = -1 if not args[-1].startswith("-") else 0
+        if len(args) >= 3 and \
+                args[-2].startswith('-') and \
+                not args[0].startswith('-'):
+            main_arg_index = 0
         main_arg = args[main_arg_index]
         del args[main_arg_index]
         command.main_arg = main_arg
@@ -336,7 +349,7 @@ class CommandParser:
         current_line = self.line
         for i, line in enumerate(lines):
             for part in bashlex.split(line):
-                if part in ['&&', '&', '|']:
+                if part in ['&&', '&', '|', ';']:
                     commands.append((current_line, tmp))
                     current_line = self.line + i
                     tmp = []
