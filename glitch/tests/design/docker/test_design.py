@@ -37,14 +37,13 @@ class TestDesign(unittest.TestCase):
         # )
 
     def test_docker_duplicate_block(self):
-        # TODO: Fix smell
         self.__help_test(
             "tests/design/docker/files/duplicate_block.Dockerfile",
             2,
             [
                 "design_duplicate_block",
                 "design_duplicate_block",
-            ], [3, 9]
+            ], [1, 9]
         )
 
     def test_docker_avoid_comments(self):
