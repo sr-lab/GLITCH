@@ -81,8 +81,7 @@ class TestSecurity(unittest.TestCase):
         )
 
     def test_docker_weak_crypt(self):
-        # TODO: Fix smell
         self.__help_test(
             "tests/security/docker/files/weak_crypt.Dockerfile",
-            1, ["sec_weak_crypt"], [4]
+            1, ["sec_weak_crypt"], [8]
         )

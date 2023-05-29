@@ -1,4 +1,8 @@
 FROM ubuntu
 USER ubuntu
 
-RUN md5sum foo
+ARG USER
+ARG PASS
+
+RUN useradd -h $USER
+RUN usermod  -p $(mkpasswd -H md5 $PASS) $USER
