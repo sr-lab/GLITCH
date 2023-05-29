@@ -61,6 +61,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__FILE_COMMANDS = json.loads(config['security']['file_commands'])
         SecurityVisitor.__DOWNLOAD_COMMANDS = json.loads(config['security']['download_commands'])
         SecurityVisitor.__SHELL_RESOURCES = json.loads(config['security']['shell_resources'])
+        SecurityVisitor.__IP_BIND_COMMANDS = json.loads(config['security']['ip_binding_commands'])
         SecurityVisitor.__OBSOLETE_COMMANDS = self._load_data_file("obsolete_commands")
         SecurityVisitor._DOCKER_OFFICIAL_IMAGES = self._load_data_file("official_docker_images")
 
@@ -129,8 +130,9 @@ class SecurityVisitor(RuleVisitor):
             errors.append(Error('sec_https', c, file, repr(c)))
 
         if re.match(r'(?:https?://|^)0.0.0.0', value) or\
-                (name == "ip" and (value =="*" or value=='::')) or\
-                (name == "bind_ip_all" and value):
+            (name == "ip" and value in {"*", '::'}) or\
+            (name in SecurityVisitor.__IP_BIND_COMMANDS and
+             (value == True or value in {'*', '::'})):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
 
         if self.__is_weak_crypt(value, name):
