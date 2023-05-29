@@ -20,16 +20,12 @@ class SecurityVisitor(RuleVisitor):
             return []
 
     class DockerNonOfficialImageSmell(SmellChecker):
-        def __init__(self, official_images: List[str]):
-            super().__init__()
-            self.off_images = official_images
-
         def check(self, element, file: str) -> List[Error]:
             if not isinstance(element, UnitBlock) or \
                     element.name is None or "Dockerfile" in element.name:
                 return []
             image = element.name.split(":")
-            if image[0] not in self.off_images:
+            if image[0] not in SecurityVisitor._DOCKER_OFFICIAL_IMAGES:
                 return [Error('sec_non_official_image', element, file, repr(element))]
             return []
 
@@ -37,8 +33,7 @@ class SecurityVisitor(RuleVisitor):
         super().__init__(tech)
 
         if tech == Tech.docker:
-            self.non_off_img = SecurityVisitor.DockerNonOfficialImageSmell(
-                self._load_data_file('official_docker_images'))
+            self.non_off_img = SecurityVisitor.DockerNonOfficialImageSmell()
         else:
             self.non_off_img = SecurityVisitor.NonOfficialImageSmell()
 
@@ -67,6 +62,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__DOWNLOAD_COMMANDS = json.loads(config['security']['download_commands'])
         SecurityVisitor.__SHELL_RESOURCES = json.loads(config['security']['shell_resources'])
         SecurityVisitor.__OBSOLETE_COMMANDS = self._load_data_file("obsolete_commands")
+        SecurityVisitor._DOCKER_OFFICIAL_IMAGES = self._load_data_file("official_docker_images")
 
     @staticmethod
     def _load_data_file(file: str) -> List[str]:
