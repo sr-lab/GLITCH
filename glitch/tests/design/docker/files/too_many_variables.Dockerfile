@@ -1,0 +1,10 @@
+FROM ubuntu:20.04
+USER ubuntu
+
+ARG aqua_admin_password
+ARG aqua_sso_client_secret
+ARG aqua_sso_client
+ARG aqua_scanner_username
+ARG aqua_scanner_password
+ARG aqua_operator_username
+ARG aqua_operator_passowrd

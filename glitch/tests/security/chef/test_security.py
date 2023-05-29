@@ -72,3 +72,15 @@ class TestSecurity(unittest.TestCase):
             "tests/security/chef/files/missing_default.rb",
             1, ["sec_no_default_switch"], [1]
         )
+
+    def test_chef_full_permission(self):
+        self.__help_test(
+            "tests/security/chef/files/full_permission.rb",
+            1, ["sec_full_permission_filesystem"], [3]
+        )
+
+    def test_chef_obs_command(self):
+        self.__help_test(
+            "tests/security/chef/files/obs_command.rb",
+            1, ["sec_obsolete_command"], [2]
+        )
