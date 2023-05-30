@@ -1,0 +1,5 @@
+- name: Running obsolete command
+  ansible.builtin.shell: pack foo bar
+  args:
+    chdir: somedir/
+    creates: somelog.txt

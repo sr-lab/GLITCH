@@ -20,8 +20,10 @@ setup(
         "pytest",
         "puppetparser",
         "jinja2",
-        "glitch-python-hcl2"
-    ],
+        "glitch-python-hcl2",
+        "dockerfile-parse==2.0.0",
+        "bashlex==0.18"
+        ],
     entry_points={
         "console_scripts": [
             "glitch = glitch.__main__:main",
