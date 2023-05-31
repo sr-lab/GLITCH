@@ -1000,6 +1000,3 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/replication/s3-bucket-cross-region-replication.tf",
             2, ["sec_replication", "sec_replication"], [9, 16]
         )
-
-if __name__ == '__main__':
-    unittest.main()
