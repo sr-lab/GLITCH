@@ -1,8 +1,8 @@
-resource "aws_alb" "bad_example" {
+resource "aws_lb" "bad_example" {
   drop_invalid_header_fields = true
 }
 
-resource "aws_alb" "bad_example2" {
+resource "aws_lb" "bad_example2" {
   drop_invalid_header_fields = true
   internal = false
 }

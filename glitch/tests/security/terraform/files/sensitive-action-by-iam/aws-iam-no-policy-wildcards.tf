@@ -32,7 +32,7 @@ data "aws_iam_policy_document" "good_example" {
   }
 }
 
-data "aws_iam_policy_document" "good_example2" {
+data "aws_iam_policy_document" "bad_example3" {
   statement {
     principals {
       type        = "AWS"

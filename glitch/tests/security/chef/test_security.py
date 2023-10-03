@@ -38,7 +38,7 @@ class TestSecurity(unittest.TestCase):
     def test_chef_empt_pass(self):
         self.__help_test(
             "tests/security/chef/files/empty.rb",
-            3, ["sec_empty_pass", "sec_hard_pass", "sec_hard_secr"], [1, 1, 1]
+            1, ["sec_empty_pass"], [1]
         )
 
     def test_chef_weak_crypt(self):

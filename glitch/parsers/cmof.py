@@ -1461,10 +1461,13 @@ class TerraformParser(p.Parser):
                 has_variable = False
             if value == "null": value = ""
 
+            if isinstance(value, int):
+                value = str(value)
+
             if type == "attribute":
-                keyvalue = Attribute(name, value, has_variable)
+                keyvalue = Attribute(str(name), value, has_variable)
             elif type == "variable":
-                keyvalue = Variable(name, value, has_variable)
+                keyvalue = Variable(str(name), value, has_variable)
             keyvalue.line = start_line
             keyvalue.code = TerraformParser.__get_element_code(start_line, end_line, code)
             return keyvalue

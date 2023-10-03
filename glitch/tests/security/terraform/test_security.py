@@ -39,7 +39,7 @@ class TestSecurity(unittest.TestCase):
     def test_terraform_empt_pass(self):
         self.__help_test(
             "tests/security/terraform/files/empty.tf",
-            3, ["sec_empty_pass", "sec_hard_pass", "sec_hard_secr"], [5, 5, 5]
+            1, ["sec_empty_pass"], [5]
         )
 
     def test_terraform_weak_crypt(self):
@@ -644,7 +644,7 @@ class TestSecurity(unittest.TestCase):
     def test_terraform_sensitive_action_by_iam(self):
         self.__help_test(
             "tests/security/terraform/files/sensitive-action-by-iam/aws-iam-no-policy-wildcards.tf",
-            2, ["sec_sensitive_iam_action", "sec_sensitive_iam_action"], [7, 19]
+            3, ["sec_sensitive_iam_action", "sec_sensitive_iam_action", "sec_sensitive_iam_action"], [7, 8, 20]
         )
 
     def test_terraform_key_management(self):

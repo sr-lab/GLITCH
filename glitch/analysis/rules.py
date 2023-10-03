@@ -16,24 +16,24 @@ class Error():
             'sec_invalid_bind': "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issues. (CWE-284)",
             'sec_no_int_check': "No integrity check - The content of files downloaded from the internet should be checked. (CWE-353)",
             'sec_no_default_switch': "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)",
-            'sec_integrity_policy': "Integrity Policy - Image tag is prone to be mutable or integrity monitoring is disabled.",
-            'sec_ssl_tls_policy': "SSL/TLS/mTLS Policy - Developers should use SSL/TLS/mTLS protocols and their secure versions.",
-            'sec_dnssec': "Use of DNS without DNSSEC - Developers should favor the usage of DNSSEC while using DNS.",
-            'sec_public_ip': "Associated Public IP address - Associating Public IP addresses allows connections from public internet.",
+            'sec_integrity_policy': "Integrity Policy - Image tag is prone to be mutable or integrity monitoring is disabled. (CWE-471)",
+            'sec_ssl_tls_policy': "SSL/TLS/mTLS Policy - Developers should use SSL/TLS/mTLS protocols and their secure versions. (CWE-326)",
+            'sec_dnssec': "Use of DNS without DNSSEC - Developers should favor the usage of DNSSEC while using DNS. (CWE-350)",
+            'sec_public_ip': "Associated Public IP address - Associating Public IP addresses allows connections from public internet. (CWE-1327)",
             'sec_access_control': "Insecure Access Control - Developers should be aware of possible unauthorized access. (CWE-284)",
             'sec_authentication': "Disabled/Weak Authentication - Developers should guarantee that authentication is enabled. (CWE-287 | CWE-306)",
             'sec_missing_encryption': "Missing Encryption - Developers should ensure encryption of sensitive and critical data. (CWE-311)",
             'sec_firewall_misconfig': "Firewall Misconfiguration - Developers should favor the usage of a well configured waf. (CWE-693)",
-            'sec_threats_detection_alerts': "Missing Threats Detection/Alerts - Developers should enable threats detection and alerts when it is possible.",
+            'sec_threats_detection_alerts': "Missing Threats Detection/Alerts - Developers should enable threats detection and alerts when it is possible. (CWE-693)",
             'sec_weak_password_key_policy': "Weak Password/Key Policy - Developers should favor the usage of strong password/key requirements and configurations. (CWE-521).",
-            'sec_sensitive_iam_action': "Sensitive Action by IAM - Developers should use the principle of least privilege when defining IAM policies.",
-            'sec_key_management': "Key Management - Developers should use well configured Customer Managed Keys (CMK) for encryption.",
-            'sec_network_security_rules': "Network Security Rules - Developers should enforce that only secure network rules are being used.",
-            'sec_permission_iam_policies': "Permission of IAM Policies - Developers should be aware of unwanted permissions of IAM policies.",
-            'sec_logging': "Logging - Logs should be enabled and securely configured to help monitoring and preventing security problems.",
-            'sec_attached_resource': "Attached Resource - Ensure that Route53 A records point to resources part of your account rather than just random IP addresses.",
+            'sec_sensitive_iam_action': "Sensitive Action by IAM - Developers should use the principle of least privilege when defining IAM policies. (CWE-284)",
+            'sec_key_management': "Key Management - Developers should use well configured Customer Managed Keys (CMK) for encryption. (CWE-1394)",
+            'sec_network_security_rules': "Network Security Rules - Developers should enforce that only secure network rules are being used. (CWE-923)",
+            'sec_permission_iam_policies': "Permission of IAM Policies - Developers should be aware of unwanted permissions of IAM policies. (CWE-732 | CWE-284)",
+            'sec_logging': "Logging - Logs should be enabled and securely configured to help monitoring and preventing security problems. (CWE-223 | CWE-778)",
+            'sec_attached_resource': "Attached Resource - Ensure that Route53 A records point to resources part of your account rather than just random IP addresses. (CWE-200)",
             'sec_versioning': "Versioning - Ensure that versioning is enabled so that users can retrieve and restore previous versions.",
-            'sec_naming': "Naming - Ensure storage accounts adhere to the naming rules and every security groups and rules have a description.",
+            'sec_naming': "Naming - Ensure storage accounts adhere to the naming rules and every security groups and rules have a description. (CWE-1099 | CWE-710)",
             'sec_replication': "Replication - Ensure that cross-region replication is enabled to allow copying objects across S3 buckets."
         },
         'design': {
@@ -73,7 +73,10 @@ class Error():
 
     def to_csv(self) -> str:
         repr = self.repr.split('\n')[0].strip()
-        return f"{self.path},{self.line},{self.code},{repr}"
+        if self.opt_msg:
+            return f"{self.path},{self.line},{self.code},{repr},{self.opt_msg}"
+        else:
+            return f"{self.path},{self.line},{self.code},{repr},-"
 
     def __repr__(self) -> str:
         with open(self.path) as f:

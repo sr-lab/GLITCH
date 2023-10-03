@@ -4,6 +4,7 @@ import json
 import configparser
 from urllib.parse import urlparse
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
+from nltk.tokenize import WordPunctTokenizer
 
 from glitch.tech import Tech
 from glitch.repr.inter import *
@@ -64,9 +65,11 @@ class SecurityVisitor(RuleVisitor):
                     aux += self.get_attributes_with_name_and_value(a.keyvalues, parents, name, value, pattern)
             return aux
 
-        def check_required_attribute(self, attributes, parents, name, value = None, pattern = None):
+        def check_required_attribute(self, attributes, parents, name, value = None, pattern = None, return_all = False):
             attributes = self.get_attributes_with_name_and_value(attributes, parents, name, value, pattern)
             if attributes != []:
+                if return_all:
+                    return attributes
                 return attributes[0]
             else:
                 return None
@@ -118,10 +121,21 @@ class SecurityVisitor(RuleVisitor):
                 if (element.type == "data.http"):
                     url = self.check_required_attribute(element.attributes, [""], "url")
                     if ("${" in url.value):
+                        vars = url.value.split("${")
                         r = url.value.split("${")[1].split("}")[0]
-                        resource_type = r.split(".")[0]
-                        resource_name = r.split(".")[1]
-                        if self.get_au(code, file, resource_name, "resource." + resource_type):
+                        for var in vars:
+                            if "data" in var or "resource" in var:
+                                r = var.split("}")[0]
+                                break
+                        type = r.split(".")[0]
+                        if type in ["data", "resource"]:
+                            resource_type = r.split(".")[1]
+                            resource_name = r.split(".")[2]
+                        else:
+                            type = "resource"
+                            resource_type = r.split(".")[0]
+                            resource_name = r.split(".")[1]
+                        if self.get_au(code, file, resource_name, type + "." + resource_type):
                             errors.append(Error('sec_https', url, file, repr(url)))
 
                 for config in SecurityVisitor._HTTPS_CONFIGS:
@@ -485,30 +499,72 @@ class SecurityVisitor(RuleVisitor):
     class TerraformSensitiveIAMAction(TerraformSmellChecker):
         def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
             errors = []
+
+            def convert_string_to_dict(input_string):
+                cleaned_string = input_string.strip()
+                try:
+                    dict_data = json.loads(cleaned_string)
+                    return dict_data
+                except json.JSONDecodeError as e:
+                    return None
+
             if isinstance(element, AtomicUnit):
                 if (element.type == "data.aws_iam_policy_document"):
-                    allow = self.check_required_attribute(element.attributes, ["statement"], "effect")
-                    if ((allow and allow.value.lower() == "allow") or (not allow)):
-                        sensitive_action = False
-                        i = 0
-                        action = self.check_required_attribute(element.attributes, ["statement"], f"actions[{i}]")
-                        while action:
-                            if action.value.lower() in ["s3:*", "s3:getobject"]:
-                                sensitive_action = True
-                                break
-                            i += 1
-                            action = self.check_required_attribute(element.attributes, ["statement"], f"actions[{i}]")
-                        sensitive_resource = False
-                        i = 0
-                        resource = self.check_required_attribute(element.attributes, ["statement"], f"resources[{i}]")
-                        while resource:
-                            if resource.value.lower() in ["*"]:
-                                sensitive_resource = True
-                                break
-                            i += 1
-                            resource = self.check_required_attribute(element.attributes, ["statement"], f"resources[{i}]")
-                        if (sensitive_action and sensitive_resource):
-                            errors.append(Error('sec_sensitive_iam_action', action, file, repr(action)))
+                    statements = self.check_required_attribute(element.attributes, [""], "statement", return_all=True)
+                    if statements:
+                        for statement in statements:
+                            allow = self.check_required_attribute(statement.keyvalues, [""], "effect")
+                            if ((allow and allow.value.lower() == "allow") or (not allow)):
+                                sensitive_action = False
+                                i = 0
+                                action = self.check_required_attribute(statement.keyvalues, [""], f"actions[{i}]")
+                                while action:
+                                    if ("*" in action.value.lower()):
+                                        sensitive_action = True
+                                        break
+                                    i += 1
+                                    action = self.check_required_attribute(statement.keyvalues, [""], f"actions[{i}]")
+                                if sensitive_action:
+                                    errors.append(Error('sec_sensitive_iam_action', action, file, repr(action)))
+                                wildcarded_resource = False
+                                i = 0
+                                resource = self.check_required_attribute(statement.keyvalues, [""], f"resources[{i}]")
+                                while resource:
+                                    if (resource.value.lower() in ["*"]) or (":*" in resource.value.lower()):
+                                        wildcarded_resource = True
+                                        break
+                                    i += 1
+                                    resource = self.check_required_attribute(statement.keyvalues, [""], f"resources[{i}]")
+                                if wildcarded_resource:
+                                    errors.append(Error('sec_sensitive_iam_action', resource, file, repr(resource)))
+                elif (element.type in ["resource.aws_iam_role_policy", "resource.aws_iam_policy", 
+                                       "resource.aws_iam_user_policy", "resource.aws_iam_group_policy"]):
+                    policy = self.check_required_attribute(element.attributes, [""], "policy")
+                    if policy:
+                        policy_dict = convert_string_to_dict(policy.value.lower())
+                        if policy_dict and policy_dict["statement"]:
+                            statements = policy_dict["statement"]
+                            if isinstance(statements, dict):
+                                statements = [statements]
+                            for statement in statements:
+                                if statement["effect"] and statement["action"] and statement["resource"]:
+                                    if statement["effect"] == "allow":
+                                        if isinstance(statement["action"], list):
+                                            for action in statement["action"]:
+                                                if ("*" in action):
+                                                    errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
+                                                    break
+                                        else:
+                                            if ("*" in statement["action"]):
+                                                errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
+                                        if isinstance(statement["resource"], list):
+                                            for resource in statement["resource"]:
+                                                if (resource in ["*"]) or (":*" in resource):
+                                                    errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
+                                                    break
+                                        else:
+                                            if (statement["resource"] in ["*"]) or (":*" in statement["resource"]):
+                                                errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
             
             elif isinstance(element, Attribute) or isinstance(element, Variable):
                 pass
@@ -1067,7 +1123,7 @@ class SecurityVisitor(RuleVisitor):
         SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
         SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
         SecurityVisitor.__SENSITIVE_DATA = json.loads(config['security']['sensitive_data'])
-        SecurityVisitor.__KEY_ASSIGN = json.loads(config['security']['key_value_assign'])
+        SecurityVisitor.__SECRET_ASSIGN = json.loads(config['security']['secret_value_assign'])
         SecurityVisitor.__GITHUB_ACTIONS = json.loads(config['security']['github_actions_resources'])
         SecurityVisitor._INTEGRITY_POLICY = json.loads(config['security']['integrity_policy'])
         SecurityVisitor.__SECRETS_WHITELIST = json.loads(config['security']['secrets_white_list'])
@@ -1250,19 +1306,21 @@ class SecurityVisitor(RuleVisitor):
             if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), name) 
                 and name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST):
                 if (not has_variable or var):
-                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
+                    
+                    if not has_variable:
+                        if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
+                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                            break
+                    if var:
+                        if (item in SecurityVisitor.__PASSWORDS and var.value != None and len(var.value) == 0):
+                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                            break
 
+                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
                     if (item in SecurityVisitor.__PASSWORDS):
                         errors.append(Error('sec_hard_pass', c, file, repr(c)))
                     elif (item in SecurityVisitor.__USERS):
                         errors.append(Error('sec_hard_user', c, file, repr(c)))
-
-                    if not has_variable:
-                        if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
-                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
-                    elif var:
-                        if (item in SecurityVisitor.__PASSWORDS and var.value != None and len(var.value) == 0):
-                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
 
                     break
 
@@ -1271,18 +1329,18 @@ class SecurityVisitor(RuleVisitor):
                 if len(value) > 0 and '/id_rsa' in value:
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-        for item in SecurityVisitor.__MISC_SECRETS:
-            if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name) 
-                    and name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST and len(value) > 0 and not has_variable):
-                errors.append(Error('sec_hard_secr', c, file, repr(c)))
+        if self.tech != Tech.terraform:
+            for item in SecurityVisitor.__MISC_SECRETS:
+                if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name) 
+                        and len(value) > 0 and not has_variable):
+                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         for item in SecurityVisitor.__SENSITIVE_DATA:
             if item.lower() in name:
-                for item_value in (SecurityVisitor.__KEY_ASSIGN + SecurityVisitor.__PASSWORDS + 
-                    SecurityVisitor.__SECRETS):
+                for item_value in (SecurityVisitor.__SECRET_ASSIGN):
                     if item_value in value.lower():
                         errors.append(Error('sec_hard_secr', c, file, repr(c)))
-                        if (item_value in SecurityVisitor.__PASSWORDS):
+                        if ("password" in item_value):
                             errors.append(Error('sec_hard_pass', c, file, repr(c)))
 
         if (au_type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value"):
@@ -1327,7 +1385,9 @@ class SecurityVisitor(RuleVisitor):
         stop = False
         for word in SecurityVisitor.__WRONG_WORDS:
             for line in lines:
-                if word in line.lower():
+                tokenizer = WordPunctTokenizer()
+                tokens = tokenizer.tokenize(line.lower())
+                if word in tokens:
                     errors.append(Error('sec_susp_comm', c, file, line))
                     stop = True
             if stop:
