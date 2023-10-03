@@ -9,7 +9,7 @@ class TestSecurity(unittest.TestCase):
         parser = TerraformParser()
         inter = parser.parse(path, "script", False)
         analysis = SecurityVisitor(Tech.terraform)
-        analysis.config("configs/default.ini")
+        analysis.config("configs/terraform.ini")
         errors = list(filter(lambda e: e.code.startswith('sec_'), set(analysis.check(inter))))
         errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))
         self.assertEqual(len(errors), n_errors)

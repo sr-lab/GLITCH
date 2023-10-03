@@ -71,6 +71,7 @@ def glitch(tech, type, path, config, module, csv,
         parser = PuppetParser()
     elif tech == Tech.terraform:
         parser = TerraformParser()
+        config = resource_filename('glitch', "configs/terraform.ini")
     file_stats = FileStats()
 
     if smells == ():

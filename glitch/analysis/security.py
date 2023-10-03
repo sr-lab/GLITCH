@@ -1329,11 +1329,10 @@ class SecurityVisitor(RuleVisitor):
                 if len(value) > 0 and '/id_rsa' in value:
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
-        if self.tech != Tech.terraform:
-            for item in SecurityVisitor.__MISC_SECRETS:
-                if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name) 
-                        and len(value) > 0 and not has_variable):
-                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
+        for item in SecurityVisitor.__MISC_SECRETS:
+            if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name) 
+                    and len(value) > 0 and not has_variable):
+                errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         for item in SecurityVisitor.__SENSITIVE_DATA:
             if item.lower() in name:
