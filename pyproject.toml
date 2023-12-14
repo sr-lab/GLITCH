@@ -20,6 +20,7 @@ Jinja2 = "3.1.2"
 glitch-python-hcl2 = "0.1.4"
 dockerfile-parse = "2.0.0"
 bashlex = "0.18"
+requests = "^2.31.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"
