@@ -25,7 +25,7 @@ class SecurityVisitor(RuleVisitor):
                     au = self.get_au(ub, file, name, type)
                     if au:
                         return au
-            else:
+            elif isinstance(c, UnitBlock):
                 for au in c.atomic_units:
                     if (au.type == type and au.name == name):
                         return au
@@ -42,7 +42,7 @@ class SecurityVisitor(RuleVisitor):
                     au = self.get_associated_au(ub, file, type, attribute_name, pattern, attribute_parents)
                     if au:
                         return au
-            else:
+            elif isinstance(code, UnitBlock):
                 for au in code.atomic_units:
                     if (au.type == type and self.check_required_attribute(
                             au.attributes, attribute_parents, attribute_name, None, pattern)):
@@ -1265,7 +1265,7 @@ class SecurityVisitor(RuleVisitor):
                     au = get_au(ub, name, type)
                     if au:
                         return au
-            else:
+            elif isinstance(c, UnitBlock):
                 for au in c.atomic_units:
                     if (au.type == type and au.name == name):
                         return au
@@ -1282,7 +1282,7 @@ class SecurityVisitor(RuleVisitor):
                     var = get_module_var(ub, name)
                     if var:
                         return var
-            else:
+            elif isinstance(c, UnitBlock):
                 for var in c.variables:
                     if var.name == name:
                         return var

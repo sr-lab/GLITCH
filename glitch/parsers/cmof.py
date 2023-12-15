@@ -1561,13 +1561,13 @@ class TerraformParser(p.Parser):
 
 
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
-        with open(path) as f:
-            try:
+        unit_block = UnitBlock(path, type)
+        unit_block.path = path
+        try:
+            with open(path) as f:
                 parsed_hcl = hcl2.load(f, True)
                 f.seek(0, 0)
                 code = f.readlines()
-                unit_block = UnitBlock(path, type)
-                unit_block.path = path
                 for key, value in parsed_hcl.items():
                     if key in ["resource", "data", "variable", "module", "output"]:
                         for v in value:
@@ -1581,10 +1581,9 @@ class TerraformParser(p.Parser):
                         continue
                     else:
                         throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
-                return unit_block
-            except:
-                throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
-                return None
+        except:
+            throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+        return unit_block
 
 
     def parse_module(self, path: str) -> Module:
