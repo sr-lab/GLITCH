@@ -13,6 +13,19 @@ class Syscall:
     exitCode: int
 
 
+@dataclass
+class Call:
+    cmd: str
+    args: List[str]
+
+
+@dataclass
+class BinaryOperation:
+    left: str
+    right: str
+    operation: str
+
+
 class OpenFlag(Enum):
     O_APPEND = 1
     O_ASYNC = 2
@@ -48,11 +61,6 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         r"0[xX][0-9a-fA-F]+"
         return t
     
-    def t_OBJECT(t):
-        # FIXME: parse object
-        r"\{.*\}"
-        return t
-    
     def t_PID(t):
         r"\[pid\s\d+\]"
         return t
@@ -67,6 +75,14 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
     
     def t_PIPE(t):
         r"\|"
+        return t
+    
+    def t_LCURLY(t):
+        r"\{"
+        return t
+    
+    def t_RCURLY(t):
+        r"\}"
         return t
     
     def t_LPARENS(t):
@@ -93,8 +109,8 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         "-[0-9]+"
         return t
 
-    def t_WORD(t):
-        r"[a-zA-Z][a-zA-Z_]*"
+    def t_ID(t):
+        r"[a-zA-Z][a-zA-Z0-9_]*"
         if t.value in [flag.name for flag in OpenFlag]:
             t.type = "OPEN_FLAG"
             t.value = OpenFlag[t.value]
@@ -119,11 +135,13 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
 
     t_ignore_ANY = r'[\t\ \n]'
 
+    def t_COMMENT(t):
+        r"/\*.*?\*/"
+        # Ignore comments
+
     def t_ANY_error(t):
         logging.error(f'Illegal character {t.value[0]!r}.')
         t.lexer.skip(1)
-        #TODO: REMOVE
-        #exit(-1)
     
     lexer = lex()
     # Give the lexer some input
@@ -154,25 +172,20 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         p[0] = p[1]
 
     def p_exit_message(p):
-        r"exit_message : WORD LPARENS words RPARENS"
+        r"exit_message : ID LPARENS ids RPARENS"
         p[0] = p[1]
 
-    def p_words(p):
-        r"words : words WORD"
+    def p_ids(p):
+        r"ids : ids ID"
         p[0] = p[1] + [p[2]]
 
-    def p_words_single(p):
-        r"words : WORD"
+    def p_ids_single(p):
+        r"ids : ID"
         p[0] = [p[1]]
 
     def p_syscall(p):
-        r"syscall : WORD LPARENS terms RPARENS EQUAL number"
+        r"syscall : ID LPARENS terms RPARENS EQUAL number"
         p[0] = Syscall(p[1], p[3], int(p[6]))
-
-    def p_syscall_number(p):
-        r"syscall : WORD POSITIVE_NUMBER LPARENS terms RPARENS EQUAL number"
-        # e.g. faccessat2
-        p[0] = Syscall(p[1] + p[2], p[4], int(p[7]))
 
     def p_terms(p):
         r"terms : terms COMMA term"
@@ -186,16 +199,16 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         r"term : number"
         p[0] = p[1]
 
-    def p_term_word(p):
-        r"term : WORD"
+    def p_term_id(p):
+        r"term : ID"
         p[0] = p[1]
+
+    def p_call(p):
+        r"term : ID LPARENS terms RPARENS"
+        p[0] = Call(p[1], p[3])
 
     def p_term_address(p):
         r"term : ADDRESS"
-        p[0] = p[1]
-
-    def p_term_object(p):
-        r"term : OBJECT"
         p[0] = p[1]
 
     def p_term_string(p):
@@ -213,6 +226,28 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
     def p_term_list(p):
         r"term : LPARENSR terms RPARENSR"
         p[0] = p[2]
+
+    def p_term_dict(p):
+        r"term : LCURLY key_values RCURLY"
+        p[0] = p[2]
+
+    def p_term_or(p):
+        r"term : term PIPE term"
+        p[0] = BinaryOperation(p[1], p[3], "|")
+
+    def p_key_values(p):
+        r"key_values : key_values COMMA key_value"
+        p[1].update({p[3][0]: p[3][1]})
+        p[0] = p[1]
+
+    def p_key_values_single(p):
+        r"key_values : key_value"
+        p[0] = {p[1][0]: p[1][1]}
+
+    def p_key_value(p):
+        r"key_value : ID EQUAL term"
+        p[0] = (p[1], p[3])
+        print(p[0])
 
     def p_number(p):
         r"number : POSITIVE_NUMBER"
@@ -240,8 +275,6 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
 
     def p_error(p):
         logging.error(f'Syntax error at {p.value!r}')
-        #TODO: REMOVE
-        #exit(-1)
 
     # Build the parser
     parser = yacc()

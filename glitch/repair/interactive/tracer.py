@@ -22,4 +22,4 @@ class STrace():
             print(line)
             print(parse_tracer_output(line))
 
-STrace("46550")
+STrace("44140")

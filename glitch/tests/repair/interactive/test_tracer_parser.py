@@ -53,22 +53,22 @@ def test_tracer_parser_openat_mode():
     assert parsed.exitCode == 3
 
 def test_tracer_parser_newfstatat():
-    parsed = parse_tracer_output('[pid 33096] newfstatat(AT_FDCWD, "/usr/lib/python3/dist-packages/mercurial/error.py", {st_mode=S_IFREG|0644, st_size=18314, ...}, 0) = 0')
+    parsed = parse_tracer_output('[pid 33096] newfstatat(AT_FDCWD, "/usr/lib/python3/dist-packages/mercurial/error.py", {st_dev=makedev(0x103, 0x3), st_ino=14852531, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=8377, st_atime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_atime_nsec=917367753, st_mtime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_mtime_nsec=917367753, st_ctime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_ctime_nsec=917367753}, 0) = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "newfstatat"
     assert parsed.args[0] == 'AT_FDCWD'
     assert parsed.args[1] == '/usr/lib/python3/dist-packages/mercurial/error.py'
-    assert parsed.args[2] == "{st_mode=S_IFREG|0644, st_size=18314, ...}"
+    assert parsed.args[2] == {"st_dev": Call("makedev", ["0x103", "0x3"]), "st_ino": "14852531", "st_mode": BinaryOperation("S_IFREG", "0644", "|"), "st_nlink": "1", "st_uid": "0", "st_gid": "0", "st_blksize": "4096", "st_blocks": "24", "st_size": "8377", "st_atime": "1684251578", "st_atime_nsec": "917367753", "st_mtime": "1684251578", "st_mtime_nsec": "917367753", "st_ctime": "1684251578", "st_ctime_nsec": "917367753"}
     assert parsed.args[3] == "0"
     assert parsed.exitCode == 0
 
 def test_tracer_parser_newfstatat_empty_path():
-    parsed = parse_tracer_output('[pid 33096] newfstatat(3, "", {st_mode=S_IFREG|0644, st_size=13865, ...}, AT_EMPTY_PATH) = 0')
+    parsed = parse_tracer_output('[pid 33096] newfstatat(3, "", {st_dev=makedev(0x103, 0x3), st_ino=14852531, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=8377, st_atime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_atime_nsec=917367753, st_mtime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_mtime_nsec=917367753, st_ctime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_ctime_nsec=917367753}, AT_EMPTY_PATH) = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "newfstatat"
     assert parsed.args[0] == '3'
     assert parsed.args[1] == ''
-    assert parsed.args[2] == "{st_mode=S_IFREG|0644, st_size=13865, ...}"
+    assert parsed.args[2] == {"st_dev": Call("makedev", ["0x103", "0x3"]), "st_ino": "14852531", "st_mode": BinaryOperation("S_IFREG", "0644", "|"), "st_nlink": "1", "st_uid": "0", "st_gid": "0", "st_blksize": "4096", "st_blocks": "24", "st_size": "8377", "st_atime": "1684251578", "st_atime_nsec": "917367753", "st_mtime": "1684251578", "st_mtime_nsec": "917367753", "st_ctime": "1684251578", "st_ctime_nsec": "917367753"}
     assert parsed.args[3] == [ORedFlag.AT_EMPTY_PATH]
     assert parsed.exitCode == 0
 
