@@ -1,9 +1,11 @@
 import subprocess
 
+from glitch.repair.interactive.tracer_parser import parse_tracer_output
+
 class STrace():
     def __init__(self, pid: str):
         proc = subprocess.Popen(
-            ["sudo", "strace", "-e", "trace=file,write", "-f", "-p", pid], 
+            ["sudo", "strace", "-v", "-s", "65536", "-e", "trace=file,write", "-f", "-p", pid], 
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=1,
@@ -11,7 +13,9 @@ class STrace():
         )
 
         for line in proc.stdout:
-            if "test234" in line:
-                print(line)
+            if line.startswith("strace: Process"):
+                continue
+            print(line)
+            print(parse_tracer_output(line))
 
-STrace("41373")
+STrace("42646")
