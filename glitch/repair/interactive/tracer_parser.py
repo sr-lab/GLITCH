@@ -3,11 +3,14 @@ from enum import Enum
 from ply.lex import lex
 from ply.yacc import yacc
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List
 
 
-class Statement:
-    pass
+@dataclass
+class Syscall:
+    cmd: str
+    args: List[str]
+    exitCode: int
 
 
 class OpenFlag(Enum):
@@ -39,79 +42,14 @@ class ORedFlag(Enum):
     AT_SYMLINK_NOFOLLOW = 2
 
 
-@dataclass
-class SStat(Statement):
-    path: str
-    flags: List[str]
-    exitCode: int
-
-
-@dataclass
-class SFStat(Statement):
-    fd: str
-    flags: List[str]
-    exitCode: int
-
-
-@dataclass
-class SFStatAt(Statement):
-    dirfd: str
-    path: str
-    flags: List[str]
-    oredFlags: List[str]
-    exitCode: int
-
-
-@dataclass
-class SOpen(Statement):
-    path: str
-    flags: List[OpenFlag]
-    mode: Optional[str]
-    exitCode: int
-
-
-@dataclass
-class SOpenAt(Statement):
-    dirfd: str
-    path: str
-    flags: List[OpenFlag]
-    mode: Optional[str]
-    exitCode: int
-
-
-@dataclass
-class SRename(Statement):
-    src: str
-    dst: str
-    exitCode: int
-
-
-@dataclass
-class SUnknown(Statement):
-    cmd: str
-    args: List[str]
-    exitCode: int
-
-
-def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
-    verbs = {
-        "open": "OPEN",
-        "openat": "OPENAT",
-        "stat": "STAT",
-        "lstat": "LSTAT",
-        "fstat": "FSTAT",
-        "fstatat": "FSTATAT",
-        "fstatat64": "FSTATAT64",
-        "newfstatat": "NEWFSTATAT",
-        "rename": "RENAME",
-    }
-
+def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
     # Tokens defined as functions preserve order
     def t_ADDRESS(t):
         r"0[xX][0-9a-fA-F]+"
         return t
     
     def t_OBJECT(t):
+        # FIXME: parse object
         r"\{.*\}"
         return t
     
@@ -139,6 +77,14 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
         r"\)"
         return t
     
+    def t_LPARENSR(t):
+        r"\["
+        return t
+    
+    def t_RPARENSR(t):
+        r"\]"
+        return t
+    
     def t_POSITIVE_NUMBER(t):
         r"[0-9]+"
         return t
@@ -155,10 +101,6 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
         elif t.value in [flag.name for flag in ORedFlag]:
             t.type = "ORED_FLAG"
             t.value = ORedFlag[t.value]
-        elif t.value == "AT_FDCWD":
-            t.type = "AT_FDCWD"
-        elif t.value in verbs.keys():
-            t.type = verbs[t.value]
         return t
 
     def t_STRING(t):
@@ -173,7 +115,7 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
                 lambda v: v.startswith("t_"), locals().keys()
             )
         ),
-    ) + ("OPEN_FLAG", "ORED_FLAG", "AT_FDCWD") + tuple(verbs.values())
+    ) + ("OPEN_FLAG", "ORED_FLAG")
 
     t_ignore_ANY = r'[\t\ \n]'
 
@@ -181,7 +123,7 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
         logging.error(f'Illegal character {t.value[0]!r}.')
         t.lexer.skip(1)
         #TODO: REMOVE
-        exit(-1)
+        #exit(-1)
     
     lexer = lex()
     # Give the lexer some input
@@ -195,20 +137,20 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
                 break
             print(tok)
 
-    def p_statements_pid(p):
-        r"statements : PID statement"
+    def p_syscalls_pid(p):
+        r"syscalls : PID syscall"
         p[0] = p[2]
 
-    def p_statements_exit(p):
-        r"statements : PID statement exit_message"
+    def p_syscalls_exit(p):
+        r"syscalls : PID syscall exit_message"
         p[0] = p[2]
 
-    def p_statements_no_pid(p):
-        r"statements : statement exit_message"
+    def p_syscalls_no_pid(p):
+        r"syscalls : syscall exit_message"
         p[0] = p[1]
 
-    def p_statements(p):
-        r"statements : statement"
+    def p_syscalls(p):
+        r"syscalls : syscall"
         p[0] = p[1]
 
     def p_exit_message(p):
@@ -223,53 +165,14 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
         r"words : WORD"
         p[0] = [p[1]]
 
-    def p_statement_stat(p):
-        r"statement : stat"
-        p[0] = p[1]
+    def p_syscall(p):
+        r"syscall : WORD LPARENS terms RPARENS EQUAL number"
+        p[0] = Syscall(p[1], p[3], int(p[6]))
 
-    def p_statement_open(p):
-        r"statement : open"
-        p[0] = p[1]
-
-    def p_statement_rename(p):
-        r"statement : rename"
-        p[0] = p[1]
-    
-    def p_statement_open_at(p):
-        r"statement : open_at"
-        p[0] = p[1]
-
-    def p_statement_fstat(p):
-        r"statement : fstat"
-        p[0] = p[1]
-
-    def p_statement_fstatat(p):
-        r"statement : fstatat"
-        p[0] = p[1]
-
-    def p_statement_unknown(p):
-        r"statement : unknown"
-        p[0] = p[1]
-
-    def p_open_flags_single(p):
-        r"open_flags : OPEN_FLAG"
-        p[0] = [p[1]]
-
-    def p_open_flags(p):
-        r"open_flags : OPEN_FLAG PIPE open_flags"
-        p[0] = [p[1]] + p[3]
-
-    def p_ored_flags_single(p):
-        r"ored_flags : ORED_FLAG"
-        p[0] = [p[1]]
-
-    def p_ored_flags(p):
-        r"ored_flags : ORED_FLAG PIPE ored_flags"
-        p[0] = [p[1]]
-
-    def p_ored_flags_integer(p):
-        r"ored_flags : POSITIVE_NUMBER"
-        p[0] = p[1]
+    def p_syscall_number(p):
+        r"syscall : WORD POSITIVE_NUMBER LPARENS terms RPARENS EQUAL number"
+        # e.g. faccessat2
+        p[0] = Syscall(p[1] + p[2], p[4], int(p[7]))
 
     def p_terms(p):
         r"terms : terms COMMA term"
@@ -299,61 +202,17 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
         r"term : STRING"
         p[0] = p[1]
 
-    def p_stat(p):
-        r"stat : STAT LPARENS STRING COMMA terms RPARENS EQUAL number"
-        # STRING is PATH
-        p[0] = SStat(p[3], p[5], int(p[8]))
-
-    def p_stat_lstat(p):
-        r"stat : LSTAT LPARENS STRING COMMA terms RPARENS EQUAL number"
-        # STRING is PATH
-        p[0] = SStat(p[3], p[5], int(p[8]))
-
-    def p_fstat(p):
-        r"fstat : FSTAT LPARENS POSITIVE_NUMBER COMMA terms RPARENS EQUAL number"
-        p[0] = SFStat(p[3], p[5], int(p[8]))
-
-    def p_fstatat(p):
-        r"fstatat : fstatat_verb LPARENS dirfd COMMA STRING COMMA terms COMMA ored_flags RPARENS EQUAL number"
-        # STRING is PATH
-        p[0] = SFStatAt(p[3], p[5], p[7], p[9], int(p[12]))
-
-    def p_open(p):
-        r"open : OPEN LPARENS STRING COMMA open_flags RPARENS EQUAL number"
-        # STRING is PATH
-        p[0] = SOpen(p[3], p[5], None, int(p[8]))
-
-    def p_open_mode(p):
-        r"open : OPEN LPARENS STRING COMMA open_flags COMMA POSITIVE_NUMBER RPARENS EQUAL number"
-        # The POSITIVE_NUMBER is the mode and STRING is PATH
-        p[0] = SOpen(p[3], p[5], p[7], int(p[10]))
-
-    def p_open_at(p):
-        r"open_at : OPENAT LPARENS dirfd COMMA STRING COMMA open_flags RPARENS EQUAL number"
-        # STRING is PATH
-        p[0] = SOpenAt(p[3], p[5], p[7], None, int(p[10]))
-
-    def p_open_at_mode(p):
-        r"open_at : OPENAT LPARENS dirfd COMMA STRING COMMA open_flags COMMA POSITIVE_NUMBER RPARENS EQUAL number"
-        # The POSITIVE_NUMBER is the mode and STRING is PATH
-        p[0] = SOpenAt(p[3], p[5], p[7], p[9], int(p[12]))
-
-    def p_rename(p):
-        r"rename : RENAME LPARENS STRING COMMA STRING RPARENS EQUAL number"
-        # STRING is PATH
-        p[0] = SRename(p[3], p[5], int(p[8]))
-    
-    def p_unknown(p):
-        r"unknown : WORD LPARENS terms RPARENS EQUAL number"
-        p[0] = SUnknown(p[1], p[3], int(p[6]))
-
-    def p_dirfd(p):
-        r"dirfd : AT_FDCWD"
+    def p_term_open_flags(p):
+        r"term : open_flags"
         p[0] = p[1]
 
-    def p_dirfd_number(p):
-        r"dirfd : POSITIVE_NUMBER"
+    def p_term_ored_flags(p):
+        r"term : ored_flags"
         p[0] = p[1]
+
+    def p_term_list(p):
+        r"term : LPARENSR terms RPARENSR"
+        p[0] = p[2]
 
     def p_number(p):
         r"number : POSITIVE_NUMBER"
@@ -363,22 +222,26 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Statement:
         r"number : NEGATIVE_NUMBER"
         p[0] = p[1]
 
-    def p_fstatat_verb(p):
-        r"fstatat_verb : FSTATAT"
-        p[0] = p[1]
+    def p_open_flags_single(p):
+        r"open_flags : OPEN_FLAG"
+        p[0] = [p[1]]
 
-    def p_fstatat_verb_64(p):
-        r"fstatat_verb : FSTATAT64"
-        p[0] = p[1]
+    def p_open_flags(p):
+        r"open_flags : OPEN_FLAG PIPE open_flags"
+        p[0] = [p[1]] + p[3]
 
-    def p_fstatat_verb_new(p):
-        r"fstatat_verb : NEWFSTATAT"
-        p[0] = p[1]
+    def p_ored_flags_single(p):
+        r"ored_flags : ORED_FLAG"
+        p[0] = [p[1]]
+
+    def p_ored_flags(p):
+        r"ored_flags : ORED_FLAG PIPE ored_flags"
+        p[0] = [p[1]]
 
     def p_error(p):
         logging.error(f'Syntax error at {p.value!r}')
         #TODO: REMOVE
-        exit(-1)
+        #exit(-1)
 
     # Build the parser
     parser = yacc()

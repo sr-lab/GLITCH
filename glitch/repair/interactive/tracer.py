@@ -13,9 +13,13 @@ class STrace():
         )
 
         for line in proc.stdout:
-            if line.startswith("strace: Process"):
+            if (
+                line.startswith("strace: Process") 
+                or "+++ exited with" in line
+                or "--- SIG" in line
+            ):
                 continue
             print(line)
             print(parse_tracer_output(line))
 
-STrace("42646")
+STrace("46550")
