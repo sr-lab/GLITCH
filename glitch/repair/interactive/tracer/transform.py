@@ -1,8 +1,11 @@
 import os
-
+from pwd import getpwuid
 from typing import Set
-from glitch.repair.interactive.tracer.model import *
 
+from glitch.repair.interactive.tracer.model import *
+from glitch.repair.interactive.filesystem import *
+
+# TODO: Add tests
 def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
     """Get all paths affected by the given syscalls.
     
@@ -40,3 +43,34 @@ def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
             workdir = syscall.path
 
     return paths
+
+
+# TODO: Add tests
+def get_file_system_state(files: Set[str]) -> FileSystemState:
+    """Get the file system state from the given set of files.
+
+    Args:
+        files: A set of files.
+
+    Returns:
+        FileSystemState: The file system state.
+    """
+    fs = FileSystemState()
+    get_owner = lambda f: getpwuid(os.stat(f).st_uid).pw_name
+    get_mode = lambda f: oct(os.stat(f).st_mode & 0o777)[2:]
+
+    for file in files:
+        if not os.path.exists(file):
+            fs.state[file] = Nil()
+        elif os.path.isdir(file):
+            fs.state[file] = Dir(get_mode(file), get_owner(file))
+        elif os.path.isfile(file):
+            with open(file, "rb") as f:
+                bytes = f.read()
+                try:
+                    content = bytes.decode("utf-8")
+                except UnicodeDecodeError:
+                    content = bytes.hex()
+                fs.state[file] = File(get_mode(file), get_owner(file), content)
+
+    return fs
