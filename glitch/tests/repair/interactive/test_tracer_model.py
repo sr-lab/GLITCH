@@ -1,5 +1,5 @@
-from glitch.repair.interactive.tracer_model import *
-from glitch.repair.interactive.tracer_parser import *
+from glitch.repair.interactive.tracer.model import *
+from glitch.repair.interactive.tracer.parser import *
 
 def test_tracer_model_rename():
     syscall = Syscall("rename", ["test", "test~"], 0)
@@ -52,3 +52,38 @@ def test_tracer_model_newfstatat():
     assert typed_syscall.path == "test"
     assert typed_syscall.flags == "0x7fffc2269490"
     assert typed_syscall.oredFlags == "0"
+
+def test_tracer_model_unlink():
+    syscall = Syscall("unlink", ["test"], 0)
+    typed_syscall = get_syscall_with_type(syscall)
+    assert isinstance(typed_syscall, SUnlink)
+    assert typed_syscall.path == "test"
+
+def test_tracer_model_unlinkat():
+    syscall = Syscall("unlinkat", ["1", "test", [UnlinkFlag.AT_REMOVEDIR]], 0)
+    typed_syscall = get_syscall_with_type(syscall)
+    assert isinstance(typed_syscall, SUnlinkAt)
+    assert typed_syscall.dirfd == "1"
+    assert typed_syscall.path == "test"
+    assert typed_syscall.flags == [UnlinkFlag.AT_REMOVEDIR]
+
+def test_tracer_model_mkdir():
+    syscall = Syscall("mkdir", ["test", "0777"], 0)
+    typed_syscall = get_syscall_with_type(syscall)
+    assert isinstance(typed_syscall, SMkdir)
+    assert typed_syscall.path == "test"
+    assert typed_syscall.mode == "0777"
+
+def test_tracer_model_mkdirat():
+    syscall = Syscall("mkdirat", ["AT_FDCWD", "test", "0777"], 0)
+    typed_syscall = get_syscall_with_type(syscall)
+    assert isinstance(typed_syscall, SMkdirAt)
+    assert typed_syscall.dirfd == "AT_FDCWD"
+    assert typed_syscall.path == "test"
+    assert typed_syscall.mode == "0777"
+
+def test_tracer_model_rmdir():
+    syscall = Syscall("rmdir", ["test"], 0)
+    typed_syscall = get_syscall_with_type(syscall)
+    assert isinstance(typed_syscall, SRmdir)
+    assert typed_syscall.path == "test"

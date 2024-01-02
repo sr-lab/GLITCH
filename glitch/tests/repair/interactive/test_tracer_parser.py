@@ -1,4 +1,4 @@
-from glitch.repair.interactive.tracer_parser import *
+from glitch.repair.interactive.tracer.parser import *
 
 def test_tracer_parser_rename():
     parsed = parse_tracer_output('[pid 18040] rename("test", "test~") = 0')
@@ -100,4 +100,46 @@ def test_tracer_parser_faccessat2():
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "faccessat2"
     assert parsed.args == ["AT_FDCWD", "/usr/lib/command-not-found", "X_OK", "AT_EACCESS"]
+    assert parsed.exitCode == 0
+
+def test_tracer_parser_mkdirat():
+    parsed = parse_tracer_output('[pid 36388] mkdirat(AT_FDCWD, "test23456", 0777) = 0')
+    assert isinstance(parsed, Syscall)
+    assert parsed.cmd == "mkdirat"
+    assert parsed.args == ["AT_FDCWD", "test23456", "0777"]
+    assert parsed.exitCode == 0
+
+def test_tracer_parser_mkdir():
+    parsed = parse_tracer_output('[pid 36388] mkdir("test23456", 0777) = 0')
+    assert isinstance(parsed, Syscall)
+    assert parsed.cmd == "mkdir"
+    assert parsed.args == ["test23456", "0777"]
+    assert parsed.exitCode == 0
+
+def test_tracer_parser_rmdir():
+    parsed = parse_tracer_output('[pid 36152] rmdir("test23456") = 0')
+    assert isinstance(parsed, Syscall)
+    assert parsed.cmd == "rmdir"
+    assert parsed.args == ["test23456"]
+    assert parsed.exitCode == 0
+
+def test_tracer_parser_unlink():
+    parsed = parse_tracer_output('[pid 47072] unlink("/home/test/.zsh_history.LOCK") = 0')
+    assert isinstance(parsed, Syscall)
+    assert parsed.cmd == "unlink"
+    assert parsed.args == ["/home/test/.zsh_history.LOCK"]
+    assert parsed.exitCode == 0
+
+def test_tracer_parser_unlinkat():
+    parsed = parse_tracer_output('[pid 32850] unlinkat(AT_FDCWD, "test234", AT_REMOVEDIR) = 0')
+    assert isinstance(parsed, Syscall)
+    assert parsed.cmd == "unlinkat"
+    assert parsed.args == ["AT_FDCWD", "test234", [UnlinkFlag.AT_REMOVEDIR]]
+    assert parsed.exitCode == 0
+
+def test_tracer_parser_unlinkat_0():
+    parsed = parse_tracer_output('[pid 32850] unlinkat(AT_FDCWD, "test234", 0) = 0')
+    assert isinstance(parsed, Syscall)
+    assert parsed.cmd == "unlinkat"
+    assert parsed.args == ["AT_FDCWD", "test234", "0"]
     assert parsed.exitCode == 0

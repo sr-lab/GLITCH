@@ -55,6 +55,10 @@ class ORedFlag(Enum):
     AT_SYMLINK_NOFOLLOW = 2
 
 
+class UnlinkFlag(Enum):
+    AT_REMOVEDIR = 0
+
+
 def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
     # Tokens defined as functions preserve order
     def t_ADDRESS(t):
@@ -117,6 +121,9 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         elif t.value in [flag.name for flag in ORedFlag]:
             t.type = "ORED_FLAG"
             t.value = ORedFlag[t.value]
+        elif t.value in [flag.name for flag in UnlinkFlag]:
+            t.type = "UNLINK_FLAG"
+            t.value = UnlinkFlag[t.value]
         return t
 
     def t_STRING(t):
@@ -131,7 +138,7 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
                 lambda v: v.startswith("t_"), locals().keys()
             )
         ),
-    ) + ("OPEN_FLAG", "ORED_FLAG")
+    ) + ("OPEN_FLAG", "ORED_FLAG", "UNLINK_FLAG")
 
     t_ignore_ANY = r'[\t\ \n]'
 
@@ -223,6 +230,10 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         r"term : ored_flags"
         p[0] = p[1]
 
+    def p_term_unlink_flags(p):
+        r"term : unlink_flags"
+        p[0] = p[1]
+
     def p_term_list(p):
         r"term : LPARENSR terms RPARENSR"
         p[0] = p[2]
@@ -247,7 +258,6 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
     def p_key_value(p):
         r"key_value : ID EQUAL term"
         p[0] = (p[1], p[3])
-        print(p[0])
 
     def p_number(p):
         r"number : POSITIVE_NUMBER"
@@ -262,16 +272,24 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         p[0] = [p[1]]
 
     def p_open_flags(p):
-        r"open_flags : OPEN_FLAG PIPE open_flags"
-        p[0] = [p[1]] + p[3]
+        r"open_flags : open_flags PIPE OPEN_FLAG"
+        p[0] = p[1] + [p[3]]
 
     def p_ored_flags_single(p):
         r"ored_flags : ORED_FLAG"
         p[0] = [p[1]]
 
     def p_ored_flags(p):
-        r"ored_flags : ORED_FLAG PIPE ored_flags"
+        r"ored_flags : ored_flags PIPE ORED_FLAG"
+        p[0] = p[1] + [p[3]]
+
+    def p_unlink_flags_single(p):
+        r"unlink_flags : UNLINK_FLAG"
         p[0] = [p[1]]
+
+    def p_unlink_flags(p):
+        r"unlink_flags : unlink_flags PIPE UNLINK_FLAG"
+        p[0] = p[1] + [p[3]]
 
     def p_error(p):
         logging.error(f'Syntax error at {p.value!r}')

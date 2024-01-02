@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional, List, Union
 
-from glitch.repair.interactive.tracer_parser import Syscall, OpenFlag, ORedFlag
+from glitch.repair.interactive.tracer.parser import (
+    Syscall, OpenFlag, ORedFlag, UnlinkFlag
+)
 
 
 def get_syscall_with_type(syscall: Syscall) -> Syscall:
@@ -23,6 +25,11 @@ def get_syscall_with_type(syscall: Syscall) -> Syscall:
         "fstatat64": "SFStatAt",
         "newfstatat": "SFStatAt",
         "rename": "SRename",
+        "mkdir": "SMkdir",
+        "mkdirat": "SMkdirAt",
+        "rmdir": "SRmdir",
+        "unlink": "SUnlink",
+        "unlinkat": "SUnlinkAt",
     }
     if syscall.cmd in verbs:
         return globals()[verbs[syscall.cmd]](syscall.cmd, syscall.args, syscall.exitCode)
@@ -117,3 +124,60 @@ class SRename(Syscall):
     @property
     def dst(self) -> str:
         return self.args[1]
+    
+
+@dataclass
+class SMkdir(Syscall):
+    @property
+    def path(self) -> str:
+        return self.args[0]
+    
+    @property
+    def mode(self) -> Optional[str]:
+        if len(self.args) == 1:
+            return None
+        return self.args[1]
+    
+
+@dataclass
+class SMkdirAt(Syscall):
+    @property
+    def dirfd(self) -> str:
+        return self.args[0]
+    
+    @property
+    def path(self) -> str:
+        return self.args[1]
+    
+    @property
+    def mode(self) -> Optional[str]:
+        if len(self.args) == 2:
+            return None
+        return self.args[2]
+    
+
+@dataclass
+class SRmdir(Syscall):
+    @property
+    def path(self) -> str:
+        return self.args[0]
+    
+
+class SUnlink(Syscall):
+    @property
+    def path(self) -> str:
+        return self.args[0]
+    
+
+class SUnlinkAt(Syscall):
+    @property
+    def dirfd(self) -> str:
+        return self.args[0]
+    
+    @property
+    def path(self) -> str:
+        return self.args[1]
+    
+    @property
+    def flags(self) -> Union[List[UnlinkFlag], str]:
+        return self.args[2]
