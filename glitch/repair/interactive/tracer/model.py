@@ -30,11 +30,19 @@ def get_syscall_with_type(syscall: Syscall) -> Syscall:
         "rmdir": "SRmdir",
         "unlink": "SUnlink",
         "unlinkat": "SUnlinkAt",
+        "chdir": "SChdir"
     }
     if syscall.cmd in verbs:
         return globals()[verbs[syscall.cmd]](syscall.cmd, syscall.args, syscall.exitCode)
     return syscall
 
+
+@dataclass
+class SChdir(Syscall):
+    @property
+    def path(self) -> str:
+        return self.args[0]
+    
 
 @dataclass
 class SStat(Syscall):

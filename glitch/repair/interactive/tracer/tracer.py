@@ -37,7 +37,6 @@ class STrace(threading.Thread):
 
         return self.syscalls
     
-# TODO: Handle chdir
-pid = "43622"
+pid = "52979"
 workdir = subprocess.check_output(["pwdx", pid]).decode("utf-8").split(": ")[1].strip()
 print(get_affected_paths(workdir, STrace(pid).run()))

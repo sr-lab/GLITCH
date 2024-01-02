@@ -87,3 +87,9 @@ def test_tracer_model_rmdir():
     typed_syscall = get_syscall_with_type(syscall)
     assert isinstance(typed_syscall, SRmdir)
     assert typed_syscall.path == "test"
+
+def test_tracer_model_chdir():
+    syscall = Syscall("chdir", ["test"], 0)
+    typed_syscall = get_syscall_with_type(syscall)
+    assert isinstance(typed_syscall, SChdir)
+    assert typed_syscall.path == "test"

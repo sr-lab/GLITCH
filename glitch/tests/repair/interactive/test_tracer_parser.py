@@ -143,3 +143,10 @@ def test_tracer_parser_unlinkat_0():
     assert parsed.cmd == "unlinkat"
     assert parsed.args == ["AT_FDCWD", "test234", "0"]
     assert parsed.exitCode == 0
+
+def test_tracer_parser_chdir():
+    parsed = parse_tracer_output('[pid 32850] chdir("/home/test") = 0')
+    assert isinstance(parsed, Syscall)
+    assert parsed.cmd == "chdir"
+    assert parsed.args == ["/home/test"]
+    assert parsed.exitCode == 0
