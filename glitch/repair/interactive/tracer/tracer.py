@@ -37,7 +37,7 @@ class STrace(threading.Thread):
 
         return self.syscalls
     
-# TODO: Handle first workdir
 # TODO: Handle chdir
-# TODO: Change paths to absolute paths
-print(get_affected_paths(STrace("37856").run()))
+pid = "43622"
+workdir = subprocess.check_output(["pwdx", pid]).decode("utf-8").split(": ")[1].strip()
+print(get_affected_paths(workdir, STrace(pid).run()))
