@@ -70,7 +70,7 @@ class TestSecurity(unittest.TestCase):
     def test_chef_missing_default(self):
         self.__help_test(
             "tests/security/chef/files/missing_default.rb",
-            1, ["sec_no_default_switch"], [1]
+            1, ["sec_no_default_switch"], [2]
         )
 
     def test_chef_full_permission(self):
