@@ -1,7 +1,7 @@
 from glitch.parsers.cmof import PuppetParser
 from glitch.repair.interactive.compiler.compiler import Compiler
 from glitch.repair.interactive.delta_p import *
-from glitch.repr.inter import *
+from glitch.repr.inter import UnitBlockType
 from glitch.tech import Tech
 from tempfile import NamedTemporaryFile
 
@@ -36,3 +36,28 @@ def test_delta_p_compiler_puppet():
         ),
         PChmod(PEConst(PStr('/var/www/customers/public_html/index.php')), PEConst(PStr('0755')))
     )
+
+
+def test_delta_p_to_filesystem():
+    statement = PSeq(
+        PSeq(
+            PSeq(
+                PSkip(),
+                PCreate(
+                    PEConst(PStr('/var/www/customers/public_html/index.php')),
+                    PEConst(PStr('<html><body><h1>Hello World</h1></body></html>'))
+                )
+            ),
+            PChown(PEConst(PStr('/var/www/customers/public_html/index.php')), PEConst(PStr('web_admin')))
+        ),
+        PChmod(PEConst(PStr('/var/www/customers/public_html/index.php')), PEConst(PStr('0755')))
+    )
+
+    fs = statement.to_filesystem()
+    assert fs.state == {
+        '/var/www/customers/public_html/index.php': File(
+            '0755',
+            'web_admin',
+            '<html><body><h1>Hello World</h1></body></html>'
+        )
+    }

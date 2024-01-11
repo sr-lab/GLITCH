@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 from dataclasses import dataclass
 
 class State:
@@ -11,15 +11,15 @@ class State:
 
 @dataclass
 class File(State):
-    mode: str
-    owner: str
-    content: str
+    mode: Optional[str]
+    owner: Optional[str]
+    content: Optional[str]
 
 
 @dataclass
 class Dir(State):
-    mode: str
-    owner: str
+    mode: Optional[str]
+    owner: Optional[str]
 
 
 @dataclass
