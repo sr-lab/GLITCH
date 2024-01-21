@@ -220,7 +220,7 @@ class PSeq(PStatement):
 class PLet(PStatement):
     id: str
     expr: PExpr
-    index: Optional[int]
+    label: Optional[int]
     body: PStatement
 
 
