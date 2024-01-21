@@ -38,37 +38,37 @@ def test_delta_p_compiler_puppet():
             PSeq(
                 PSkip(),
                 PLet(
-                    "state",
+                    "state-2",
                     PEConst(PStr("present")),
                     2,
                     PLet(
-                        "content",
+                        "content-1",
                         PEConst(PStr("<html><body><h1>Hello World</h1></body></html>")),
                         1,
                         PCreate(
                             PEConst(PStr("/var/www/customers/public_html/index.php")),
-                            PEConst(PStr("<html><body><h1>Hello World</h1></body></html>")),
+                            PEVar("content-1"),
                         ),
                     )
                 ),
             ),
             PLet(
-                "mode",
+                "mode-3",
                 PEConst(PStr("0755")),
                 3,
                 PChmod(
                     PEConst(PStr("/var/www/customers/public_html/index.php")),
-                    PEConst(PStr("0755")),
+                    PEVar("mode-3"),
                 ),
             ),
         ),
         PLet(
-            "owner",
+            "owner-4",
             PEConst(PStr("web_admin")),
             4,
             PChown(
                 PEConst(PStr("/var/www/customers/public_html/index.php")),
-                PEConst(PStr("web_admin")),
+                PEVar("owner-4"),
             ),
         ),
     )

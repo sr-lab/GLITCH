@@ -21,33 +21,57 @@ class DeltaPCompiler:
         attributes: Dict[str, Tuple[PExpr, Attribute]],
         labeled_script: LabeledUnitBlock,
     ) -> PStatement:
-        let = lambda attr_name, body: PLet(
-            attr_name,
-            attributes[attr_name][0],
-            labeled_script.get_label(attributes[attr_name][1]),
-            body,
-        )
+        def process_var(attr: str):
+            label = labeled_script.get_label(attributes[attr][1])
+            var = f"{attr}-{label}"
+            return label, var
 
         match attr_name, attributes[attr_name][0]:
             case "state", PEConst(PStr("present")):
-                return let(
-                    attr_name,
-                    let(
-                        "content",
-                        PCreate(attributes["path"][0], attributes["content"][0]),
+                state_label, state_var = process_var("state")
+                content_label, content_var = process_var("content")
+                return PLet(
+                    state_var,
+                    attributes["state"][0],
+                    state_label,
+                    PLet(
+                        content_var,
+                        attributes["content"][0],
+                        content_label,
+                        PCreate(attributes["path"][0], PEVar(content_var)),
                     ),
                 )
             case "state", PEConst(PStr("absent")):
-                return let(attr_name, PRm(attributes["path"][0]))
+                state_label, state_var = process_var("state")
+                return PLet(
+                    state_var,
+                    attributes["state"][0],
+                    state_label,
+                    PRm(attributes["path"][0]),
+                )
             case "state", PEConst(PStr("directory")):
-                return let(attr_name, PMkdir(attributes["path"][0]))
+                state_label, state_var = process_var("state")
+                return PLet(
+                    state_var,
+                    attributes["state"][0],
+                    state_label,
+                    PMkdir(attributes["path"][0]),
+                )
             case "owner", _:
-                return let(
-                    attr_name, PChown(attributes["path"][0], attributes["owner"][0])
+                owner_label, owner_var = process_var("owner")
+                return PLet(
+                    owner_var,
+                    attributes["owner"][0],
+                    owner_label,
+                    PChown(attributes["path"][0], PEVar(owner_var)),
                 )
             case "mode", _:
-                return let(
-                    attr_name, PChmod(attributes["path"][0], attributes["mode"][0])
+                mode_label, mode_var = process_var("mode")
+                return PLet(
+                    mode_var,
+                    attributes["mode"][0],
+                    mode_label,
+                    PChmod(attributes["path"][0], PEVar(mode_var)),
                 )
 
         return None

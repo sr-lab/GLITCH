@@ -7,6 +7,9 @@ class State:
     
     def is_file(self) -> bool:
         return isinstance(self, File)
+    
+    def __str__(self) -> str:
+        return self.__class__.__name__.lower()
 
 
 @dataclass
