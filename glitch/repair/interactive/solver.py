@@ -1,5 +1,17 @@
-from typing import List
-from z3 import Solver, sat, If, StringVal, String, And, Int, Or, Sum, ModelRef
+from typing import List, Callable, Tuple
+from z3 import (
+    Solver,
+    sat,
+    If,
+    StringVal,
+    String,
+    And,
+    Int,
+    Or,
+    Sum,
+    ModelRef,
+    Z3PPObject,
+)
 
 from glitch.repair.interactive.filesystem import FileSystemState
 from glitch.repair.interactive.tracer.transform import get_file_system_state
@@ -58,7 +70,18 @@ class PatchSolver:
         for label in labels:
             self.unchanged[label] = Int(f"unchanged-{label}")
 
-        self.__generate_soft_constraints(self.statement)
+        (
+            self.state_fun,
+            self.contents_fun,
+            self.mode_fun,
+            self.owner_fun,
+        ) = self.__generate_soft_constraints(
+            self.statement,
+            self.state_fun,
+            self.contents_fun,
+            self.mode_fun,
+            self.owner_fun,
+        )
         self.__generate_hard_constraints(filesystem)
 
         self.solver.add(Sum(list(self.unchanged.values())) == self.sum_var)
@@ -97,73 +120,84 @@ class PatchSolver:
                 self.solver.add(self.mode_fun(path) == StringVal(state.mode))
                 self.solver.add(self.owner_fun(path) == StringVal(state.owner))
 
-    def __generate_soft_constraints(self, statement: PStatement):
+    def __generate_soft_constraints(
+        self,
+        statement: PStatement,
+        state_fun: Callable[[PStatement], Z3PPObject],
+        contents_fun: Callable[[PStatement], Z3PPObject],
+        mode_fun: Callable[[PStatement], Z3PPObject],
+        owner_fun: Callable[[PStatement], Z3PPObject],
+    ) -> Tuple[
+        Callable[[PStatement], Z3PPObject],
+        Callable[[PStatement], Z3PPObject],
+        Callable[[PStatement], Z3PPObject],
+        Callable[[PStatement], Z3PPObject],
+    ]:
         # NOTE: For now it doesn't make sense to update the funs for the
         # default values because the else will always be the default value
-        previous_state_fun = self.state_fun
-        previous_contents_fun = self.contents_fun
-        previous_mode_fun = self.mode_fun
-        previous_owner_fun = self.owner_fun
+        previous_state_fun = state_fun
+        previous_contents_fun = contents_fun
+        previous_mode_fun = mode_fun
+        previous_owner_fun = owner_fun
 
         if isinstance(statement, PSkip):
             pass
         elif isinstance(statement, PMkdir):
             # FIXME: Problem this creates infinite recursion
-            previous_state_fun = self.state_fun
             path = self.__compile_expr(statement.path)
-            self.state_fun = lambda p: If(
-                p == path, StringVal("dir"), previous_state_fun(p)
-            )
+            state_fun = lambda p: If(p == path, StringVal("dir"), previous_state_fun(p))
         elif isinstance(statement, PCreate):
             path = self.__compile_expr(statement.path)
-            self.state_fun = lambda p: If(
+            state_fun = lambda p: If(
                 p == path, StringVal("file"), previous_state_fun(p)
             )
-            self.contents_fun = lambda p: If(
+            contents_fun = lambda p: If(
                 p == path,
                 self.__compile_expr(statement.content),
                 previous_contents_fun(p),
             )
         elif isinstance(statement, PRm):
             path = self.__compile_expr(statement.path)
-            self.state_fun = lambda p: If(
-                p == path, StringVal("nil"), previous_state_fun(p)
-            )
+            state_fun = lambda p: If(p == path, StringVal("nil"), previous_state_fun(p))
         elif isinstance(statement, PCp):
             dst, src = self.__compile_expr(statement.dst), self.__compile_expr(
                 statement.src
             )
-            self.state_fun = lambda p: If(
+            state_fun = lambda p: If(
                 p == dst, previous_state_fun(src), previous_state_fun(p)
             )
-            self.contents_fun = lambda p: If(
+            contents_fun = lambda p: If(
                 p == dst,
                 previous_contents_fun(src),
                 previous_contents_fun(p),
             )
-            self.mode_fun = lambda p: If(
+            mode_fun = lambda p: If(
                 p == dst, previous_mode_fun(src), previous_mode_fun(p)
             )
-            self.owner_fun = lambda p: If(
+            owner_fun = lambda p: If(
                 p == dst, previous_owner_fun(src), previous_owner_fun(p)
             )
         elif isinstance(statement, PChmod):
             path = self.__compile_expr(statement.path)
-            self.mode_fun = lambda p: If(
+            mode_fun = lambda p: If(
                 p == path,
                 self.__compile_expr(statement.mode),
                 previous_mode_fun(p),
             )
         elif isinstance(statement, PChown):
             path = self.__compile_expr(statement.path)
-            self.owner_fun = lambda p: If(
+            owner_fun = lambda p: If(
                 p == path,
                 self.__compile_expr(statement.owner),
                 previous_owner_fun(p),
             )
         elif isinstance(statement, PSeq):
-            self.__generate_soft_constraints(statement.lhs)
-            self.__generate_soft_constraints(statement.rhs)
+            state_fun, contents_fun, mode_fun, owner_fun = self.__generate_soft_constraints(
+                statement.lhs, state_fun, contents_fun, mode_fun, owner_fun
+            )
+            state_fun, contents_fun, mode_fun, owner_fun = self.__generate_soft_constraints(
+                statement.rhs, state_fun, contents_fun, mode_fun, owner_fun
+            )
         elif isinstance(statement, PLet):
             hole, var = String(f"loc-{statement.label}"), String(statement.id)
             self.holes[f"loc-{statement.label}"] = hole
@@ -175,10 +209,14 @@ class PatchSolver:
                     And(unchanged == 0, var == hole),
                 )
             )
-            self.__generate_soft_constraints(statement.body)
+            state_fun, contents_fun, mode_fun, owner_fun = self.__generate_soft_constraints(
+                statement.body, state_fun, contents_fun, mode_fun, owner_fun
+            )
         elif isinstance(statement, PIf):
             # TODO
             pass
+
+        return state_fun, contents_fun, mode_fun, owner_fun
 
     def solve(self) -> Optional[ModelRef]:
         lo, hi = 0, len(self.unchanged)

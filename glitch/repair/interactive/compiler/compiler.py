@@ -58,6 +58,7 @@ class DeltaPCompiler:
                     PMkdir(attributes["path"][0]),
                 )
             case "owner", _:
+                # TODO: this should use a is_defined
                 owner_label, owner_var = process_var("owner")
                 return PLet(
                     owner_var,
@@ -66,6 +67,7 @@ class DeltaPCompiler:
                     PChown(attributes["path"][0], PEVar(owner_var)),
                 )
             case "mode", _:
+                # TODO: this should use a is_defined
                 mode_label, mode_var = process_var("mode")
                 return PLet(
                     mode_var,
