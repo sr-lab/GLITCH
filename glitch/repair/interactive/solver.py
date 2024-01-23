@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, Callable, Tuple
 from z3 import (
     Solver,
@@ -9,7 +10,6 @@ from z3 import (
     Int,
     Or,
     Sum,
-    Not,
     ModelRef,
     Z3PPObject,
 )
@@ -19,8 +19,16 @@ from glitch.repair.interactive.tracer.transform import get_file_system_state
 from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
 
+Fun = Callable[[PStatement], Z3PPObject]
 
 class PatchSolver:
+    @dataclass
+    class __Funs():
+        state_fun: Fun
+        contents_fun: Fun
+        mode_fun: Fun
+        owner_fun: Fun
+
     __DEFAULT_MODE = "644"  # FIXME: what is the default mode?
     __DEFAULT_OWNER = "root"  # FIXME: what is the default owner?
 
@@ -32,57 +40,25 @@ class PatchSolver:
         self.vars = {}
         self.holes = {}
 
+        # FIXME: check the defaults
+        self.__funs = PatchSolver.__Funs(
+            lambda p: StringVal(""),
+            lambda p: StringVal(""),
+            lambda p: StringVal(PatchSolver.__DEFAULT_MODE),
+            lambda p: StringVal(PatchSolver.__DEFAULT_OWNER),
+        )
+
+        # TODO?: We might want to use the default file system state to update
+        # the funs
         # default_fs = self.__get_default_fs()
-
-        # NOTE: Right now having the default filesystem does not make sense
-        # for me because the functions will be overrided by the constraints
-        # in the file anyway
-
-        self.state_fun = lambda p: StringVal("") # FIXME
-        # for file, state in default_fs.state.items():
-        #     self.state_fun = lambda p: If(
-        #         p == file, StringVal(str(state)), self.state_fun(p)
-        #     )
-
-        self.contents_fun = lambda p: StringVal("") # FIXME
-        # for file, state in default_fs.state.items():
-        #     if state.is_file():
-        #         self.contents_fun = lambda p: If(
-        #             p == file, StringVal(state.content), self.contents_fun(p)
-        #         )
-        #     elif state.is_dir():
-        #         self.contents_fun = lambda p: If(p == file, "", self.contents_fun(p))
-
-        self.mode_fun = lambda p: StringVal(PatchSolver.__DEFAULT_MODE) # FIXME
-        # for file, state in default_fs.state.items():
-        #     if state.is_file() or state.is_dir():
-        #         self.mode_fun = lambda p: If(
-        #             p == file, StringVal(state.mode), self.mode_fun(p)
-        #         )
-
-        self.owner_fun = lambda p: StringVal(PatchSolver.__DEFAULT_OWNER) # FIXME
-        # for file, state in default_fs.state.items():
-        #     if state.is_file() or state.is_dir():
-        #         self.owner_fun = lambda p: If(
-        #             p == file, StringVal(state.owner), self.owner_fun(p)
-        #         )
 
         labels = self.__collect_labels(statement)
         for label in labels:
             self.unchanged[label] = Int(f"unchanged-{label}")
 
-        (
-            constraints,
-            self.state_fun,
-            self.contents_fun,
-            self.mode_fun,
-            self.owner_fun,
-        ) = self.__generate_soft_constraints(
+        constraints, self.__funs = self.__generate_soft_constraints(
             self.statement,
-            self.state_fun,
-            self.contents_fun,
-            self.mode_fun,
-            self.owner_fun,
+            self.__funs
         )
         for constraint in constraints:
             self.solver.add(constraint)
@@ -126,107 +102,89 @@ class PatchSolver:
 
     def __generate_hard_constraints(self, filesystem: FileSystemState):
         for path, state in filesystem.state.items():
-            self.solver.add(self.state_fun(path) == StringVal(str(state)))
+            self.solver.add(self.__funs.state_fun(path) == StringVal(str(state)))
             if state.is_file():
-                self.solver.add(self.contents_fun(path) == StringVal(state.content))
+                self.solver.add(self.__funs.contents_fun(path) == StringVal(state.content))
             if state.is_file() or state.is_dir():
-                self.solver.add(self.mode_fun(path) == StringVal(state.mode))
-                self.solver.add(self.owner_fun(path) == StringVal(state.owner))
+                self.solver.add(self.__funs.mode_fun(path) == StringVal(state.mode))
+                self.solver.add(self.__funs.owner_fun(path) == StringVal(state.owner))
 
     def __generate_soft_constraints(
         self,
         statement: PStatement,
-        state_fun: Callable[[PStatement], Z3PPObject],
-        contents_fun: Callable[[PStatement], Z3PPObject],
-        mode_fun: Callable[[PStatement], Z3PPObject],
-        owner_fun: Callable[[PStatement], Z3PPObject],
+        funs: __Funs
     ) -> Tuple[
         List[Z3PPObject],
-        Callable[[PStatement], Z3PPObject],
-        Callable[[PStatement], Z3PPObject],
-        Callable[[PStatement], Z3PPObject],
-        Callable[[PStatement], Z3PPObject],
+        __Funs,
     ]:
+        # Avoids infinite recursion
+        funs = deepcopy(funs)
         # NOTE: For now it doesn't make sense to update the funs for the
         # default values because the else will always be the default value
-        previous_state_fun = state_fun
-        previous_contents_fun = contents_fun
-        previous_mode_fun = mode_fun
-        previous_owner_fun = owner_fun
+        previous_state_fun = funs.state_fun
+        previous_contents_fun = funs.contents_fun
+        previous_mode_fun = funs.mode_fun
+        previous_owner_fun = funs.owner_fun
         constraints = []
 
-        if isinstance(statement, PSkip):
-            pass
-        elif isinstance(statement, PMkdir):
-            # FIXME: Problem this creates infinite recursion
+        if isinstance(statement, PMkdir):
             path = self.__compile_expr(statement.path)
-            state_fun = lambda p: If(p == path, StringVal("dir"), previous_state_fun(p))
+            funs.state_fun = lambda p: If(p == path, StringVal("dir"), previous_state_fun(p))
         elif isinstance(statement, PCreate):
             path = self.__compile_expr(statement.path)
-            state_fun = lambda p: If(
+            funs.state_fun = lambda p: If(
                 p == path, StringVal("file"), previous_state_fun(p)
             )
-            contents_fun = lambda p: If(
+            funs.contents_fun = lambda p: If(
                 p == path,
                 self.__compile_expr(statement.content),
                 previous_contents_fun(p),
             )
         elif isinstance(statement, PRm):
             path = self.__compile_expr(statement.path)
-            state_fun = lambda p: If(p == path, StringVal("nil"), previous_state_fun(p))
+            funs.state_fun = lambda p: If(p == path, StringVal("nil"), previous_state_fun(p))
         elif isinstance(statement, PCp):
             dst, src = self.__compile_expr(statement.dst), self.__compile_expr(
                 statement.src
             )
-            state_fun = lambda p: If(
+            funs.state_fun = lambda p: If(
                 p == dst, previous_state_fun(src), previous_state_fun(p)
             )
-            contents_fun = lambda p: If(
+            funs.contents_fun = lambda p: If(
                 p == dst,
                 previous_contents_fun(src),
                 previous_contents_fun(p),
             )
-            mode_fun = lambda p: If(
+            funs.mode_fun = lambda p: If(
                 p == dst, previous_mode_fun(src), previous_mode_fun(p)
             )
-            owner_fun = lambda p: If(
+            funs.owner_fun = lambda p: If(
                 p == dst, previous_owner_fun(src), previous_owner_fun(p)
             )
         elif isinstance(statement, PChmod):
             path = self.__compile_expr(statement.path)
-            mode_fun = lambda p: If(
+            funs.mode_fun = lambda p: If(
                 p == path,
                 self.__compile_expr(statement.mode),
                 previous_mode_fun(p),
             )
         elif isinstance(statement, PChown):
             path = self.__compile_expr(statement.path)
-            owner_fun = lambda p: If(
+            funs.owner_fun = lambda p: If(
                 p == path,
                 self.__compile_expr(statement.owner),
                 previous_owner_fun(p),
             )
         elif isinstance(statement, PSeq):
-            (
-                aux_constraints,
-                state_fun,
-                contents_fun,
-                mode_fun,
-                owner_fun,
-            ) = self.__generate_soft_constraints(
-                statement.lhs, state_fun, contents_fun, mode_fun, owner_fun
+            self.__generate_soft_constraints(statement.lhs, funs)
+            lhs_constraints, funs = self.__generate_soft_constraints(
+                statement.lhs, funs
             )
-            constraints += aux_constraints
-            (
-                aux_constraints,
-                state_fun,
-                contents_fun,
-                mode_fun,
-                owner_fun,
-            ) = self.__generate_soft_constraints(
-                statement.rhs, state_fun, contents_fun, mode_fun, owner_fun
+            constraints += lhs_constraints
+            rhs_constraints, funs = self.__generate_soft_constraints(
+                statement.rhs, funs
             )
-            constraints += aux_constraints
+            constraints += rhs_constraints
         elif isinstance(statement, PLet):
             hole, var = String(f"loc-{statement.label}"), String(statement.id)
             self.holes[f"loc-{statement.label}"] = hole
@@ -238,43 +196,25 @@ class PatchSolver:
                     And(unchanged == 0, var == hole),
                 )
             )
-            (
-                aux_constraints,
-                state_fun,
-                contents_fun,
-                mode_fun,
-                owner_fun,
-            ) = self.__generate_soft_constraints(
-                statement.body, state_fun, contents_fun, mode_fun, owner_fun
+            body_constraints, funs = self.__generate_soft_constraints(
+                statement.body, funs
             )
-            constraints += aux_constraints
+            constraints += body_constraints
         elif isinstance(statement, PIf):
             condition = self.__compile_expr(statement.pred)
-            (
-                cons_constraints,
-                cons_state_fun,
-                cons_contents_fun,
-                cons_mode_fun,
-                cons_owner_fun,
-            ) = self.__generate_soft_constraints(
-                statement.cons, state_fun, contents_fun, mode_fun, owner_fun
+            cons_constraints, cons_funs = self.__generate_soft_constraints(
+                statement.cons, funs
             )
-            (
-                alt_constraints,
-                alt_state_fun,
-                alt_contents_fun,
-                alt_mode_fun,
-                alt_owner_fun,
-            ) = self.__generate_soft_constraints(
-                statement.alt, state_fun, contents_fun, mode_fun, owner_fun
+            alt_constraints, alt_funs = self.__generate_soft_constraints(
+                statement.alt, funs
             )
 
-            state_fun = lambda p: If(condition, cons_state_fun(p), alt_state_fun(p))
-            contents_fun = lambda p: If(
-                condition, cons_contents_fun(p), alt_contents_fun(p)
+            funs.state_fun = lambda p: If(condition, cons_funs.state_fun(p), alt_funs.state_fun(p))
+            funs.contents_fun = lambda p: If(
+                condition, cons_funs.contents_fun(p), alt_funs.contents_fun(p)
             )
-            mode_fun = lambda p: If(condition, cons_mode_fun(p), alt_mode_fun(p))
-            owner_fun = lambda p: If(condition, cons_owner_fun(p), alt_owner_fun(p))
+            funs.mode_fun = lambda p: If(condition, cons_funs.mode_fun(p), alt_funs.mode_fun(p))
+            funs.owner_fun = lambda p: If(condition, cons_funs.owner_fun(p), alt_funs.owner_fun(p))
 
             # NOTE: This works because the only constraints created should
             # always be added. Its kinda of an HACK
@@ -285,7 +225,7 @@ class PatchSolver:
                 constraints.append(constraint)
                 #constraints.append(Or(condition, And(Not(condition), constraint)))
 
-        return constraints, state_fun, contents_fun, mode_fun, owner_fun
+        return constraints, funs
 
     def solve(self) -> Optional[ModelRef]:
         lo, hi = 0, len(self.unchanged)
@@ -301,5 +241,7 @@ class PatchSolver:
             else:
                 hi = mid
             self.solver.pop()
+
+        # TODO: Get multiple solutions
 
         return model
