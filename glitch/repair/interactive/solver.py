@@ -38,13 +38,13 @@ class PatchSolver:
         # for me because the functions will be overrided by the constraints
         # in the file anyway
 
-        self.state_fun = lambda p: StringVal(str(Nil()))
+        self.state_fun = lambda p: StringVal("") # FIXME
         # for file, state in default_fs.state.items():
         #     self.state_fun = lambda p: If(
         #         p == file, StringVal(str(state)), self.state_fun(p)
         #     )
 
-        self.contents_fun = lambda p: StringVal("")
+        self.contents_fun = lambda p: StringVal("") # FIXME
         # for file, state in default_fs.state.items():
         #     if state.is_file():
         #         self.contents_fun = lambda p: If(
@@ -53,14 +53,14 @@ class PatchSolver:
         #     elif state.is_dir():
         #         self.contents_fun = lambda p: If(p == file, "", self.contents_fun(p))
 
-        self.mode_fun = lambda p: StringVal(PatchSolver.__DEFAULT_MODE)
+        self.mode_fun = lambda p: StringVal(PatchSolver.__DEFAULT_MODE) # FIXME
         # for file, state in default_fs.state.items():
         #     if state.is_file() or state.is_dir():
         #         self.mode_fun = lambda p: If(
         #             p == file, StringVal(state.mode), self.mode_fun(p)
         #         )
 
-        self.owner_fun = lambda p: StringVal(PatchSolver.__DEFAULT_OWNER)
+        self.owner_fun = lambda p: StringVal(PatchSolver.__DEFAULT_OWNER) # FIXME
         # for file, state in default_fs.state.items():
         #     if state.is_file() or state.is_dir():
         #         self.owner_fun = lambda p: If(
@@ -276,10 +276,14 @@ class PatchSolver:
             mode_fun = lambda p: If(condition, cons_mode_fun(p), alt_mode_fun(p))
             owner_fun = lambda p: If(condition, cons_owner_fun(p), alt_owner_fun(p))
 
+            # NOTE: This works because the only constraints created should
+            # always be added. Its kinda of an HACK
             for constraint in cons_constraints:
-                constraints.append(Or(Not(condition), And(condition, constraint)))
+                #constraints.append(Or(Not(condition), And(condition, constraint)))
+                constraints.append(constraint)
             for constraint in alt_constraints:
-                constraints.append(Or(condition, And(Not(condition), constraint)))
+                constraints.append(constraint)
+                #constraints.append(Or(condition, And(Not(condition), constraint)))
 
         return constraints, state_fun, contents_fun, mode_fun, owner_fun
 
