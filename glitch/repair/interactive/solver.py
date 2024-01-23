@@ -9,6 +9,7 @@ from z3 import (
     Int,
     Or,
     Sum,
+    Not,
     ModelRef,
     Z3PPObject,
 )
@@ -71,6 +72,7 @@ class PatchSolver:
             self.unchanged[label] = Int(f"unchanged-{label}")
 
         (
+            constraints,
             self.state_fun,
             self.contents_fun,
             self.mode_fun,
@@ -82,6 +84,9 @@ class PatchSolver:
             self.mode_fun,
             self.owner_fun,
         )
+        for constraint in constraints:
+            self.solver.add(constraint)
+
         self.__generate_hard_constraints(filesystem)
 
         self.solver.add(Sum(list(self.unchanged.values())) == self.sum_var)
@@ -98,10 +103,15 @@ class PatchSolver:
             return self.__collect_labels(statement.lhs) + self.__collect_labels(
                 statement.rhs
             )
+        elif isinstance(statement, PIf):
+            return (
+                self.__collect_labels(statement.pred)
+                + self.__collect_labels(statement.cons)
+                + self.__collect_labels(statement.alt)
+            )
         elif isinstance(statement, PLet):
             return [statement.label] + self.__collect_labels(statement.body)
         return []
-        # TODO if
 
     def __compile_expr(self, expr: PExpr):
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
@@ -109,6 +119,9 @@ class PatchSolver:
         elif isinstance(expr, PEVar):
             self.vars[expr.id] = String(expr.id)
             return self.vars[expr.id]
+        elif isinstance(expr, PEBinOP) and isinstance(expr.op, PEq):
+            return self.__compile_expr(expr.lhs) == self.__compile_expr(expr.rhs)
+
         raise ValueError(f"Not supported {expr}")
 
     def __generate_hard_constraints(self, filesystem: FileSystemState):
@@ -128,6 +141,7 @@ class PatchSolver:
         mode_fun: Callable[[PStatement], Z3PPObject],
         owner_fun: Callable[[PStatement], Z3PPObject],
     ) -> Tuple[
+        List[Z3PPObject],
         Callable[[PStatement], Z3PPObject],
         Callable[[PStatement], Z3PPObject],
         Callable[[PStatement], Z3PPObject],
@@ -139,6 +153,7 @@ class PatchSolver:
         previous_contents_fun = contents_fun
         previous_mode_fun = mode_fun
         previous_owner_fun = owner_fun
+        constraints = []
 
         if isinstance(statement, PSkip):
             pass
@@ -192,31 +207,81 @@ class PatchSolver:
                 previous_owner_fun(p),
             )
         elif isinstance(statement, PSeq):
-            state_fun, contents_fun, mode_fun, owner_fun = self.__generate_soft_constraints(
+            (
+                aux_constraints,
+                state_fun,
+                contents_fun,
+                mode_fun,
+                owner_fun,
+            ) = self.__generate_soft_constraints(
                 statement.lhs, state_fun, contents_fun, mode_fun, owner_fun
             )
-            state_fun, contents_fun, mode_fun, owner_fun = self.__generate_soft_constraints(
+            constraints += aux_constraints
+            (
+                aux_constraints,
+                state_fun,
+                contents_fun,
+                mode_fun,
+                owner_fun,
+            ) = self.__generate_soft_constraints(
                 statement.rhs, state_fun, contents_fun, mode_fun, owner_fun
             )
+            constraints += aux_constraints
         elif isinstance(statement, PLet):
             hole, var = String(f"loc-{statement.label}"), String(statement.id)
             self.holes[f"loc-{statement.label}"] = hole
             self.vars[statement.id] = var
             unchanged = self.unchanged[statement.label]
-            self.solver.add(
+            constraints.append(
                 Or(
                     And(unchanged == 1, var == self.__compile_expr(statement.expr)),
                     And(unchanged == 0, var == hole),
                 )
             )
-            state_fun, contents_fun, mode_fun, owner_fun = self.__generate_soft_constraints(
+            (
+                aux_constraints,
+                state_fun,
+                contents_fun,
+                mode_fun,
+                owner_fun,
+            ) = self.__generate_soft_constraints(
                 statement.body, state_fun, contents_fun, mode_fun, owner_fun
             )
+            constraints += aux_constraints
         elif isinstance(statement, PIf):
-            # TODO
-            pass
+            condition = self.__compile_expr(statement.pred)
+            (
+                cons_constraints,
+                cons_state_fun,
+                cons_contents_fun,
+                cons_mode_fun,
+                cons_owner_fun,
+            ) = self.__generate_soft_constraints(
+                statement.cons, state_fun, contents_fun, mode_fun, owner_fun
+            )
+            (
+                alt_constraints,
+                alt_state_fun,
+                alt_contents_fun,
+                alt_mode_fun,
+                alt_owner_fun,
+            ) = self.__generate_soft_constraints(
+                statement.alt, state_fun, contents_fun, mode_fun, owner_fun
+            )
 
-        return state_fun, contents_fun, mode_fun, owner_fun
+            state_fun = lambda p: If(condition, cons_state_fun(p), alt_state_fun(p))
+            contents_fun = lambda p: If(
+                condition, cons_contents_fun(p), alt_contents_fun(p)
+            )
+            mode_fun = lambda p: If(condition, cons_mode_fun(p), alt_mode_fun(p))
+            owner_fun = lambda p: If(condition, cons_owner_fun(p), alt_owner_fun(p))
+
+            for constraint in cons_constraints:
+                constraints.append(Or(Not(condition), And(condition, constraint)))
+            for constraint in alt_constraints:
+                constraints.append(Or(condition, And(Not(condition), constraint)))
+
+        return constraints, state_fun, contents_fun, mode_fun, owner_fun
 
     def solve(self) -> Optional[ModelRef]:
         lo, hi = 0, len(self.unchanged)

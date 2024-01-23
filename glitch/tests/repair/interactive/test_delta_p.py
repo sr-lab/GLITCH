@@ -41,15 +41,41 @@ def test_delta_p_compiler_puppet():
                     "state-2",
                     PEConst(PStr("present")),
                     2,
-                    PLet(
-                        "content-1",
-                        PEConst(PStr("<html><body><h1>Hello World</h1></body></html>")),
-                        1,
-                        PCreate(
-                            PEConst(PStr("/var/www/customers/public_html/index.php")),
-                            PEVar("content-1"),
+                    PIf(
+                        PEBinOP(PEq(), PEVar("state-2"), PEConst(PStr("present"))),
+                        PLet(
+                            "content-1",
+                            PEConst(
+                                PStr("<html><body><h1>Hello World</h1></body></html>")
+                            ),
+                            1,
+                            PCreate(
+                                PEConst(
+                                    PStr("/var/www/customers/public_html/index.php")
+                                ),
+                                PEVar("content-1"),
+                            ),
                         ),
-                    )
+                        PIf(
+                            PEBinOP(PEq(), PEVar("state-2"), PEConst(PStr("absent"))),
+                            PRm(
+                                PEConst(
+                                    PStr("/var/www/customers/public_html/index.php")
+                                )
+                            ),
+                            PIf(
+                                PEBinOP(
+                                    PEq(), PEVar("state-2"), PEConst(PStr("directory"))
+                                ),
+                                PMkdir(
+                                    PEConst(
+                                        PStr("/var/www/customers/public_html/index.php")
+                                    )
+                                ),
+                                PSkip(),
+                            ),
+                        ),
+                    ),
                 ),
             ),
             PLet(

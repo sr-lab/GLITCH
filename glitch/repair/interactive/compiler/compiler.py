@@ -26,38 +26,31 @@ class DeltaPCompiler:
             var = f"{attr}-{label}"
             return label, var
 
-        match attr_name, attributes[attr_name][0]:
-            case "state", PEConst(PStr("present")):
+        match attr_name:
+            case "state":
                 state_label, state_var = process_var("state")
                 content_label, content_var = process_var("content")
                 return PLet(
                     state_var,
                     attributes["state"][0],
                     state_label,
-                    PLet(
-                        content_var,
-                        attributes["content"][0],
-                        content_label,
-                        PCreate(attributes["path"][0], PEVar(content_var)),
-                    ),
+                    PIf(PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
+                        PLet(
+                            content_var,
+                            attributes["content"][0],
+                            content_label,
+                            PCreate(attributes["path"][0], PEVar(content_var)),
+                        ),
+                        PIf(PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
+                            PRm(attributes["path"][0]),
+                            PIf(PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("directory"))),
+                                PMkdir(attributes["path"][0]),
+                                PSkip()
+                            )
+                        )
+                    )
                 )
-            case "state", PEConst(PStr("absent")):
-                state_label, state_var = process_var("state")
-                return PLet(
-                    state_var,
-                    attributes["state"][0],
-                    state_label,
-                    PRm(attributes["path"][0]),
-                )
-            case "state", PEConst(PStr("directory")):
-                state_label, state_var = process_var("state")
-                return PLet(
-                    state_var,
-                    attributes["state"][0],
-                    state_label,
-                    PMkdir(attributes["path"][0]),
-                )
-            case "owner", _:
+            case "owner":
                 # TODO: this should use a is_defined
                 owner_label, owner_var = process_var("owner")
                 return PLet(
@@ -66,7 +59,7 @@ class DeltaPCompiler:
                     owner_label,
                     PChown(attributes["path"][0], PEVar(owner_var)),
                 )
-            case "mode", _:
+            case "mode":
                 # TODO: this should use a is_defined
                 mode_label, mode_var = process_var("mode")
                 return PLet(
