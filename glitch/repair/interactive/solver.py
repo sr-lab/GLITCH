@@ -111,8 +111,10 @@ class PatchSolver:
                     self.__funs.contents_fun(path) == StringVal(state.content)
                 )
             if state.is_file() or state.is_dir():
-                self.solver.add(self.__funs.mode_fun(path) == StringVal(state.mode))
-                self.solver.add(self.__funs.owner_fun(path) == StringVal(state.owner))
+                if state.mode is not None:
+                    self.solver.add(self.__funs.mode_fun(path) == StringVal(state.mode))
+                if state.owner is not None:
+                    self.solver.add(self.__funs.owner_fun(path) == StringVal(state.owner))
 
     def __generate_soft_constraints(
         self, statement: PStatement, funs: __Funs
