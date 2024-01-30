@@ -1,6 +1,7 @@
 import os
 import re
 import tempfile
+import traceback
 from puppetparser.parser import parse as parse_puppet
 import puppetparser.model as puppetmodel
 from string import Template
@@ -844,8 +845,7 @@ class ChefParser(p.Parser):
                         ConditionStatement.ConditionType.SWITCH
                     )
                     self.condition.code = ChefParser._get_source(ast, self.source)
-                    self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0] - 1
-                    self.condition.repr_str = "case " + self.case_head
+                    self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
                     self.current_condition = self.condition
                 else:
                     self.current_condition.else_statement = ConditionStatement(
@@ -864,6 +864,8 @@ class ChefParser(p.Parser):
                     ConditionStatement.ConditionType.SWITCH,
                     is_default=True
                 )
+                self.current_condition.else_statement.code = \
+                    ChefParser._get_source(ast, self.source)
                 self.current_condition.else_statement.line = \
                         ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
@@ -1077,7 +1079,7 @@ class PuppetParser(p.Parser):
     def __process_codeelement(codeelement, path, code):
         def get_code(ce):
             if ce.line == ce.end_line:
-                res = code[ce.line - 1][ce.col - 1 : ce.end_col - 1]
+                res = code[ce.line - 1][max(0, ce.col - 1) : ce.end_col - 1]
             else:
                 res = code[ce.line - 1]
             
@@ -1335,45 +1337,46 @@ class PuppetParser(p.Parser):
                         condition = ConditionStatement(control + "==" + expression, 
                             ConditionStatement.ConditionType.SWITCH, False)
                         condition.line, condition.column = match.line, match.col
+                        condition.code = get_code(match)
                         conditions.append(condition)
                     else:
                         condition = ConditionStatement("", 
                             ConditionStatement.ConditionType.SWITCH, True)
                         condition.line, condition.column = match.line, match.col
+                        condition.code = get_code(match)
                         conditions.append(condition)
 
             for i in range(1, len(conditions)):
                 conditions[i - 1].else_statement = conditions[i]
 
-            conditions[0].repr_str = "case " + control
-            conditions[0].code = get_code(codeelement)
             return [conditions[0]] + \
                 list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement.matches))
         elif (isinstance(codeelement, puppetmodel.Selector)):
             control = PuppetParser.__process_codeelement(codeelement.control, path, code)
             conditions = []
         
-            for key, value in codeelement.hash.value.items():
-                key = PuppetParser.__process_codeelement(key, path, code)
-                value = PuppetParser.__process_codeelement(value, path, code)
+            for key_element, value_element in codeelement.hash.value.items():
+                key = PuppetParser.__process_codeelement(key_element, path, code)
+                value = PuppetParser.__process_codeelement(value_element, path, code)
 
                 if key != "default":
                     condition = ConditionStatement(control + "==" + key, 
                         ConditionStatement.ConditionType.SWITCH, False)
-                    condition.line, condition.column = codeelement.hash.line, codeelement.hash.col
+                    condition.line, condition.column = key_element.line, key_element.col
+                    # HACK: the get_code function should be changed to receive a range
+                    key_element.end_line, key_element.end_col = value_element.end_line, value_element.end_col
+                    condition.code = get_code(key_element)
                     conditions.append(condition)
                 else:
                     condition = ConditionStatement("", 
                         ConditionStatement.ConditionType.SWITCH, True)
-                    condition.line, condition.column = codeelement.hash.line, codeelement.hash.col
+                    condition.line, condition.column = key_element.line, key_element.col
+                    key_element.end_line, key_element.end_col = value_element.end_line, value_element.end_col
+                    condition.code = get_code(key_element)
                     conditions.append(condition)
-                condition.add_statement(PuppetParser.__process_codeelement(codeelement.hash, path, code))
+            
             for i in range(1, len(conditions)):
                 conditions[i - 1].else_statement = conditions[i]
-
-            conditions[0].code = get_code(codeelement)
-            conditions[0].repr_str = control + "?"\
-                + repr(PuppetParser.__process_codeelement(codeelement.hash, path, code))
 
             return conditions[0]
         elif (isinstance(codeelement, puppetmodel.Reference)):
@@ -1446,7 +1449,8 @@ class PuppetParser(p.Parser):
                     PuppetParser.__process_codeelement(parsed_script, path, code),
                     unit_block
                 )
-        except:
+        except Exception as e:
+           traceback.print_exc()
            throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
         return unit_block
 
