@@ -121,11 +121,14 @@ class PConcat(PBinOp):
 
 
 class PStatement(ABC):
-    def __get_str(self, expr: PExpr) -> Optional[str]:
+    def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
+        elif isinstance(expr, PEVar):
+            return self.__get_str(vars[expr.id], vars)
+
         # FIXME: Change exception type
-        raise ValueError(f"Expected string, got {expr}")
+        raise RuntimeError(f"Unsupported expression, got {expr}")
 
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr:
         if isinstance(expr, PEVar):
@@ -150,30 +153,32 @@ class PStatement(ABC):
         if vars is None:
             vars = {}
 
+        get_str = lambda expr: self.__get_str(expr, vars)
+
         if isinstance(self, PSkip):
             return fs
         elif isinstance(self, PMkdir):
-            fs.state[self.__get_str(self.path)] = Dir(None, None)
+            fs.state[get_str(self.path)] = Dir(None, None)
         elif isinstance(self, PCreate):
-            fs.state[self.__get_str(self.path)] = File(
-                None, None, self.__get_str(self.content)
+            fs.state[get_str(self.path)] = File(
+                None, None, get_str(self.content)
             )
         elif isinstance(self, PRm):
-            fs.state[self.__get_str(self.path)] = Nil()
+            fs.state[get_str(self.path)] = Nil()
         elif isinstance(self, PCp):
-            fs.state[self.__get_str(self.dst)] = fs.state[self.__get_str(self.src)]
+            fs.state[get_str(self.dst)] = fs.state[get_str(self.src)]
         elif isinstance(self, PChmod):
-            path, mode = self.__get_str(self.path), self.__get_str(self.mode)
+            path, mode = get_str(self.path), get_str(self.mode)
             if isinstance(fs.state[path], (File, Dir)):
                 fs.state[path].mode = mode
             else:
-                raise ValueError(f"Expected file or directory, got {fs.state[path]}")
+                raise RuntimeError(f"Expected file or directory, got {fs.state[path]}")
         elif isinstance(self, PChown):
-            path, owner = self.__get_str(self.path), self.__get_str(self.owner)
+            path, owner = get_str(self.path), get_str(self.owner)
             if isinstance(fs.state[path], (File, Dir)):
                 fs.state[path].owner = owner
             else:
-                raise ValueError(f"Expected file or directory, got {fs.state[path]}")
+                raise RuntimeError(f"Expected file or directory, got {fs.state[path]}")
         elif isinstance(self, PSeq):
             fs = self.lhs.to_filesystem(fs, vars)
             fs = self.rhs.to_filesystem(fs, vars)
