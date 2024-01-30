@@ -129,12 +129,12 @@ class PStatement(ABC):
 
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr:
         if isinstance(expr, PEVar):
-            return self.__eval(vars[expr.id])
+            return self.__eval(vars[expr.id], vars)
         elif isinstance(expr, PEUndef) or isinstance(expr, PEConst):
             # NOTE: it is an arbitrary string to represent an undefined value
             return expr
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PEq):
-            if self.__eval(expr.lhs) == self.__eval(expr.rhs):
+            if self.__eval(expr.lhs, vars) == self.__eval(expr.rhs, vars):
                 return PEConst(PBool(True))
             else:
                 return PEConst(PBool(False))
