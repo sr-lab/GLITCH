@@ -6,7 +6,7 @@ class NamesDatabase:
     @staticmethod
     def get_au_type(type: str, tech: Tech) -> str:
         """Returns the generic type of the atomic unit with the given type and tech.
-        
+
         Args:
             type (str): The type of the atomic unit.
             tech (Tech): The tech being considered.
@@ -18,12 +18,11 @@ class NamesDatabase:
             case "file", Tech.puppet | Tech.chef:
                 return "file"
         return None
-            
-    
+
     @staticmethod
     def get_attr_name(name: str, au_type: str, tech: Tech) -> Optional[str]:
         """Returns the generic name of the attribute with the given name, atomic unit type and tech.
-        
+
         Args:
             name (str): The name of the attribute.
             au_type (str): The type of the atomic unit.
@@ -45,5 +44,5 @@ class NamesDatabase:
                 return "state"
             case "state", "file", Tech.ansible:
                 return "state"
-            
+
         return None

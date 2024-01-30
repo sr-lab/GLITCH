@@ -64,51 +64,51 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
     def t_ADDRESS(t):
         r"0[xX][0-9a-fA-F]+"
         return t
-    
+
     def t_PID(t):
         r"\[pid\s\d+\]"
         return t
-    
+
     def t_COMMA(t):
         r","
         return t
-    
+
     def t_EQUAL(t):
         r"="
         return t
-    
+
     def t_PIPE(t):
         r"\|"
         return t
-    
+
     def t_LCURLY(t):
         r"\{"
         return t
-    
+
     def t_RCURLY(t):
         r"\}"
         return t
-    
+
     def t_LPARENS(t):
         r"\("
         return t
-    
+
     def t_RPARENS(t):
         r"\)"
         return t
-    
+
     def t_LPARENSR(t):
         r"\["
         return t
-    
+
     def t_RPARENSR(t):
         r"\]"
         return t
-    
+
     def t_POSITIVE_NUMBER(t):
         r"[0-9]+"
         return t
-    
+
     def t_NEGATIVE_NUMBER(t):
         "-[0-9]+"
         return t
@@ -131,25 +131,24 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         t.value = t.value[1:-1]
         t.lexer.lineno += t.value.count("\n")
         return t
-    
+
     tokens = tuple(
         map(
-            lambda token: token[2:], filter(
-                lambda v: v.startswith("t_"), locals().keys()
-            )
+            lambda token: token[2:],
+            filter(lambda v: v.startswith("t_"), locals().keys()),
         ),
     ) + ("OPEN_FLAG", "ORED_FLAG", "UNLINK_FLAG")
 
-    t_ignore_ANY = r'[\t\ \n]'
+    t_ignore_ANY = r"[\t\ \n]"
 
     def t_COMMENT(t):
         r"/\*.*?\*/"
         # Ignore comments
 
     def t_ANY_error(t):
-        logging.error(f'Illegal character {t.value[0]!r}.')
+        logging.error(f"Illegal character {t.value[0]!r}.")
         t.lexer.skip(1)
-    
+
     lexer = lex()
     # Give the lexer some input
     lexer.input(tracer_output)
@@ -292,7 +291,7 @@ def parse_tracer_output(tracer_output: str, debug=False) -> Syscall:
         p[0] = p[1] + [p[3]]
 
     def p_error(p):
-        logging.error(f'Syntax error at {p.value!r}')
+        logging.error(f"Syntax error at {p.value!r}")
 
     # Build the parser
     parser = yacc()

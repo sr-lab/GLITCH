@@ -8,8 +8,52 @@ from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 
 
 class DeltaPCompiler:
+    class __Attributes:
+        def __init__(self, au_type: str, tech: Tech):
+            self.__au_type = NamesDatabase.get_au_type(au_type, tech)
+            self.__tech = tech
+            self.__attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
+
+        def add_attribute(self, attribute: Attribute):
+            attr_name = NamesDatabase.get_attr_name(
+                attribute.name, self.__au_type, self.__tech
+            )
+            if attr_name is not None:
+                self.__attributes[attr_name] = (
+                    DeltaPCompiler._compile_expr(attribute.value, self.__tech),
+                    attribute,
+                )
+
+        def get_attribute(self, attr_name: str) -> Optional[Attribute]:
+            return self.__attributes.get(attr_name, (None, None))[1]
+
+        def get_attribute_value(self, attr_name: str) -> PExpr:
+            return self.__attributes.get(attr_name, (PEUndef(), None))[0]
+
+        def __getitem__(self, key: str) -> PExpr:
+            return self.get_attribute_value(key)
+
+        def create_label_var_pair(
+            self,
+            attr_name: str,
+            atomic_unit: AtomicUnit,
+            labeled_script: LabeledUnitBlock,
+        ) -> Optional[Tuple[str, str]]:
+            attr = self.get_attribute(attr_name)
+
+            if attr is not None:
+                label = labeled_script.get_label(attr)
+            else:
+                # Creates sketched attribute
+                attr = Attribute(attr_name, "", False)
+                atomic_unit.attributes.append(attr)
+                self.add_attribute(attr)
+                label = labeled_script.add_label(attr_name, attr, sketched=True)
+
+            return label, labeled_script.get_var(label)
+
     @staticmethod
-    def __compile_expr(expr: Optional[str], tech: Tech) -> PExpr:
+    def _compile_expr(expr: Optional[str], tech: Tech) -> PExpr:
         # FIXME to fix this I need to extend GLITCH's IR
         if expr is None:
             return None
@@ -18,55 +62,64 @@ class DeltaPCompiler:
     @staticmethod
     def __handle_attribute(
         attr_name: str,
-        attributes: Dict[str, Tuple[PExpr, Attribute]],
+        atomic_unit: AtomicUnit,
+        attributes: __Attributes,
         labeled_script: LabeledUnitBlock,
     ) -> PStatement:
-        def process_var(attr: str):
-            label = labeled_script.get_label(attributes[attr][1])
-            var = f"{attr}-{label}"
-            return label, var
-
         match attr_name:
             case "state":
-                state_label, state_var = process_var("state")
-                content_label, content_var = process_var("content")
+                state_label, state_var = attributes.create_label_var_pair(
+                    attr_name, atomic_unit, labeled_script
+                )
+                content_label, content_var = attributes.create_label_var_pair(
+                    "content", atomic_unit, labeled_script
+                )
                 return PLet(
                     state_var,
-                    attributes["state"][0],
+                    attributes["state"],
                     state_label,
-                    PIf(PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
+                    PIf(
+                        PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
                         PLet(
                             content_var,
-                            attributes["content"][0],
+                            attributes["content"],
                             content_label,
-                            PCreate(attributes["path"][0], PEVar(content_var)),
+                            PCreate(attributes["path"], PEVar(content_var)),
                         ),
-                        PIf(PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
-                            PRm(attributes["path"][0]),
-                            PIf(PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("directory"))),
-                                PMkdir(attributes["path"][0]),
-                                PSkip()
-                            )
-                        )
-                    )
+                        PIf(
+                            PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
+                            PRm(attributes["path"]),
+                            PIf(
+                                PEBinOP(
+                                    PEq(), PEVar(state_var), PEConst(PStr("directory"))
+                                ),
+                                PMkdir(attributes["path"]),
+                                PSkip(),
+                            ),
+                        ),
+                    ),
                 )
             case "owner":
                 # TODO: this should use a is_defined
-                owner_label, owner_var = process_var("owner")
+                owner_label, owner_var = attributes.create_label_var_pair(
+                    "owner", atomic_unit, labeled_script
+                )
                 return PLet(
                     owner_var,
-                    attributes["owner"][0],
+                    attributes["owner"],
                     owner_label,
-                    PChown(attributes["path"][0], PEVar(owner_var)),
+                    PChown(attributes["path"], PEVar(owner_var)),
                 )
             case "mode":
                 # TODO: this should use a is_defined
-                mode_label, mode_var = process_var("mode")
+                mode_label, mode_var = attributes.create_label_var_pair(
+                    "mode", atomic_unit, labeled_script
+                )
                 return PLet(
                     mode_var,
-                    attributes["mode"][0],
+                    attributes["mode"],
                     mode_label,
-                    PChmod(attributes["path"][0], PEVar(mode_var)),
+                    PChmod(attributes["path"], PEVar(mode_var)),
                 )
 
         return None
@@ -79,22 +132,20 @@ class DeltaPCompiler:
         # TODO: Handle variables
         # TODO: Handle scopes
         for atomic_unit in script.atomic_units:
-            type = NamesDatabase.get_au_type(atomic_unit.type, tech)
-            attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
+            attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
+                atomic_unit.type, tech
+            )
 
-            if type == "file":
+            if atomic_unit.type == "file":
                 for attribute in atomic_unit.attributes:
-                    attr_name = NamesDatabase.get_attr_name(attribute.name, type, tech)
-                    if attr_name is not None:
-                        attributes[attr_name] = (
-                            DeltaPCompiler.__compile_expr(attribute.value, tech),
-                            attribute,
-                        )
+                    attributes.add_attribute(attribute)
 
                 for attribute in atomic_unit.attributes:
-                    attr_name = NamesDatabase.get_attr_name(attribute.name, type, tech)
+                    attr_name = NamesDatabase.get_attr_name(
+                        attribute.name, atomic_unit.type, tech
+                    )
                     attr_statement = DeltaPCompiler.__handle_attribute(
-                        attr_name, attributes, labeled_script
+                        attr_name, atomic_unit, attributes, labeled_script
                     )
                     if attr_statement is not None:
                         statement = PSeq(statement, attr_statement)

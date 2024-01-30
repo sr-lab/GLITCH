@@ -18,19 +18,18 @@ from glitch.repair.interactive.filesystem import FileSystemState
 from glitch.repair.interactive.tracer.transform import get_file_system_state
 from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
+from glitch.repair.interactive.default_values import DefaultValue
 
 Fun = Callable[[PStatement], Z3PPObject]
 
+
 class PatchSolver:
     @dataclass
-    class __Funs():
+    class __Funs:
         state_fun: Fun
         contents_fun: Fun
         mode_fun: Fun
         owner_fun: Fun
-
-    __DEFAULT_MODE = "644"  # FIXME: what is the default mode?
-    __DEFAULT_OWNER = "root"  # FIXME: what is the default owner?
 
     def __init__(self, statement: PStatement, filesystem: FileSystemState):
         self.solver = Solver()
@@ -42,10 +41,10 @@ class PatchSolver:
 
         # FIXME: check the defaults
         self.__funs = PatchSolver.__Funs(
-            lambda p: StringVal(""),
-            lambda p: StringVal(""),
-            lambda p: StringVal(PatchSolver.__DEFAULT_MODE),
-            lambda p: StringVal(PatchSolver.__DEFAULT_OWNER),
+            lambda p: StringVal("file"),  # FIXME get value from default values
+            lambda p: self.__compile_expr(DefaultValue.DEFAULT_CONTENT),
+            lambda p: self.__compile_expr(DefaultValue.DEFAULT_MODE),
+            lambda p: self.__compile_expr(DefaultValue.DEFAULT_OWNER),
         )
 
         # TODO?: We might want to use the default file system state to update
@@ -57,8 +56,7 @@ class PatchSolver:
             self.unchanged[label] = Int(f"unchanged-{label}")
 
         constraints, self.__funs = self.__generate_soft_constraints(
-            self.statement,
-            self.__funs
+            self.statement, self.__funs
         )
         for constraint in constraints:
             self.solver.add(constraint)
@@ -95,6 +93,9 @@ class PatchSolver:
         elif isinstance(expr, PEVar):
             self.vars[expr.id] = String(expr.id)
             return self.vars[expr.id]
+        elif isinstance(expr, PEUndef):
+            # NOTE: it is an arbitrary string to represent an undefined value
+            return StringVal("glitch-undef")
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PEq):
             return self.__compile_expr(expr.lhs) == self.__compile_expr(expr.rhs)
 
@@ -104,19 +105,16 @@ class PatchSolver:
         for path, state in filesystem.state.items():
             self.solver.add(self.__funs.state_fun(path) == StringVal(str(state)))
             if state.is_file():
-                self.solver.add(self.__funs.contents_fun(path) == StringVal(state.content))
+                self.solver.add(
+                    self.__funs.contents_fun(path) == StringVal(state.content)
+                )
             if state.is_file() or state.is_dir():
                 self.solver.add(self.__funs.mode_fun(path) == StringVal(state.mode))
                 self.solver.add(self.__funs.owner_fun(path) == StringVal(state.owner))
 
     def __generate_soft_constraints(
-        self,
-        statement: PStatement,
-        funs: __Funs
-    ) -> Tuple[
-        List[Z3PPObject],
-        __Funs,
-    ]:
+        self, statement: PStatement, funs: __Funs
+    ) -> Tuple[List[Z3PPObject], __Funs,]:
         # Avoids infinite recursion
         funs = deepcopy(funs)
         # NOTE: For now it doesn't make sense to update the funs for the
@@ -129,7 +127,9 @@ class PatchSolver:
 
         if isinstance(statement, PMkdir):
             path = self.__compile_expr(statement.path)
-            funs.state_fun = lambda p: If(p == path, StringVal("dir"), previous_state_fun(p))
+            funs.state_fun = lambda p: If(
+                p == path, StringVal("dir"), previous_state_fun(p)
+            )
         elif isinstance(statement, PCreate):
             path = self.__compile_expr(statement.path)
             funs.state_fun = lambda p: If(
@@ -142,7 +142,9 @@ class PatchSolver:
             )
         elif isinstance(statement, PRm):
             path = self.__compile_expr(statement.path)
-            funs.state_fun = lambda p: If(p == path, StringVal("nil"), previous_state_fun(p))
+            funs.state_fun = lambda p: If(
+                p == path, StringVal("nil"), previous_state_fun(p)
+            )
         elif isinstance(statement, PCp):
             dst, src = self.__compile_expr(statement.dst), self.__compile_expr(
                 statement.src
@@ -209,21 +211,27 @@ class PatchSolver:
                 statement.alt, funs
             )
 
-            funs.state_fun = lambda p: If(condition, cons_funs.state_fun(p), alt_funs.state_fun(p))
+            funs.state_fun = lambda p: If(
+                condition, cons_funs.state_fun(p), alt_funs.state_fun(p)
+            )
             funs.contents_fun = lambda p: If(
                 condition, cons_funs.contents_fun(p), alt_funs.contents_fun(p)
             )
-            funs.mode_fun = lambda p: If(condition, cons_funs.mode_fun(p), alt_funs.mode_fun(p))
-            funs.owner_fun = lambda p: If(condition, cons_funs.owner_fun(p), alt_funs.owner_fun(p))
+            funs.mode_fun = lambda p: If(
+                condition, cons_funs.mode_fun(p), alt_funs.mode_fun(p)
+            )
+            funs.owner_fun = lambda p: If(
+                condition, cons_funs.owner_fun(p), alt_funs.owner_fun(p)
+            )
 
             # NOTE: This works because the only constraints created should
             # always be added. Its kinda of an HACK
             for constraint in cons_constraints:
-                #constraints.append(Or(Not(condition), And(condition, constraint)))
+                # constraints.append(Or(Not(condition), And(condition, constraint)))
                 constraints.append(constraint)
             for constraint in alt_constraints:
                 constraints.append(constraint)
-                #constraints.append(Or(condition, And(Not(condition), constraint)))
+                # constraints.append(Or(condition, And(Not(condition), constraint)))
 
         return constraints, funs
 
@@ -241,6 +249,8 @@ class PatchSolver:
             else:
                 hi = mid
             self.solver.pop()
+
+        # Combinatorial Sketching for Finite Programs by Solar-Lezama et al.
 
         # TODO: Get multiple solutions
 

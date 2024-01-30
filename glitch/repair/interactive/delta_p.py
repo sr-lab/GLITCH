@@ -4,6 +4,7 @@ from typing import Optional
 
 from glitch.repair.interactive.filesystem import *
 
+
 class PConst(ABC):
     pass
 
@@ -57,7 +58,7 @@ class PEBinOP(PExpr):
 
 @dataclass
 class PUnOp(ABC):
-    value: PExpr   
+    value: PExpr
 
 
 @dataclass
@@ -129,13 +130,15 @@ class PStatement(ABC):
     def to_filesystem(self, fs: Optional[FileSystemState] = None) -> FileSystemState:
         if fs is None:
             fs = FileSystemState()
-        
+
         if isinstance(self, PSkip):
             return fs
         elif isinstance(self, PMkdir):
             fs.state[self.__get_str(self.path)] = Dir(None, None)
         elif isinstance(self, PCreate):
-            fs.state[self.__get_str(self.path)] = File(None, None, self.__get_str(self.content))
+            fs.state[self.__get_str(self.path)] = File(
+                None, None, self.__get_str(self.content)
+            )
         elif isinstance(self, PRm):
             fs.state[self.__get_str(self.path)] = Nil()
         elif isinstance(self, PCp):
