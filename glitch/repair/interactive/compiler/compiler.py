@@ -69,6 +69,11 @@ class DeltaPCompiler:
         attributes: __Attributes,
         labeled_script: LabeledUnitBlock,
     ) -> PStatement:
+        path = attributes["path"]
+        # The path may be defined as the name of the atomic unit
+        if path == PEUndef():
+            path = PEConst(PStr(atomic_unit.name))
+
         match attr_name:
             case "state":
                 state_label, state_var = attributes.create_label_var_pair(
@@ -87,16 +92,16 @@ class DeltaPCompiler:
                             content_var,
                             attributes["content"],
                             content_label,
-                            PCreate(attributes["path"], PEVar(content_var)),
+                            PCreate(path, PEVar(content_var)),
                         ),
                         PIf(
                             PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
-                            PRm(attributes["path"]),
+                            PRm(path),
                             PIf(
                                 PEBinOP(
                                     PEq(), PEVar(state_var), PEConst(PStr("directory"))
                                 ),
-                                PMkdir(attributes["path"]),
+                                PMkdir(path),
                                 PSkip(),
                             ),
                         ),
@@ -111,7 +116,7 @@ class DeltaPCompiler:
                     owner_var,
                     attributes["owner"],
                     owner_label,
-                    PChown(attributes["path"], PEVar(owner_var)),
+                    PChown(path, PEVar(owner_var)),
                 )
             case "mode":
                 # TODO: this should use a is_defined
@@ -122,7 +127,7 @@ class DeltaPCompiler:
                     mode_var,
                     attributes["mode"],
                     mode_label,
-                    PChmod(attributes["path"], PEVar(mode_var)),
+                    PChmod(path, PEVar(mode_var)),
                 )
 
         return None

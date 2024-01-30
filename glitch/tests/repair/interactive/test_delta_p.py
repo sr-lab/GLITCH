@@ -100,6 +100,71 @@ def test_delta_p_compiler_puppet():
     )
 
 
+def test_delta_p_compiler_puppet_2():
+    puppet_script = """
+    file {'/usr/sbin/policy-rc.d':
+        ensure  => absent,
+    }
+    """
+
+    with NamedTemporaryFile() as f:
+        f.write(puppet_script.encode())
+        f.flush()
+        puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
+        labeled_script = GLITCHLabeler.label(puppet_parser)
+
+        # Check labels
+        i = 0
+        for atomic_unit in labeled_script.script.atomic_units:
+            for attribute in atomic_unit.attributes:
+                assert labeled_script.get_label(attribute) == i
+                i += 1
+
+        statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
+
+    assert statement == PSeq(
+        lhs=PSkip(),
+        rhs=PLet(
+            id="state-0",
+            expr=PEConst(const=PStr(value="absent")),
+            label=0,
+            body=PIf(
+                pred=PEBinOP(
+                    op=PEq(),
+                    lhs=PEVar(id="state-0"),
+                    rhs=PEConst(const=PStr(value="present")),
+                ),
+                cons=PLet(
+                    id="sketched-content-1",
+                    expr=PEConst(const=PStr(value="")),
+                    label=1,
+                    body=PCreate(
+                        path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                        content=PEVar(id="sketched-content-1"),
+                    ),
+                ),
+                alt=PIf(
+                    pred=PEBinOP(
+                        op=PEq(),
+                        lhs=PEVar(id="state-0"),
+                        rhs=PEConst(const=PStr(value="absent")),
+                    ),
+                    cons=PRm(path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))),
+                    alt=PIf(
+                        pred=PEBinOP(
+                            op=PEq(),
+                            lhs=PEVar(id="state-0"),
+                            rhs=PEConst(const=PStr(value="directory")),
+                        ),
+                        cons=PMkdir(path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))),
+                        alt=PSkip(),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+
 def test_delta_p_to_filesystem():
     statement = PSeq(
         PSeq(
@@ -126,4 +191,53 @@ def test_delta_p_to_filesystem():
         "/var/www/customers/public_html/index.php": File(
             "0755", "web_admin", "<html><body><h1>Hello World</h1></body></html>"
         )
+    }
+
+
+def test_delta_p_to_filesystem_2():
+    statement = PSeq(
+        lhs=PSkip(),
+        rhs=PLet(
+            id="state-0",
+            expr=PEConst(const=PStr(value="absent")),
+            label=0,
+            body=PIf(
+                pred=PEBinOP(
+                    op=PEq(),
+                    lhs=PEVar(id="state-0"),
+                    rhs=PEConst(const=PStr(value="present")),
+                ),
+                cons=PLet(
+                    id="sketched-content-1",
+                    expr=PEConst(const=PStr(value="")),
+                    label=1,
+                    body=PCreate(
+                        path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                        content=PEVar(id="sketched-content-1"),
+                    ),
+                ),
+                alt=PIf(
+                    pred=PEBinOP(
+                        op=PEq(),
+                        lhs=PEVar(id="state-0"),
+                        rhs=PEConst(const=PStr(value="absent")),
+                    ),
+                    cons=PRm(path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))),
+                    alt=PIf(
+                        pred=PEBinOP(
+                            op=PEq(),
+                            lhs=PEVar(id="state-0"),
+                            rhs=PEConst(const=PStr(value="directory")),
+                        ),
+                        cons=PMkdir(path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))),
+                        alt=PSkip(),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    fs = statement.to_filesystem()
+    assert fs.state == {
+        "/usr/sbin/policy-rc.d": Nil()
     }
