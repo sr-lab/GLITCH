@@ -46,3 +46,23 @@ class NamesDatabase:
                 return "state"
 
         return None
+    
+    @staticmethod
+    def get_attr_value(value: str, name: str, au_type: str, tech: Tech) -> Optional[str]:
+        """Returns the generic value of the attribute with the given value, name,
+        atomic unit type and tech.
+
+        Args:
+            value (str): The value of the attribute.
+            name (str): The name of the attribute.
+            au_type (str): The type of the atomic unit.
+            tech (Tech): The tech being considered.
+
+        Returns:
+            str: The generic value of the attribute.
+        """
+        match value, name, au_type, tech:
+            case "file", "state", "file", Tech.puppet:
+                return "present"
+        
+        return value

@@ -21,7 +21,15 @@ class DeltaPCompiler:
             )
             if attr_name is not None:
                 self.__attributes[attr_name] = (
-                    DeltaPCompiler._compile_expr(attribute.value, self.__tech),
+                    DeltaPCompiler._compile_expr(
+                        NamesDatabase.get_attr_value(
+                            attribute.value,
+                            attr_name,
+                            self.__au_type,
+                            self.__tech,
+                        ),
+                        self.__tech
+                    ),
                     attribute,
                 )
 
