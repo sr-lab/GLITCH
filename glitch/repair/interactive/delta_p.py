@@ -171,14 +171,10 @@ class PStatement(ABC):
             path, mode = get_str(self.path), get_str(self.mode)
             if isinstance(fs.state[path], (File, Dir)):
                 fs.state[path].mode = mode
-            else:
-                raise RuntimeError(f"Expected file or directory, got {fs.state[path]}")
         elif isinstance(self, PChown):
             path, owner = get_str(self.path), get_str(self.owner)
             if isinstance(fs.state[path], (File, Dir)):
                 fs.state[path].owner = owner
-            else:
-                raise RuntimeError(f"Expected file or directory, got {fs.state[path]}")
         elif isinstance(self, PSeq):
             fs = self.lhs.to_filesystem(fs, vars)
             fs = self.rhs.to_filesystem(fs, vars)

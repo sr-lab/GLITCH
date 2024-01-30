@@ -19,6 +19,8 @@ from glitch.repair.interactive.tracer.transform import get_file_system_state
 from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.default_values import DefaultValue
+from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
+from glitch.repr.inter import Attribute
 
 Fun = Callable[[PStatement], Z3PPObject]
 
@@ -255,3 +257,17 @@ class PatchSolver:
         # TODO: Get multiple solutions
 
         return model
+
+    def apply_patch(self, model_ref: ModelRef, labeled_script: LabeledUnitBlock):
+        changed = []
+
+        for label, unchanged in self.unchanged.items():
+            if model_ref[unchanged] == 0:
+                hole = self.holes[f"loc-{label}"]
+                changed.append((label, model_ref[hole]))
+        
+        for change in changed:
+            label, value = change
+            codeelement = labeled_script.get_codeelement(label)
+            if isinstance(codeelement, Attribute):
+                codeelement.value = value

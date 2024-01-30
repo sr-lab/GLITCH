@@ -1,5 +1,14 @@
+from z3 import ModelRef
+from tempfile import NamedTemporaryFile
+
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.solver import PatchSolver
+from glitch.parsers.cmof import PuppetParser
+from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
+from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
+from glitch.repr.inter import UnitBlockType
+from glitch.tech import Tech
+
 
 statement = PSeq(
     PSeq(
@@ -60,6 +69,26 @@ statement = PSeq(
 )
 
 
+def patch_solver_apply(solver: PatchSolver, model: ModelRef, filesystem: FileSystemState):
+    puppet_script = """
+    file { '/var/www/customers/public_html/index.php':
+        path => '/var/www/customers/public_html/index.php',
+        content => '<html><body><h1>Hello World</h1></body></html>',
+        ensure => present,
+        mode => '0755',
+        owner => 'web_admin'
+    }
+    """
+    with NamedTemporaryFile() as f:
+        f.write(puppet_script.encode())
+        f.flush()
+        puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
+        labeled_script = GLITCHLabeler.label(puppet_parser)
+        solver.apply_patch(model, labeled_script)
+        statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
+        assert statement.to_filesystem().state == filesystem.state
+
+
 def test_patch_solver_mode():
     filesystem = FileSystemState()
     filesystem.state["/var/www/customers/public_html/index.php"] = File(
@@ -83,6 +112,7 @@ def test_patch_solver_mode():
     assert model[solver.vars["state-2"]] == "present"
     assert model[solver.vars["mode-3"]] == "0777"
     assert model[solver.vars["owner-4"]] == "web_admin"
+    patch_solver_apply(solver, model, filesystem)
 
 
 def test_patch_solver_delete_file():
@@ -110,3 +140,4 @@ def test_patch_solver_delete_file():
     assert model[solver.vars["state-2"]] == "absent"
     assert model[solver.vars["mode-3"]] == "0755"
     assert model[solver.vars["owner-4"]] == "web_admin"
+    patch_solver_apply(solver, model, filesystem)
