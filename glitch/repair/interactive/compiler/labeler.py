@@ -12,7 +12,9 @@ class LabeledUnitBlock:
         self.__codeelement_to_label: Dict[CodeElement, int] = {}
         self.__label_to_codeelement: Dict[int, CodeElement] = {}
 
-    def add_label(self, name: str, codeelement: CodeElement, sketched: bool = False) -> int:
+    def add_label(
+        self, name: str, codeelement: CodeElement, sketched: bool = False
+    ) -> int:
         self.__codeelement_to_label[codeelement] = self.__label
         self.__label_to_codeelement[self.__label] = codeelement
         var = f"{name}-{self.__label}"
@@ -41,7 +43,9 @@ class GLITCHLabeler:
         for atomic_unit in script.atomic_units:
             for attribute in atomic_unit.attributes:
                 # FIXME: Puppet
-                name = NamesDatabase.get_attr_name(attribute.name, atomic_unit.type, Tech.puppet)
+                name = NamesDatabase.get_attr_name(
+                    attribute.name, atomic_unit.type, Tech.puppet
+                )
                 labeled.add_label(name, attribute)
 
         for variable in script.variables:

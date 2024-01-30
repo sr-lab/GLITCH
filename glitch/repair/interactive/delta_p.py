@@ -127,9 +127,28 @@ class PStatement(ABC):
         # FIXME: Change exception type
         raise ValueError(f"Expected string, got {expr}")
 
-    def to_filesystem(self, fs: Optional[FileSystemState] = None) -> FileSystemState:
+    def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr:
+        if isinstance(expr, PEVar):
+            return self.__eval(vars[expr.id])
+        elif isinstance(expr, PEUndef) or isinstance(expr, PEConst):
+            # NOTE: it is an arbitrary string to represent an undefined value
+            return expr
+        elif isinstance(expr, PEBinOP) and isinstance(expr.op, PEq):
+            if self.__eval(expr.lhs) == self.__eval(expr.rhs):
+                return PEConst(PBool(True))
+            else:
+                return PEConst(PBool(False))
+        # TODO: Add support for other operators and expressions
+
+    def to_filesystem(
+        self,
+        fs: Optional[FileSystemState] = None,
+        vars: Optional[Dict[str, PExpr]] = None,
+    ) -> FileSystemState:
         if fs is None:
             fs = FileSystemState()
+        if vars is None:
+            vars = {}
 
         if isinstance(self, PSkip):
             return fs
@@ -156,14 +175,19 @@ class PStatement(ABC):
             else:
                 raise ValueError(f"Expected file or directory, got {fs.state[path]}")
         elif isinstance(self, PSeq):
-            fs = self.lhs.to_filesystem(fs)
-            fs = self.rhs.to_filesystem(fs)
+            fs = self.lhs.to_filesystem(fs, vars)
+            fs = self.rhs.to_filesystem(fs, vars)
         elif isinstance(self, PLet):
-            # TODO
-            pass
+            vars[self.id] = self.expr
+            fs = self.body.to_filesystem(fs, vars)
         elif isinstance(self, PIf):
-            # TODO
-            pass
+            eval_pred = self.__eval(self.pred, vars)
+            if eval_pred == PEConst(PBool(True)):
+                fs = self.cons.to_filesystem(fs, vars)
+            elif eval_pred == PEConst(PBool(False)):
+                fs = self.alt.to_filesystem(fs, vars)
+            else:
+                raise RuntimeError(f"Expected boolean, got {eval_pred}")
 
         return fs
 
