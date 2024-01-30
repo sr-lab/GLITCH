@@ -13,6 +13,7 @@ class DeltaPCompiler:
             self.__au_type = NamesDatabase.get_au_type(au_type, tech)
             self.__tech = tech
             self.__attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
+            self.__sketched = -1
 
         def add_attribute(self, attribute: Attribute):
             attr_name = NamesDatabase.get_attr_name(
@@ -46,6 +47,8 @@ class DeltaPCompiler:
             else:
                 # Creates sketched attribute
                 attr = Attribute(attr_name, "", False)
+                attr.line, attr.column = self.__sketched, self.__sketched
+                self.__sketched -= 1
                 atomic_unit.attributes.append(attr)
                 self.add_attribute(attr)
                 label = labeled_script.add_label(attr_name, attr, sketched=True)
