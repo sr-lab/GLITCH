@@ -126,6 +126,8 @@ class PStatement(ABC):
             return expr.const.value
         elif isinstance(expr, PEVar):
             return self.__get_str(vars[expr.id], vars)
+        elif isinstance(expr, PEUndef):
+            return None
 
         # FIXME: Change exception type
         raise RuntimeError(f"Unsupported expression, got {expr}")

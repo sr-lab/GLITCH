@@ -107,9 +107,10 @@ class PatchSolver:
         for path, state in filesystem.state.items():
             self.solver.add(self.__funs.state_fun(path) == StringVal(str(state)))
             if state.is_file():
-                self.solver.add(
-                    self.__funs.contents_fun(path) == StringVal(state.content)
-                )
+                if state.content is not None:
+                    self.solver.add(
+                        self.__funs.contents_fun(path) == StringVal(state.content)
+                    )
             if state.is_file() or state.is_dir():
                 if state.mode is not None:
                     self.solver.add(self.__funs.mode_fun(path) == StringVal(state.mode))

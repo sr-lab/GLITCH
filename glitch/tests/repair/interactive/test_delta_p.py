@@ -34,67 +34,89 @@ def test_delta_p_compiler_puppet():
         statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
 
     assert statement == PSeq(
-        PSeq(
-            PSeq(
-                PSkip(),
-                PLet(
-                    "state-2",
-                    PEConst(PStr("present")),
-                    2,
-                    PIf(
-                        PEBinOP(PEq(), PEVar("state-2"), PEConst(PStr("present"))),
-                        PLet(
-                            "content-1",
-                            PEConst(
-                                PStr("<html><body><h1>Hello World</h1></body></html>")
-                            ),
-                            1,
-                            PCreate(
-                                PEConst(
-                                    PStr("/var/www/customers/public_html/index.php")
-                                ),
-                                PEVar("content-1"),
-                            ),
+        lhs=PSkip(),
+        rhs=PSeq(
+            lhs=PSeq(
+                lhs=PLet(
+                    id="state-2",
+                    expr=PEConst(const=PStr(value="present")),
+                    label=2,
+                    body=PIf(
+                        pred=PEBinOP(
+                            op=PEq(),
+                            lhs=PEVar(id="state-2"),
+                            rhs=PEConst(const=PStr(value="present")),
                         ),
-                        PIf(
-                            PEBinOP(PEq(), PEVar("state-2"), PEConst(PStr("absent"))),
-                            PRm(
-                                PEConst(
-                                    PStr("/var/www/customers/public_html/index.php")
+                        cons=PLet(
+                            id="content-1",
+                            expr=PEConst(
+                                const=PStr(
+                                    value="<html><body><h1>Hello World</h1></body></html>"
                                 )
                             ),
-                            PIf(
-                                PEBinOP(
-                                    PEq(), PEVar("state-2"), PEConst(PStr("directory"))
-                                ),
-                                PMkdir(
-                                    PEConst(
-                                        PStr("/var/www/customers/public_html/index.php")
+                            label=1,
+                            body=PCreate(
+                                path=PEConst(
+                                    const=PStr(
+                                        value="/var/www/customers/public_html/index.php"
                                     )
                                 ),
-                                PSkip(),
+                                content=PEVar(id="content-1"),
+                            ),
+                        ),
+                        alt=PIf(
+                            pred=PEBinOP(
+                                op=PEq(),
+                                lhs=PEVar(id="state-2"),
+                                rhs=PEConst(const=PStr(value="absent")),
+                            ),
+                            cons=PRm(
+                                path=PEConst(
+                                    const=PStr(
+                                        value="/var/www/customers/public_html/index.php"
+                                    )
+                                )
+                            ),
+                            alt=PIf(
+                                pred=PEBinOP(
+                                    op=PEq(),
+                                    lhs=PEVar(id="state-2"),
+                                    rhs=PEConst(const=PStr(value="directory")),
+                                ),
+                                cons=PMkdir(
+                                    path=PEConst(
+                                        const=PStr(
+                                            value="/var/www/customers/public_html/index.php"
+                                        )
+                                    )
+                                ),
+                                alt=PSkip(),
                             ),
                         ),
                     ),
                 ),
-            ),
-            PLet(
-                "mode-3",
-                PEConst(PStr("0755")),
-                3,
-                PChmod(
-                    PEConst(PStr("/var/www/customers/public_html/index.php")),
-                    PEVar("mode-3"),
+                rhs=PLet(
+                    id="owner-4",
+                    expr=PEConst(const=PStr(value="web_admin")),
+                    label=4,
+                    body=PChown(
+                        path=PEConst(
+                            const=PStr(value="/var/www/customers/public_html/index.php")
+                        ),
+                        owner=PEVar(id="owner-4"),
+                    ),
                 ),
             ),
-        ),
-        PLet(
-            "owner-4",
-            PEConst(PStr("web_admin")),
-            4,
-            PChown(
-                PEConst(PStr("/var/www/customers/public_html/index.php")),
-                PEVar("owner-4"),
+            rhs=PLet(
+                id="mode-3",
+                expr=PEConst(const=PStr(value="0755")),
+                label=3,
+                body=PChmod(
+                    path=PEConst(
+                        const=PStr(value="/var/www/customers/public_html/index.php")
+                    ),
+                    mode=PEVar(id="mode-3"),
+                ),
             ),
         ),
     )
@@ -124,41 +146,69 @@ def test_delta_p_compiler_puppet_2():
 
     assert statement == PSeq(
         lhs=PSkip(),
-        rhs=PLet(
-            id="state-0",
-            expr=PEConst(const=PStr(value="absent")),
-            label=0,
-            body=PIf(
-                pred=PEBinOP(
-                    op=PEq(),
-                    lhs=PEVar(id="state-0"),
-                    rhs=PEConst(const=PStr(value="present")),
-                ),
-                cons=PLet(
-                    id="sketched-content-1",
-                    expr=PEConst(const=PStr(value="")),
-                    label=1,
-                    body=PCreate(
-                        path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                        content=PEVar(id="sketched-content-1"),
-                    ),
-                ),
-                alt=PIf(
-                    pred=PEBinOP(
-                        op=PEq(),
-                        lhs=PEVar(id="state-0"),
-                        rhs=PEConst(const=PStr(value="absent")),
-                    ),
-                    cons=PRm(path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))),
-                    alt=PIf(
+        rhs=PSeq(
+            lhs=PSeq(
+                lhs=PLet(
+                    id="state-0",
+                    expr=PEConst(const=PStr(value="absent")),
+                    label=0,
+                    body=PIf(
                         pred=PEBinOP(
                             op=PEq(),
                             lhs=PEVar(id="state-0"),
-                            rhs=PEConst(const=PStr(value="directory")),
+                            rhs=PEConst(const=PStr(value="present")),
                         ),
-                        cons=PMkdir(path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))),
-                        alt=PSkip(),
+                        cons=PLet(
+                            id="sketched-content-1",
+                            expr=PEUndef(),
+                            label=1,
+                            body=PCreate(
+                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                                content=PEVar(id="sketched-content-1"),
+                            ),
+                        ),
+                        alt=PIf(
+                            pred=PEBinOP(
+                                op=PEq(),
+                                lhs=PEVar(id="state-0"),
+                                rhs=PEConst(const=PStr(value="absent")),
+                            ),
+                            cons=PRm(
+                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))
+                            ),
+                            alt=PIf(
+                                pred=PEBinOP(
+                                    op=PEq(),
+                                    lhs=PEVar(id="state-0"),
+                                    rhs=PEConst(const=PStr(value="directory")),
+                                ),
+                                cons=PMkdir(
+                                    path=PEConst(
+                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    )
+                                ),
+                                alt=PSkip(),
+                            ),
+                        ),
                     ),
+                ),
+                rhs=PLet(
+                    id="sketched-owner-2",
+                    expr=PEUndef(),
+                    label=2,
+                    body=PChown(
+                        path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                        owner=PEVar(id="sketched-owner-2"),
+                    ),
+                ),
+            ),
+            rhs=PLet(
+                id="sketched-mode-3",
+                expr=PEUndef(),
+                label=3,
+                body=PChmod(
+                    path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                    mode=PEVar(id="sketched-mode-3"),
                 ),
             ),
         ),
@@ -229,7 +279,9 @@ def test_delta_p_to_filesystem_2():
                             lhs=PEVar(id="state-0"),
                             rhs=PEConst(const=PStr(value="directory")),
                         ),
-                        cons=PMkdir(path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))),
+                        cons=PMkdir(
+                            path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))
+                        ),
                         alt=PSkip(),
                     ),
                 ),
@@ -238,6 +290,4 @@ def test_delta_p_to_filesystem_2():
     )
 
     fs = statement.to_filesystem()
-    assert fs.state == {
-        "/usr/sbin/policy-rc.d": Nil()
-    }
+    assert fs.state == {"/usr/sbin/policy-rc.d": Nil()}
