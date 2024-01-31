@@ -66,5 +66,7 @@ class NamesDatabase:
         match value, name, au_type, tech:
             case "file", "state", "file", Tech.puppet | Tech.ansible:
                 return "present"
+            case "touch", "state", "file", Tech.ansible:
+                return "create"
         
         return value
