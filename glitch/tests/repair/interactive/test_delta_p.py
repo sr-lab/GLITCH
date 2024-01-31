@@ -22,7 +22,7 @@ def test_delta_p_compiler_puppet():
         f.write(puppet_script.encode())
         f.flush()
         puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
-        labeled_script = GLITCHLabeler.label(puppet_parser)
+        labeled_script = GLITCHLabeler.label(puppet_parser, Tech.puppet)
 
         # Check labels
         i = 0
@@ -133,7 +133,7 @@ def test_delta_p_compiler_puppet_2():
         f.write(puppet_script.encode())
         f.flush()
         puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
-        labeled_script = GLITCHLabeler.label(puppet_parser)
+        labeled_script = GLITCHLabeler.label(puppet_parser, Tech.puppet)
 
         # Check labels
         i = 0

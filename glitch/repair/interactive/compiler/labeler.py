@@ -37,14 +37,14 @@ class LabeledUnitBlock:
 
 class GLITCHLabeler:
     @staticmethod
-    def label(script: UnitBlock) -> LabeledUnitBlock:
+    def label(script: UnitBlock, tech: Tech) -> LabeledUnitBlock:
         labeled = LabeledUnitBlock(script)
 
         for atomic_unit in script.atomic_units:
+            type = NamesDatabase.get_au_type(atomic_unit.type, tech)
             for attribute in atomic_unit.attributes:
-                # FIXME: Puppet
                 name = NamesDatabase.get_attr_name(
-                    attribute.name, atomic_unit.type, Tech.puppet
+                    attribute.name, type, tech
                 )
                 labeled.add_label(name, attribute)
 

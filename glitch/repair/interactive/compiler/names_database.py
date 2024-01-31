@@ -15,7 +15,9 @@ class NamesDatabase:
             str: The generic type of the atomic unit.
         """
         match type, tech:
-            case "file", Tech.puppet | Tech.chef:
+            case "file", Tech.puppet | Tech.chef | Tech.ansible:
+                return "file"
+            case "ansible.builtin.file", Tech.ansible:
                 return "file"
         return None
 
@@ -62,7 +64,7 @@ class NamesDatabase:
             str: The generic value of the attribute.
         """
         match value, name, au_type, tech:
-            case "file", "state", "file", Tech.puppet:
+            case "file", "state", "file", Tech.puppet | Tech.ansible:
                 return "present"
         
         return value

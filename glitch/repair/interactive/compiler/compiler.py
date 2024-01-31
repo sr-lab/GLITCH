@@ -10,14 +10,14 @@ from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 class DeltaPCompiler:
     class __Attributes:
         def __init__(self, au_type: str, tech: Tech):
-            self.__au_type = NamesDatabase.get_au_type(au_type, tech)
+            self.au_type = NamesDatabase.get_au_type(au_type, tech)
             self.__tech = tech
             self.__attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
             self.__sketched = -1
 
         def add_attribute(self, attribute: Attribute):
             attr_name = NamesDatabase.get_attr_name(
-                attribute.name, self.__au_type, self.__tech
+                attribute.name, self.au_type, self.__tech
             )
             if attr_name is not None:
                 self.__attributes[attr_name] = (
@@ -25,7 +25,7 @@ class DeltaPCompiler:
                         NamesDatabase.get_attr_value(
                             attribute.value,
                             attr_name,
-                            self.__au_type,
+                            self.au_type,
                             self.__tech,
                         ),
                         self.__tech
@@ -149,8 +149,7 @@ class DeltaPCompiler:
             attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
                 atomic_unit.type, tech
             )
-
-            if atomic_unit.type == "file":
+            if attributes.au_type == "file":
                 for attribute in atomic_unit.attributes:
                     attributes.add_attribute(attribute)
                 statement = PSeq(
