@@ -1,5 +1,6 @@
 from glitch.repair.interactive.delta_p import *
 
+UNDEF = "glitch-undef"
 
 class DefaultValue:
     DEFAULT_MODE = PEConst(PStr("644"))

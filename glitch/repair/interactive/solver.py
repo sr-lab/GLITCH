@@ -18,9 +18,9 @@ from glitch.repair.interactive.filesystem import FileSystemState
 from glitch.repair.interactive.tracer.transform import get_file_system_state
 from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
-from glitch.repair.interactive.default_values import DefaultValue
+from glitch.repair.interactive.values import DefaultValue, UNDEF
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repr.inter import Attribute
+from glitch.repr.inter import Attribute, AtomicUnit
 
 Fun = Callable[[PStatement], Z3PPObject]
 
@@ -43,7 +43,7 @@ class PatchSolver:
 
         # FIXME: check the defaults
         self.__funs = PatchSolver.__Funs(
-            lambda p: StringVal("file"),  # FIXME get value from default values
+            lambda p: StringVal(UNDEF),
             lambda p: self.__compile_expr(DefaultValue.DEFAULT_CONTENT),
             lambda p: self.__compile_expr(DefaultValue.DEFAULT_MODE),
             lambda p: self.__compile_expr(DefaultValue.DEFAULT_OWNER),
@@ -97,7 +97,7 @@ class PatchSolver:
             return self.vars[expr.id]
         elif isinstance(expr, PEUndef):
             # NOTE: it is an arbitrary string to represent an undefined value
-            return StringVal("glitch-undef")
+            return StringVal(UNDEF)
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PEq):
             return self.__compile_expr(expr.lhs) == self.__compile_expr(expr.rhs)
 
@@ -107,15 +107,13 @@ class PatchSolver:
         for path, state in filesystem.state.items():
             self.solver.add(self.__funs.state_fun(path) == StringVal(str(state)))
             if state.is_file():
-                if state.content is not None:
-                    self.solver.add(
-                        self.__funs.contents_fun(path) == StringVal(state.content)
-                    )
+                content = UNDEF if state.content is None else state.content
+                self.solver.add(self.__funs.contents_fun(path) == StringVal(content))
             if state.is_file() or state.is_dir():
-                if state.mode is not None:
-                    self.solver.add(self.__funs.mode_fun(path) == StringVal(state.mode))
-                if state.owner is not None:
-                    self.solver.add(self.__funs.owner_fun(path) == StringVal(state.owner))
+                mode = UNDEF if state.mode is None else state.mode
+                self.solver.add(self.__funs.mode_fun(path) == StringVal(mode))
+                owner = UNDEF if state.owner is None else state.owner
+                self.solver.add(self.__funs.owner_fun(path) == StringVal(owner))
 
     def __generate_soft_constraints(
         self, statement: PStatement, funs: __Funs
@@ -261,6 +259,14 @@ class PatchSolver:
 
         return model
 
+    def __find_atomic_unit(
+        labeled_script: LabeledUnitBlock, attribute: Attribute
+    ) -> AtomicUnit:
+        for atomic_unit in labeled_script.script.atomic_units:
+            if attribute in atomic_unit.attributes:
+                return atomic_unit
+        raise ValueError(f"Attribute {attribute} not found in the script")
+
     def apply_patch(self, model_ref: ModelRef, labeled_script: LabeledUnitBlock):
         changed = []
 
@@ -268,9 +274,17 @@ class PatchSolver:
             if model_ref[unchanged] == 0:
                 hole = self.holes[f"loc-{label}"]
                 changed.append((label, model_ref[hole]))
-        
+
         for change in changed:
             label, value = change
             codeelement = labeled_script.get_codeelement(label)
+
+            # Remove attributes that are not defined
+            if value == UNDEF:
+                atomic_unit = PatchSolver.__find_atomic_unit(
+                    labeled_script, codeelement
+                )
+                atomic_unit.attributes.remove(codeelement)
+
             if isinstance(codeelement, Attribute):
                 codeelement.value = value
