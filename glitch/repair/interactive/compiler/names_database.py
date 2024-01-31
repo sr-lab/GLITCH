@@ -67,6 +67,6 @@ class NamesDatabase:
             case "file", "state", "file", Tech.puppet | Tech.ansible:
                 return "present"
             case "touch", "state", "file", Tech.ansible:
-                return "create"
+                return "present"
         
         return value
