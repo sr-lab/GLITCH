@@ -87,21 +87,13 @@ class DeltaPCompiler:
         state_label, state_var = attributes.create_label_var_pair(
             "state", atomic_unit, labeled_script
         )
-        content_label, content_var = attributes.create_label_var_pair(
-            "content", atomic_unit, labeled_script
-        )
         statement = PLet(
             state_var,
             attributes["state"],
             state_label,
             PIf(
                 PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
-                PLet(
-                    content_var,
-                    attributes["content"],
-                    content_label,
-                    PCreate(path, PEVar(content_var)),
-                ),
+                PCreate(path),
                 PIf(
                     PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
                     PRm(path),
@@ -115,6 +107,16 @@ class DeltaPCompiler:
                 ),
             ),
         )
+
+        content_label, content_var = attributes.create_label_var_pair(
+            "content", atomic_unit, labeled_script
+        )
+        statement = PSeq(statement, PLet(
+            content_var,
+            attributes["content"],
+            content_label,
+            PWrite(path, PEVar(content_var)),
+        ))
 
         owner_label, owner_var = attributes.create_label_var_pair(
             "owner", atomic_unit, labeled_script

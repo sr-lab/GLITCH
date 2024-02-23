@@ -162,9 +162,11 @@ class PStatement(ABC):
         elif isinstance(self, PMkdir):
             fs.state[get_str(self.path)] = Dir(None, None)
         elif isinstance(self, PCreate):
-            fs.state[get_str(self.path)] = File(
-                None, None, get_str(self.content)
-            )
+            fs.state[get_str(self.path)] = File(None, None, None)
+        elif isinstance(self, PWrite):
+            path, content = get_str(self.path), get_str(self.content)
+            if isinstance(fs.state[path], File):
+                fs.state[path].content = content
         elif isinstance(self, PRm):
             fs.state[get_str(self.path)] = Nil()
         elif isinstance(self, PCp):
@@ -190,6 +192,7 @@ class PStatement(ABC):
             elif eval_pred == PEConst(PBool(False)):
                 fs = self.alt.to_filesystem(fs, vars)
             else:
+                # FIXME: Generate the two cases and return a list
                 raise RuntimeError(f"Expected boolean, got {eval_pred}")
 
         return fs
@@ -204,12 +207,14 @@ class PSkip(PStatement):
 class PMkdir(PStatement):
     path: PExpr
 
+@dataclass
+class PWrite(PStatement):
+    path: PExpr
+    content: PExpr
 
 @dataclass
 class PCreate(PStatement):
     path: PExpr
-    content: PExpr
-
 
 @dataclass
 class PRm(PStatement):

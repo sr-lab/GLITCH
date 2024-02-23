@@ -7,6 +7,7 @@ from z3 import (
     StringVal,
     String,
     And,
+    Not,
     Int,
     Or,
     Sum,
@@ -34,6 +35,8 @@ class PatchSolver:
         owner_fun: Fun
 
     def __init__(self, statement: PStatement, filesystem: FileSystemState):
+        # FIXME: the filesystem in here should be generated from
+        # checking the affected paths in statement
         self.solver = Solver()
         self.statement = statement
         self.sum_var = Int("sum")
@@ -106,14 +109,17 @@ class PatchSolver:
     def __generate_hard_constraints(self, filesystem: FileSystemState):
         for path, state in filesystem.state.items():
             self.solver.add(self.__funs.state_fun(path) == StringVal(str(state)))
+            content, mode, owner = UNDEF, UNDEF, UNDEF
+
             if state.is_file():
                 content = UNDEF if state.content is None else state.content
-                self.solver.add(self.__funs.contents_fun(path) == StringVal(content))
             if state.is_file() or state.is_dir():
                 mode = UNDEF if state.mode is None else state.mode
-                self.solver.add(self.__funs.mode_fun(path) == StringVal(mode))
                 owner = UNDEF if state.owner is None else state.owner
-                self.solver.add(self.__funs.owner_fun(path) == StringVal(owner))
+
+            self.solver.add(self.__funs.contents_fun(path) == StringVal(content))
+            self.solver.add(self.__funs.mode_fun(path) == StringVal(mode))
+            self.solver.add(self.__funs.owner_fun(path) == StringVal(owner))
 
     def __generate_soft_constraints(
         self, statement: PStatement, funs: __Funs
@@ -138,10 +144,10 @@ class PatchSolver:
             funs.state_fun = lambda p: If(
                 p == path, StringVal("file"), previous_state_fun(p)
             )
+        elif isinstance(statement, PWrite):
+            path = self.__compile_expr(statement.path)
             funs.contents_fun = lambda p: If(
-                p == path,
-                self.__compile_expr(statement.content),
-                previous_contents_fun(p),
+                p == path, self.__compile_expr(statement.content), previous_contents_fun(p)
             )
         elif isinstance(statement, PRm):
             path = self.__compile_expr(statement.path)
@@ -238,26 +244,32 @@ class PatchSolver:
 
         return constraints, funs
 
-    def solve(self) -> Optional[ModelRef]:
-        lo, hi = 0, len(self.unchanged)
-        model = None
+    def solve(self) -> List[ModelRef]:
+        models = []
 
-        while lo < hi:
-            mid = (lo + hi) // 2
-            self.solver.push()
-            self.solver.add(self.sum_var >= mid)
-            if self.solver.check() == sat:
-                lo = mid + 1
-                model = self.solver.model()
-            else:
-                hi = mid
-            self.solver.pop()
+        while True:
+            lo, hi = 0, len(self.unchanged)
+            model = None
 
-        # Combinatorial Sketching for Finite Programs by Solar-Lezama et al.
+            while lo < hi:
+                mid = (lo + hi) // 2
+                self.solver.push()
+                self.solver.add(self.sum_var >= mid)
+                if self.solver.check() == sat:
+                    lo = mid + 1
+                    model = self.solver.model()
+                    models.append(model)
+                    self.solver.pop()
+                    self.solver.add(Not(And([v == model[v] for v in self.vars.values()])))
+                    continue
+                else:
+                    hi = mid
+                self.solver.pop()
 
-        # TODO: Get multiple solutions
+            if model is None:
+                break
 
-        return model
+        return models
 
     def __find_atomic_unit(
         labeled_script: LabeledUnitBlock, attribute: Attribute

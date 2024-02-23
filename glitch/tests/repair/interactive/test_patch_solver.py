@@ -80,8 +80,9 @@ def test_patch_solver_mode():
     )
 
     solver = PatchSolver(statement, filesystem)
-    model = solver.solve()
-    assert model is not None
+    models = solver.solve()
+    assert len(models) == 1
+    model = models[0]
     assert model[solver.sum_var] == 3
     assert model[solver.unchanged[1]] == 1
     assert model[solver.unchanged[2]] == 1
@@ -104,8 +105,9 @@ def test_patch_solver_owner():
     filesystem = FileSystemState()
     filesystem.state["/etc/icinga2/conf.d/test.conf"] = File("0431", None, None)
     solver = PatchSolver(statement, filesystem)
-    model = solver.solve()
-    assert model is not None
+    models = solver.solve()
+    assert len(models) == 1
+    model = models[0]
     assert model[solver.sum_var] == 3
     assert model[solver.unchanged[0]] == 1
     assert model[solver.unchanged[2]] == 1
@@ -133,20 +135,21 @@ def test_patch_solver_delete_file():
     # to the other cases
 
     solver = PatchSolver(statement, filesystem)
-    model = solver.solve()
-    assert model is not None
-    assert model[solver.sum_var] == 3
-    assert model[solver.unchanged[1]] == 1
+    models = solver.solve()
+    assert len(models) == 1
+    model = models[0]
+    assert model[solver.sum_var] == 0
+    assert model[solver.unchanged[1]] == 0
     assert model[solver.unchanged[2]] == 0
-    assert model[solver.unchanged[3]] == 1
-    assert model[solver.unchanged[4]] == 1
+    assert model[solver.unchanged[3]] == 0
+    assert model[solver.unchanged[4]] == 0
     assert (
         model[solver.vars["content-1"]]
-        == "<html><body><h1>Hello World</h1></body></html>"
+        == UNDEF
     )
     assert model[solver.vars["state-2"]] == "absent"
-    assert model[solver.vars["mode-3"]] == "0755"
-    assert model[solver.vars["owner-4"]] == "web_admin"
+    assert model[solver.vars["mode-3"]] == UNDEF
+    assert model[solver.vars["owner-4"]] == UNDEF
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
 
@@ -160,9 +163,9 @@ def test_patch_solver_remove_content():
     )
 
     solver = PatchSolver(statement, filesystem)
-    model = solver.solve()
-
-    assert model is not None
+    models = solver.solve()
+    assert len(models) == 1
+    model = models[0]
     assert model[solver.sum_var] == 3
     assert model[solver.unchanged[1]] == 0
     assert model[solver.unchanged[2]] == 1
@@ -187,8 +190,9 @@ def test_patch_solver_mode_ansible():
     )
 
     solver = PatchSolver(statement, filesystem)
-    model = solver.solve()
-    assert model is not None
+    models = solver.solve()
+    assert len(models) == 1
+    model = models[0]
     assert model[solver.sum_var] == 3
     assert model[solver.unchanged[1]] == 1
     assert model[solver.unchanged[2]] == 1
