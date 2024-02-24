@@ -103,7 +103,7 @@ def test_patch_solver_owner():
         puppet_script_2, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
     filesystem = FileSystemState()
-    filesystem.state["/etc/icinga2/conf.d/test.conf"] = File("0431", None, None)
+    filesystem.state["/etc/icinga2/conf.d/test.conf"] = File(None, "new", None)
     solver = PatchSolver(statement, filesystem)
     models = solver.solve()
     assert len(models) == 1
@@ -111,12 +111,12 @@ def test_patch_solver_owner():
     assert model[solver.sum_var] == 3
     assert model[solver.unchanged[0]] == 1
     assert model[solver.unchanged[2]] == 1
-    assert model[solver.unchanged[3]] == 1
-    assert model[solver.unchanged[4]] == 0
+    assert model[solver.unchanged[3]] == 0
+    assert model[solver.unchanged[4]] == 1
     assert model[solver.vars["state-0"]] == "present"
     assert model[solver.vars["sketched-content-2"]] == UNDEF
-    assert model[solver.vars["sketched-owner-3"]] == UNDEF
-    assert model[solver.vars["sketched-mode-4"]] == "0431"
+    assert model[solver.vars["sketched-owner-3"]] == "new"
+    assert model[solver.vars["sketched-mode-4"]] == UNDEF
 
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
