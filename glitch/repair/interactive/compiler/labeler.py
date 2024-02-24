@@ -11,6 +11,7 @@ class LabeledUnitBlock:
         self.__label_to_var: Dict[int, str] = {}
         self.__codeelement_to_label: Dict[CodeElement, int] = {}
         self.__label_to_codeelement: Dict[int, CodeElement] = {}
+        self.__sketch_location: Dict[CodeElement, CodeElement] = {}
 
     def add_label(
         self, name: str, codeelement: CodeElement, sketched: bool = False
@@ -24,6 +25,11 @@ class LabeledUnitBlock:
             self.__label_to_var[self.__label] = f"sketched-{var}"
         self.__label += 1
         return self.__label - 1
+    
+    def add_sketch_location(
+        self, codeelement: CodeElement, sketch_location: CodeElement
+    ):
+        self.__sketch_location[codeelement] = sketch_location
 
     def get_label(self, codeelement: CodeElement) -> int:
         return self.__codeelement_to_label[codeelement]
@@ -33,6 +39,9 @@ class LabeledUnitBlock:
 
     def get_var(self, label: int) -> str:
         return self.__label_to_var[label]
+    
+    def get_sketch_location(self, codeelement: CodeElement) -> CodeElement:
+        return self.__sketch_location.get(codeelement, codeelement)
 
 
 class GLITCHLabeler:

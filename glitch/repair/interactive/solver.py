@@ -21,7 +21,7 @@ from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.values import DefaultValue, UNDEF
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repr.inter import Attribute, AtomicUnit
+from glitch.repr.inter import Attribute, AtomicUnit, CodeElement
 
 Fun = Callable[[PStatement], Z3PPObject]
 
@@ -278,6 +278,10 @@ class PatchSolver:
             if attribute in atomic_unit.attributes:
                 return atomic_unit
         raise ValueError(f"Attribute {attribute} not found in the script")
+    
+    # TODO: improve way to identify sketch
+    def __is_sketch(self, codeelement: CodeElement) -> bool:
+        return codeelement.line < 0 and codeelement.column < 0
 
     def apply_patch(self, model_ref: ModelRef, labeled_script: LabeledUnitBlock):
         changed = []
@@ -291,19 +295,19 @@ class PatchSolver:
             label, value = change
             value = value.as_string()
             codeelement = labeled_script.get_codeelement(label)
+            if not isinstance(codeelement, Attribute):
+                continue
 
-            # Remove attributes that are not defined
-            if value == UNDEF:
+            if self.__is_sketch(codeelement):
+                atomic_unit = labeled_script.get_sketch_location(codeelement)
+                atomic_unit.attributes.append(codeelement)
+            else:
                 atomic_unit = PatchSolver.__find_atomic_unit(
                     labeled_script, codeelement
                 )
+
+            # Remove attributes that are not defined
+            if value == UNDEF:
                 atomic_unit.attributes.remove(codeelement)
-
-            if isinstance(codeelement, Attribute):
+            else:
                 codeelement.value = value
-
-        # HACK: Remove the attributes sketched by the DeltaP Compiler
-        for atomic_unit in labeled_script.script.atomic_units:
-            for attr in atomic_unit.attributes:
-                if attr.value == PEUndef():
-                    atomic_unit.attributes.remove(attr)

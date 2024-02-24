@@ -42,9 +42,6 @@ class DeltaPCompiler:
         def __getitem__(self, key: str) -> PExpr:
             return self.get_attribute_value(key)
 
-        # TODO: Remove creation of sketched attributes from here
-        # The creation should be a step by itself
-        # And probably shouldn't be made on the actual script but on a copy
         def create_label_var_pair(
             self,
             attr_name: str,
@@ -60,7 +57,7 @@ class DeltaPCompiler:
                 attr = Attribute(attr_name, PEUndef(), False)
                 attr.line, attr.column = self.__sketched, self.__sketched
                 self.__sketched -= 1
-                atomic_unit.attributes.append(attr)
+                labeled_script.add_sketch_location(attr, atomic_unit)
                 self.add_attribute(attr)
                 label = labeled_script.add_label(attr_name, attr, sketched=True)
 
