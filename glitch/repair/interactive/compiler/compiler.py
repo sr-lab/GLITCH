@@ -42,6 +42,9 @@ class DeltaPCompiler:
         def __getitem__(self, key: str) -> PExpr:
             return self.get_attribute_value(key)
 
+        # TODO: Remove creation of sketched attributes from here
+        # The creation should be a step by itself
+        # And probably shouldn't be made on the actual script but on a copy
         def create_label_var_pair(
             self,
             attr_name: str,

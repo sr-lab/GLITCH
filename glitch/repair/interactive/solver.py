@@ -289,6 +289,7 @@ class PatchSolver:
 
         for change in changed:
             label, value = change
+            value = value.as_string()
             codeelement = labeled_script.get_codeelement(label)
 
             # Remove attributes that are not defined
@@ -300,3 +301,9 @@ class PatchSolver:
 
             if isinstance(codeelement, Attribute):
                 codeelement.value = value
+
+        # HACK: Remove the attributes sketched by the DeltaP Compiler
+        for atomic_unit in labeled_script.script.atomic_units:
+            for attr in atomic_unit.attributes:
+                if attr.value == PEUndef():
+                    atomic_unit.attributes.remove(attr)
