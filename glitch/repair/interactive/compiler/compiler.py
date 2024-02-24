@@ -8,12 +8,13 @@ from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 
 
 class DeltaPCompiler:
+    _sketched = -1
+
     class __Attributes:
         def __init__(self, au_type: str, tech: Tech):
             self.au_type = NamesDatabase.get_au_type(au_type, tech)
             self.__tech = tech
             self.__attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
-            self.__sketched = -1
 
         def add_attribute(self, attribute: Attribute):
             attr_name = NamesDatabase.get_attr_name(
@@ -55,9 +56,9 @@ class DeltaPCompiler:
             else:
                 # Creates sketched attribute
                 attr = Attribute(attr_name, PEUndef(), False)
-                attr.line, attr.column = self.__sketched, self.__sketched
-                self.__sketched -= 1
-                labeled_script.add_sketch_location(attr, atomic_unit)
+                attr.line, attr.column = DeltaPCompiler._sketched, DeltaPCompiler._sketched
+                DeltaPCompiler._sketched -= 1
+                labeled_script.add_sketch_location(atomic_unit, attr)
                 self.add_attribute(attr)
                 label = labeled_script.add_label(attr_name, attr, sketched=True)
 

@@ -27,7 +27,7 @@ class LabeledUnitBlock:
         return self.__label - 1
     
     def add_sketch_location(
-        self, codeelement: CodeElement, sketch_location: CodeElement
+        self, sketch_location: CodeElement, codeelement: CodeElement
     ):
         self.__sketch_location[codeelement] = sketch_location
 
@@ -41,7 +41,7 @@ class LabeledUnitBlock:
         return self.__label_to_var[label]
     
     def get_sketch_location(self, codeelement: CodeElement) -> CodeElement:
-        return self.__sketch_location.get(codeelement, codeelement)
+        return self.__sketch_location[codeelement]
 
 
 class GLITCHLabeler:

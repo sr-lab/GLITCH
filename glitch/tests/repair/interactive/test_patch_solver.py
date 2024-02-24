@@ -29,6 +29,16 @@ puppet_script_2 = """
     }
 """
 
+puppet_script_3 = """
+file { 'test1':
+    ensure => file,
+}
+
+file { 'test2':
+    ensure => file,
+}
+"""
+
 ansible_script_1 = """
 ---
 - ansible.builtin.file:
@@ -120,6 +130,21 @@ def test_patch_solver_owner():
 
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
+def test_patch_solver_two_files():
+    setup_patch_solver(
+        puppet_script_3, PuppetParser(), UnitBlockType.script, Tech.puppet
+    )
+    filesystem = FileSystemState()
+    filesystem.state["test1"] = File(None, "new", None)
+    filesystem.state["test2"] = File("0666", None, None)
+    solver = PatchSolver(statement, filesystem)
+    models = solver.solve()
+    assert len(models) == 1
+    model = models[0]
+    assert model[solver.sum_var] == 6
+    
+    patch_solver_apply(solver, model, filesystem, Tech.puppet)
+
 
 def test_patch_solver_delete_file():
     setup_patch_solver(
@@ -127,12 +152,6 @@ def test_patch_solver_delete_file():
     )
     filesystem = FileSystemState()
     filesystem.state["/var/www/customers/public_html/index.php"] = Nil()
-
-    # TODO: For this to work I need to change the way ensures are handled
-    # The author of the paper uses the construct If to do this
-    # I have to decide if I want to do that or not
-    # I think it is possible to do it in a simpler way, similar
-    # to the other cases
 
     solver = PatchSolver(statement, filesystem)
     models = solver.solve()
