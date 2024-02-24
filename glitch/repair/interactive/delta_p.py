@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from abc import ABC
-from typing import Optional
+from typing import Optional, List
 
 from glitch.repair.interactive.filesystem import *
 
@@ -145,6 +145,64 @@ class PStatement(ABC):
                 return PEConst(PBool(False))
         # TODO: Add support for other operators and expressions
 
+    @staticmethod
+    def minimize(statement: "PStatement", considered_paths: List[str]) -> "PStatement":
+        """Minimize the statement by removing all the paths that are not in the
+        list of considered paths. This method is used to minimize the
+        statements that are not relevant to the current repair.
+        
+        Args:
+            statement (PStatement): The statement to minimize.
+            considered_paths (List[str]): The list of paths that are relevant
+                to the current repair.
+                
+        Returns:
+            PStatement: The minimized statement.
+        """
+        if isinstance(statement, PMkdir) and statement.path in considered_paths:
+            return statement
+        elif isinstance(statement, PCreate) and statement.path in considered_paths:
+            return statement
+        elif isinstance(statement, PWrite) and statement.path in considered_paths:
+            return statement
+        elif isinstance(statement, PRm) and statement.path in considered_paths:
+            return PSkip()
+        elif isinstance(statement, PCp) and (statement.src in considered_paths or statement.dst in considered_paths):
+            return statement
+        elif isinstance(statement, PChmod) and statement.path in considered_paths:
+            return statement
+        elif isinstance(statement, PChown) and statement.path in considered_paths:
+            return statement
+        elif isinstance(statement, PSeq):
+            lhs = PStatement.minimize(statement.lhs, considered_paths)
+            rhs = PStatement.minimize(statement.rhs, considered_paths)
+            if not isinstance(lhs, PSkip) and not isinstance(rhs, PSkip):
+                return PSeq(lhs, rhs)
+            elif isinstance(lhs, PSkip):
+                return rhs
+            elif isinstance(rhs, PSkip):
+                return lhs
+        elif isinstance(statement, PLet):
+            body = PStatement.minimize(statement.body, considered_paths)
+            if not isinstance(body, PSkip):
+                return PLet(
+                    statement.id,
+                    statement.expr,
+                    statement.label,
+                    body,
+                )
+        elif isinstance(statement, PIf):
+            cons = PStatement.minimize(statement.cons, considered_paths)
+            alt = PStatement.minimize(statement.alt, considered_paths)
+            if not isinstance(cons, PSkip) or not isinstance(alt, PSkip):
+                return PIf(
+                    statement.pred,
+                    cons,
+                    alt,
+                )
+        
+        return PSkip()
+        
     def to_filesystem(
         self,
         fs: Optional[FileSystemState] = None,
