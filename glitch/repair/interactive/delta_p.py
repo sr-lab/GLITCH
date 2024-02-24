@@ -150,59 +150,71 @@ class PStatement(ABC):
         """Minimize the statement by removing all the paths that are not in the
         list of considered paths. This method is used to minimize the
         statements that are not relevant to the current repair.
-        
+
         Args:
             statement (PStatement): The statement to minimize.
             considered_paths (List[str]): The list of paths that are relevant
                 to the current repair.
-                
+
         Returns:
             PStatement: The minimized statement.
         """
-        if isinstance(statement, PMkdir) and statement.path in considered_paths:
-            return statement
-        elif isinstance(statement, PCreate) and statement.path in considered_paths:
-            return statement
-        elif isinstance(statement, PWrite) and statement.path in considered_paths:
-            return statement
-        elif isinstance(statement, PRm) and statement.path in considered_paths:
+
+        def minimize_aux(
+            statement: "PStatement", considered_paths: List[PExpr]
+        ) -> "PStatement":
+            # FIXME compile statement.path
+            if isinstance(statement, PMkdir) and statement.path in considered_paths:
+                return statement
+            elif isinstance(statement, PCreate) and statement.path in considered_paths:
+                return statement
+            elif isinstance(statement, PWrite) and statement.path in considered_paths:
+                return statement
+            elif isinstance(statement, PRm) and statement.path in considered_paths:
+                return statement
+            elif isinstance(statement, PCp) and (
+                statement.src in considered_paths or statement.dst in considered_paths
+            ):
+                return statement
+            elif isinstance(statement, PChmod) and statement.path in considered_paths:
+                return statement
+            elif isinstance(statement, PChown) and statement.path in considered_paths:
+                return statement
+            elif isinstance(statement, PSeq):
+                lhs = minimize_aux(statement.lhs, considered_paths)
+                rhs = minimize_aux(statement.rhs, considered_paths)
+                if not isinstance(lhs, PSkip) and not isinstance(rhs, PSkip):
+                    return PSeq(lhs, rhs)
+                elif isinstance(lhs, PSkip):
+                    return rhs
+                elif isinstance(rhs, PSkip):
+                    return lhs
+            elif isinstance(statement, PLet):
+                body = minimize_aux(statement.body, considered_paths)
+                if not isinstance(body, PSkip):
+                    return PLet(
+                        statement.id,
+                        statement.expr,
+                        statement.label,
+                        body,
+                    )
+            elif isinstance(statement, PIf):
+                cons = minimize_aux(statement.cons, considered_paths)
+                alt = minimize_aux(statement.alt, considered_paths)
+                if not isinstance(cons, PSkip) or not isinstance(alt, PSkip):
+                    return PIf(
+                        statement.pred,
+                        cons,
+                        alt,
+                    )
+
             return PSkip()
-        elif isinstance(statement, PCp) and (statement.src in considered_paths or statement.dst in considered_paths):
-            return statement
-        elif isinstance(statement, PChmod) and statement.path in considered_paths:
-            return statement
-        elif isinstance(statement, PChown) and statement.path in considered_paths:
-            return statement
-        elif isinstance(statement, PSeq):
-            lhs = PStatement.minimize(statement.lhs, considered_paths)
-            rhs = PStatement.minimize(statement.rhs, considered_paths)
-            if not isinstance(lhs, PSkip) and not isinstance(rhs, PSkip):
-                return PSeq(lhs, rhs)
-            elif isinstance(lhs, PSkip):
-                return rhs
-            elif isinstance(rhs, PSkip):
-                return lhs
-        elif isinstance(statement, PLet):
-            body = PStatement.minimize(statement.body, considered_paths)
-            if not isinstance(body, PSkip):
-                return PLet(
-                    statement.id,
-                    statement.expr,
-                    statement.label,
-                    body,
-                )
-        elif isinstance(statement, PIf):
-            cons = PStatement.minimize(statement.cons, considered_paths)
-            alt = PStatement.minimize(statement.alt, considered_paths)
-            if not isinstance(cons, PSkip) or not isinstance(alt, PSkip):
-                return PIf(
-                    statement.pred,
-                    cons,
-                    alt,
-                )
-        
-        return PSkip()
-        
+
+        considered_paths = list(
+            map(lambda path: PEConst(const=PStr(value=path)), considered_paths)
+        )
+        return minimize_aux(statement, considered_paths)
+
     def to_filesystem(
         self,
         fs: Optional[FileSystemState] = None,
@@ -265,14 +277,17 @@ class PSkip(PStatement):
 class PMkdir(PStatement):
     path: PExpr
 
+
 @dataclass
 class PWrite(PStatement):
     path: PExpr
     content: PExpr
 
+
 @dataclass
 class PCreate(PStatement):
     path: PExpr
+
 
 @dataclass
 class PRm(PStatement):
