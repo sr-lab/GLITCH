@@ -200,6 +200,8 @@ class SecurityVisitor(RuleVisitor):
 
     def check_condition(self, c: ConditionStatement, file: str) -> List[Error]:
         errors = super().check_condition(c, file)
+        if c.type != ConditionStatement.ConditionType.SWITCH:
+            return errors
 
         condition = c
         has_default = False

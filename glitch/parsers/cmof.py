@@ -1282,14 +1282,28 @@ class PuppetParser(p.Parser):
             if lamb != "": return [res] + lamb 
             else: return res
         elif (isinstance(codeelement, puppetmodel.If)):
-            # FIXME Conditionals are not yet supported
-            res = list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), 
-                    codeelement.block))
+            condition = PuppetParser.__process_codeelement(
+                codeelement.condition, path, code
+            )
+            condition = ConditionStatement(
+                condition, ConditionStatement.ConditionType.IF
+            )
+            body = list(
+                map(
+                    lambda ce: PuppetParser.__process_codeelement(ce, path, code), 
+                    codeelement.block
+                )
+            )
+            for statement in body:
+                condition.add_statement(statement)
+            
             if (codeelement.elseblock is not None):
-                res += PuppetParser.__process_codeelement(codeelement.elseblock, path, code)
-            return res
+                condition.else_statement = PuppetParser.__process_codeelement(
+                    codeelement.elseblock, path, code
+                )
+            return condition
         elif (isinstance(codeelement, puppetmodel.Unless)):
-            # FIXME Conditionals are not yet supported
+            # FIXME Unless is not yet supported
             res = list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), 
                     codeelement.block))
             if (codeelement.elseblock is not None):
