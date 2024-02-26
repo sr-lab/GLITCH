@@ -19,7 +19,7 @@ class Stats(ABC):
             self.compute_attribute(c)
         elif isinstance(c, Variable):
             self.compute_variable(c)
-        elif isinstance(c, ConditionStatement):
+        elif isinstance(c, ConditionalStatement):
             self.compute_condition(c)
         elif isinstance(c, Comment):
             self.compute_comment(c)
@@ -57,7 +57,7 @@ class Stats(ABC):
         pass
 
     @abstractmethod
-    def compute_condition(self, c: ConditionStatement):
+    def compute_condition(self, c: ConditionalStatement):
         pass
 
     @abstractmethod
@@ -107,7 +107,7 @@ class FileStats(Stats):
     def compute_variable(self, v: Variable):
         pass
 
-    def compute_condition(self, c: ConditionStatement):
+    def compute_condition(self, c: ConditionalStatement):
         pass
 
     def compute_comment(self, c: Comment):

@@ -840,17 +840,17 @@ class ChefParser(p.Parser):
             if (ChefParser._check_node(ast, ["when"], 3) \
                     or ChefParser._check_node(ast, ["when"], 2)):
                 if self.condition is None:
-                    self.condition = ConditionStatement(
+                    self.condition = ConditionalStatement(
                         self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
-                        ConditionStatement.ConditionType.SWITCH
+                        ConditionalStatement.ConditionType.SWITCH
                     )
                     self.condition.code = ChefParser._get_source(ast, self.source)
                     self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
                     self.current_condition = self.condition
                 else:
-                    self.current_condition.else_statement = ConditionStatement(
+                    self.current_condition.else_statement = ConditionalStatement(
                         self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
-                        ConditionStatement.ConditionType.SWITCH
+                        ConditionalStatement.ConditionType.SWITCH
                     )
                     self.current_condition = self.current_condition.else_statement
                     self.current_condition.code = ChefParser._get_source(ast, self.source)
@@ -859,9 +859,9 @@ class ChefParser(p.Parser):
                     self.push([self.is_case_condition], ast.args[2])
                 return True
             elif (ChefParser._check_node(ast, ["else"], 1)):
-                self.current_condition.else_statement = ConditionStatement(
+                self.current_condition.else_statement = ConditionalStatement(
                     "",
-                    ConditionStatement.ConditionType.SWITCH,
+                    ConditionalStatement.ConditionType.SWITCH,
                     is_default=True
                 )
                 self.current_condition.else_statement.code = \
@@ -1069,7 +1069,7 @@ class PuppetParser(p.Parser):
             unit_block.add_unit_block(ce)
         elif isinstance(ce, Attribute):
             unit_block.add_attribute(ce)
-        elif isinstance(ce, ConditionStatement):
+        elif isinstance(ce, ConditionalStatement):
             unit_block.add_statement(ce)
         elif isinstance(ce, list):
             for c in ce:
@@ -1334,14 +1334,14 @@ class PuppetParser(p.Parser):
                 expressions = PuppetParser.__process_codeelement(match.expressions, path, code)
                 for expression in expressions:
                     if expression != "default":
-                        condition = ConditionStatement(control + "==" + expression, 
-                            ConditionStatement.ConditionType.SWITCH, False)
+                        condition = ConditionalStatement(control + "==" + expression, 
+                            ConditionalStatement.ConditionType.SWITCH, False)
                         condition.line, condition.column = match.line, match.col
                         condition.code = get_code(match)
                         conditions.append(condition)
                     else:
-                        condition = ConditionStatement("", 
-                            ConditionStatement.ConditionType.SWITCH, True)
+                        condition = ConditionalStatement("", 
+                            ConditionalStatement.ConditionType.SWITCH, True)
                         condition.line, condition.column = match.line, match.col
                         condition.code = get_code(match)
                         conditions.append(condition)
@@ -1360,16 +1360,16 @@ class PuppetParser(p.Parser):
                 value = PuppetParser.__process_codeelement(value_element, path, code)
 
                 if key != "default":
-                    condition = ConditionStatement(control + "==" + key, 
-                        ConditionStatement.ConditionType.SWITCH, False)
+                    condition = ConditionalStatement(control + "==" + key, 
+                        ConditionalStatement.ConditionType.SWITCH, False)
                     condition.line, condition.column = key_element.line, key_element.col
                     # HACK: the get_code function should be changed to receive a range
                     key_element.end_line, key_element.end_col = value_element.end_line, value_element.end_col
                     condition.code = get_code(key_element)
                     conditions.append(condition)
                 else:
-                    condition = ConditionStatement("", 
-                        ConditionStatement.ConditionType.SWITCH, True)
+                    condition = ConditionalStatement("", 
+                        ConditionalStatement.ConditionType.SWITCH, True)
                     condition.line, condition.column = key_element.line, key_element.col
                     key_element.end_line, key_element.end_col = value_element.end_line, value_element.end_col
                     condition.code = get_code(key_element)
