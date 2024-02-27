@@ -15,6 +15,7 @@ from z3 import (
     Sum,
     ModelRef,
     Z3PPObject,
+    Context
 )
 
 from glitch.repair.interactive.filesystem import FileSystemState
@@ -38,10 +39,15 @@ class PatchSolver:
         mode_fun: Fun
         owner_fun: Fun
 
-    def __init__(self, statement: PStatement, filesystem: FileSystemState):
+    def __init__(
+        self, 
+        statement: PStatement, 
+        filesystem: FileSystemState, 
+        ctx: Optional[Context] = None
+    ):
         # FIXME: the filesystem in here should be generated from
         # checking the affected paths in statement
-        self.solver = Solver()
+        self.solver = Solver(ctx=ctx)
         self.statement = statement
         self.sum_var = Int("sum")
         self.unchanged = {}
