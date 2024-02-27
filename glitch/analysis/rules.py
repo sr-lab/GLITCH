@@ -97,7 +97,7 @@ class RuleVisitor(ABC):
             return self.check_attribute(c, file)
         elif isinstance(c, Variable):
             return self.check_variable(c, file)
-        elif isinstance(c, ConditionStatement):
+        elif isinstance(c, ConditionalStatement):
             return self.check_condition(c, file)
         elif isinstance(c, Comment):
             return self.check_comment(c, file)
@@ -173,7 +173,7 @@ class RuleVisitor(ABC):
     def check_variable(self, v: Variable, file: str) -> list[Error]:
         pass
 
-    def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
+    def check_condition(self, c: ConditionalStatement, file: str) -> list[Error]:
         errors = []
 
         for s in c.statements:

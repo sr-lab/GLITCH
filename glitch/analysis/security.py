@@ -80,7 +80,7 @@ class SecurityVisitor(RuleVisitor):
                 continue
             for a in au.attributes:
                 values = [a.value]
-                if isinstance(a.value, ConditionStatement):
+                if isinstance(a.value, ConditionalStatement):
                     statements = a.value.statements
                     if len(statements) == 0:
                         continue
@@ -198,7 +198,7 @@ class SecurityVisitor(RuleVisitor):
                 break
         return errors
 
-    def check_condition(self, c: ConditionStatement, file: str) -> List[Error]:
+    def check_condition(self, c: ConditionalStatement, file: str) -> List[Error]:
         errors = super().check_condition(c, file)
 
         condition = c

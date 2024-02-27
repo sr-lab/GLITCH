@@ -22,7 +22,7 @@ class Block(CodeElement):
     def add_statement(self, statement):
         self.statements.append(statement)
 
-class ConditionStatement(Block):
+class ConditionalStatement(Block):
     class ConditionType(Enum):
         IF = 1
         SWITCH = 2
