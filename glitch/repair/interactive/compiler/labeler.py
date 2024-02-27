@@ -5,8 +5,9 @@ from glitch.tech import Tech
 
 
 class LabeledUnitBlock:
-    def __init__(self, script: UnitBlock):
+    def __init__(self, script: UnitBlock, tech: Tech):
         self.script = script
+        self.tech: Tech = tech
         self.__label = 0
         self.__label_to_var: Dict[int, str] = {}
         self.__codeelement_to_label: Dict[CodeElement, int] = {}
@@ -36,6 +37,12 @@ class LabeledUnitBlock:
 
     def get_codeelement(self, label: int) -> CodeElement:
         return self.__label_to_codeelement[label]
+    
+    def remove_label(self, codeelement: CodeElement):
+        label = self.get_label(codeelement)
+        del self.__codeelement_to_label[codeelement]
+        del self.__label_to_codeelement[label]
+        del self.__label_to_var[label]
 
     def get_var(self, label: int) -> str:
         return self.__label_to_var[label]
@@ -45,43 +52,52 @@ class LabeledUnitBlock:
 
 
 class GLITCHLabeler:
-    def label_atomic_unit(
-        labeled: LabeledUnitBlock, atomic_unit: AtomicUnit, tech: Tech
+    @staticmethod
+    def label_attribute(
+        labeled: LabeledUnitBlock, atomic_unit: AtomicUnit, attribute: Attribute
     ):
-        type = NamesDatabase.get_au_type(atomic_unit.type, tech)
-        for attribute in atomic_unit.attributes:
-            name = NamesDatabase.get_attr_name(attribute.name, type, tech)
-            labeled.add_label(name, attribute)
+        type = NamesDatabase.get_au_type(atomic_unit.type, labeled.tech)
+        name = NamesDatabase.get_attr_name(attribute.name, type, labeled.tech)
+        labeled.add_label(name, attribute)
 
+    @staticmethod
+    def label_atomic_unit(
+        labeled: LabeledUnitBlock, atomic_unit: AtomicUnit
+    ):
+        for attribute in atomic_unit.attributes:
+            GLITCHLabeler.label_attribute(labeled, atomic_unit, attribute)
+
+    @staticmethod
     def label_variable(labeled: LabeledUnitBlock, variable: Variable):
         labeled.add_label(variable.name, variable)
 
+    @staticmethod
     def label_conditional(
-        labeled: LabeledUnitBlock, conditional: ConditionStatement, tech: Tech
+        labeled: LabeledUnitBlock, conditional: ConditionStatement
     ):
         for statement in conditional.statements:
             if isinstance(statement, AtomicUnit):
-                GLITCHLabeler.label_atomic_unit(labeled, statement, tech)
+                GLITCHLabeler.label_atomic_unit(labeled, statement)
             elif isinstance(statement, ConditionStatement):
-                GLITCHLabeler.label_conditional(labeled, statement, tech)
+                GLITCHLabeler.label_conditional(labeled, statement)
             elif isinstance(statement, Variable):
                 GLITCHLabeler.label_variable(labeled, statement)
 
         if conditional.else_statement is not None:
             GLITCHLabeler.label_conditional(
-                labeled, conditional.else_statement, tech
+                labeled, conditional.else_statement
             )
 
     @staticmethod
     def label(script: UnitBlock, tech: Tech) -> LabeledUnitBlock:
-        labeled = LabeledUnitBlock(script)
+        labeled = LabeledUnitBlock(script, tech)
 
         for statement in script.statements:
             if isinstance(statement, ConditionStatement):
-                GLITCHLabeler.label_conditional(labeled, statement, tech)
+                GLITCHLabeler.label_conditional(labeled, statement)
 
         for atomic_unit in script.atomic_units:
-            GLITCHLabeler.label_atomic_unit(labeled, atomic_unit, tech)
+            GLITCHLabeler.label_atomic_unit(labeled, atomic_unit)
 
         for variable in script.variables:
             GLITCHLabeler.label_variable(labeled, variable)

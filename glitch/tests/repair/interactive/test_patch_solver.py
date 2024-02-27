@@ -51,6 +51,15 @@ if $x == 'absent' {
 }
 """
 
+puppet_script_5 = """
+file { '/etc/dhcp/dhclient-enter-hooks':
+  content => template('fuel/dhclient-enter-hooks.erb'),
+  owner   => 'root',
+  group   => 'root',
+  mode    => '0755',
+}
+"""
+
 ansible_script_1 = """
 ---
 - ansible.builtin.file:
@@ -269,3 +278,22 @@ def test_patch_solver_mode_ansible():
         == UNDEF
     )
     patch_solver_apply(solver, model, filesystem, Tech.ansible)
+
+
+def test_patch_solver_new_attribute_difficult_name():
+    """
+    This test requires the solver to create a new attribute "state".
+    However, the attribute "state" should be called "ensure" in Puppet,
+    so it is required to do the translation back.
+    """
+    setup_patch_solver(
+        puppet_script_5, PuppetParser(), UnitBlockType.script, Tech.puppet
+    )
+    global statement
+    filesystem = FileSystemState()
+    filesystem.state["/etc/dhcp/dhclient-enter-hooks"] = Nil()
+
+    solver = PatchSolver(statement, filesystem)
+    models = solver.solve()
+    assert len(models) == 1
+    patch_solver_apply(solver, models[0], filesystem, Tech.puppet)

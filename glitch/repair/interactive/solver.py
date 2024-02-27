@@ -24,6 +24,8 @@ from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.values import DefaultValue, UNDEF
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 from glitch.repr.inter import Attribute, AtomicUnit, CodeElement
+from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
+from glitch.repair.interactive.compiler.names_database import NamesDatabase
 
 Fun = Callable[[PStatement], Z3PPObject]
 
@@ -327,7 +329,15 @@ class PatchSolver:
 
             if self.__is_sketch(codeelement):
                 atomic_unit = labeled_script.get_sketch_location(codeelement)
+                codeelement.name = NamesDatabase.reverse_attr_name(
+                    codeelement.name, atomic_unit.type, labeled_script.tech
+                )
                 atomic_unit.attributes.append(codeelement)
+                # Remove sketch label and add regular label
+                labeled_script.remove_label(codeelement)
+                GLITCHLabeler.label_attribute(
+                    labeled_script, atomic_unit, codeelement
+                )
             else:
                 atomic_unit = PatchSolver.__find_atomic_unit(
                     labeled_script, codeelement
@@ -336,5 +346,8 @@ class PatchSolver:
             # Remove attributes that are not defined
             if value == UNDEF:
                 atomic_unit.attributes.remove(codeelement)
+                labeled_script.remove_label(codeelement)
             else:
-                codeelement.value = value
+                codeelement.value = NamesDatabase.reverse_attr_value(
+                    value, codeelement.name, atomic_unit.type, labeled_script.tech
+                )

@@ -20,6 +20,30 @@ class NamesDatabase:
             case "ansible.builtin.file", Tech.ansible:
                 return "file"
         return None
+    
+    @staticmethod
+    def reverse_attr_name(name: str, au_type: str, tech: Tech) -> Optional[str]:
+        match name, au_type, tech:
+            case "path", "file", Tech.puppet | Tech.chef | Tech.ansible:
+                return "path"
+            case "owner", "file", Tech.puppet | Tech.chef | Tech.ansible:
+                return "owner"
+            case "mode", "file", Tech.puppet | Tech.chef | Tech.ansible:
+                return "mode"
+            case "content", "file", Tech.puppet | Tech.chef | Tech.ansible:
+                return "content"
+            case "state", "file", Tech.ansible:
+                return "state"
+            case "state", "file", Tech.puppet:
+                return "ensure"
+        return None
+    
+    @staticmethod
+    def reverse_attr_value(value: str, name: str, au_type: str, tech: Tech) -> Optional[str]:
+        match value, name, au_type, tech:
+            case "present", "state", "file", Tech.ansible:
+                return "file"
+        return value
 
     @staticmethod
     def get_attr_name(name: str, au_type: str, tech: Tech) -> Optional[str]:
