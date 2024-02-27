@@ -9,6 +9,7 @@ from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 
 class DeltaPCompiler:
     _sketched = -1
+    _condition = 0
 
     class __Attributes:
         def __init__(self, au_type: str, tech: Tech):
@@ -29,7 +30,7 @@ class DeltaPCompiler:
                             self.au_type,
                             self.__tech,
                         ),
-                        self.__tech
+                        self.__tech,
                     ),
                     attribute,
                 )
@@ -56,7 +57,10 @@ class DeltaPCompiler:
             else:
                 # Creates sketched attribute
                 attr = Attribute(attr_name, PEUndef(), False)
-                attr.line, attr.column = DeltaPCompiler._sketched, DeltaPCompiler._sketched
+                attr.line, attr.column = (
+                    DeltaPCompiler._sketched,
+                    DeltaPCompiler._sketched,
+                )
                 DeltaPCompiler._sketched -= 1
                 labeled_script.add_sketch_location(atomic_unit, attr)
                 self.add_attribute(attr)
@@ -99,9 +103,7 @@ class DeltaPCompiler:
                     PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
                     PRm(path),
                     PIf(
-                        PEBinOP(
-                            PEq(), PEVar(state_var), PEConst(PStr("directory"))
-                        ),
+                        PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("directory"))),
                         PMkdir(path),
                         PSkip(),
                     ),
@@ -112,34 +114,95 @@ class DeltaPCompiler:
         content_label, content_var = attributes.create_label_var_pair(
             "content", atomic_unit, labeled_script
         )
-        statement = PSeq(statement, PLet(
-            content_var,
-            attributes["content"],
-            content_label,
-            PWrite(path, PEVar(content_var)),
-        ))
+        statement = PSeq(
+            statement,
+            PLet(
+                content_var,
+                attributes["content"],
+                content_label,
+                PWrite(path, PEVar(content_var)),
+            ),
+        )
 
         owner_label, owner_var = attributes.create_label_var_pair(
             "owner", atomic_unit, labeled_script
         )
-        statement = PSeq(statement, PLet(
-            owner_var,
-            attributes["owner"],
-            owner_label,
-            PChown(path, PEVar(owner_var)),
-        ))
+        statement = PSeq(
+            statement,
+            PLet(
+                owner_var,
+                attributes["owner"],
+                owner_label,
+                PChown(path, PEVar(owner_var)),
+            ),
+        )
 
         mode_label, mode_var = attributes.create_label_var_pair(
             "mode", atomic_unit, labeled_script
         )
-        statement = PSeq(statement, PLet(
-            mode_var,
-            attributes["mode"],
-            mode_label,
-            PChmod(path, PEVar(mode_var)),
-        ))
+        statement = PSeq(
+            statement,
+            PLet(
+                mode_var,
+                attributes["mode"],
+                mode_label,
+                PChmod(path, PEVar(mode_var)),
+            ),
+        )
 
         return statement
+
+    @staticmethod
+    def __handle_atomic_unit(
+        statement: PStatement, 
+        atomic_unit: AtomicUnit, 
+        tech: Tech, 
+        labeled_script: LabeledUnitBlock
+    ) -> PStatement:
+        attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
+            atomic_unit.type, tech
+        )
+        if attributes.au_type == "file":
+            for attribute in atomic_unit.attributes:
+                attributes.add_attribute(attribute)
+            statement = PSeq(
+                statement,
+                DeltaPCompiler.__handle_file(atomic_unit, attributes, labeled_script),
+            )
+        return statement
+
+    @staticmethod
+    def __handle_conditional(
+        conditional: ConditionStatement,
+        tech: Tech, 
+        labeled_script: LabeledUnitBlock
+    ) -> PStatement:
+        body = PSkip()
+        for stat in conditional.statements:
+            if isinstance(stat, AtomicUnit):
+                body = DeltaPCompiler.__handle_atomic_unit(
+                    body, stat, tech, labeled_script
+                )
+            elif isinstance(stat, ConditionStatement):
+                body = DeltaPCompiler.__handle_conditional(
+                    body, stat, tech, labeled_script
+                )
+        
+        else_statement = PSkip() 
+        if conditional.else_statement is not None:
+            else_statement = DeltaPCompiler.__handle_conditional(
+                conditional.else_statement, tech, labeled_script
+            )
+        
+        DeltaPCompiler._condition += 1
+        return PIf(
+            # FIXME: This creates a placeholder since we will branch every time
+            # There are cases that we can infer the value of the condition
+            # The creation of these variables should be done in the solver
+            PEVar(f"dejavu-condition-{DeltaPCompiler._condition}"), 
+            body, 
+            else_statement
+        )
 
     @staticmethod
     def compile(labeled_script: LabeledUnitBlock, tech: Tech) -> PStatement:
@@ -148,16 +211,17 @@ class DeltaPCompiler:
 
         # TODO: Handle variables
         # TODO: Handle scopes
+        # TODO: The statements will not be in the correct order
+
+        for stat in script.statements:
+            if isinstance(stat, ConditionStatement):
+                statement = PSeq(statement, DeltaPCompiler.__handle_conditional(
+                    stat, tech, labeled_script
+                ))
+
         for atomic_unit in script.atomic_units:
-            attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
-                atomic_unit.type, tech
+            statement = DeltaPCompiler.__handle_atomic_unit(
+                statement, atomic_unit, tech, labeled_script
             )
-            if attributes.au_type == "file":
-                for attribute in atomic_unit.attributes:
-                    attributes.add_attribute(attribute)
-                statement = PSeq(
-                    statement,
-                    DeltaPCompiler.__handle_file(atomic_unit, attributes, labeled_script)
-                )
 
         return statement

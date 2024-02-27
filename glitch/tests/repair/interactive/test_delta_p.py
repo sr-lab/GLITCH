@@ -231,6 +231,214 @@ def test_delta_p_compiler_puppet_2():
     )
 
 
+def test_delta_p_compiler_puppet_if():
+    puppet_script = """
+if $x == 'absent' {
+    file {'/usr/sbin/policy-rc.d':
+        ensure  => absent,
+    }
+} else {
+    file {'/usr/sbin/policy-rc.d':
+        ensure  => present,
+    }
+}
+    """
+
+    with NamedTemporaryFile() as f:
+        f.write(puppet_script.encode())
+        f.flush()
+        ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
+        labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
+        statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
+
+    assert statement == PSeq(
+        lhs=PSkip(),
+        rhs=PIf(
+            pred=PEVar(id="dejavu-condition-2"),
+            cons=PSeq(
+                lhs=PSkip(),
+                rhs=PSeq(
+                    lhs=PSeq(
+                        lhs=PSeq(
+                            lhs=PLet(
+                                id="state-0",
+                                expr=PEConst(const=PStr(value="absent")),
+                                label=0,
+                                body=PIf(
+                                    pred=PEBinOP(
+                                        op=PEq(),
+                                        lhs=PEVar(id="state-0"),
+                                        rhs=PEConst(const=PStr(value="present")),
+                                    ),
+                                    cons=PCreate(
+                                        path=PEConst(
+                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        )
+                                    ),
+                                    alt=PIf(
+                                        pred=PEBinOP(
+                                            op=PEq(),
+                                            lhs=PEVar(id="state-0"),
+                                            rhs=PEConst(const=PStr(value="absent")),
+                                        ),
+                                        cons=PRm(
+                                            path=PEConst(
+                                                const=PStr(
+                                                    value="/usr/sbin/policy-rc.d"
+                                                )
+                                            )
+                                        ),
+                                        alt=PIf(
+                                            pred=PEBinOP(
+                                                op=PEq(),
+                                                lhs=PEVar(id="state-0"),
+                                                rhs=PEConst(
+                                                    const=PStr(value="directory")
+                                                ),
+                                            ),
+                                            cons=PMkdir(
+                                                path=PEConst(
+                                                    const=PStr(
+                                                        value="/usr/sbin/policy-rc.d"
+                                                    )
+                                                )
+                                            ),
+                                            alt=PSkip(),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            rhs=PLet(
+                                id="sketched-content-2",
+                                expr=PEUndef(),
+                                label=2,
+                                body=PWrite(
+                                    path=PEConst(
+                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    ),
+                                    content=PEVar(id="sketched-content-2"),
+                                ),
+                            ),
+                        ),
+                        rhs=PLet(
+                            id="sketched-owner-3",
+                            expr=PEUndef(),
+                            label=3,
+                            body=PChown(
+                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                                owner=PEVar(id="sketched-owner-3"),
+                            ),
+                        ),
+                    ),
+                    rhs=PLet(
+                        id="sketched-mode-4",
+                        expr=PEUndef(),
+                        label=4,
+                        body=PChmod(
+                            path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                            mode=PEVar(id="sketched-mode-4"),
+                        ),
+                    ),
+                ),
+            ),
+            alt=PIf(
+                pred=PEVar(id="dejavu-condition-1"),
+                cons=PSeq(
+                    lhs=PSkip(),
+                    rhs=PSeq(
+                        lhs=PSeq(
+                            lhs=PSeq(
+                                lhs=PLet(
+                                    id="state-1",
+                                    expr=PEConst(const=PStr(value="present")),
+                                    label=1,
+                                    body=PIf(
+                                        pred=PEBinOP(
+                                            op=PEq(),
+                                            lhs=PEVar(id="state-1"),
+                                            rhs=PEConst(const=PStr(value="present")),
+                                        ),
+                                        cons=PCreate(
+                                            path=PEConst(
+                                                const=PStr(
+                                                    value="/usr/sbin/policy-rc.d"
+                                                )
+                                            )
+                                        ),
+                                        alt=PIf(
+                                            pred=PEBinOP(
+                                                op=PEq(),
+                                                lhs=PEVar(id="state-1"),
+                                                rhs=PEConst(const=PStr(value="absent")),
+                                            ),
+                                            cons=PRm(
+                                                path=PEConst(
+                                                    const=PStr(
+                                                        value="/usr/sbin/policy-rc.d"
+                                                    )
+                                                )
+                                            ),
+                                            alt=PIf(
+                                                pred=PEBinOP(
+                                                    op=PEq(),
+                                                    lhs=PEVar(id="state-1"),
+                                                    rhs=PEConst(
+                                                        const=PStr(value="directory")
+                                                    ),
+                                                ),
+                                                cons=PMkdir(
+                                                    path=PEConst(
+                                                        const=PStr(
+                                                            value="/usr/sbin/policy-rc.d"
+                                                        )
+                                                    )
+                                                ),
+                                                alt=PSkip(),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                rhs=PLet(
+                                    id="sketched-content-5",
+                                    expr=PEUndef(),
+                                    label=5,
+                                    body=PWrite(
+                                        path=PEConst(
+                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        ),
+                                        content=PEVar(id="sketched-content-5"),
+                                    ),
+                                ),
+                            ),
+                            rhs=PLet(
+                                id="sketched-owner-6",
+                                expr=PEUndef(),
+                                label=6,
+                                body=PChown(
+                                    path=PEConst(
+                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    ),
+                                    owner=PEVar(id="sketched-owner-6"),
+                                ),
+                            ),
+                        ),
+                        rhs=PLet(
+                            id="sketched-mode-7",
+                            expr=PEUndef(),
+                            label=7,
+                            body=PChmod(
+                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                                mode=PEVar(id="sketched-mode-7"),
+                            ),
+                        ),
+                    ),
+                ),
+                alt=PSkip(),
+            ),
+        ),
+    )
+
+
 def test_delta_p_to_filesystem():
     statement = PSeq(
         PSeq(

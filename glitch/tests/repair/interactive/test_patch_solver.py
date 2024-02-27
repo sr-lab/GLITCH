@@ -39,6 +39,18 @@ file { 'test2':
 }
 """
 
+puppet_script_4 = """
+if $x == 'absent' {
+    file {'/usr/sbin/policy-rc.d':
+        ensure  => absent,
+    }
+} else {
+    file {'/usr/sbin/policy-rc.d':
+        ensure  => present,
+    }
+}
+"""
+
 ansible_script_1 = """
 ---
 - ansible.builtin.file:
@@ -59,6 +71,7 @@ def setup_patch_solver(
     tech: Tech,
 ):
     global labeled_script, statement
+    DeltaPCompiler._condition = 0
     with NamedTemporaryFile() as f:
         f.write(script.encode())
         f.flush()
@@ -76,8 +89,31 @@ def patch_solver_apply(
 
 
 # TODO: Refactor tests
-# TODO: Remove sketched attributes that are not required
-        
+    
+def test_patch_solver_if():
+    setup_patch_solver(
+        puppet_script_4, PuppetParser(), UnitBlockType.script, Tech.puppet
+    )
+    filesystem = FileSystemState()
+    filesystem.state["/usr/sbin/policy-rc.d"] = File(None, None, None)
+
+    solver = PatchSolver(statement, filesystem)
+    models = solver.solve()
+    assert len(models) == 2
+
+    assert models[0][solver.sum_var] == 8
+    assert models[0][solver.vars["dejavu-condition-1"]]
+    assert not models[0][solver.vars["dejavu-condition-2"]]
+    assert models[0][solver.vars["state-0"]] == "absent"
+    assert models[0][solver.vars["state-1"]] == "present"
+
+    assert models[1][solver.sum_var] == 7
+    assert not models[1][solver.vars["dejavu-condition-1"]]
+    assert models[1][solver.vars["dejavu-condition-2"]]
+    assert models[1][solver.vars["state-0"]] == "present"
+    assert models[1][solver.vars["state-1"]] == "present"
+
+
 def test_patch_solver_mode():
     setup_patch_solver(
         puppet_script_1, PuppetParser(), UnitBlockType.script, Tech.puppet

@@ -45,19 +45,45 @@ class LabeledUnitBlock:
 
 
 class GLITCHLabeler:
+    def label_atomic_unit(
+        labeled: LabeledUnitBlock, atomic_unit: AtomicUnit, tech: Tech
+    ):
+        type = NamesDatabase.get_au_type(atomic_unit.type, tech)
+        for attribute in atomic_unit.attributes:
+            name = NamesDatabase.get_attr_name(attribute.name, type, tech)
+            labeled.add_label(name, attribute)
+
+    def label_variable(labeled: LabeledUnitBlock, variable: Variable):
+        labeled.add_label(variable.name, variable)
+
+    def label_conditional(
+        labeled: LabeledUnitBlock, conditional: ConditionStatement, tech: Tech
+    ):
+        for statement in conditional.statements:
+            if isinstance(statement, AtomicUnit):
+                GLITCHLabeler.label_atomic_unit(labeled, statement, tech)
+            elif isinstance(statement, ConditionStatement):
+                GLITCHLabeler.label_conditional(labeled, statement, tech)
+            elif isinstance(statement, Variable):
+                GLITCHLabeler.label_variable(labeled, statement)
+
+        if conditional.else_statement is not None:
+            GLITCHLabeler.label_conditional(
+                labeled, conditional.else_statement, tech
+            )
+
     @staticmethod
     def label(script: UnitBlock, tech: Tech) -> LabeledUnitBlock:
         labeled = LabeledUnitBlock(script)
 
+        for statement in script.statements:
+            if isinstance(statement, ConditionStatement):
+                GLITCHLabeler.label_conditional(labeled, statement, tech)
+
         for atomic_unit in script.atomic_units:
-            type = NamesDatabase.get_au_type(atomic_unit.type, tech)
-            for attribute in atomic_unit.attributes:
-                name = NamesDatabase.get_attr_name(
-                    attribute.name, type, tech
-                )
-                labeled.add_label(name, attribute)
+            GLITCHLabeler.label_atomic_unit(labeled, atomic_unit, tech)
 
         for variable in script.variables:
-            labeled.add_label(variable.name, variable)
+            GLITCHLabeler.label_variable(labeled, variable)
 
         return labeled

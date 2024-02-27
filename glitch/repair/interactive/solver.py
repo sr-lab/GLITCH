@@ -3,9 +3,11 @@ from typing import List, Callable, Tuple
 from z3 import (
     Solver,
     sat,
+    BoolRef,
     If,
     StringVal,
     String,
+    Bool,
     And,
     Not,
     Int,
@@ -95,6 +97,9 @@ class PatchSolver:
     def __compile_expr(self, expr: PExpr):
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return StringVal(expr.const.value)
+        elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
+            self.vars[expr.id] = Bool(expr.id)
+            return self.vars[expr.id]
         elif isinstance(expr, PEVar):
             self.vars[expr.id] = String(expr.id)
             return self.vars[expr.id]
@@ -147,7 +152,9 @@ class PatchSolver:
         elif isinstance(statement, PWrite):
             path = self.__compile_expr(statement.path)
             funs.contents_fun = lambda p: If(
-                p == path, self.__compile_expr(statement.content), previous_contents_fun(p)
+                p == path,
+                self.__compile_expr(statement.content),
+                previous_contents_fun(p),
             )
         elif isinstance(statement, PRm):
             path = self.__compile_expr(statement.path)
@@ -213,6 +220,19 @@ class PatchSolver:
             constraints += body_constraints
         elif isinstance(statement, PIf):
             condition = self.__compile_expr(statement.pred)
+
+            if (
+                isinstance(condition, BoolRef)
+                and str(condition).startswith("dejavu-condition")
+                and isinstance(statement.alt, PIf)
+            ):
+                alt_condition = self.__compile_expr(statement.alt.pred)
+                if (
+                    isinstance(alt_condition, BoolRef)
+                    and str(alt_condition).startswith("dejavu-condition")
+                ):
+                    self.solver.add(Or(Not(condition), Not(alt_condition)))
+
             cons_constraints, cons_funs = self.__generate_soft_constraints(
                 statement.cons, funs
             )
@@ -233,6 +253,10 @@ class PatchSolver:
                 condition, cons_funs.owner_fun(p), alt_funs.owner_fun(p)
             )
 
+            # The alt is handled when the else is processed
+            for label in self.__collect_labels(statement.cons):
+                self.solver.add(Or(condition, self.unchanged[label] == 1))
+
             # NOTE: This works because the only constraints created should
             # always be added. Its kinda of an HACK
             for constraint in cons_constraints:
@@ -248,7 +272,7 @@ class PatchSolver:
         models = []
 
         while True:
-            lo, hi = 0, len(self.unchanged)
+            lo, hi = 0, len(self.unchanged) + 1
             model = None
 
             while lo < hi:
@@ -258,9 +282,7 @@ class PatchSolver:
                 if self.solver.check() == sat:
                     lo = mid + 1
                     model = self.solver.model()
-                    models.append(model)
                     self.solver.pop()
-                    self.solver.add(Not(And([v == model[v] for v in self.vars.values()])))
                     continue
                 else:
                     hi = mid
@@ -268,6 +290,11 @@ class PatchSolver:
 
             if model is None:
                 break
+
+            models.append(model)
+            # Removes conditional variables that were not used
+            vars = filter(lambda v: model[v] is not None, self.vars.values())
+            self.solver.add(Not(And([v == model[v] for v in vars])))
 
         return models
 
@@ -278,7 +305,7 @@ class PatchSolver:
             if attribute in atomic_unit.attributes:
                 return atomic_unit
         raise ValueError(f"Attribute {attribute} not found in the script")
-    
+
     # TODO: improve way to identify sketch
     def __is_sketch(self, codeelement: CodeElement) -> bool:
         return codeelement.line < 0 and codeelement.column < 0
