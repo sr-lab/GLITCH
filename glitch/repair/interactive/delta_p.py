@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from abc import ABC
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from glitch.repair.interactive.filesystem import *
 
@@ -133,6 +133,8 @@ class PStatement(ABC):
         raise RuntimeError(f"Unsupported expression, got {expr}")
 
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr:
+        if isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition"):
+            return expr
         if isinstance(expr, PEVar):
             return self.__eval(vars[expr.id], vars)
         elif isinstance(expr, PEUndef) or isinstance(expr, PEConst):
@@ -215,57 +217,76 @@ class PStatement(ABC):
         )
         return minimize_aux(statement, considered_paths)
 
-    def to_filesystem(
+    def to_filesystems(
         self,
-        fs: Optional[FileSystemState] = None,
+        fss: Union[FileSystemState, List[FileSystemState]] = [],
         vars: Optional[Dict[str, PExpr]] = None,
-    ) -> FileSystemState:
-        if fs is None:
-            fs = FileSystemState()
+    ) -> List[FileSystemState]:
+        if isinstance(fss, FileSystemState):
+            fss = [fss.copy()]
+        elif fss == []:
+            fss = [FileSystemState()]
+        
         if vars is None:
             vars = {}
 
-        get_str = lambda expr: self.__get_str(expr, vars)
+        res_fss = []
+        for fs in fss:
+            get_str = lambda expr: self.__get_str(expr, vars)
 
-        if isinstance(self, PSkip):
-            return fs
-        elif isinstance(self, PMkdir):
-            fs.state[get_str(self.path)] = Dir(None, None)
-        elif isinstance(self, PCreate):
-            fs.state[get_str(self.path)] = File(None, None, None)
-        elif isinstance(self, PWrite):
-            path, content = get_str(self.path), get_str(self.content)
-            if isinstance(fs.state[path], File):
-                fs.state[path].content = content
-        elif isinstance(self, PRm):
-            fs.state[get_str(self.path)] = Nil()
-        elif isinstance(self, PCp):
-            fs.state[get_str(self.dst)] = fs.state[get_str(self.src)]
-        elif isinstance(self, PChmod):
-            path, mode = get_str(self.path), get_str(self.mode)
-            if isinstance(fs.state[path], (File, Dir)):
-                fs.state[path].mode = mode
-        elif isinstance(self, PChown):
-            path, owner = get_str(self.path), get_str(self.owner)
-            if isinstance(fs.state[path], (File, Dir)):
-                fs.state[path].owner = owner
-        elif isinstance(self, PSeq):
-            fs = self.lhs.to_filesystem(fs, vars)
-            fs = self.rhs.to_filesystem(fs, vars)
-        elif isinstance(self, PLet):
-            vars[self.id] = self.expr
-            fs = self.body.to_filesystem(fs, vars)
-        elif isinstance(self, PIf):
-            eval_pred = self.__eval(self.pred, vars)
-            if eval_pred == PEConst(PBool(True)):
-                fs = self.cons.to_filesystem(fs, vars)
-            elif eval_pred == PEConst(PBool(False)):
-                fs = self.alt.to_filesystem(fs, vars)
-            else:
-                # FIXME: Generate the two cases and return a list
-                raise RuntimeError(f"Expected boolean, got {eval_pred}")
+            if isinstance(self, PSkip):
+                pass
+            elif isinstance(self, PMkdir):
+                fs.state[get_str(self.path)] = Dir(None, None)
+            elif isinstance(self, PCreate):
+                fs.state[get_str(self.path)] = File(None, None, None)
+            elif isinstance(self, PWrite):
+                path, content = get_str(self.path), get_str(self.content)
+                if isinstance(fs.state[path], File):
+                    fs.state[path].content = content
+            elif isinstance(self, PRm):
+                fs.state[get_str(self.path)] = Nil()
+            elif isinstance(self, PCp):
+                fs.state[get_str(self.dst)] = fs.state[get_str(self.src)]
+            elif isinstance(self, PChmod):
+                path, mode = get_str(self.path), get_str(self.mode)
+                if isinstance(fs.state[path], (File, Dir)):
+                    fs.state[path].mode = mode
+            elif isinstance(self, PChown):
+                path, owner = get_str(self.path), get_str(self.owner)
+                if isinstance(fs.state[path], (File, Dir)):
+                    fs.state[path].owner = owner
+            elif isinstance(self, PSeq):
+                fss_lhs = self.lhs.to_filesystems(fs, vars)
+                for fs_lhs in fss_lhs:
+                    res_fss.extend(self.rhs.to_filesystems(fs_lhs, vars))
+                continue
+            elif isinstance(self, PLet):
+                vars[self.id] = self.expr
+                fss_body = self.body.to_filesystems(fs, vars)
+                res_fss.extend(fss_body)
+                continue
+            elif isinstance(self, PIf):
+                eval_pred = self.__eval(self.pred, vars)
+                cons_fss = self.cons.to_filesystems(fs, vars)
+                alt_fss = self.alt.to_filesystems(fs, vars)
 
-        return fs
+                if eval_pred == PEConst(PBool(True)):
+                    res_fss.extend(cons_fss)
+                elif eval_pred == PEConst(PBool(False)):
+                    res_fss.extend(alt_fss)
+                else:
+                    if self.cons != PSkip():
+                        res_fss.extend(cons_fss)
+                    if self.alt != PSkip():
+                        res_fss.extend(alt_fss)
+                    if self.cons == PSkip() and self.alt == PSkip():
+                        res_fss.append(fs)
+                continue
+            
+            res_fss.append(fs)
+
+        return res_fss
 
 
 @dataclass

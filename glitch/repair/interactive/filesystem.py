@@ -34,3 +34,8 @@ class Nil(State):
 class FileSystemState:
     def __init__(self):
         self.state: Dict[str, State] = {}
+
+    def copy(self):
+        fs = FileSystemState()
+        fs.state = self.state.copy()
+        return fs

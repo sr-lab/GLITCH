@@ -75,7 +75,7 @@ class PatchSolver:
     def __get_default_fs(self):
         # Returns the current file system state for all the files affected by the script
         # TODO: For now we will consider only the files defined in the script
-        fs = self.statement.to_filesystem()
+        fs = self.statement.to_filesystems()
         affected_files = fs.state.keys()
         return get_file_system_state(affected_files)
 
@@ -293,8 +293,8 @@ class PatchSolver:
 
             models.append(model)
             # Removes conditional variables that were not used
-            vars = filter(lambda v: model[v] is not None, self.vars.values())
-            self.solver.add(Not(And([v == model[v] for v in vars])))
+            dvars = filter(lambda v: model[v] is not None, self.vars.values())
+            self.solver.add(Not(And([v == model[v] for v in dvars])))
 
         return models
 

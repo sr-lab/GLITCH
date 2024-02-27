@@ -81,11 +81,17 @@ def setup_patch_solver(
 
 
 def patch_solver_apply(
-    solver: PatchSolver, model: ModelRef, filesystem: FileSystemState, tech: Tech
+    solver: PatchSolver, 
+    model: ModelRef, 
+    filesystem: FileSystemState, 
+    tech: Tech,
+    n_filesystems: int = 1
 ):
     solver.apply_patch(model, labeled_script)
     statement = DeltaPCompiler.compile(labeled_script, tech)
-    assert statement.to_filesystem().state == filesystem.state
+    filesystems = statement.to_filesystems()
+    assert len(filesystems) == n_filesystems
+    assert any(fs.state == filesystem.state for fs in filesystems)
 
 
 # TODO: Refactor tests
@@ -112,6 +118,8 @@ def test_patch_solver_if():
     assert models[1][solver.vars["dejavu-condition-2"]]
     assert models[1][solver.vars["state-0"]] == "present"
     assert models[1][solver.vars["state-1"]] == "present"
+
+    patch_solver_apply(solver, models[0], filesystem, Tech.puppet, n_filesystems=2)
 
 
 def test_patch_solver_mode():
