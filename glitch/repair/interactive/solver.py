@@ -23,7 +23,7 @@ from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.values import DefaultValue, UNDEF
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repr.inter import Attribute, AtomicUnit, CodeElement
+from glitch.repr.inter import Attribute, AtomicUnit, CodeElement, Block
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
 
@@ -303,9 +303,25 @@ class PatchSolver:
     def __find_atomic_unit(
         labeled_script: LabeledUnitBlock, attribute: Attribute
     ) -> AtomicUnit:
-        for atomic_unit in labeled_script.script.atomic_units:
-            if attribute in atomic_unit.attributes:
-                return atomic_unit
+        def aux_find_atomic_unit(
+            code_element: CodeElement
+        ) -> AtomicUnit:
+            if isinstance(code_element, AtomicUnit) and attribute in code_element.attributes:
+                return code_element
+            elif isinstance(code_element, Block):
+                for statement in code_element.statements:
+                    result = aux_find_atomic_unit(statement)
+                    if result is not None:
+                        return result
+            return None
+
+        code_elements = (labeled_script.script.statements 
+                         + labeled_script.script.atomic_units)
+        for code_element in code_elements:
+            result = aux_find_atomic_unit(code_element)
+            if result is not None:
+                return result
+
         raise ValueError(f"Attribute {attribute} not found in the script")
 
     # TODO: improve way to identify sketch

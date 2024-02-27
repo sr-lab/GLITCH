@@ -289,7 +289,6 @@ def test_patch_solver_new_attribute_difficult_name():
     setup_patch_solver(
         puppet_script_5, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
-    global statement
     filesystem = FileSystemState()
     filesystem.state["/etc/dhcp/dhclient-enter-hooks"] = Nil()
 
