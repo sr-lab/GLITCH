@@ -5,6 +5,7 @@ from glitch.repr.inter import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
+from glitch.repair.interactive.values import DefaultValue
 
 
 class DeltaPCompiler:
@@ -39,7 +40,12 @@ class DeltaPCompiler:
             return self.__attributes.get(attr_name, (None, None))[1]
 
         def get_attribute_value(self, attr_name: str) -> PExpr:
-            return self.__attributes.get(attr_name, (PEUndef(), None))[0]
+            default = PEUndef()
+            if attr_name == "state":
+                default = DefaultValue.DEFAULT_STATE
+            # FIXME: probably the other attributes should also have their
+            # default values
+            return self.__attributes.get(attr_name, (default, None))[0]
 
         def __getitem__(self, key: str) -> PExpr:
             return self.get_attribute_value(key)

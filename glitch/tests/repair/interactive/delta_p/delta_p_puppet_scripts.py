@@ -63,9 +63,7 @@ delta_p_puppet = PSeq(
                     label=1,
                     body=PWrite(
                         path=PEConst(
-                            const=PStr(
-                                value="/var/www/customers/public_html/index.php"
-                            )
+                            const=PStr(value="/var/www/customers/public_html/index.php")
                         ),
                         content=PEVar(id="content-1"),
                     ),
@@ -123,9 +121,7 @@ delta_p_puppet_2 = PSeq(
                                 rhs=PEConst(const=PStr(value="absent")),
                             ),
                             cons=PRm(
-                                path=PEConst(
-                                    const=PStr(value="/usr/sbin/policy-rc.d")
-                                )
+                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))
                             ),
                             alt=PIf(
                                 pred=PEBinOP(
@@ -208,18 +204,14 @@ delta_p_puppet_if = PSeq(
                                     ),
                                     cons=PRm(
                                         path=PEConst(
-                                            const=PStr(
-                                                value="/usr/sbin/policy-rc.d"
-                                            )
+                                            const=PStr(value="/usr/sbin/policy-rc.d")
                                         )
                                     ),
                                     alt=PIf(
                                         pred=PEBinOP(
                                             op=PEq(),
                                             lhs=PEVar(id="state-0"),
-                                            rhs=PEConst(
-                                                const=PStr(value="directory")
-                                            ),
+                                            rhs=PEConst(const=PStr(value="directory")),
                                         ),
                                         cons=PMkdir(
                                             path=PEConst(
@@ -238,9 +230,7 @@ delta_p_puppet_if = PSeq(
                             expr=PEUndef(),
                             label=2,
                             body=PWrite(
-                                path=PEConst(
-                                    const=PStr(value="/usr/sbin/policy-rc.d")
-                                ),
+                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
                                 content=PEVar(id="sketched-content-2"),
                             ),
                         ),
@@ -285,9 +275,7 @@ delta_p_puppet_if = PSeq(
                                     ),
                                     cons=PCreate(
                                         path=PEConst(
-                                            const=PStr(
-                                                value="/usr/sbin/policy-rc.d"
-                                            )
+                                            const=PStr(value="/usr/sbin/policy-rc.d")
                                         )
                                     ),
                                     alt=PIf(
@@ -340,9 +328,7 @@ delta_p_puppet_if = PSeq(
                             expr=PEUndef(),
                             label=6,
                             body=PChown(
-                                path=PEConst(
-                                    const=PStr(value="/usr/sbin/policy-rc.d")
-                                ),
+                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
                                 owner=PEVar(id="sketched-owner-6"),
                             ),
                         ),
@@ -359,6 +345,82 @@ delta_p_puppet_if = PSeq(
                 ),
             ),
             alt=PSkip(),
+        ),
+    ),
+)
+
+
+delta_p_puppet_default_state = PSeq(
+    lhs=PSkip(),
+    rhs=PSeq(
+        lhs=PSeq(
+            lhs=PSeq(
+                lhs=PLet(
+                    id="sketched-state-4",
+                    expr=PEConst(const=PStr(value="present")),
+                    label=4,
+                    body=PIf(
+                        pred=PEBinOP(
+                            op=PEq(),
+                            lhs=PEVar(id="sketched-state-4"),
+                            rhs=PEConst(const=PStr(value="present")),
+                        ),
+                        cons=PCreate(
+                            path=PEConst(const=PStr(value="/root/.ssh/config"))
+                        ),
+                        alt=PIf(
+                            pred=PEBinOP(
+                                op=PEq(),
+                                lhs=PEVar(id="sketched-state-4"),
+                                rhs=PEConst(const=PStr(value="absent")),
+                            ),
+                            cons=PRm(
+                                path=PEConst(const=PStr(value="/root/.ssh/config"))
+                            ),
+                            alt=PIf(
+                                pred=PEBinOP(
+                                    op=PEq(),
+                                    lhs=PEVar(id="sketched-state-4"),
+                                    rhs=PEConst(const=PStr(value="directory")),
+                                ),
+                                cons=PMkdir(
+                                    path=PEConst(const=PStr(value="/root/.ssh/config"))
+                                ),
+                                alt=PSkip(),
+                            ),
+                        ),
+                    ),
+                ),
+                rhs=PLet(
+                    id="content-0",
+                    expr=PEConst(
+                        const=PStr(value="template('fuel/root_ssh_config.erb')")
+                    ),
+                    label=0,
+                    body=PWrite(
+                        path=PEConst(const=PStr(value="/root/.ssh/config")),
+                        content=PEVar(id="content-0"),
+                    ),
+                ),
+            ),
+            rhs=PLet(
+                id="owner-1",
+                expr=PEConst(const=PStr(value="root")),
+                label=1,
+                body=PChown(
+                    path=PEConst(const=PStr(value="/root/.ssh/config")),
+                    owner=PEVar(id="owner-1"),
+                ),
+            ),
+        ),
+        rhs=PLet(
+            id="mode-3",
+            expr=PEConst(const=PStr(value="0600")),
+            label=3,
+            body=PChmod(
+                path=PEConst(const=PStr(value="/root/.ssh/config")),
+                mode=PEVar(id="mode-3"),
+            ),
         ),
     ),
 )
