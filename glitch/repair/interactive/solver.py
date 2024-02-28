@@ -298,6 +298,7 @@ class PatchSolver:
                     lo = mid + 1
                     model = self.solver.model()
                     self.solver.pop()
+                    elapsed = time.time() - start
                     continue
                 else:
                     hi = mid
