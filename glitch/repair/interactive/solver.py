@@ -45,11 +45,13 @@ class PatchSolver:
         self, 
         statement: PStatement, 
         filesystem: FileSystemState, 
+        timeout: int = 180,
         ctx: Optional[Context] = None
     ):
         # FIXME: the filesystem in here should be generated from
         # checking the affected paths in statement
         self.solver = Solver(ctx=ctx)
+        self.timeout = timeout
         self.statement = statement
         self.sum_var = Int("sum")
         self.unchanged = {}
@@ -284,11 +286,11 @@ class PatchSolver:
         start = time.time()
         elapsed = 0
 
-        while True and elapsed < 180:
+        while True and elapsed < self.timeout:
             lo, hi = 0, len(self.unchanged) + 1
             model = None
 
-            while lo < hi and elapsed < 180:
+            while lo < hi and elapsed < self.timeout:
                 mid = (lo + hi) // 2
                 self.solver.push()
                 self.solver.add(self.sum_var >= mid)
