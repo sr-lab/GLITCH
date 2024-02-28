@@ -313,7 +313,7 @@ class PatchSolver:
             dvars = filter(lambda v: model[v] is not None, self.vars.values())
             self.solver.add(Not(And([v == model[v] for v in dvars])))
 
-        if elapsed >= 180:
+        if elapsed >= self.timeout:
             return None
         return models
 
