@@ -62,7 +62,15 @@ class DeltaPCompiler:
                 label = labeled_script.get_label(attr)
             else:
                 # Creates sketched attribute
-                attr = Attribute(attr_name, PEUndef(), False)
+                if attr_name == "state": # HACK
+                    attr = Attribute(
+                        attr_name, 
+                        DefaultValue.DEFAULT_STATE.const.value, 
+                        False
+                    )
+                else:
+                    attr = Attribute(attr_name, PEUndef(), False)
+                
                 attr.line, attr.column = (
                     DeltaPCompiler._sketched,
                     DeltaPCompiler._sketched,
