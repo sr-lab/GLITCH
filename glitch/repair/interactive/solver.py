@@ -233,17 +233,17 @@ class PatchSolver:
         elif isinstance(statement, PIf):
             condition = self.__compile_expr(statement.pred)
 
-            if (
-                isinstance(condition, BoolRef)
-                and str(condition).startswith("dejavu-condition")
-                and isinstance(statement.alt, PIf)
-            ):
-                alt_condition = self.__compile_expr(statement.alt.pred)
-                if (
-                    isinstance(alt_condition, BoolRef)
-                    and str(alt_condition).startswith("dejavu-condition")
-                ):
-                    self.solver.add(Or(Not(condition), Not(alt_condition)))
+            # if (
+            #     isinstance(condition, BoolRef)
+            #     and str(condition).startswith("dejavu-condition")
+            #     and isinstance(statement.alt, PIf)
+            # ):
+            #     alt_condition = self.__compile_expr(statement.alt.pred)
+            #     if (
+            #         isinstance(alt_condition, BoolRef)
+            #         and str(alt_condition).startswith("dejavu-condition")
+            #     ):
+            #         self.solver.add(Or(Not(condition), Not(alt_condition)))
 
             cons_constraints, cons_funs = self.__generate_soft_constraints(
                 statement.cons, funs
