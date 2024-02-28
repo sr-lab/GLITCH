@@ -1,3 +1,5 @@
+import time
+
 from copy import deepcopy
 from typing import List, Callable, Tuple
 from z3 import (
@@ -276,14 +278,17 @@ class PatchSolver:
 
         return constraints, funs
 
-    def solve(self) -> List[ModelRef]:
+    def solve(self) -> Optional[List[ModelRef]]:
         models = []
 
-        while True:
+        start = time.time()
+        elapsed = 0
+
+        while True and elapsed < 180:
             lo, hi = 0, len(self.unchanged) + 1
             model = None
 
-            while lo < hi:
+            while lo < hi and elapsed < 180:
                 mid = (lo + hi) // 2
                 self.solver.push()
                 self.solver.add(self.sum_var >= mid)
@@ -295,7 +300,9 @@ class PatchSolver:
                 else:
                     hi = mid
                 self.solver.pop()
+                elapsed = time.time() - start
 
+            elapsed = time.time() - start
             if model is None:
                 break
 
@@ -304,6 +311,8 @@ class PatchSolver:
             dvars = filter(lambda v: model[v] is not None, self.vars.values())
             self.solver.add(Not(And([v == model[v] for v in dvars])))
 
+        if elapsed >= 180:
+            return None
         return models
 
     def __find_atomic_unit(
