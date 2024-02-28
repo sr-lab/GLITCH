@@ -198,8 +198,11 @@ class DeltaPCompiler:
                     body, stat, tech, labeled_script
                 )
             elif isinstance(stat, ConditionStatement):
-                body = DeltaPCompiler.__handle_conditional(
-                    stat, tech, labeled_script
+                body = PSeq(
+                    body,
+                    DeltaPCompiler.__handle_conditional(
+                        stat, tech, labeled_script
+                    )
                 )
         
         else_statement = PSkip() 
