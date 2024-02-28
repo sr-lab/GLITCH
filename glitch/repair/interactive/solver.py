@@ -265,9 +265,10 @@ class PatchSolver:
                 condition, cons_funs.owner_fun(p), alt_funs.owner_fun(p)
             )
 
-            # The alt is handled when the else is processed
             for label in self.__collect_labels(statement.cons):
                 self.solver.add(Or(condition, self.unchanged[label] == 1))
+            for label in self.__collect_labels(statement.alt):
+                self.solver.add(Or(Not(condition), self.unchanged[label] == 1))
 
             # NOTE: This works because the only constraints created should
             # always be added. Its kinda of an HACK
