@@ -60,6 +60,8 @@ class NamesDatabase:
         match name, au_type, tech:
             case "path", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "path"
+            case "dest", "file", Tech.ansible:
+                return "path"
             case "owner", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "owner"
             case "mode", "file", Tech.puppet | Tech.chef | Tech.ansible:
