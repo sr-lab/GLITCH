@@ -352,8 +352,11 @@ class PatchSolver:
 
             if self.__is_sketch(codeelement):
                 atomic_unit = labeled_script.get_sketch_location(codeelement)
+                atomic_unit_type = NamesDatabase.get_au_type(
+                    atomic_unit.type, labeled_script.tech
+                )
                 codeelement.name = NamesDatabase.reverse_attr_name(
-                    codeelement.name, atomic_unit.type, labeled_script.tech
+                    codeelement.name, atomic_unit_type, labeled_script.tech
                 )
                 atomic_unit.attributes.append(codeelement)
                 # Remove sketch label and add regular label
