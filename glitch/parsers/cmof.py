@@ -141,7 +141,7 @@ class AnsibleParser(p.Parser):
                     variables += AnsibleParser.__parse_vars(unit_block, f"{cur_name}[{i}]", val, code, child)
                 else:
                     value.append(val.value)
-            if value:
+            if len(value) > 0:
                 create_variable(val, cur_name, str(value), child)
 
         return variables

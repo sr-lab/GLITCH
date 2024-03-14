@@ -19,7 +19,7 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
         if isinstance(element, AtomicUnit):
             if (element.type == "data.aws_iam_policy_document"):
                 statements = self.check_required_attribute(element.attributes, [""], "statement", return_all=True)
-                if statements:
+                if statements is not None:
                     for statement in statements:
                         allow = self.check_required_attribute(statement.keyvalues, [""], "effect")
                         if ((allow and allow.value.lower() == "allow") or (not allow)):
@@ -48,7 +48,7 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
             elif (element.type in ["resource.aws_iam_role_policy", "resource.aws_iam_policy", 
                                     "resource.aws_iam_user_policy", "resource.aws_iam_group_policy"]):
                 policy = self.check_required_attribute(element.attributes, [""], "policy")
-                if policy:
+                if policy is not None:
                     policy_dict = convert_string_to_dict(policy.value.lower())
                     if policy_dict and policy_dict["statement"]:
                         statements = policy_dict["statement"]

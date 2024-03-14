@@ -25,12 +25,12 @@ class TerraformAccessControl(TerraformSmellChecker):
                             f"Suggestion: check for a required attribute with name 'authorization'."))
             elif (element.type == "resource.github_repository"):
                 visibility = self.check_required_attribute(element.attributes, [""], 'visibility')
-                if visibility:
+                if visibility is not None:
                     if visibility.value.lower() not in ["private", "internal"]:
                         errors.append(Error('sec_access_control', visibility, file, repr(visibility)))
                 else:
                     private = self.check_required_attribute(element.attributes, [""], 'private')
-                    if private:
+                    if private is not None:
                         if f"{private.value}".lower() != "true":
                             errors.append(Error('sec_access_control', private, file, repr(private)))
                     else:

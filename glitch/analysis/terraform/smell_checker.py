@@ -13,7 +13,7 @@ class TerraformSmellChecker(SmellChecker):
             elif isinstance(c, Module):
                 for ub in c.blocks:
                     au = self.get_au(ub, file, name, type)
-                    if au:
+                    if au is not None:
                         return au
             elif isinstance(c, UnitBlock):
                 for au in c.atomic_units:
@@ -30,7 +30,7 @@ class TerraformSmellChecker(SmellChecker):
             elif isinstance(code, Module):
                 for ub in code.blocks:
                     au = self.get_associated_au(ub, file, type, attribute_name, pattern, attribute_parents)
-                    if au:
+                    if au is not None:
                         return au
             elif isinstance(code, UnitBlock):
                 for au in code.atomic_units:
@@ -72,7 +72,7 @@ class TerraformSmellChecker(SmellChecker):
             if database_flags != []:
                 for flag in database_flags:
                     name = self.check_required_attribute(flag.keyvalues, [""], "name", flag_name)
-                    if name:
+                    if name is not None:
                         found_flag = True
                         value = self.check_required_attribute(flag.keyvalues, [""], "value")
                         if value and value.value.lower() != safe_value:

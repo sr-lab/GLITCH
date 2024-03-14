@@ -207,7 +207,7 @@ class SecurityVisitor(RuleVisitor):
             elif isinstance(c, Module):
                 for ub in c.blocks:
                     au = get_au(ub, name, type)
-                    if au:
+                    if au is not None:
                         return au
             elif isinstance(c, UnitBlock):
                 for au in c.atomic_units:
@@ -224,7 +224,7 @@ class SecurityVisitor(RuleVisitor):
             elif isinstance(c, Module):
                 for ub in c.blocks:
                     var = get_module_var(ub, name)
-                    if var:
+                    if var is not None:
                         return var
             elif isinstance(c, UnitBlock):
                 for var in c.variables:
@@ -255,7 +255,7 @@ class SecurityVisitor(RuleVisitor):
                         if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
                             errors.append(Error('sec_empty_pass', c, file, repr(c)))
                             break
-                    if var:
+                    if var is not None:
                         if (item in SecurityVisitor.__PASSWORDS and var.value != None and len(var.value) == 0):
                             errors.append(Error('sec_empty_pass', c, file, repr(c)))
                             break
@@ -344,11 +344,11 @@ class SecurityVisitor(RuleVisitor):
         missing_integrity_checks = {}
         for au in u.atomic_units:
             result = self.check_integrity_check(au, u.path)
-            if result:
+            if result is not None:
                 missing_integrity_checks[result[0]] = result[1]
                 continue
             file = SecurityVisitor.check_has_checksum(au)
-            if file:
+            if file is not None:
                 if file in missing_integrity_checks:
                     del missing_integrity_checks[file]
 

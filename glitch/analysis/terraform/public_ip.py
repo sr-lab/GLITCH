@@ -15,7 +15,7 @@ class TerraformPublicIp(TerraformSmellChecker):
                         f"Suggestion: check for a required attribute with name '{config['msg']}'."))
                 elif (config['required'] == "must_not_exist" and element.type in config['au_type']):
                     a = self.check_required_attribute(element.attributes, config['parents'], config['attribute'])
-                    if a:
+                    if a is not None:
                         errors.append(Error('sec_public_ip', a, file, repr(a)))
                     
         elif isinstance(element, Attribute) or isinstance(element, Variable):

@@ -21,7 +21,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                         port = False
                         if (dest_port_range and dest_port_range.value.lower() in ["22", "3389", "*"]):
                             port = True
-                        if dest_port_ranges:
+                        if dest_port_ranges is not None:
                             i = 1
                             while dest_port_ranges:
                                 if dest_port_ranges.value.lower() in ["22", "3389", "*"]:
@@ -29,7 +29,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                                     break
                                 i += 1
                                 dest_port_ranges = self.check_required_attribute(element.attributes, [""], f"destination_port_ranges[{i}]")
-                        if port:
+                        if port is not None:
                             source_address_prefix = self.check_required_attribute(element.attributes, [""], "source_address_prefix")
                             if (source_address_prefix and (source_address_prefix.value.lower() in ["*", "/0", "internet", "any"] 
                                 or re.match(r'^0.0.0.0', source_address_prefix.value.lower()))):

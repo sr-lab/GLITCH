@@ -12,7 +12,7 @@ class TerraformLogging(TerraformSmellChecker):
             if (element.type == "resource.aws_eks_cluster"):
                 enabled_cluster_log_types = self.check_required_attribute(element.attributes, [""], "enabled_cluster_log_types[0]")
                 types = ["api", "authenticator", "audit", "scheduler", "controllermanager"]
-                if enabled_cluster_log_types:
+                if enabled_cluster_log_types is not None:
                     i = 0
                     while enabled_cluster_log_types:
                         a = enabled_cluster_log_types
@@ -28,13 +28,13 @@ class TerraformLogging(TerraformSmellChecker):
                         f"Suggestion: check for a required attribute with name 'enabled_cluster_log_types'."))
             elif (element.type == "resource.aws_msk_cluster"):
                 broker_logs = self.check_required_attribute(element.attributes, ["logging_info"], "broker_logs")
-                if broker_logs:
+                if broker_logs is not None:
                     active = False
                     logs_type = ["cloudwatch_logs", "firehose", "s3"]
                     a_list = []
                     for type in logs_type:
                         log = self.check_required_attribute(broker_logs.keyvalues, [""], type)
-                        if log:
+                        if log is not None:
                             enabled = self.check_required_attribute(log.keyvalues, [""], "enabled")
                             if enabled and f"{enabled.value}".lower() == "true":
                                 active = True
@@ -54,7 +54,7 @@ class TerraformLogging(TerraformSmellChecker):
             elif (element.type == "resource.aws_neptune_cluster"):
                 active = False
                 enable_cloudwatch_logs_exports = self.check_required_attribute(element.attributes, [""], f"enable_cloudwatch_logs_exports[0]")
-                if enable_cloudwatch_logs_exports:
+                if enable_cloudwatch_logs_exports is not None:
                     i = 0
                     while enable_cloudwatch_logs_exports:
                         a = enable_cloudwatch_logs_exports
@@ -71,7 +71,7 @@ class TerraformLogging(TerraformSmellChecker):
             elif (element.type == "resource.aws_docdb_cluster"):
                 active = False
                 enabled_cloudwatch_logs_exports = self.check_required_attribute(element.attributes, [""], f"enabled_cloudwatch_logs_exports[0]")
-                if enabled_cloudwatch_logs_exports:
+                if enabled_cloudwatch_logs_exports is not None:
                     i = 0
                     while enabled_cloudwatch_logs_exports:
                         a = enabled_cloudwatch_logs_exports
@@ -112,7 +112,7 @@ class TerraformLogging(TerraformSmellChecker):
             elif (element.type == "resource.azurerm_monitor_log_profile"):
                 categories = self.check_required_attribute(element.attributes, [""], "categories[0]")
                 activities = [ "action", "delete", "write"]
-                if categories:
+                if categories is not None:
                     i = 0
                     while categories:
                         a = categories
@@ -137,14 +137,14 @@ class TerraformLogging(TerraformSmellChecker):
                 if storage_account_name and storage_account_name.value.lower().startswith("${azurerm_storage_account."):
                     name = storage_account_name.value.lower().split('.')[1]
                     storage_account_au = self.get_au(code, file, name, "resource.azurerm_storage_account")
-                    if storage_account_au:
+                    if storage_account_au is not None:
                         expr = "\${azurerm_storage_account\." + f"{name}\."
                         pattern = re.compile(rf"{expr}")
                         assoc_au = self.get_associated_au(code, file, "resource.azurerm_log_analytics_storage_insights",
                             "storage_account_id", pattern, [""])
-                        if assoc_au:
+                        if assoc_au is not None:
                             blob_container_names = self.check_required_attribute(assoc_au.attributes, [""], "blob_container_names[0]")
-                            if blob_container_names:
+                            if blob_container_names is not None:
                                 i = 0
                                 contains_blob_name = False
                                 while blob_container_names:
@@ -176,9 +176,9 @@ class TerraformLogging(TerraformSmellChecker):
                     errors.append(Error('sec_logging', container_access_type, file, repr(container_access_type)))
             elif (element.type == "resource.aws_ecs_cluster"):
                 name = self.check_required_attribute(element.attributes, ["setting"], "name", "containerinsights")
-                if name:
+                if name is not None:
                     enabled = self.check_required_attribute(element.attributes, ["setting"], "value")
-                    if enabled:
+                    if enabled is not None:
                         if enabled.value.lower() != "enabled":
                             errors.append(Error('sec_logging', enabled, file, repr(enabled)))
                     else:

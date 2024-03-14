@@ -20,7 +20,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                             f"associated to an 'aws_s3_bucket' resource."))
             elif (element.type == "resource.aws_eks_cluster"):
                 resources = self.check_required_attribute(element.attributes, ["encryption_config"], "resources[0]")
-                if resources:
+                if resources is not None:
                     i = 0
                     valid = False
                     while resources:
@@ -37,16 +37,16 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                         f"Suggestion: check for a required attribute with name 'encryption_config.resources'."))
             elif (element.type in ["resource.aws_instance", "resource.aws_launch_configuration"]):
                 ebs_block_device = self.check_required_attribute(element.attributes, [""], "ebs_block_device")
-                if ebs_block_device:
+                if ebs_block_device is not None:
                     encrypted = self.check_required_attribute(ebs_block_device.keyvalues, [""], "encrypted")
                     if not encrypted:
                         errors.append(Error('sec_missing_encryption', element, file, repr(element), 
                         f"Suggestion: check for a required attribute with name 'ebs_block_device.encrypted'."))
             elif (element.type == "resource.aws_ecs_task_definition"):
                 volume = self.check_required_attribute(element.attributes, [""], "volume")
-                if volume:
+                if volume is not None:
                     efs_volume_config = self.check_required_attribute(volume.keyvalues, [""], "efs_volume_configuration")
-                    if efs_volume_config:
+                    if efs_volume_config is not None:
                         transit_encryption = self.check_required_attribute(efs_volume_config.keyvalues, [""], "transit_encryption")
                         if not transit_encryption:
                             errors.append(Error('sec_missing_encryption', element, file, repr(element), 

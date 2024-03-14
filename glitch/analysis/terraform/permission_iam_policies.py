@@ -13,7 +13,7 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
                 expr = "\${aws_iam_user\." + f"{elem_name}\."
                 pattern = re.compile(rf"{expr}")
                 assoc_au = self.get_associated_au(code, file, "resource.aws_iam_user_policy", "user", pattern, [""])
-                if assoc_au:
+                if assoc_au is not None:
                     a = self.check_required_attribute(assoc_au.attributes, [""], "user", None, pattern) 
                     errors.append(Error('sec_permission_iam_policies', a, file, repr(a)))
 
