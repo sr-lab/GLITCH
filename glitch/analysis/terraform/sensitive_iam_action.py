@@ -74,7 +74,4 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
                                         if (statement["resource"] in ["*"]) or (":*" in statement["resource"]):
                                             errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
         
-        elif isinstance(element, Attribute) or isinstance(element, Variable):
-            pass
-        
         return errors

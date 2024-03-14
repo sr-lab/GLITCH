@@ -28,6 +28,4 @@ class TerraformAttachedResource(TerraformSmellChecker):
                 if type_A and not check_attached_resource(element.attributes, SecurityVisitor._POSSIBLE_ATTACHED_RESOURCES):
                     errors.append(Error('sec_attached_resource', element, file, repr(element)))
 
-        elif isinstance(element, Attribute) or isinstance(element, Variable):
-            pass
         return errors
