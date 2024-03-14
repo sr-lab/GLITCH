@@ -17,19 +17,14 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                         errors.append(Error('sec_network_security_rules', access, file, repr(access)))
                     elif (protocol and protocol.value.lower() == "tcp"):
                         dest_port_range = self.check_required_attribute(element.attributes, [""], "destination_port_range")
-                        dest_port_ranges = self.check_required_attribute(element.attributes, [""], "destination_port_ranges[0]")
-                        port = False
-                        if (dest_port_range and dest_port_range.value.lower() in ["22", "3389", "*"]):
-                            port = True
-                        if dest_port_ranges is not None:
-                            i = 1
-                            while dest_port_ranges:
-                                if dest_port_ranges.value.lower() in ["22", "3389", "*"]:
-                                    port = True
-                                    break
-                                i += 1
-                                dest_port_ranges = self.check_required_attribute(element.attributes, [""], f"destination_port_ranges[{i}]")
-                        if port is not None:
+                        port = (dest_port_range and dest_port_range.value.lower() in ["22", "3389", "*"])
+                        port_ranges, _ = self.iterate_required_attributes(
+                            element.attributes, 
+                            "destination_port_ranges", 
+                            lambda x: (x.value.lower() in ["22", "3389", "*"])
+                        )
+
+                        if port or port_ranges:
                             source_address_prefix = self.check_required_attribute(element.attributes, [""], "source_address_prefix")
                             if (source_address_prefix and (source_address_prefix.value.lower() in ["*", "/0", "internet", "any"] 
                                 or re.match(r'^0.0.0.0', source_address_prefix.value.lower()))):

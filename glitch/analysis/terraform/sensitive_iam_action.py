@@ -16,62 +16,66 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
             except json.JSONDecodeError as e:
                 return None
 
-        if isinstance(element, AtomicUnit):
-            if (element.type == "data.aws_iam_policy_document"):
-                statements = self.check_required_attribute(element.attributes, [""], "statement", return_all=True)
-                if statements is not None:
-                    for statement in statements:
-                        allow = self.check_required_attribute(statement.keyvalues, [""], "effect")
-                        if ((allow and allow.value.lower() == "allow") or (not allow)):
-                            sensitive_action = False
-                            i = 0
-                            action = self.check_required_attribute(statement.keyvalues, [""], f"actions[{i}]")
-                            while action:
-                                if ("*" in action.value.lower()):
-                                    sensitive_action = True
-                                    break
-                                i += 1
-                                action = self.check_required_attribute(statement.keyvalues, [""], f"actions[{i}]")
-                            if sensitive_action:
-                                errors.append(Error('sec_sensitive_iam_action', action, file, repr(action)))
-                            wildcarded_resource = False
-                            i = 0
-                            resource = self.check_required_attribute(statement.keyvalues, [""], f"resources[{i}]")
-                            while resource:
-                                if (resource.value.lower() in ["*"]) or (":*" in resource.value.lower()):
-                                    wildcarded_resource = True
-                                    break
-                                i += 1
-                                resource = self.check_required_attribute(statement.keyvalues, [""], f"resources[{i}]")
-                            if wildcarded_resource:
-                                errors.append(Error('sec_sensitive_iam_action', resource, file, repr(resource)))
-            elif (element.type in ["resource.aws_iam_role_policy", "resource.aws_iam_policy", 
-                                    "resource.aws_iam_user_policy", "resource.aws_iam_group_policy"]):
-                policy = self.check_required_attribute(element.attributes, [""], "policy")
-                if policy is not None:
-                    policy_dict = convert_string_to_dict(policy.value.lower())
-                    if policy_dict and policy_dict["statement"]:
-                        statements = policy_dict["statement"]
-                        if isinstance(statements, dict):
-                            statements = [statements]
-                        for statement in statements:
-                            if statement["effect"] and statement["action"] and statement["resource"]:
-                                if statement["effect"] == "allow":
-                                    if isinstance(statement["action"], list):
-                                        for action in statement["action"]:
-                                            if ("*" in action):
-                                                errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
-                                                break
-                                    else:
-                                        if ("*" in statement["action"]):
-                                            errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
-                                    if isinstance(statement["resource"], list):
-                                        for resource in statement["resource"]:
-                                            if (resource in ["*"]) or (":*" in resource):
-                                                errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
-                                                break
-                                    else:
-                                        if (statement["resource"] in ["*"]) or (":*" in statement["resource"]):
-                                            errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
+        if not isinstance(element, AtomicUnit):
+            return errors
+        
+        if element.type != "data.aws_iam_policy_document":
+            return errors
+        
+        statements = self.check_required_attribute(element.attributes, [""], "statement", return_all=True)
+        if statements is not None:
+            for statement in statements:
+                allow = self.check_required_attribute(statement.keyvalues, [""], "effect")
+                if ((allow and allow.value.lower() == "allow") or (not allow)):
+                    sensitive_action, action = self.iterate_required_attributes(
+                        statement.keyvalues, 
+                        "actions", 
+                        lambda x: "*" in x.value.lower()
+                    )
+                    if sensitive_action:
+                        errors.append(Error('sec_sensitive_iam_action', action, file, repr(action)))
+                    
+                    wildcarded_resource, resource = self.iterate_required_attributes(
+                        statement.keyvalues, 
+                        "resources", 
+                        lambda x: (x.value.lower() in ["*"]) or (":*" in x.value.lower())
+                    )
+                    if wildcarded_resource:
+                        errors.append(Error('sec_sensitive_iam_action', resource, file, repr(resource)))
+        elif (element.type in ["resource.aws_iam_role_policy", "resource.aws_iam_policy", 
+                                "resource.aws_iam_user_policy", "resource.aws_iam_group_policy"]):
+            policy = self.check_required_attribute(element.attributes, [""], "policy")
+            if policy is None:
+                return errors
+            
+            policy_dict = convert_string_to_dict(policy.value.lower())
+            if not (policy_dict and policy_dict["statement"]):
+                return errors
+
+            statements = policy_dict["statement"]
+            if isinstance(statements, dict):
+                statements = [statements]
+            
+            for statement in statements:
+                if not (statement["effect"] and statement["action"] and statement["resource"]):
+                    continue
+                if not (statement["effect"] == "allow"):
+                    continue
+
+                if isinstance(statement["action"], list):
+                    for action in statement["action"]:
+                        if ("*" in action):
+                            errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
+                            break
+                elif ("*" in statement["action"]):
+                    errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
+                
+                if isinstance(statement["resource"], list):
+                    for resource in statement["resource"]:
+                        if (resource in ["*"]) or (":*" in resource):
+                            errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
+                            break
+                elif (statement["resource"] in ["*"]) or (":*" in statement["resource"]):
+                    errors.append(Error('sec_sensitive_iam_action', policy, file, repr(policy)))
         
         return errors
