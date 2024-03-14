@@ -1,6 +1,7 @@
 import click, os, sys
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import RulesListOption
+from glitch.parsers.docker_parser import DockerParser
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
 from glitch.tech import Tech
@@ -69,6 +70,8 @@ def glitch(tech, type, path, config, module, csv,
         parser = ChefParser()
     elif tech == Tech.puppet:
         parser = PuppetParser()
+    elif tech == Tech.docker:
+        parser = DockerParser()
     elif tech == Tech.terraform:
         parser = TerraformParser()
         config = resource_filename('glitch', "configs/terraform.ini")

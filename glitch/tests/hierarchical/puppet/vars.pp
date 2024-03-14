@@ -6,6 +6,9 @@ $my_hash = {
 'key2' => 'value2',
 'key3' => 'value3',
 }
+
+$my_hash['key4']['key5'] = 'value5'
+
 $configdir         = "${boxen::config::configdir}/php"
 $datadir           = "${boxen::config::datadir}/php"
 $pluginsdir        = "${root}/plugins"

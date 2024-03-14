@@ -32,7 +32,7 @@ class TestPuppet(unittest.TestCase):
         self.assertEqual(str(unitblock.variables), vars)
 
     def test_hierarchical_vars(self):
-        vars = "[$my_hash:None:[key1:None:[test1:'1', test2:'2'], key2:'value2', key3:'value3'], $configdir:'${boxen::config::configdir}/php', $datadir:'${boxen::config::datadir}/php', $pluginsdir:'${root}/plugins', $cachedir:'${php::config::datadir}/cache', $extensioncachedir:'${php::config::datadir}/cache/extensions']"
+        vars = "[$my_hash:None:[key1:None:[test1:'1', test2:'2'], key2:'value2', key3:'value3', key4:None:[key5:'value5']], $configdir:'${boxen::config::configdir}/php', $datadir:'${boxen::config::datadir}/php', $pluginsdir:'${root}/plugins', $cachedir:'${php::config::datadir}/cache', $extensioncachedir:'${php::config::datadir}/cache/extensions']"
         self.__test_parse_vars("tests/hierarchical/puppet/vars.pp", vars)
 
 

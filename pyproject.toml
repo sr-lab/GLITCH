@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "glitch"
+version = "1.0.1"
+description = "A tool to analyze IaC scripts"
+authors = ["Nuno Saavedra <nuno.saavedra@tecnico.ulisboa.pt>"]
+license = "GPL-3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+"ruamel.yaml" = "0.17.21"
+ply = "3.11"
+click = "8.1.7"
+alive-progress = "3.0.1"
+prettytable = "3.6.0"
+pandas = "1.5.3"
+configparser = "5.3.0"
+puppetparser = "0.2.1"
+Jinja2 = "3.1.2"
+glitch-python-hcl2 = "0.1.4"
+dockerfile-parse = "2.0.0"
+bashlex = "0.18"
+requests = "^2.31.0"
+nltk = "^3.8.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "7.3.1"
+
+[tool.poetry.scripts]
+glitch = "glitch.__main__:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

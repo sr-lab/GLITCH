@@ -14,7 +14,7 @@ GLITCH is a technology-agnostic framework that enables automated detection of Ia
 ## Paper and Academic Usage
 "[GLITCH: Automated Polyglot Security Smell Detection in Infrastructure as Code](https://arxiv.org/abs/2205.14371)" is the main paper that describes the implementation of security smells in GLITCH. It also presents a large-scale empirical study  that analyzes security smells on three large datasets containing 196,755 IaC scripts and 12,281,251 LOC.
 
-If you use GLITCH or any of its datasets, please cite:
+**If you use GLITCH or any of its datasets, please cite:**
 
  - Nuno Saavedra and João F. Ferreira. 2022. [GLITCH: Automated Polyglot Security Smell Detection in Infrastructure as Code](https://arxiv.org/abs/2205.14371). In 37th IEEE/ACM International Conference on Automated Software Engineering (ASE ’22), October 10–14, 2022, Rochester, MI, USA. ACM, New York NY, USA, 12 pages. https://doi.org/10.1145/3551349.3556945  
  
@@ -28,6 +28,19 @@ If you use GLITCH or any of its datasets, please cite:
 }
  ```
 
+- 	Nuno Saavedra, João Gonçalves, Miguel Henriques, João F. Ferreira, Alexandra Mendes. 2023. [Polyglot Code Smell Detection for Infrastructure as Code with GLITCH](https://arxiv.org/pdf/2308.09458.pdf). In 38th IEEE/ACM International Conference on Automated Software Engineering (ASE '23), September 11-15, 2023, Luxembourg.
+https://doi.org/10.1109/ASE56229.2023.00162
+
+```
+@inproceedings{saavedra23glitchdemo,
+  author={Saavedra, Nuno and Gonçalves, João and Henriques, Miguel and Ferreira, João F. and Mendes, Alexandra},
+  booktitle={2023 38th IEEE/ACM International Conference on Automated Software Engineering (ASE)}, 
+  title={Polyglot Code Smell Detection for Infrastructure as Code with GLITCH}, 
+  year={2023},
+  pages={2042-2045},
+  doi={10.1109/ASE56229.2023.00162}}
+```
+
 ## Installation
 
 To install run:
@@ -37,19 +50,44 @@ python -m pip install -e .
 
 To use the tool for Chef you also need Ruby and its Ripper package installed.
 
+### Poetry
+
+To install GLITCH using Poetry, run:
+```
+poetry install
+```
+
+**WARNING**: _For now, the GLITCH VSCode extension does not function if GLITCH 
+is installed via Poetry. Since Poetry uses virtual environments it does not 
+create a binary for GLITCH available in the user's PATH, which is required for 
+the VSCode extension._
+
 ## Usage
 
-You can use the command to see all options:
+To explore all available options, use the command:
 ```
 glitch --help
 ```
 
-To analyze a file or folder and get the csv results you can run:
+To analyze a file or folder and retrieve CSV results, use the following command:
 ```
 glitch --tech (chef|puppet|ansible|terraform) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
 ```
 
 If you want to consider the module structure you can add the flag ```--module```.
+
+### Poetry
+
+If GLITCH was installed using Poetry, execute GLITCH commands as follows:
+```
+poetry run glitch --help
+```
+
+Alternatively, you can use `poetry shell`:
+```
+poetry shell
+glitch --help
+```
 
 ## Tests
 

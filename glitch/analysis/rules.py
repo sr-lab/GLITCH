@@ -34,7 +34,10 @@ class Error():
             'sec_attached_resource': "Attached Resource - Ensure that Route53 A records point to resources part of your account rather than just random IP addresses. (CWE-200)",
             'sec_versioning': "Versioning - Ensure that versioning is enabled so that users can retrieve and restore previous versions.",
             'sec_naming': "Naming - Ensure storage accounts adhere to the naming rules and every security groups and rules have a description. (CWE-1099 | CWE-710)",
-            'sec_replication': "Replication - Ensure that cross-region replication is enabled to allow copying objects across S3 buckets."
+            'sec_replication': "Replication - Ensure that cross-region replication is enabled to allow copying objects across S3 buckets.",
+            'sec_non_official_image': "Use of non-official Docker image - Use of non-official images should be avoided or taken into careful consideration. (CWE-829)",
+            'sec_full_permission_filesystem': "Full permission to the filesystem - Files should not have full permissions to every user. (CWE-732)",
+            'sec_obsolete_command': "Use of obsolete command or function - Avoid using obsolete or deprecated commands and functions. (CWE-477)"
         },
         'design': {
             'design_imperative_abstraction': "Imperative abstraction - The presence of imperative statements defies the purpose of IaC declarative languages.",
@@ -85,7 +88,7 @@ class Error():
                 line += f"\n-> {self.opt_msg}"
             return \
                 f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n" + \
-                    f"{line}\n" 
+                    f"{line}\n"
 
     def __hash__(self):
         return hash((self.code, self.path, self.line, self.opt_msg))
@@ -121,7 +124,7 @@ class RuleVisitor(ABC):
             return self.check_attribute(c, file, au_type, parent_name)
         elif isinstance(c, Variable):
             return self.check_variable(c, file)
-        elif isinstance(c, ConditionStatement):
+        elif isinstance(c, ConditionalStatement):
             return self.check_condition(c, file)
         elif isinstance(c, Comment):
             return self.check_comment(c, file)
@@ -197,7 +200,7 @@ class RuleVisitor(ABC):
     def check_variable(self, v: Variable, file: str) -> list[Error]:
         pass
 
-    def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
+    def check_condition(self, c: ConditionalStatement, file: str) -> list[Error]:
         errors = []
 
         for s in c.statements:
