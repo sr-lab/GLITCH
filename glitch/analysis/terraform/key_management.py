@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformKeyManagement(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.azurerm_storage_account"):
@@ -27,24 +27,24 @@ class TerraformKeyManagement(TerraformSmellChecker):
             for config in SecurityVisitor._KEY_MANAGEMENT:
                 if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
-                    if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
+                    if ("any_not_empty" in config['values'] and element.value.lower() == ""):
                         errors.append(Error('sec_key_management', element, file, repr(element)))
                         break
                     elif ("any_not_empty" not in config['values'] and not element.has_variable and 
-                        elem_value.lower() not in config['values']):
+                        element.value.lower() not in config['values']):
                         errors.append(Error('sec_key_management', element, file, repr(element)))
                         break
 
             if (element.name == "rotation_period" and au_type == "resource.google_kms_crypto_key"):
                 expr1 = r'\d+\.\d{0,9}s'
                 expr2 = r'\d+s'
-                if (re.search(expr1, elem_value) or re.search(expr2, elem_value)):
-                    if (int(elem_value.split("s")[0]) > 7776000):
+                if (re.search(expr1, element.value) or re.search(expr2, element.value)):
+                    if (int(element.value.split("s")[0]) > 7776000):
                         errors.append(Error('sec_key_management', element, file, repr(element)))
                 else:
                     errors.append(Error('sec_key_management', element, file, repr(element)))
             elif (element.name == "kms_master_key_id" and ((au_type == "resource.aws_sqs_queue"
-                and elem_value == "alias/aws/sqs") or  (au_type == "resource.aws_sns_queue"
-                and elem_value == "alias/aws/sns"))):
+                and element.value == "alias/aws/sqs") or  (au_type == "resource.aws_sns_queue"
+                and element.value == "alias/aws/sns"))):
                 errors.append(Error('sec_key_management', element, file, repr(element)))
         return errors

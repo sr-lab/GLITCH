@@ -159,42 +159,42 @@ class SecurityVisitor(RuleVisitor):
     def check_dependency(self, d: Dependency, file: str) -> List[Error]:
         return []
 
-    def __check_keyvalue(self, c: KeyValue, name: str, 
-            value: str, has_variable: bool, file: str, au_type = None, parent_name: str = ""):
+    def __check_keyvalue(self, c: KeyValue, file: str, au_type = None, parent_name: str = ""):
         errors = []
-        name = name.strip().lower()
-        if (isinstance(value, type(None))):
+        c.name = c.name.strip().lower()
+        
+        if (isinstance(c.value, type(None))):
             for child in c.keyvalues:
-                errors += self.check_element(child, file, au_type, name)
+                errors += self.check_element(child, file, au_type, c.name)
             return errors
-        elif (isinstance(value, str)):
-            value = value.strip().lower()
+        elif (isinstance(c.value, str)):
+            c.value = c.value.strip().lower()
         else:
-            errors += self.check_element(value, file)
-            value = repr(value)
+            errors += self.check_element(c.value, file)
+            c.value = repr(c.value)
 
-        if self.__is_http_url(value):
+        if self.__is_http_url(c.value):
             errors.append(Error('sec_https', c, file, repr(c)))
 
-        if re.match(r'(?:https?://|^)0.0.0.0', value) or\
-            (name == "ip" and value in {"*", '::'}) or\
-            (name in SecurityVisitor.__IP_BIND_COMMANDS and
-             (value == True or value in {'*', '::'})):
+        if re.match(r'(?:https?://|^)0.0.0.0', c.value) or\
+            (c.name == "ip" and c.value in {"*", '::'}) or\
+            (c.name in SecurityVisitor.__IP_BIND_COMMANDS and
+             (c.value == True or c.value in {'*', '::'})):
             errors.append(Error('sec_invalid_bind', c, file, repr(c)))
 
-        if self.__is_weak_crypt(value, name):
+        if self.__is_weak_crypt(c.value, c.name):
             errors.append(Error('sec_weak_crypt', c, file, repr(c)))
 
         for check in SecurityVisitor.__CHECKSUM:
-            if (check in name and (value == 'no' or value == 'false')):
+            if (check in c.name and (c.value == 'no' or c.value == 'false')):
                 errors.append(Error('sec_no_int_check', c, file, repr(c)))
                 break
 
         for item in (SecurityVisitor.__ROLES + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), name)):
-                if (len(value) > 0 and not has_variable):
+            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), c.name)):
+                if (len(c.value) > 0 and not c.has_variable):
                     for admin in SecurityVisitor.__ADMIN:
-                        if admin in value:
+                        if admin in c.value:
                             errors.append(Error('sec_def_admin', c, file, repr(c)))
                             break
 
@@ -234,8 +234,8 @@ class SecurityVisitor(RuleVisitor):
 
         # only for terraform
         var = None
-        if (has_variable and self.tech == Tech.terraform):
-            value = re.sub(r'^\${(.*)}$', r'\1', value)
+        if (c.has_variable and self.tech == Tech.terraform):
+            value = re.sub(r'^\${(.*)}$', r'\1', c.value)
             if value.startswith("var."):   # input variable (atomic unit with type variable)
                 au = get_au(self.code, value.strip("var."), "variable")
                 if au != None:
@@ -247,12 +247,12 @@ class SecurityVisitor(RuleVisitor):
 
         for item in (SecurityVisitor.__PASSWORDS + 
                 SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), name) 
-                and name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST + SecurityVisitor.__PROFILE):
-                if (not has_variable or var):
+            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), c.name) 
+                and c.name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST + SecurityVisitor.__PROFILE):
+                if (not c.has_variable or var):
                     
-                    if not has_variable:
-                        if (item in SecurityVisitor.__PASSWORDS and len(value) == 0):
+                    if not c.has_variable:
+                        if (item in SecurityVisitor.__PASSWORDS and len(c.value) == 0):
                             errors.append(Error('sec_empty_pass', c, file, repr(c)))
                             break
                     if var is not None:
@@ -269,40 +269,40 @@ class SecurityVisitor(RuleVisitor):
                     break
 
         for item in SecurityVisitor.__SSH_DIR:
-            if item.lower() in name:
-                if len(value) > 0 and '/id_rsa' in value:
+            if item.lower() in c.name:
+                if len(c.value) > 0 and '/id_rsa' in c.value:
                     errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         for item in SecurityVisitor.__MISC_SECRETS:
-            if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), name)
-                    and len(value) > 0 and not has_variable):
+            if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), c.name)
+                    and len(c.value) > 0 and not c.has_variable):
                 errors.append(Error('sec_hard_secr', c, file, repr(c)))
 
         for item in SecurityVisitor.__SENSITIVE_DATA:
-            if item.lower() in name:
+            if item.lower() in c.name:
                 for item_value in (SecurityVisitor.__SECRET_ASSIGN):
-                    if item_value in value.lower():
+                    if item_value in c.value.lower():
                         errors.append(Error('sec_hard_secr', c, file, repr(c)))
                         if ("password" in item_value):
                             errors.append(Error('sec_hard_pass', c, file, repr(c)))
 
-        if (au_type in SecurityVisitor.__GITHUB_ACTIONS and name == "plaintext_value"):
+        if (au_type in SecurityVisitor.__GITHUB_ACTIONS and c.name == "plaintext_value"):
             errors.append(Error('sec_hard_secr', c, file, repr(c)))
         
-        if (has_variable and var):
-            has_variable = False
-            value = var.value
+        if (c.has_variable and var is not None):
+            c.has_variable = var.has_variable
+            c.value = var.value
 
         for checker in self.checkers:
-            errors += checker.check(c, file, self.code, value, au_type, parent_name)
+            errors += checker.check(c, file, self.code, au_type, parent_name)
 
         return errors
 
     def check_attribute(self, a: Attribute, file: str, au_type = None, parent_name: str = "") -> list[Error]:
-        return self.__check_keyvalue(a, a.name, a.value, a.has_variable, file, au_type, parent_name)
+        return self.__check_keyvalue(a, file, au_type, parent_name)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
-        return self.__check_keyvalue(v, v.name, v.value, v.has_variable, file)
+        return self.__check_keyvalue(v, file)
 
     def check_comment(self, c: Comment, file: str) -> List[Error]:
         errors = []

@@ -1,11 +1,11 @@
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, Variable
+from glitch.repr.inter import AtomicUnit
 
 
 class TerraformAttachedResource(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             def check_attached_resource(attributes, resource_types):

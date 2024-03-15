@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformSensitiveIAMAction(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
 
         def convert_string_to_dict(input_string):

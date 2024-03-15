@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             for policy in SecurityVisitor._PASSWORD_KEY_POLICY:
@@ -19,18 +19,18 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                 if (element.name == policy['attribute'] and au_type in policy['au_type']
                     and parent_name in policy['parents'] and policy['values'] != [""]):
                     if (policy['logic'] == "equal"):
-                        if ("any_not_empty" in policy['values'] and elem_value.lower() == ""):
+                        if ("any_not_empty" in policy['values'] and element.value.lower() == ""):
                             return [Error('sec_weak_password_key_policy', element, file, repr(element))]
                         elif ("any_not_empty" not in policy['values'] and not element.has_variable and 
-                            elem_value.lower() not in policy['values']):
+                            element.value.lower() not in policy['values']):
                             return [Error('sec_weak_password_key_policy', element, file, repr(element))]
-                    elif ((policy['logic'] == "gte" and not elem_value.isnumeric()) or
-                        (policy['logic'] == "gte" and elem_value.isnumeric() 
-                            and int(elem_value) < int(policy['values'][0]))):
+                    elif ((policy['logic'] == "gte" and not element.value.isnumeric()) or
+                        (policy['logic'] == "gte" and element.value.isnumeric() 
+                            and int(element.value) < int(policy['values'][0]))):
                         return [Error('sec_weak_password_key_policy', element, file, repr(element))]
-                    elif ((policy['logic'] == "lte" and not elem_value.isnumeric()) or
-                        (policy['logic'] == "lte" and elem_value.isnumeric() 
-                            and int(elem_value) > int(policy['values'][0]))):
+                    elif ((policy['logic'] == "lte" and not element.value.isnumeric()) or
+                        (policy['logic'] == "lte" and element.value.isnumeric() 
+                            and int(element.value) > int(policy['values'][0]))):
                         return [Error('sec_weak_password_key_policy', element, file, repr(element))]
 
         return errors

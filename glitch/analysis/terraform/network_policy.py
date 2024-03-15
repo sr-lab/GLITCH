@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformNetworkSecurityRules(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.azurerm_network_security_rule"):
@@ -52,7 +52,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for rule in SecurityVisitor._NETWORK_SECURITY_RULES:
                 if (element.name == rule['attribute'] and au_type in rule['au_type'] and parent_name in rule['parents'] 
-                    and not element.has_variable and elem_value.lower() not in rule['values'] and rule['values'] != [""]):
+                    and not element.has_variable and element.value.lower() not in rule['values'] and rule['values'] != [""]):
                     return [Error('sec_network_security_rules', element, file, repr(element))]
         
         return errors

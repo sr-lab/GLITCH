@@ -63,7 +63,7 @@ class TerraformLogging(TerraformSmellChecker):
             errors.append(Error('sec_logging', container_access_type, file, repr(container_access_type)))
 
         storage_account_name = self.check_required_attribute(element.attributes, [""], "storage_account_name")
-        if not (storage_account_name and storage_account_name.value.lower().startswith("${azurerm_storage_account.")):
+        if not (storage_account_name is not None and storage_account_name.value.lower().startswith("${azurerm_storage_account.")):
             errors.append(Error('sec_logging', element, file, repr(element), 
                 f"Suggestion: 'azurerm_storage_container' resource has to be associated to an " + 
                 f"'azurerm_storage_account' resource in order to enable logging.")
@@ -108,7 +108,7 @@ class TerraformLogging(TerraformSmellChecker):
 
         return errors
 
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_eks_cluster"):
@@ -229,8 +229,8 @@ class TerraformLogging(TerraformSmellChecker):
                         
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             if (element.name == "cloud_watch_logs_group_arn" and au_type == "resource.aws_cloudtrail"):
-                if re.match(r"^\${aws_cloudwatch_log_group\..", elem_value):
-                    aws_cloudwatch_log_group_name = elem_value.split('.')[1]
+                if re.match(r"^\${aws_cloudwatch_log_group\..", element.value):
+                    aws_cloudwatch_log_group_name = element.value.split('.')[1]
                     if not self.get_au(code, file, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
                         errors.append(Error('sec_logging', element, file, repr(element),
                             f"Suggestion: check for a required resource 'aws_cloudwatch_log_group' " +
@@ -242,21 +242,21 @@ class TerraformLogging(TerraformSmellChecker):
                 "resource.azurerm_mssql_server_extended_auditing_policy"]) 
                 or (element.name == "days" and parent_name == "retention_policy" 
                 and au_type == "resource.azurerm_network_watcher_flow_log")) 
-                and ((not elem_value.isnumeric()) or (elem_value.isnumeric() and int(elem_value) < 90))):
+                and ((not element.value.isnumeric()) or (element.value.isnumeric() and int(element.value) < 90))):
                 errors.append(Error('sec_logging', element, file, repr(element)))
             elif (element.name == "days" and parent_name == "retention_policy" 
                 and au_type == "resource.azurerm_monitor_log_profile" 
-                and (not elem_value.isnumeric() or (elem_value.isnumeric() and int(elem_value) < 365))):
+                and (not element.value.isnumeric() or (element.value.isnumeric() and int(element.value) < 365))):
                 errors.append(Error('sec_logging', element, file, repr(element)))
 
             for config in SecurityVisitor._LOGGING:
                 if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
-                    if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
+                    if ("any_not_empty" in config['values'] and element.value.lower() == ""):
                         errors.append(Error('sec_logging', element, file, repr(element)))
                         break
                     elif ("any_not_empty" not in config['values'] and not element.has_variable and 
-                        elem_value.lower() not in config['values']):
+                        element.value.lower() not in config['values']):
                         errors.append(Error('sec_logging', element, file, repr(element)))
                         break
         return errors

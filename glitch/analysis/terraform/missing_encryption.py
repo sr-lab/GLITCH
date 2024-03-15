@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformMissingEncryption(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_s3_bucket"):
@@ -63,11 +63,11 @@ class TerraformMissingEncryption(TerraformSmellChecker):
             for config in SecurityVisitor._MISSING_ENCRYPTION:
                 if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
-                    if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
+                    if ("any_not_empty" in config['values'] and element.value.lower() == ""):
                         errors.append(Error('sec_missing_encryption', element, file, repr(element)))
                         break
                     elif ("any_not_empty" not in config['values'] and not element.has_variable 
-                        and elem_value.lower() not in config['values']):
+                        and element.value.lower() not in config['values']):
                         errors.append(Error('sec_missing_encryption', element, file, repr(element)))
                         break
 
@@ -77,10 +77,10 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                         if au_type in config['au_type']:
                             expr = config['keyword'].lower() + "\s*" + config['value'].lower()
                             pattern = re.compile(rf"{expr}")
-                            if not re.search(pattern, elem_value) and config['required'] == "yes":
+                            if not re.search(pattern, element.value) and config['required'] == "yes":
                                 errors.append(Error('sec_missing_encryption', element, file, repr(element)))
                                 break
-                            elif re.search(pattern, elem_value) and config['required'] == "must_not_exist":
+                            elif re.search(pattern, element.value) and config['required'] == "must_not_exist":
                                 errors.append(Error('sec_missing_encryption', element, file, repr(element)))
                                 break
         return errors

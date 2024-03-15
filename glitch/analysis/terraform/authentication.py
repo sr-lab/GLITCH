@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformAuthentication(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.google_sql_database_instance"):
@@ -32,13 +32,13 @@ class TerraformAuthentication(TerraformSmellChecker):
                         if au_type in config['au_type']:
                             expr = config['keyword'].lower() + "\s*" + config['value'].lower()
                             pattern = re.compile(rf"{expr}")
-                            if not re.search(pattern, elem_value):
+                            if not re.search(pattern, element.value):
                                 errors.append(Error('sec_authentication', element, file, repr(element)))
 
             for config in SecurityVisitor._AUTHENTICATION:
                 if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and not element.has_variable 
-                    and elem_value.lower() not in config['values']
+                    and element.value.lower() not in config['values']
                     and config['values'] != [""]):
                     errors.append(Error('sec_authentication', element, file, repr(element)))
                     break

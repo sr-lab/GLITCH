@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformNaming(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_security_group"):
@@ -37,17 +37,17 @@ class TerraformNaming(TerraformSmellChecker):
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             if (element.name == "name" and au_type in ["resource.azurerm_storage_account"]):
                 pattern = r'^[a-z0-9]{3,24}$'
-                if not re.match(pattern, elem_value):
+                if not re.match(pattern, element.value):
                     errors.append(Error('sec_naming', element, file, repr(element)))
 
             for config in SecurityVisitor._NAMING:
                 if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
-                    if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
+                    if ("any_not_empty" in config['values'] and element.value.lower() == ""):
                         errors.append(Error('sec_naming', element, file, repr(element)))
                         break
                     elif ("any_not_empty" not in config['values'] and not element.has_variable and 
-                        elem_value.lower() not in config['values']):
+                        element.value.lower() not in config['values']):
                         errors.append(Error('sec_naming', element, file, repr(element)))
                         break
         return errors

@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformPermissionIAMPolicies(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_iam_user"):
@@ -20,16 +20,16 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             if ((element.name == "member" or element.name.split('[')[0] == "members") 
                 and au_type in SecurityVisitor._GOOGLE_IAM_MEMBER
-                and (re.search(r".-compute@developer.gserviceaccount.com", elem_value) or 
-                    re.search(r".@appspot.gserviceaccount.com", elem_value) or
-                    re.search(r"user:", elem_value))):
+                and (re.search(r".-compute@developer.gserviceaccount.com", element.value) or 
+                    re.search(r".@appspot.gserviceaccount.com", element.value) or
+                    re.search(r"user:", element.value))):
                 errors.append(Error('sec_permission_iam_policies', element, file, repr(element)))
 
             for config in SecurityVisitor._PERMISSION_IAM_POLICIES:
                 if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
-                    if ((config['logic'] == "equal" and not element.has_variable and elem_value.lower() not in config['values'])
-                        or (config['logic'] == "diff" and elem_value.lower() in config['values'])):
+                    if ((config['logic'] == "equal" and not element.has_variable and element.value.lower() not in config['values'])
+                        or (config['logic'] == "diff" and element.value.lower() in config['values'])):
                         errors.append(Error('sec_permission_iam_policies', element, file, repr(element)))
                         break
         return errors
