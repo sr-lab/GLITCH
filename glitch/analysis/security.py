@@ -147,7 +147,8 @@ class SecurityVisitor(RuleVisitor):
                     break
         
         for checker in self.checkers:
-            errors += checker.check(au, file, self.code)
+            checker.code = self.code
+            errors += checker.check(au, file)
         
         if self.__is_http_url(au.name):
             errors.append(Error('sec_https', au, file, repr(au)))
@@ -294,7 +295,8 @@ class SecurityVisitor(RuleVisitor):
             c.value = var.value
 
         for checker in self.checkers:
-            errors += checker.check(c, file, self.code, au_type, parent_name)
+            checker.code = self.code
+            errors += checker.check(c, file, au_type, parent_name)
 
         return errors
 

@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit
 
 
 class TerraformAttachedResource(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             def check_attached_resource(attributes, resource_types):
@@ -15,7 +15,7 @@ class TerraformAttachedResource(TerraformSmellChecker):
                             if (f"{a.value}".lower().startswith("${" + f"{resource_type}.") 
                                 or f"{a.value}".lower().startswith(f"{resource_type}.")):
                                 resource_name = a.value.lower().split(".")[1]
-                                if self.get_au(code, file, resource_name, f"resource.{resource_type}"):
+                                if self.get_au(file, resource_name, f"resource.{resource_type}"):
                                     return True
                     elif a.value == None:
                         attached = check_attached_resource(a.keyvalues, resource_types)

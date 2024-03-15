@@ -6,13 +6,13 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformPermissionIAMPolicies(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_iam_user"):
                 expr = "\${aws_iam_user\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                assoc_au = self.get_associated_au(code, file, "resource.aws_iam_user_policy", "user", pattern, [""])
+                assoc_au = self.get_associated_au(file, "resource.aws_iam_user_policy", "user", pattern, [""])
                 if assoc_au is not None:
                     a = self.check_required_attribute(assoc_au.attributes, [""], "user", None, pattern) 
                     errors.append(Error('sec_permission_iam_policies', a, file, repr(a)))

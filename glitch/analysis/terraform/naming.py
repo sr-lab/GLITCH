@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformNaming(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_security_group"):

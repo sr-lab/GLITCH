@@ -53,7 +53,7 @@ class TerraformLogging(TerraformSmellChecker):
 
         return errors
     
-    def check_azurerm_storage_container(self, element, code, file: str):
+    def check_azurerm_storage_container(self, element, file: str):
         errors = []
 
         container_access_type = self.check_required_attribute(
@@ -71,7 +71,7 @@ class TerraformLogging(TerraformSmellChecker):
             return errors
     
         name = storage_account_name.value.lower().split('.')[1]
-        storage_account_au = self.get_au(code, file, name, "resource.azurerm_storage_account")
+        storage_account_au = self.get_au(file, name, "resource.azurerm_storage_account")
         if storage_account_au is None:
             errors.append(Error('sec_logging', element, file, repr(element), 
                 f"Suggestion: 'azurerm_storage_container' resource has to be associated to an " + 
@@ -81,7 +81,7 @@ class TerraformLogging(TerraformSmellChecker):
         
         expr = "\${azurerm_storage_account\." + f"{name}\."
         pattern = re.compile(rf"{expr}")
-        assoc_au = self.get_associated_au(code, file, "resource.azurerm_log_analytics_storage_insights",
+        assoc_au = self.get_associated_au(file, "resource.azurerm_log_analytics_storage_insights",
             "storage_account_id", pattern, [""])
         if assoc_au is None:
             errors.append(Error('sec_logging', storage_account_au, file, repr(storage_account_au), 
@@ -108,7 +108,7 @@ class TerraformLogging(TerraformSmellChecker):
 
         return errors
 
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_eks_cluster"):
@@ -161,7 +161,7 @@ class TerraformLogging(TerraformSmellChecker):
             elif (element.type == "resource.azurerm_mssql_server"):
                 expr = "\${azurerm_mssql_server\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                assoc_au = self.get_associated_au(code, file, "resource.azurerm_mssql_server_extended_auditing_policy", 
+                assoc_au = self.get_associated_au(file, "resource.azurerm_mssql_server_extended_auditing_policy", 
                     "server_id", pattern, [""])
                 if not assoc_au:
                     errors.append(Error('sec_logging', element, file, repr(element), 
@@ -170,7 +170,7 @@ class TerraformLogging(TerraformSmellChecker):
             elif (element.type == "resource.azurerm_mssql_database"):
                 expr = "\${azurerm_mssql_database\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                assoc_au = self.get_associated_au(code, file, "resource.azurerm_mssql_database_extended_auditing_policy", 
+                assoc_au = self.get_associated_au(file, "resource.azurerm_mssql_database_extended_auditing_policy", 
                     "database_id", pattern, [""])
                 if not assoc_au:
                     errors.append(Error('sec_logging', element, file, repr(element), 
@@ -197,7 +197,7 @@ class TerraformLogging(TerraformSmellChecker):
                         required_flag = False
                     errors += self.check_database_flags(element, file, 'sec_logging', flag['flag_name'], flag['value'], required_flag)
             elif (element.type == "resource.azurerm_storage_container"):
-                errors += self.check_azurerm_storage_container(element, code, file)
+                errors += self.check_azurerm_storage_container(element, file)
             elif (element.type == "resource.aws_ecs_cluster"):
                 name = self.check_required_attribute(element.attributes, ["setting"], "name", "containerinsights")
                 if name is not None:
@@ -214,7 +214,7 @@ class TerraformLogging(TerraformSmellChecker):
             elif (element.type == "resource.aws_vpc"):
                 expr = "\${aws_vpc\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                assoc_au = self.get_associated_au(code, file, "resource.aws_flow_log",
+                assoc_au = self.get_associated_au(file, "resource.aws_flow_log",
                             "vpc_id", pattern, [""])
                 if not assoc_au:
                     errors.append(Error('sec_logging', element, file, repr(element), 
@@ -231,7 +231,7 @@ class TerraformLogging(TerraformSmellChecker):
             if (element.name == "cloud_watch_logs_group_arn" and au_type == "resource.aws_cloudtrail"):
                 if re.match(r"^\${aws_cloudwatch_log_group\..", element.value):
                     aws_cloudwatch_log_group_name = element.value.split('.')[1]
-                    if not self.get_au(code, file, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
+                    if not self.get_au(file, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
                         errors.append(Error('sec_logging', element, file, repr(element),
                             f"Suggestion: check for a required resource 'aws_cloudwatch_log_group' " +
                             f"with name '{aws_cloudwatch_log_group_name}'."))

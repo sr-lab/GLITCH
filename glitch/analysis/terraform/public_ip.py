@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformPublicIp(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             for config in SecurityVisitor._PUBLIC_IP_CONFIGS:

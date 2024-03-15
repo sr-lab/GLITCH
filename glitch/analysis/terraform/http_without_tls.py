@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformHttpWithoutTls(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "data.http"):
@@ -25,7 +25,7 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
                         type = "resource"
                         resource_type = r.split(".")[0]
                         resource_name = r.split(".")[1]
-                    if self.get_au(code, file, resource_name, type + "." + resource_type):
+                    if self.get_au(file, resource_name, type + "." + resource_type):
                         errors.append(Error('sec_https', url, file, repr(url)))
 
             for config in SecurityVisitor._HTTPS_CONFIGS:

@@ -6,13 +6,13 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformMissingEncryption(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_s3_bucket"):
                 expr = "\${aws_s3_bucket\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                r = self.get_associated_au(code, file, "resource.aws_s3_bucket_server_side_encryption_configuration", 
+                r = self.get_associated_au(file, "resource.aws_s3_bucket_server_side_encryption_configuration", 
                     "bucket", pattern, [""])
                 if not r:
                     errors.append(Error('sec_missing_encryption', element, file, repr(element), 

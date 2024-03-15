@@ -6,13 +6,13 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformKeyManagement(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.azurerm_storage_account"):
                 expr = "\${azurerm_storage_account\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                if not self.get_associated_au(code, file, "resource.azurerm_storage_account_customer_managed_key", "storage_account_id",
+                if not self.get_associated_au(file, "resource.azurerm_storage_account_customer_managed_key", "storage_account_id",
                     pattern, [""]):
                     errors.append(Error('sec_key_management', element, file, repr(element), 
                         f"Suggestion: check for a required resource 'azurerm_storage_account_customer_managed_key' " + 

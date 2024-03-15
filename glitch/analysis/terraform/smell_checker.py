@@ -5,15 +5,16 @@ from glitch.repr.inter import *
 from glitch.analysis.rules import Error, SmellChecker
 
 class TerraformSmellChecker(SmellChecker):
-    def get_au(self, c, file: str, name: str, type: str):
+    def get_au(self, file: str, name: str, type: str, c = None):
+        c = self.code if c is None else c
         if isinstance(c, Project):
             module_name = os.path.basename(os.path.dirname(file))
             for m in c.modules:
                 if m.name == module_name:
-                    return self.get_au(m, file, name, type)
+                    return self.get_au(file, name, type, c = m)
         elif isinstance(c, Module):
             for ub in c.blocks:
-                au = self.get_au(ub, file, name, type)
+                au = self.get_au(file, name, type, c = ub)
                 if au is not None:
                     return au
         elif isinstance(c, UnitBlock):
@@ -22,15 +23,16 @@ class TerraformSmellChecker(SmellChecker):
                     return au
         return None
 
-    def get_associated_au(self, code, file: str, type: str, attribute_name: str , pattern, attribute_parents: list):
+    def get_associated_au(self, file: str, type: str, attribute_name: str, pattern, attribute_parents: list, code = None):
+        code = self.code if code is None else code
         if isinstance(code, Project):
             module_name = os.path.basename(os.path.dirname(file))
             for m in code.modules:
                 if m.name == module_name:
-                    return self.get_associated_au(m, file, type, attribute_name, pattern, attribute_parents)
+                    return self.get_associated_au(file, type, attribute_name, pattern, attribute_parents, code = m)
         elif isinstance(code, Module):
             for ub in code.blocks:
-                au = self.get_associated_au(ub, file, type, attribute_name, pattern, attribute_parents)
+                au = self.get_associated_au(file, type, attribute_name, pattern, attribute_parents, code = ub)
                 if au is not None:
                     return au
         elif isinstance(code, UnitBlock):

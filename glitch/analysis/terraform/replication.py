@@ -6,13 +6,13 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformReplication(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_s3_bucket"):
                 expr = "\${aws_s3_bucket\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                if not self.get_associated_au(code, file, "resource.aws_s3_bucket_replication_configuration", 
+                if not self.get_associated_au(file, "resource.aws_s3_bucket_replication_configuration", 
                     "bucket", pattern, [""]):
                     errors.append(Error('sec_replication', element, file, repr(element), 
                         f"Suggestion: check for a required resource 'aws_s3_bucket_replication_configuration' " + 

@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformAccessControl(TerraformSmellChecker):
-    def check(self, element, file: str, code, au_type = None, parent_name = ""):
+    def check(self, element, file: str, au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_api_gateway_method"):
@@ -41,7 +41,7 @@ class TerraformAccessControl(TerraformSmellChecker):
             elif (element.type == "resource.aws_s3_bucket"):
                 expr = "\${aws_s3_bucket\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
-                if not self.get_associated_au(code, file, "resource.aws_s3_bucket_public_access_block", "bucket", pattern, [""]):
+                if self.get_associated_au(file, "resource.aws_s3_bucket_public_access_block", "bucket", pattern, [""]) is None:
                     errors.append(Error('sec_access_control', element, file, repr(element), 
                         f"Suggestion: check for a required resource 'aws_s3_bucket_public_access_block' " + 
                             f"associated to an 'aws_s3_bucket' resource."))

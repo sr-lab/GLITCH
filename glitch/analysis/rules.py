@@ -220,6 +220,9 @@ class RuleVisitor(ABC):
 Error.agglomerate_errors()
 
 class SmellChecker(ABC):
+    def __init__(self) -> None:
+        self.code = None
+
     @abstractmethod
     def check(self, element, file: str) -> list[Error]:
         pass
