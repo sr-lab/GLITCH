@@ -6,11 +6,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformReplication(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_s3_bucket"):
-                expr = "\${aws_s3_bucket\." + f"{elem_name}\."
+                expr = "\${aws_s3_bucket\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
                 if not self.get_associated_au(code, file, "resource.aws_s3_bucket_replication_configuration", 
                     "bucket", pattern, [""]):
@@ -26,7 +26,7 @@ class TerraformReplication(TerraformSmellChecker):
         
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for config in SecurityVisitor._REPLICATION:
-                if (elem_name == config['attribute'] and au_type in config['au_type']
+                if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]
                     and not element.has_variable and elem_value.lower() not in config['values']):
                     return [Error('sec_replication', element, file, repr(element))]

@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformFirewallMisconfig(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             for config in SecurityVisitor._FIREWALL_CONFIGS:
@@ -16,7 +16,7 @@ class TerraformFirewallMisconfig(TerraformSmellChecker):
             
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for config in SecurityVisitor._FIREWALL_CONFIGS:
-                if (elem_name == config['attribute'] and au_type in config['au_type']
+                if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
                     if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
                         return [Error('sec_firewall_misconfig', element, file, repr(element))]

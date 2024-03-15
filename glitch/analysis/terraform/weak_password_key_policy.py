@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             for policy in SecurityVisitor._PASSWORD_KEY_POLICY:
@@ -16,7 +16,7 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
 
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for policy in SecurityVisitor._PASSWORD_KEY_POLICY:
-                if (elem_name == policy['attribute'] and au_type in policy['au_type']
+                if (element.name == policy['attribute'] and au_type in policy['au_type']
                     and parent_name in policy['parents'] and policy['values'] != [""]):
                     if (policy['logic'] == "equal"):
                         if ("any_not_empty" in policy['values'] and elem_value.lower() == ""):

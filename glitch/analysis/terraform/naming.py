@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformNaming(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_security_group"):
@@ -35,13 +35,13 @@ class TerraformNaming(TerraformSmellChecker):
                         f"Suggestion: check for a required attribute with name '{config['msg']}'."))
                     
         elif isinstance(element, Attribute) or isinstance(element, Variable):
-            if (elem_name == "name" and au_type in ["resource.azurerm_storage_account"]):
+            if (element.name == "name" and au_type in ["resource.azurerm_storage_account"]):
                 pattern = r'^[a-z0-9]{3,24}$'
                 if not re.match(pattern, elem_value):
                     errors.append(Error('sec_naming', element, file, repr(element)))
 
             for config in SecurityVisitor._NAMING:
-                if (elem_name == config['attribute'] and au_type in config['au_type']
+                if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
                     if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
                         errors.append(Error('sec_naming', element, file, repr(element)))

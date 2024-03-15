@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformHttpWithoutTls(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "data.http"):
@@ -36,7 +36,7 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
                     
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for config in SecurityVisitor._HTTPS_CONFIGS:
-                if (elem_name == config["attribute"] and au_type in config["au_type"] 
+                if (element.name == config["attribute"] and au_type in config["au_type"] 
                     and parent_name in config["parents"] and not element.has_variable 
                     and elem_value.lower() not in config["values"]):
                     return [Error('sec_https', element, file, repr(element))]

@@ -108,7 +108,7 @@ class TerraformLogging(TerraformSmellChecker):
 
         return errors
 
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_eks_cluster"):
@@ -159,7 +159,7 @@ class TerraformLogging(TerraformSmellChecker):
                     ["audit", "profiler"]
                 ))
             elif (element.type == "resource.azurerm_mssql_server"):
-                expr = "\${azurerm_mssql_server\." + f"{elem_name}\."
+                expr = "\${azurerm_mssql_server\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
                 assoc_au = self.get_associated_au(code, file, "resource.azurerm_mssql_server_extended_auditing_policy", 
                     "server_id", pattern, [""])
@@ -168,7 +168,7 @@ class TerraformLogging(TerraformSmellChecker):
                         f"Suggestion: check for a required resource 'azurerm_mssql_server_extended_auditing_policy' " + 
                         f"associated to an 'azurerm_mssql_server' resource."))
             elif (element.type == "resource.azurerm_mssql_database"):
-                expr = "\${azurerm_mssql_database\." + f"{elem_name}\."
+                expr = "\${azurerm_mssql_database\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
                 assoc_au = self.get_associated_au(code, file, "resource.azurerm_mssql_database_extended_auditing_policy", 
                     "database_id", pattern, [""])
@@ -212,7 +212,7 @@ class TerraformLogging(TerraformSmellChecker):
                     errors.append(Error('sec_logging', element, file, repr(element), 
                         "Suggestion: check for a required attribute with name 'setting.name' and value 'containerInsights'."))
             elif (element.type == "resource.aws_vpc"):
-                expr = "\${aws_vpc\." + f"{elem_name}\."
+                expr = "\${aws_vpc\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
                 assoc_au = self.get_associated_au(code, file, "resource.aws_flow_log",
                             "vpc_id", pattern, [""])
@@ -228,7 +228,7 @@ class TerraformLogging(TerraformSmellChecker):
                         f"Suggestion: check for a required attribute with name '{config['msg']}'."))  
                         
         elif isinstance(element, Attribute) or isinstance(element, Variable):
-            if (elem_name == "cloud_watch_logs_group_arn" and au_type == "resource.aws_cloudtrail"):
+            if (element.name == "cloud_watch_logs_group_arn" and au_type == "resource.aws_cloudtrail"):
                 if re.match(r"^\${aws_cloudwatch_log_group\..", elem_value):
                     aws_cloudwatch_log_group_name = elem_value.split('.')[1]
                     if not self.get_au(code, file, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
@@ -237,20 +237,20 @@ class TerraformLogging(TerraformSmellChecker):
                             f"with name '{aws_cloudwatch_log_group_name}'."))
                 else:
                     errors.append(Error('sec_logging', element, file, repr(element)))
-            elif (((elem_name == "retention_in_days" and parent_name == "" 
+            elif (((element.name == "retention_in_days" and parent_name == "" 
                 and au_type in ["resource.azurerm_mssql_database_extended_auditing_policy", 
                 "resource.azurerm_mssql_server_extended_auditing_policy"]) 
-                or (elem_name == "days" and parent_name == "retention_policy" 
+                or (element.name == "days" and parent_name == "retention_policy" 
                 and au_type == "resource.azurerm_network_watcher_flow_log")) 
                 and ((not elem_value.isnumeric()) or (elem_value.isnumeric() and int(elem_value) < 90))):
                 errors.append(Error('sec_logging', element, file, repr(element)))
-            elif (elem_name == "days" and parent_name == "retention_policy" 
+            elif (element.name == "days" and parent_name == "retention_policy" 
                 and au_type == "resource.azurerm_monitor_log_profile" 
                 and (not elem_value.isnumeric() or (elem_value.isnumeric() and int(elem_value) < 365))):
                 errors.append(Error('sec_logging', element, file, repr(element)))
 
             for config in SecurityVisitor._LOGGING:
-                if (elem_name == config['attribute'] and au_type in config['au_type']
+                if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
                     if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
                         errors.append(Error('sec_logging', element, file, repr(element)))

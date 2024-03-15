@@ -147,7 +147,7 @@ class SecurityVisitor(RuleVisitor):
                     break
         
         for checker in self.checkers:
-            errors += checker.check(au, file, self.code, au.name)
+            errors += checker.check(au, file, self.code)
         
         if self.__is_http_url(au.name):
             errors.append(Error('sec_https', au, file, repr(au)))
@@ -159,7 +159,7 @@ class SecurityVisitor(RuleVisitor):
     def check_dependency(self, d: Dependency, file: str) -> List[Error]:
         return []
 
-    def __check_keyvalue(self, c: CodeElement, name: str, 
+    def __check_keyvalue(self, c: KeyValue, name: str, 
             value: str, has_variable: bool, file: str, au_type = None, parent_name: str = ""):
         errors = []
         name = name.strip().lower()
@@ -294,7 +294,7 @@ class SecurityVisitor(RuleVisitor):
             value = var.value
 
         for checker in self.checkers:
-            errors += checker.check(c, file, self.code, name, value, au_type, parent_name)
+            errors += checker.check(c, file, self.code, value, au_type, parent_name)
 
         return errors
 

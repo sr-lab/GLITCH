@@ -6,11 +6,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformMissingEncryption(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_s3_bucket"):
-                expr = "\${aws_s3_bucket\." + f"{elem_name}\."
+                expr = "\${aws_s3_bucket\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
                 r = self.get_associated_au(code, file, "resource.aws_s3_bucket_server_side_encryption_configuration", 
                     "bucket", pattern, [""])
@@ -61,7 +61,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                     
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for config in SecurityVisitor._MISSING_ENCRYPTION:
-                if (elem_name == config['attribute'] and au_type in config['au_type']
+                if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and config['values'] != [""]):
                     if ("any_not_empty" in config['values'] and elem_value.lower() == ""):
                         errors.append(Error('sec_missing_encryption', element, file, repr(element)))
@@ -72,7 +72,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                         break
 
             for item in SecurityVisitor._CONFIGURATION_KEYWORDS:
-                if item.lower() == elem_name:
+                if item.lower() == element.name:
                     for config in SecurityVisitor._ENCRYPT_CONFIG:
                         if au_type in config['au_type']:
                             expr = config['keyword'].lower() + "\s*" + config['value'].lower()

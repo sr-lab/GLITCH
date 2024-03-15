@@ -5,7 +5,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformSslTlsPolicy(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type in ["resource.aws_alb_listener", "resource.aws_lb_listener"]):
@@ -24,7 +24,7 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                     
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for policy in SecurityVisitor._SSL_TLS_POLICY:
-                if (elem_name == policy['attribute'] and au_type in policy['au_type']
+                if (element.name == policy['attribute'] and au_type in policy['au_type']
                     and parent_name in policy['parents'] and not element.has_variable 
                     and elem_value.lower() not in policy['values']):
                     return [Error('sec_ssl_tls_policy', element, file, repr(element))]

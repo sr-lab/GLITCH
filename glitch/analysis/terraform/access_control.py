@@ -6,7 +6,7 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformAccessControl(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_api_gateway_method"):
@@ -39,7 +39,7 @@ class TerraformAccessControl(TerraformSmellChecker):
             elif (element.type == "resource.google_sql_database_instance"):
                 errors += self.check_database_flags(element, file, 'sec_access_control', "cross db ownership chaining", "off")
             elif (element.type == "resource.aws_s3_bucket"):
-                expr = "\${aws_s3_bucket\." + f"{elem_name}\."
+                expr = "\${aws_s3_bucket\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
                 if not self.get_associated_au(code, file, "resource.aws_s3_bucket_public_access_block", "bucket", pattern, [""]):
                     errors.append(Error('sec_access_control', element, file, repr(element), 
@@ -54,7 +54,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                     
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for item in SecurityVisitor._POLICY_KEYWORDS:
-                if item.lower() == elem_name:
+                if item.lower() == element.name:
                     for config in SecurityVisitor._POLICY_ACCESS_CONTROL:
                         expr = config['keyword'].lower() + "\s*" + config['value'].lower()
                         pattern = re.compile(rf"{expr}")
@@ -64,20 +64,20 @@ class TerraformAccessControl(TerraformSmellChecker):
                             errors.append(Error('sec_access_control', element, file, repr(element)))
                             break
 
-            if (re.search(r"actions\[\d+\]", elem_name) and parent_name == "permissions" 
+            if (re.search(r"actions\[\d+\]", element.name) and parent_name == "permissions" 
                 and au_type == "resource.azurerm_role_definition" and elem_value == "*"):
                 errors.append(Error('sec_access_control', element, file, repr(element)))
-            elif (((re.search(r"members\[\d+\]", elem_name) and au_type == "resource.google_storage_bucket_iam_binding")
-                or (elem_name == "member" and au_type == "resource.google_storage_bucket_iam_member"))
+            elif (((re.search(r"members\[\d+\]", element.name) and au_type == "resource.google_storage_bucket_iam_binding")
+                or (element.name == "member" and au_type == "resource.google_storage_bucket_iam_member"))
                 and (elem_value == "allusers" or elem_value == "allauthenticatedusers")):
                 errors.append(Error('sec_access_control', element, file, repr(element)))
-            elif (elem_name == "email" and parent_name == "service_account" 
+            elif (element.name == "email" and parent_name == "service_account" 
                 and au_type == "resource.google_compute_instance"
                 and re.search(r".-compute@developer.gserviceaccount.com", elem_value)):
                 errors.append(Error('sec_access_control', element, file, repr(element)))
 
             for config in SecurityVisitor._ACCESS_CONTROL_CONFIGS:
-                if (elem_name == config['attribute'] and au_type in config['au_type']
+                if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and not element.has_variable 
                     and elem_value.lower() not in config['values']
                     and config['values'] != [""]):

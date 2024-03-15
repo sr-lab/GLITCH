@@ -221,5 +221,5 @@ Error.agglomerate_errors()
 
 class SmellChecker(ABC):
     @abstractmethod
-    def check(self, element, file: str, code = None, elem_name: str = "", elem_value: str = "", au_type = None, parent_name = "") -> list[Error]:
+    def check(self, element, file: str) -> list[Error]:
         pass

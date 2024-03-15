@@ -6,13 +6,13 @@ from glitch.repr.inter import AtomicUnit, Attribute, Variable
 
 
 class TerraformAuthentication(TerraformSmellChecker):
-    def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+    def check(self, element, file: str, code, elem_value: str = "", au_type = None, parent_name = ""):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.google_sql_database_instance"):
                 errors += self.check_database_flags(element, file, 'sec_authentication', "contained database authentication", "off")
             elif (element.type == "resource.aws_iam_group"):
-                expr = "\${aws_iam_group\." + f"{elem_name}\."
+                expr = "\${aws_iam_group\." + f"{element.name}\."
                 pattern = re.compile(rf"{expr}")
                 if not self.get_associated_au(code, file, "resource.aws_iam_group_policy", "group", pattern, [""]):
                     errors.append(Error('sec_authentication', element, file, repr(element), 
@@ -27,7 +27,7 @@ class TerraformAuthentication(TerraformSmellChecker):
             
         elif isinstance(element, Attribute) or isinstance(element, Variable):
             for item in SecurityVisitor._POLICY_KEYWORDS:
-                if item.lower() == elem_name:        
+                if item.lower() == element.name:        
                     for config in SecurityVisitor._POLICY_AUTHENTICATION:
                         if au_type in config['au_type']:
                             expr = config['keyword'].lower() + "\s*" + config['value'].lower()
@@ -36,7 +36,7 @@ class TerraformAuthentication(TerraformSmellChecker):
                                 errors.append(Error('sec_authentication', element, file, repr(element)))
 
             for config in SecurityVisitor._AUTHENTICATION:
-                if (elem_name == config['attribute'] and au_type in config['au_type']
+                if (element.name == config['attribute'] and au_type in config['au_type']
                     and parent_name in config['parents'] and not element.has_variable 
                     and elem_value.lower() not in config['values']
                     and config['values'] != [""]):
