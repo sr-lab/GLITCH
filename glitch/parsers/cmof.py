@@ -141,7 +141,7 @@ class AnsibleParser(p.Parser):
                     variables += AnsibleParser.__parse_vars(unit_block, f"{cur_name}[{i}]", val, code, child)
                 else:
                     value.append(val.value)
-            if value:
+            if len(value) > 0:
                 create_variable(val, cur_name, str(value), child)
 
         return variables
@@ -1492,12 +1492,19 @@ class TerraformParser(p.Parser):
     def parse_keyvalues(self, unit_block: UnitBlock, keyvalues, code, type: str):
         def create_keyvalue(start_line, end_line, name: str, value: str):
             has_variable = ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
+            pattern = r'^[+-]?\d+(\.\d+)?$'
+            if (has_variable and re.match(pattern, re.sub(r'^\${(.*)}$', r'\1', value))):
+                value = re.sub(r'^\${(.*)}$', r'\1', value)
+                has_variable = False
             if value == "null": value = ""
 
+            if isinstance(value, int):
+                value = str(value)
+
             if type == "attribute":
-                keyvalue = Attribute(name, value, has_variable)
+                keyvalue = Attribute(str(name), value, has_variable)
             elif type == "variable":
-                keyvalue = Variable(name, value, has_variable)
+                keyvalue = Variable(str(name), value, has_variable)
             keyvalue.line = start_line
             keyvalue.code = TerraformParser.__get_element_code(start_line, end_line, code)
             return keyvalue
@@ -1534,19 +1541,20 @@ class TerraformParser(p.Parser):
                     k_values.append(k)    
             elif isinstance(keyvalue, list) and type == "attribute":
             # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
-                if name == "dynamic":
-                    for block in keyvalue:
-                        for block_name, block_attributes in block.items():
-                            k = create_keyvalue(block_attributes["__start_line__"], 
-                                    block_attributes["__end_line__"], f"dynamic.{block_name}", None)
-                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
-                            k_values.append(k)
-                else:
+                try:
                     for block_attributes in keyvalue:
                         k = create_keyvalue(block_attributes["__start_line__"], 
                                 block_attributes["__end_line__"], name, None)
                         k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
                         k_values.append(k)
+                except KeyError:
+                    for block in keyvalue:
+                        for block_name, block_attributes in block.items():
+                            k = create_keyvalue(block_attributes["__start_line__"], 
+                                    block_attributes["__end_line__"], f"{name}.{block_name}", None)
+                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                            k_values.append(k)
+                    
                     
         return k_values
 
@@ -1590,14 +1598,13 @@ class TerraformParser(p.Parser):
 
 
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
-        with open(path) as f:
-            try:
+        unit_block = UnitBlock(path, type)
+        unit_block.path = path
+        try:
+            with open(path) as f:
                 parsed_hcl = hcl2.load(f, True)
                 f.seek(0, 0)
                 code = f.readlines()
-        
-                unit_block = UnitBlock(path, type)
-                unit_block.path = path
                 for key, value in parsed_hcl.items():
                     if key in ["resource", "data", "variable", "module", "output"]:
                         for v in value:
@@ -1607,14 +1614,13 @@ class TerraformParser(p.Parser):
                     elif key == "locals":
                         for local in value:
                             unit_block.variables += self.parse_keyvalues(unit_block, local, code, "variable")
-                    elif key == "provider":
+                    elif key in ["provider", "terraform"]:
                         continue
                     else:
                         throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
-                return unit_block
-            except:
-                throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
-                return None
+        except:
+            throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+        return unit_block
 
 
     def parse_module(self, path: str) -> Module:

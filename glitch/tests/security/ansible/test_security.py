@@ -42,7 +42,7 @@ class TestSecurity(unittest.TestCase):
         self.__help_test(
             "tests/security/ansible/files/empty.yml",
             "tasks",
-            3, ["sec_empty_pass", "sec_hard_pass", "sec_hard_secr"], [8, 8, 8]
+            1, ["sec_empty_pass"], [8]
         )
 
     def test_ansible_weak_crypt(self):

@@ -1,6 +1,6 @@
 import click, os, sys
 from glitch.analysis.rules import Error, RuleVisitor
-from glitch.helpers import RulesListOption
+from glitch.helpers import RulesListOption, get_smell_types, get_smells
 from glitch.parsers.docker_parser import DockerParser
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
@@ -50,12 +50,12 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
          "This flag is only relevant if you are using the dataset flag.")
 @click.option('--csv', is_flag=True, default=False,
     help="Use this flag if you want the output to be in CSV format.")
-@click.option('--smells', cls=RulesListOption, multiple=True, 
-    help="The type of smells being analyzed.")
+@click.option('--smell_types', cls=RulesListOption, multiple=True, 
+    help="The type of smell_types being analyzed.")
 @click.argument('path', type=click.Path(exists=True), required=True)
 @click.argument('output', type=click.Path(), required=False)
 def glitch(tech, type, path, config, module, csv, 
-        dataset, includeall, smells, output, tableformat, linter):
+        dataset, includeall, smell_types, output, tableformat, linter):
     if config != "configs/default.ini" and not os.path.exists(config):
         raise click.BadOptionUsage('config', f"Invalid value for 'config': Path '{config}' does not exist.")
     elif os.path.isdir(config):
@@ -74,15 +74,16 @@ def glitch(tech, type, path, config, module, csv,
         parser = DockerParser()
     elif tech == Tech.terraform:
         parser = TerraformParser()
+        config = resource_filename('glitch', "configs/terraform.ini")
     file_stats = FileStats()
 
-    if smells == ():
-        smells = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
+    if smell_types == ():
+        smell_types = get_smell_types()
 
     analyses = []
     rules = RuleVisitor.__subclasses__()
     for r in rules:
-        if smells == () or r.get_name() in smells:
+        if smell_types == () or r.get_name() in smell_types:
             analysis = r(tech)
             analysis.config(config)
             analyses.append(analysis)
@@ -139,7 +140,7 @@ def glitch(tech, type, path, config, module, csv,
 
     if f != sys.stdout: f.close()
     if not linter:
-        print_stats(errors, smells, file_stats, tableformat)
+        print_stats(errors, get_smells(smell_types, tech), file_stats, tableformat)
 
 def main():
     glitch(prog_name='glitch')
