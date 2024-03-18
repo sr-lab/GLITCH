@@ -295,7 +295,7 @@ class DesignVisitor(RuleVisitor):
 
         return errors
 
-    def check_condition(self, c: ConditionStatement, file: str) -> list[Error]:
+    def check_condition(self, c: ConditionalStatement, file: str) -> list[Error]:
         return super().check_condition(c, file)
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
@@ -328,7 +328,7 @@ class DesignVisitor(RuleVisitor):
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
         return []
 
-    def check_attribute(self, a: Attribute, file: str) -> list[Error]:
+    def check_attribute(self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
         return []
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:

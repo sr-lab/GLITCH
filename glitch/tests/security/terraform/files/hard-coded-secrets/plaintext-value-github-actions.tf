@@ -1,0 +1,13 @@
+resource "github_actions_environment_secret" "bad_example" {     
+  repository       = "my repository name"
+  environment       = "my environment"
+  secret_name       = "my secret name"
+  plaintext_value   = "sensitive secret string"
+}
+
+resource "github_actions_environment_secret" "good_example" {
+  repository       = "my repository name"
+  environment       = "my environment"
+  secret_name       = "my secret name"
+  encrypted_value   = var.some_encrypted_secret_string
+}

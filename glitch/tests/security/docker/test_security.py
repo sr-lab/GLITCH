@@ -28,7 +28,7 @@ class TestSecurity(unittest.TestCase):
     def test_docker_empty(self):
         self.__help_test(
             "tests/security/docker/files/empty.Dockerfile",
-            3, ["sec_empty_pass", "sec_hard_pass", "sec_hard_secr"], [4, 4, 4]
+            1, ["sec_empty_pass"], [4]
         )
         pass
 

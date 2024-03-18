@@ -1,0 +1,46 @@
+resource "aws_elasticsearch_domain" "bad_example" {
+  encrypt_at_rest {
+    enabled = true
+  }
+  domain_endpoint_options {
+    enforce_https = true
+    tls_security_policy = "policy-min-tls-1-2-2019-07"
+  }
+  log_publishing_options {
+    log_type = "audit_logs"
+  }
+}
+
+resource "aws_elasticsearch_domain" "bad_example2" {
+  node_to_node_encryption {
+    enabled = false
+  }
+  
+  encrypt_at_rest {
+    enabled = true
+  }
+  domain_endpoint_options {
+    enforce_https = true
+    tls_security_policy = "policy-min-tls-1-2-2019-07"
+  }
+  log_publishing_options {
+    log_type = "audit_logs"
+  }
+}
+
+resource "aws_elasticsearch_domain" "good_example" {
+  node_to_node_encryption {
+    enabled = true
+  }
+  
+  encrypt_at_rest {
+    enabled = true
+  }
+  domain_endpoint_options {
+    enforce_https = true
+    tls_security_policy = "policy-min-tls-1-2-2019-07"
+  }
+  log_publishing_options {
+    log_type = "audit_logs"
+  }
+}

@@ -30,7 +30,7 @@ class Block(CodeElement):
     def add_statement(self, statement):
         self.statements.append(statement)
 
-class ConditionStatement(Block):
+class ConditionalStatement(Block):
     class ConditionType(Enum):
         IF = 1
         SWITCH = 2
@@ -41,10 +41,9 @@ class ConditionStatement(Block):
         self.else_statement = None
         self.is_default = is_default
         self.type = type
-        self.repr_str = str(self.type) + " " + self.condition
 
     def __repr__(self) -> str:
-        return self.repr_str
+        return self.code.strip().split('\n')[0]
 
     def print(self, tab) -> str:
         res = (tab * "\t") + str(self.type) + " " + self.condition + \

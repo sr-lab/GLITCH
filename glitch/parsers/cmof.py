@@ -1,6 +1,7 @@
 import os
 import re
 import tempfile
+import traceback
 from puppetparser.parser import parse as parse_puppet
 import puppetparser.model as puppetmodel
 from string import Template
@@ -140,7 +141,7 @@ class AnsibleParser(p.Parser):
                     variables += AnsibleParser.__parse_vars(unit_block, f"{cur_name}[{i}]", val, code, child)
                 else:
                     value.append(val.value)
-            if value:
+            if len(value) > 0:
                 create_variable(val, cur_name, str(value), child)
 
         return variables
@@ -840,18 +841,17 @@ class ChefParser(p.Parser):
             if (ChefParser._check_node(ast, ["when"], 3) \
                     or ChefParser._check_node(ast, ["when"], 2)):
                 if self.condition is None:
-                    self.condition = ConditionStatement(
+                    self.condition = ConditionalStatement(
                         self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
-                        ConditionStatement.ConditionType.SWITCH
+                        ConditionalStatement.ConditionType.SWITCH
                     )
                     self.condition.code = ChefParser._get_source(ast, self.source)
-                    self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0] - 1
-                    self.condition.repr_str = "case " + self.case_head
+                    self.condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
                     self.current_condition = self.condition
                 else:
-                    self.current_condition.else_statement = ConditionStatement(
+                    self.current_condition.else_statement = ConditionalStatement(
                         self.case_head + " == " + ChefParser._get_content(ast.args[0][0], self.source),
-                        ConditionStatement.ConditionType.SWITCH
+                        ConditionalStatement.ConditionType.SWITCH
                     )
                     self.current_condition = self.current_condition.else_statement
                     self.current_condition.code = ChefParser._get_source(ast, self.source)
@@ -860,11 +860,13 @@ class ChefParser(p.Parser):
                     self.push([self.is_case_condition], ast.args[2])
                 return True
             elif (ChefParser._check_node(ast, ["else"], 1)):
-                self.current_condition.else_statement = ConditionStatement(
+                self.current_condition.else_statement = ConditionalStatement(
                     "",
-                    ConditionStatement.ConditionType.SWITCH,
+                    ConditionalStatement.ConditionType.SWITCH,
                     is_default=True
                 )
+                self.current_condition.else_statement.code = \
+                    ChefParser._get_source(ast, self.source)
                 self.current_condition.else_statement.line = \
                         ChefParser._get_content_bounds(ast, self.source)[0]
                 return True
@@ -1068,7 +1070,7 @@ class PuppetParser(p.Parser):
             unit_block.add_unit_block(ce)
         elif isinstance(ce, Attribute):
             unit_block.add_attribute(ce)
-        elif isinstance(ce, ConditionStatement):
+        elif isinstance(ce, ConditionalStatement):
             unit_block.add_statement(ce)
         elif isinstance(ce, list):
             for c in ce:
@@ -1078,7 +1080,7 @@ class PuppetParser(p.Parser):
     def __process_codeelement(codeelement, path, code):
         def get_code(ce):
             if ce.line == ce.end_line:
-                res = code[ce.line - 1][ce.col - 1 : ce.end_col - 1]
+                res = code[ce.line - 1][max(0, ce.col - 1) : ce.end_col - 1]
             else:
                 res = code[ce.line - 1]
             
@@ -1347,48 +1349,49 @@ class PuppetParser(p.Parser):
                 expressions = PuppetParser.__process_codeelement(match.expressions, path, code)
                 for expression in expressions:
                     if expression != "default":
-                        condition = ConditionStatement(control + "==" + expression, 
-                            ConditionStatement.ConditionType.SWITCH, False)
+                        condition = ConditionalStatement(control + "==" + expression, 
+                            ConditionalStatement.ConditionType.SWITCH, False)
                         condition.line, condition.column = match.line, match.col
+                        condition.code = get_code(match)
                         conditions.append(condition)
                     else:
-                        condition = ConditionStatement("", 
-                            ConditionStatement.ConditionType.SWITCH, True)
+                        condition = ConditionalStatement("", 
+                            ConditionalStatement.ConditionType.SWITCH, True)
                         condition.line, condition.column = match.line, match.col
+                        condition.code = get_code(match)
                         conditions.append(condition)
 
             for i in range(1, len(conditions)):
                 conditions[i - 1].else_statement = conditions[i]
 
-            conditions[0].repr_str = "case " + control
-            conditions[0].code = get_code(codeelement)
             return [conditions[0]] + \
                 list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), codeelement.matches))
         elif (isinstance(codeelement, puppetmodel.Selector)):
             control = PuppetParser.__process_codeelement(codeelement.control, path, code)
             conditions = []
         
-            for key, value in codeelement.hash.value.items():
-                key = PuppetParser.__process_codeelement(key, path, code)
-                value = PuppetParser.__process_codeelement(value, path, code)
+            for key_element, value_element in codeelement.hash.value.items():
+                key = PuppetParser.__process_codeelement(key_element, path, code)
+                value = PuppetParser.__process_codeelement(value_element, path, code)
 
                 if key != "default":
-                    condition = ConditionStatement(control + "==" + key, 
-                        ConditionStatement.ConditionType.SWITCH, False)
-                    condition.line, condition.column = codeelement.hash.line, codeelement.hash.col
+                    condition = ConditionalStatement(control + "==" + key, 
+                        ConditionalStatement.ConditionType.SWITCH, False)
+                    condition.line, condition.column = key_element.line, key_element.col
+                    # HACK: the get_code function should be changed to receive a range
+                    key_element.end_line, key_element.end_col = value_element.end_line, value_element.end_col
+                    condition.code = get_code(key_element)
                     conditions.append(condition)
                 else:
-                    condition = ConditionStatement("", 
-                        ConditionStatement.ConditionType.SWITCH, True)
-                    condition.line, condition.column = codeelement.hash.line, codeelement.hash.col
+                    condition = ConditionalStatement("", 
+                        ConditionalStatement.ConditionType.SWITCH, True)
+                    condition.line, condition.column = key_element.line, key_element.col
+                    key_element.end_line, key_element.end_col = value_element.end_line, value_element.end_col
+                    condition.code = get_code(key_element)
                     conditions.append(condition)
-                condition.add_statement(PuppetParser.__process_codeelement(codeelement.hash, path, code))
+            
             for i in range(1, len(conditions)):
                 conditions[i - 1].else_statement = conditions[i]
-
-            conditions[0].code = get_code(codeelement)
-            conditions[0].repr_str = control + "?"\
-                + repr(PuppetParser.__process_codeelement(codeelement.hash, path, code))
 
             return conditions[0]
         elif (isinstance(codeelement, puppetmodel.Reference)):
@@ -1461,7 +1464,8 @@ class PuppetParser(p.Parser):
                     PuppetParser.__process_codeelement(parsed_script, path, code),
                     unit_block
                 )
-        except:
+        except Exception as e:
+           traceback.print_exc()
            throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
         return unit_block
 
@@ -1503,12 +1507,19 @@ class TerraformParser(p.Parser):
     def parse_keyvalues(self, unit_block: UnitBlock, keyvalues, code, type: str):
         def create_keyvalue(start_line, end_line, name: str, value: str):
             has_variable = ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
+            pattern = r'^[+-]?\d+(\.\d+)?$'
+            if (has_variable and re.match(pattern, re.sub(r'^\${(.*)}$', r'\1', value))):
+                value = re.sub(r'^\${(.*)}$', r'\1', value)
+                has_variable = False
             if value == "null": value = ""
 
+            if isinstance(value, int):
+                value = str(value)
+
             if type == "attribute":
-                keyvalue = Attribute(name, value, has_variable)
+                keyvalue = Attribute(str(name), value, has_variable)
             elif type == "variable":
-                keyvalue = Variable(name, value, has_variable)
+                keyvalue = Variable(str(name), value, has_variable)
             keyvalue.line = start_line
             keyvalue.code = TerraformParser.__get_element_code(start_line, end_line, code)
             return keyvalue
@@ -1545,19 +1556,20 @@ class TerraformParser(p.Parser):
                     k_values.append(k)    
             elif isinstance(keyvalue, list) and type == "attribute":
             # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
-                if name == "dynamic":
-                    for block in keyvalue:
-                        for block_name, block_attributes in block.items():
-                            k = create_keyvalue(block_attributes["__start_line__"], 
-                                    block_attributes["__end_line__"], f"dynamic.{block_name}", None)
-                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
-                            k_values.append(k)
-                else:
+                try:
                     for block_attributes in keyvalue:
                         k = create_keyvalue(block_attributes["__start_line__"], 
                                 block_attributes["__end_line__"], name, None)
                         k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
                         k_values.append(k)
+                except KeyError:
+                    for block in keyvalue:
+                        for block_name, block_attributes in block.items():
+                            k = create_keyvalue(block_attributes["__start_line__"], 
+                                    block_attributes["__end_line__"], f"{name}.{block_name}", None)
+                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                            k_values.append(k)
+                    
                     
         return k_values
 
@@ -1601,14 +1613,13 @@ class TerraformParser(p.Parser):
 
 
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
-        with open(path) as f:
-            try:
+        unit_block = UnitBlock(path, type)
+        unit_block.path = path
+        try:
+            with open(path) as f:
                 parsed_hcl = hcl2.load(f, True)
                 f.seek(0, 0)
                 code = f.readlines()
-        
-                unit_block = UnitBlock(path, type)
-                unit_block.path = path
                 for key, value in parsed_hcl.items():
                     if key in ["resource", "data", "variable", "module", "output"]:
                         for v in value:
@@ -1618,14 +1629,13 @@ class TerraformParser(p.Parser):
                     elif key == "locals":
                         for local in value:
                             unit_block.variables += self.parse_keyvalues(unit_block, local, code, "variable")
-                    elif key == "provider":
+                    elif key in ["provider", "terraform"]:
                         continue
                     else:
                         throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
-                return unit_block
-            except:
-                throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
-                return None
+        except:
+            throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+        return unit_block
 
 
     def parse_module(self, path: str) -> Module:

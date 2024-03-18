@@ -20,7 +20,7 @@ class TestTerraform(unittest.TestCase):
         self.__help_test("tests/parser/terraform/files/empty_string_assign.tf", attributes)
 
     def test_terraform_boolean_value(self):
-        attributes = "[account_id:True]"
+        attributes = "[account_id:'True']"
         self.__help_test("tests/parser/terraform/files/boolean_value_assign.tf", attributes)
 
     def test_terraform_multiline_string(self):
@@ -36,7 +36,7 @@ class TestTerraform(unittest.TestCase):
         self.__help_test("tests/parser/terraform/files/dict_value_assign.tf", attributes)
 
     def test_terraform_list_value(self):
-        attributes =  "[keys[0]:'value1', keys[1][0]:1, keys[1][1]:None:[key2:'value2'], keys[2]:None:[key3:'value3']]"
+        attributes =  "[keys[0]:'value1', keys[1][0]:'1', keys[1][1]:None:[key2:'value2'], keys[2]:None:[key3:'value3']]"
         self.__help_test("tests/parser/terraform/files/list_value_assign.tf", attributes)
 
     def test_terraform_dynamic_block(self):
