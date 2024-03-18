@@ -43,8 +43,13 @@ class DeltaPCompiler:
             default = PEUndef()
             if attr_name == "state":
                 default = DefaultValue.DEFAULT_STATE
-            # FIXME: probably the other attributes should also have their
-            # default values
+            elif attr_name == "mode":
+                default = DefaultValue.DEFAULT_MODE
+            elif attr_name == "owner":
+                default = DefaultValue.DEFAULT_OWNER
+            elif attr_name == "content":
+                default = DefaultValue.DEFAULT_CONTENT
+
             return self.__attributes.get(attr_name, (default, None))[0]
 
         def __getitem__(self, key: str) -> PExpr:

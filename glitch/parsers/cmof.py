@@ -153,7 +153,7 @@ class AnsibleParser(p.Parser):
             if (value in ["null", "~"]): value = ""
             a = Attribute(name, value, has_variable)
             a.line = token.start_mark.line + 1
-            a.column = token.start_mark.column # FIXME: not sure if -1 or +1
+            a.column = token.start_mark.column + 1
             if val == None:
                 a.code = AnsibleParser.__get_element_code(token, token, code)
             else:

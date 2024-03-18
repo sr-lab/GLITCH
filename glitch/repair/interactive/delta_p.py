@@ -129,7 +129,6 @@ class PStatement(ABC):
         elif isinstance(expr, PEUndef):
             return None
 
-        # FIXME: Change exception type
         raise RuntimeError(f"Unsupported expression, got {expr}")
 
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr:
