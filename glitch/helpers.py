@@ -1,6 +1,9 @@
 import click
 
-from glitch.analysis.rules import RuleVisitor
+from typing import List
+from glitch.tech import Tech
+from glitch.analysis.rules import Error
+
 
 class RulesListOption(click.Option):
     def __init__(
@@ -35,8 +38,42 @@ class RulesListOption(click.Option):
             show_choices = show_choices,
             show_envvar = show_envvar,
         )
-        rules = list(map(lambda c: c.get_name(), RuleVisitor.__subclasses__()))
-        self.type = click.Choice(rules, case_sensitive=False)
+        self.type = click.Choice(
+            get_smell_types(), 
+            case_sensitive=False
+        )
+
+
+def get_smell_types() -> List[str]:
+    """Get list of smell types.
+
+    Returns:
+        List[str]: List of smell types.
+    """
+    return Error.ERRORS.keys()
+
+
+def get_smells(smell_types: List[str], tech: Tech) -> List[str]:
+    """Get list of smells.
+    
+    Args:
+        smell_types (List[str]): List of smell types.
+        tech (Tech): Technology being analyzed.
+        
+    Returns:
+        List[str]: List of smells.
+    """
+
+    smells = []
+    for smell_type in smell_types:
+        errors = Error.ERRORS[smell_type]
+        for error in errors:
+            if error == tech:
+                smells.extend(errors[error].keys())
+            elif not isinstance(error, Tech):
+                smells.append(error)
+    return smells
+
 
 def remove_unmatched_brackets(string):
     stack, aux = [], ""

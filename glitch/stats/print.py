@@ -7,10 +7,10 @@ def print_stats(errors, smells, file_stats, format):
     total_files = len(file_stats.files)
     occurrences = {}
     files_with_the_smell = {'Combined': set()}
-    for smell_type in smells:
-        for code in Error.ERRORS[smell_type].keys():
-            occurrences[code] = 0
-            files_with_the_smell[code] = set()
+
+    for smell in smells:
+        occurrences[smell] = 0
+        files_with_the_smell[smell] = set()
 
     for error in errors:
         occurrences[error.code] += 1

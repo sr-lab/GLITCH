@@ -1547,7 +1547,7 @@ class TerraformParser(p.Parser):
                                 block_attributes["__end_line__"], name, None)
                         k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
                         k_values.append(k)
-                except Exception:
+                except KeyError:
                     for block in keyvalue:
                         for block_name, block_attributes in block.items():
                             k = create_keyvalue(block_attributes["__start_line__"], 

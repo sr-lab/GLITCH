@@ -16,10 +16,12 @@ class Error():
             'sec_invalid_bind': "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issues. (CWE-284)",
             'sec_no_int_check': "No integrity check - The content of files downloaded from the internet should be checked. (CWE-353)",
             'sec_no_default_switch': "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)",
-            'sec_non_official_image': "Use of non-official Docker image - Use of non-official images should be avoided or taken into careful consideration. (CWE-829)",
             'sec_full_permission_filesystem': "Full permission to the filesystem - Files should not have full permissions to every user. (CWE-732)",
             'sec_obsolete_command': "Use of obsolete command or function - Avoid using obsolete or deprecated commands and functions. (CWE-477)",
-            'terraform': {
+            Tech.docker: {
+                'sec_non_official_image': "Use of non-official Docker image - Use of non-official images should be avoided or taken into careful consideration. (CWE-829)",
+            },
+            Tech.terraform: {
                 'sec_integrity_policy': "Integrity Policy - Image tag is prone to be mutable or integrity monitoring is disabled. (CWE-471)",
                 'sec_ssl_tls_policy': "SSL/TLS/mTLS Policy - Developers should use SSL/TLS/mTLS protocols and their secure versions. (CWE-326)",
                 'sec_dnssec': "Use of DNS without DNSSEC - Developers should favor the usage of DNSSEC while using DNS. (CWE-350)",
