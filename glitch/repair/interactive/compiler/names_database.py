@@ -23,6 +23,16 @@ class NamesDatabase:
     
     @staticmethod
     def reverse_attr_name(name: str, au_type: str, tech: Tech) -> Optional[str]:
+        """Returns the technology-specific name of the attribute with the given name, atomic unit type and tech.
+        
+        Args:
+            name (str): The name of the attribute.
+            au_type (str): The type of the atomic unit.
+            tech (Tech): The tech being considered.
+            
+        Returns:
+            str: The technology-specific name of the attribute.
+        """
         match name, au_type, tech:
             case "path", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "path"
@@ -39,8 +49,19 @@ class NamesDatabase:
         return None
     
     @staticmethod
-    def reverse_attr_value(value: str, name: str, au_type: str, tech: Tech) -> Optional[str]:
-        match value, name, au_type, tech:
+    def reverse_attr_value(value: str, attr_name: str, au_type: str, tech: Tech) -> Optional[str]:
+        """Returns the technology-specific value of the attribute with the given value, attribute name, atomic unit type and tech.
+
+        Args:
+            value (str): The value of the attribute.
+            attr_name (str): The name of the attribute.
+            au_type (str): The type of the atomic unit.
+            tech (Tech): The tech being considered.
+
+        Returns:
+            str: The technology-specific value of the attribute.
+        """
+        match value, attr_name, au_type, tech:
             case "present", "state", "file", Tech.ansible:
                 return "file"
         return value
