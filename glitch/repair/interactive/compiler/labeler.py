@@ -73,12 +73,12 @@ class GLITCHLabeler:
 
     @staticmethod
     def label_conditional(
-        labeled: LabeledUnitBlock, conditional: ConditionStatement
+        labeled: LabeledUnitBlock, conditional: ConditionalStatement
     ):
         for statement in conditional.statements:
             if isinstance(statement, AtomicUnit):
                 GLITCHLabeler.label_atomic_unit(labeled, statement)
-            elif isinstance(statement, ConditionStatement):
+            elif isinstance(statement, ConditionalStatement):
                 GLITCHLabeler.label_conditional(labeled, statement)
             elif isinstance(statement, Variable):
                 GLITCHLabeler.label_variable(labeled, statement)
@@ -93,7 +93,7 @@ class GLITCHLabeler:
         labeled = LabeledUnitBlock(script, tech)
 
         for statement in script.statements:
-            if isinstance(statement, ConditionStatement):
+            if isinstance(statement, ConditionalStatement):
                 GLITCHLabeler.label_conditional(labeled, statement)
 
         for atomic_unit in script.atomic_units:

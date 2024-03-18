@@ -187,7 +187,7 @@ class DeltaPCompiler:
 
     @staticmethod
     def __handle_conditional(
-        conditional: ConditionStatement,
+        conditional: ConditionalStatement,
         tech: Tech, 
         labeled_script: LabeledUnitBlock
     ) -> PStatement:
@@ -197,7 +197,7 @@ class DeltaPCompiler:
                 body = DeltaPCompiler.__handle_atomic_unit(
                     body, stat, tech, labeled_script
                 )
-            elif isinstance(stat, ConditionStatement):
+            elif isinstance(stat, ConditionalStatement):
                 body = PSeq(
                     body,
                     DeltaPCompiler.__handle_conditional(
@@ -231,7 +231,7 @@ class DeltaPCompiler:
         # TODO: The statements will not be in the correct order
 
         for stat in script.statements:
-            if isinstance(stat, ConditionStatement):
+            if isinstance(stat, ConditionalStatement):
                 statement = PSeq(statement, DeltaPCompiler.__handle_conditional(
                     stat, tech, labeled_script
                 ))

@@ -1287,8 +1287,8 @@ class PuppetParser(p.Parser):
             condition = PuppetParser.__process_codeelement(
                 codeelement.condition, path, code
             )
-            condition = ConditionStatement(
-                condition, ConditionStatement.ConditionType.IF
+            condition = ConditionalStatement(
+                condition, ConditionalStatement.ConditionType.IF
             )
             body = list(
                 map(
