@@ -1,11 +1,11 @@
 import json
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.repr.inter import AtomicUnit, Attribute, Variable
+from glitch.repr.inter import AtomicUnit
 
 
 class TerraformSensitiveIAMAction(TerraformSmellChecker):
-    def check(self, element, file: str, au_type = None, parent_name = ""):
+    def check(self, element, file: str):
         errors = []
 
         def convert_string_to_dict(input_string):

@@ -1,3 +1,4 @@
+from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
@@ -5,6 +6,15 @@ from glitch.repr.inter import AtomicUnit, Attribute
 
 
 class TerraformSslTlsPolicy(TerraformSmellChecker):
+    def _check_attribute(self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str) -> List[Error]:
+        for policy in SecurityVisitor._SSL_TLS_POLICY:
+            if (attribute.name == policy['attribute'] and atomic_unit.type in policy['au_type']
+                and parent_name in policy['parents'] and not attribute.has_variable and attribute.value is not None and 
+                    attribute.value.lower() not in policy['values']):
+                return[Error('sec_ssl_tls_policy', attribute, file, repr(attribute))]
+                            
+        return []
+
     def check(self, element, file: str):
         errors = []
         if isinstance(element, AtomicUnit):
@@ -22,18 +32,6 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                     errors.append(Error('sec_ssl_tls_policy', element, file, repr(element), 
                         f"Suggestion: check for a required attribute with name '{policy['msg']}'."))
             
-            def check_attribute(attribute: Attribute, parent_name: str):
-                for policy in SecurityVisitor._SSL_TLS_POLICY:
-                    if (attribute.name == policy['attribute'] and element.type in policy['au_type']
-                        and parent_name in policy['parents'] and not attribute.has_variable and attribute.value is not None and 
-                            attribute.value.lower() not in policy['values']):
-                        errors.append(Error('sec_ssl_tls_policy', attribute, file, repr(attribute)))
-                        break
-                    
-                for child in attribute.keyvalues:
-                    check_attribute(child, attribute.name)
-
-            for attribute in element.attributes:
-                check_attribute(attribute, "")
+            errors += self._check_attributes(element, file)
 
         return errors

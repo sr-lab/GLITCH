@@ -1,12 +1,32 @@
 import re
+from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, Variable
+from glitch.repr.inter import AtomicUnit, Attribute
 
 
 class TerraformAuthentication(TerraformSmellChecker):
-    def check(self, element, file: str, au_type = None, parent_name = ""):
+    def _check_attribute(self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str) -> List[Error]:
+        for item in SecurityVisitor._POLICY_KEYWORDS:
+            if item.lower() == attribute.name:        
+                for config in SecurityVisitor._POLICY_AUTHENTICATION:
+                    if atomic_unit.type in config['au_type']:
+                        expr = config['keyword'].lower() + "\s*" + config['value'].lower()
+                        pattern = re.compile(rf"{expr}")
+                        if not re.search(pattern, attribute.value):
+                            return [Error('sec_authentication', attribute, file, repr(attribute))]
+
+        for config in SecurityVisitor._AUTHENTICATION:
+            if (attribute.name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and not attribute.has_variable 
+                and attribute.value.lower() not in config['values']
+                and config['values'] != [""]):
+                return [Error('sec_authentication', attribute, file, repr(attribute))]
+    
+        return []
+
+    def check(self, element, file: str):
         errors = []
 
         if isinstance(element, AtomicUnit):
@@ -26,29 +46,6 @@ class TerraformAuthentication(TerraformSmellChecker):
                     errors.append(Error('sec_authentication', element, file, repr(element), 
                         f"Suggestion: check for a required attribute with name '{config['msg']}'."))
             
-            def check_attribute(attribute: Attribute, parent_name: str):
-                for item in SecurityVisitor._POLICY_KEYWORDS:
-                    if item.lower() == attribute.name:        
-                        for config in SecurityVisitor._POLICY_AUTHENTICATION:
-                            if element.type in config['au_type']:
-                                expr = config['keyword'].lower() + "\s*" + config['value'].lower()
-                                pattern = re.compile(rf"{expr}")
-                                if not re.search(pattern, attribute.value):
-                                    errors.append(Error('sec_authentication', attribute, file, repr(attribute)))
-                                    break
-
-                for config in SecurityVisitor._AUTHENTICATION:
-                    if (attribute.name == config['attribute'] and element.type in config['au_type']
-                        and parent_name in config['parents'] and not attribute.has_variable 
-                        and attribute.value.lower() not in config['values']
-                        and config['values'] != [""]):
-                        errors.append(Error('sec_authentication', attribute, file, repr(attribute)))
-                        break
-
-                for attr_child in attribute.keyvalues:
-                    check_attribute(attr_child, attribute.name)
-
-            for attribute in element.attributes:
-                check_attribute(attribute, "")
+            errors += self._check_attributes(element, file)
 
         return errors

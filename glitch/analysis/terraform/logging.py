@@ -53,7 +53,7 @@ class TerraformLogging(TerraformSmellChecker):
 
         return errors
     
-    def check_azurerm_storage_container(self, element, file: str):
+    def __check_azurerm_storage_container(self, element, file: str):
         errors = []
 
         container_access_type = self.check_required_attribute(
@@ -107,6 +107,39 @@ class TerraformLogging(TerraformSmellChecker):
             errors.append(Error('sec_logging', assoc_au.attributes[-1], file, repr(assoc_au.attributes[-1])))
 
         return errors
+    
+    def _check_attribute(self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str) -> List[Error]:
+        if (attribute.name == "cloud_watch_logs_group_arn" and atomic_unit.type == "resource.aws_cloudtrail"):
+            if re.match(r"^\${aws_cloudwatch_log_group\..", attribute.value):
+                aws_cloudwatch_log_group_name = attribute.value.split('.')[1]
+                if not self.get_au(file, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
+                    return [Error('sec_logging', attribute, file, repr(attribute),
+                        f"Suggestion: check for a required resource 'aws_cloudwatch_log_group' " +
+                        f"with name '{aws_cloudwatch_log_group_name}'.")]
+            else:
+                return [Error('sec_logging', attribute, file, repr(attribute))]
+        elif (((attribute.name == "retention_in_days" and parent_name == "" 
+            and atomic_unit.type in ["resource.azurerm_mssql_database_extended_auditing_policy", 
+            "resource.azurerm_mssql_server_extended_auditing_policy"]) 
+            or (attribute.name == "days" and parent_name == "retention_policy" 
+            and atomic_unit.type == "resource.azurerm_network_watcher_flow_log")) 
+            and ((not attribute.value.isnumeric()) or (attribute.value.isnumeric() and int(attribute.value) < 90))):
+            return [Error('sec_logging', attribute, file, repr(attribute))]
+        elif (attribute.name == "days" and parent_name == "retention_policy" 
+            and atomic_unit.type == "resource.azurerm_monitor_log_profile" 
+            and (not attribute.value.isnumeric() or (attribute.value.isnumeric() and int(attribute.value) < 365))):
+            return [Error('sec_logging', attribute, file, repr(attribute))]
+
+        for config in SecurityVisitor._LOGGING:
+            if (attribute.name == config['attribute'] and atomic_unit.type in config['au_type']
+                and parent_name in config['parents'] and config['values'] != [""]):
+                if ("any_not_empty" in config['values'] and attribute.value.lower() == ""):
+                    return [Error('sec_logging', attribute, file, repr(attribute))]
+                elif ("any_not_empty" not in config['values'] and not attribute.has_variable and 
+                    attribute.value.lower() not in config['values']):
+                    return [Error('sec_logging', attribute, file, repr(attribute))]
+        
+        return []
 
     def check(self, element, file: str):
         errors = []
@@ -197,7 +230,7 @@ class TerraformLogging(TerraformSmellChecker):
                         required_flag = False
                     errors += self.check_database_flags(element, file, 'sec_logging', flag['flag_name'], flag['value'], required_flag)
             elif (element.type == "resource.azurerm_storage_container"):
-                errors += self.check_azurerm_storage_container(element, file)
+                errors += self.__check_azurerm_storage_container(element, file)
             elif (element.type == "resource.aws_ecs_cluster"):
                 name = self.check_required_attribute(element.attributes, ["setting"], "name", "containerinsights")
                 if name is not None:
@@ -227,43 +260,6 @@ class TerraformLogging(TerraformSmellChecker):
                     errors.append(Error('sec_logging', element, file, repr(element), 
                         f"Suggestion: check for a required attribute with name '{config['msg']}'."))  
             
-            def check_attribute(attribute: Attribute, parent_name: str):
-                if (attribute.name == "cloud_watch_logs_group_arn" and element.type == "resource.aws_cloudtrail"):
-                    if re.match(r"^\${aws_cloudwatch_log_group\..", attribute.value):
-                        aws_cloudwatch_log_group_name = attribute.value.split('.')[1]
-                        if not self.get_au(file, aws_cloudwatch_log_group_name, "resource.aws_cloudwatch_log_group"):
-                            errors.append(Error('sec_logging', attribute, file, repr(attribute),
-                                f"Suggestion: check for a required resource 'aws_cloudwatch_log_group' " +
-                                f"with name '{aws_cloudwatch_log_group_name}'."))
-                    else:
-                        errors.append(Error('sec_logging', attribute, file, repr(attribute)))
-                elif (((attribute.name == "retention_in_days" and parent_name == "" 
-                    and element.type in ["resource.azurerm_mssql_database_extended_auditing_policy", 
-                    "resource.azurerm_mssql_server_extended_auditing_policy"]) 
-                    or (attribute.name == "days" and parent_name == "retention_policy" 
-                    and element.type == "resource.azurerm_network_watcher_flow_log")) 
-                    and ((not attribute.value.isnumeric()) or (attribute.value.isnumeric() and int(attribute.value) < 90))):
-                    errors.append(Error('sec_logging', attribute, file, repr(attribute)))
-                elif (attribute.name == "days" and parent_name == "retention_policy" 
-                    and element.type == "resource.azurerm_monitor_log_profile" 
-                    and (not attribute.value.isnumeric() or (attribute.value.isnumeric() and int(attribute.value) < 365))):
-                    errors.append(Error('sec_logging', attribute, file, repr(attribute)))
-
-                for config in SecurityVisitor._LOGGING:
-                    if (attribute.name == config['attribute'] and element.type in config['au_type']
-                        and parent_name in config['parents'] and config['values'] != [""]):
-                        if ("any_not_empty" in config['values'] and attribute.value.lower() == ""):
-                            errors.append(Error('sec_logging', attribute, file, repr(attribute)))
-                            break
-                        elif ("any_not_empty" not in config['values'] and not attribute.has_variable and 
-                            attribute.value.lower() not in config['values']):
-                            errors.append(Error('sec_logging', attribute, file, repr(attribute)))
-                            break
-
-                for attr_child in attribute.keyvalues:
-                    check_attribute(attr_child, attribute.name)
-
-            for attr in element.attributes:
-                check_attribute(attr, "")
+            errors += self._check_attributes(element, file)
 
         return errors

@@ -103,3 +103,19 @@ class TerraformSmellChecker(SmellChecker):
             attribute = self.check_required_attribute(attributes, [""], f"{name}[{i}]")
 
         return False, None
+    
+    def _check_attribute(self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str) -> List[Error]:
+        pass
+
+    def __check_attribute(self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str) -> List[Error]:
+        errors = []
+        errors += self._check_attribute(attribute, atomic_unit, parent_name, file)
+        for attr_child in attribute.keyvalues:
+            errors += self.__check_attribute(attr_child, atomic_unit, attribute.name, file)
+        return errors
+
+    def _check_attributes(self, atomic_unit: AtomicUnit, file: str) -> List[Error]:
+        errors = []
+        for attribute in atomic_unit.attributes:
+            errors += self.__check_attribute(attribute, atomic_unit, "", file)
+        return errors
