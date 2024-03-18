@@ -2,11 +2,11 @@ import re
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, Variable
+from glitch.repr.inter import AtomicUnit, Attribute
 
 
 class TerraformNetworkSecurityRules(TerraformSmellChecker):
-    def check(self, element, file: str, au_type = None, parent_name = ""):
+    def check(self, element, file: str):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.azurerm_network_security_rule"):
@@ -49,10 +49,18 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                     errors.append(Error('sec_network_security_rules', element, file, repr(element), 
                         f"Suggestion: check for a required attribute with name '{rule['msg']}'."))
         
-        elif isinstance(element, Attribute) or isinstance(element, Variable):
-            for rule in SecurityVisitor._NETWORK_SECURITY_RULES:
-                if (element.name == rule['attribute'] and au_type in rule['au_type'] and parent_name in rule['parents'] 
-                    and not element.has_variable and element.value.lower() not in rule['values'] and rule['values'] != [""]):
-                    return [Error('sec_network_security_rules', element, file, repr(element))]
+            def check_attribute(attribute: Attribute, parent_name: str):
+                for rule in SecurityVisitor._NETWORK_SECURITY_RULES:
+                    if (attribute.name == rule['attribute'] and element.type in rule['au_type'] and parent_name in rule['parents'] 
+                        and not attribute.has_variable and attribute.value is not None and 
+                            attribute.value.lower() not in rule['values'] and rule['values'] != [""]):
+                        errors.append(Error('sec_network_security_rules', attribute, file, repr(attribute)))
+                        break
+                
+                for child in attribute.keyvalues:
+                    check_attribute(child, attribute.name)
+
+            for attribute in element.attributes:
+                check_attribute(attribute, "")
         
         return errors

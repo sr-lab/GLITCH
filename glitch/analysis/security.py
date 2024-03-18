@@ -18,7 +18,7 @@ class SecurityVisitor(RuleVisitor):
     __URL_REGEX = r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
 
     class EmptyChecker(SmellChecker):
-        def check(self, element, file: str, code, elem_name: str, elem_value: str = "", au_type = None, parent_name = ""):
+        def check(self, element, file: str):
             return []
 
     class NonOfficialImageSmell(SmellChecker):
@@ -296,7 +296,7 @@ class SecurityVisitor(RuleVisitor):
 
         for checker in self.checkers:
             checker.code = self.code
-            errors += checker.check(c, file, au_type, parent_name)
+            errors += checker.check(c, file)
 
         return errors
 

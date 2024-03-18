@@ -52,35 +52,42 @@ class TerraformAccessControl(TerraformSmellChecker):
                     errors.append(Error('sec_access_control', element, file, repr(element), 
                         f"Suggestion: check for a required attribute with name '{config['msg']}'."))
                     
-        elif isinstance(element, Attribute) or isinstance(element, Variable):
-            for item in SecurityVisitor._POLICY_KEYWORDS:
-                if item.lower() == element.name:
-                    for config in SecurityVisitor._POLICY_ACCESS_CONTROL:
-                        expr = config['keyword'].lower() + "\s*" + config['value'].lower()
-                        pattern = re.compile(rf"{expr}")
-                        allow_expr = "\"effect\":" + "\s*" + "\"allow\""
-                        allow_pattern = re.compile(rf"{allow_expr}")
-                        if re.search(pattern, element.value) and re.search(allow_pattern, element.value):
-                            errors.append(Error('sec_access_control', element, file, repr(element)))
-                            break
+            def check_attribute(attribute, parent_name):
+                for item in SecurityVisitor._POLICY_KEYWORDS:
+                    if item.lower() == attribute.name:
+                        for config in SecurityVisitor._POLICY_ACCESS_CONTROL:
+                            expr = config['keyword'].lower() + "\s*" + config['value'].lower()
+                            pattern = re.compile(rf"{expr}")
+                            allow_expr = "\"effect\":" + "\s*" + "\"allow\""
+                            allow_pattern = re.compile(rf"{allow_expr}")
+                            if re.search(pattern, attribute.value) and re.search(allow_pattern, attribute.value):
+                                errors.append(Error('sec_access_control', attribute, file, repr(attribute)))
+                                break
 
-            if (re.search(r"actions\[\d+\]", element.name) and parent_name == "permissions" 
-                and au_type == "resource.azurerm_role_definition" and element.value == "*"):
-                errors.append(Error('sec_access_control', element, file, repr(element)))
-            elif (((re.search(r"members\[\d+\]", element.name) and au_type == "resource.google_storage_bucket_iam_binding")
-                or (element.name == "member" and au_type == "resource.google_storage_bucket_iam_member"))
-                and (element.value == "allusers" or element.value == "allauthenticatedusers")):
-                errors.append(Error('sec_access_control', element, file, repr(element)))
-            elif (element.name == "email" and parent_name == "service_account" 
-                and au_type == "resource.google_compute_instance"
-                and re.search(r".-compute@developer.gserviceaccount.com", element.value)):
-                errors.append(Error('sec_access_control', element, file, repr(element)))
+                if (re.search(r"actions\[\d+\]", attribute.name) and parent_name == "permissions" 
+                    and element.type == "resource.azurerm_role_definition" and attribute.value == "*"):
+                    errors.append(Error('sec_access_control', attribute, file, repr(attribute)))
+                elif (((re.search(r"members\[\d+\]", attribute.name) and element.type == "resource.google_storage_bucket_iam_binding")
+                    or (attribute.name == "member" and element.type == "resource.google_storage_bucket_iam_member"))
+                    and (attribute.value == "allusers" or attribute.value == "allauthenticatedusers")):
+                    errors.append(Error('sec_access_control', attribute, file, repr(attribute)))
+                elif (attribute.name == "email" and parent_name == "service_account" 
+                    and element.type == "resource.google_compute_instance"
+                    and re.search(r".-compute@developer.gserviceaccount.com", attribute.value)):
+                    errors.append(Error('sec_access_control', attribute, file, repr(attribute)))
 
-            for config in SecurityVisitor._ACCESS_CONTROL_CONFIGS:
-                if (element.name == config['attribute'] and au_type in config['au_type']
-                    and parent_name in config['parents'] and not element.has_variable 
-                    and element.value.lower() not in config['values']
-                    and config['values'] != [""]):
-                    errors.append(Error('sec_access_control', element, file, repr(element)))
-                    break
+                for config in SecurityVisitor._ACCESS_CONTROL_CONFIGS:
+                    if (attribute.name == config['attribute'] and element.type in config['au_type']
+                        and parent_name in config['parents'] and not attribute.has_variable 
+                        and attribute.value.lower() not in config['values']
+                        and config['values'] != [""]):
+                        errors.append(Error('sec_access_control', attribute, file, repr(attribute)))
+                        break
+        
+                for attr_child in attribute.keyvalues:
+                    check_attribute(attr_child, attribute.name)
+
+            for attribute in element.attributes:
+                check_attribute(attribute, "")
+
         return errors

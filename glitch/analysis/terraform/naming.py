@@ -2,11 +2,11 @@ import re
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, Variable
+from glitch.repr.inter import AtomicUnit, Attribute
 
 
 class TerraformNaming(TerraformSmellChecker):
-    def check(self, element, file: str, au_type = None, parent_name = ""):
+    def check(self, element, file: str):
         errors = []
         if isinstance(element, AtomicUnit):
             if (element.type == "resource.aws_security_group"):
@@ -34,20 +34,27 @@ class TerraformNaming(TerraformSmellChecker):
                     errors.append(Error('sec_naming', element, file, repr(element), 
                         f"Suggestion: check for a required attribute with name '{config['msg']}'."))
                     
-        elif isinstance(element, Attribute) or isinstance(element, Variable):
-            if (element.name == "name" and au_type in ["resource.azurerm_storage_account"]):
-                pattern = r'^[a-z0-9]{3,24}$'
-                if not re.match(pattern, element.value):
-                    errors.append(Error('sec_naming', element, file, repr(element)))
+            def check_attribute(attribute: Attribute, parent_name: str):
+                if (attribute.name == "name" and element.type in ["resource.azurerm_storage_account"]):
+                    pattern = r'^[a-z0-9]{3,24}$'
+                    if not re.match(pattern, attribute.value):
+                        errors.append(Error('sec_naming', attribute, file, repr(attribute)))
 
-            for config in SecurityVisitor._NAMING:
-                if (element.name == config['attribute'] and au_type in config['au_type']
-                    and parent_name in config['parents'] and config['values'] != [""]):
-                    if ("any_not_empty" in config['values'] and element.value.lower() == ""):
-                        errors.append(Error('sec_naming', element, file, repr(element)))
-                        break
-                    elif ("any_not_empty" not in config['values'] and not element.has_variable and 
-                        element.value.lower() not in config['values']):
-                        errors.append(Error('sec_naming', element, file, repr(element)))
-                        break
+                for config in SecurityVisitor._NAMING:
+                    if (attribute.name == config['attribute'] and element.type in config['au_type']
+                        and parent_name in config['parents'] and config['values'] != [""]):
+                        if ("any_not_empty" in config['values'] and attribute.value.lower() == ""):
+                            errors.append(Error('sec_naming', attribute, file, repr(attribute)))
+                            break
+                        elif ("any_not_empty" not in config['values'] and not attribute.has_variable and 
+                            attribute.value.lower() not in config['values']):
+                            errors.append(Error('sec_naming', attribute, file, repr(attribute)))
+                            break
+                
+                for child in attribute.keyvalues:
+                    check_attribute(child, attribute.name)
+
+            for attribute in element.attributes:
+                check_attribute(attribute, "")
+        
         return errors
