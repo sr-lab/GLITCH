@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+
 class CodeElement(ABC):
     def __init__(self) -> None:
         self.line: int = -1
@@ -9,7 +10,7 @@ class CodeElement(ABC):
 
     def __hash__(self) -> int:
         return hash(self.line) * hash(self.column)
-    
+
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, CodeElement):
             return False
@@ -22,6 +23,7 @@ class CodeElement(ABC):
     def print(self, tab):
         pass
 
+
 class Block(CodeElement):
     def __init__(self) -> None:
         super().__init__()
@@ -29,6 +31,7 @@ class Block(CodeElement):
 
     def add_statement(self, statement):
         self.statements.append(statement)
+
 
 class ConditionalStatement(Block):
     class ConditionType(Enum):
@@ -43,14 +46,23 @@ class ConditionalStatement(Block):
         self.type = type
 
     def __repr__(self) -> str:
-        return self.code.strip().split('\n')[0]
+        return self.code.strip().split("\n")[0]
 
     def print(self, tab) -> str:
-        res = (tab * "\t") + str(self.type) + " " + self.condition + \
-            ("" if not self.is_default else "default") + ' (on line ' + str(self.line) + ')' + "\n"
+        res = (
+            (tab * "\t")
+            + str(self.type)
+            + " "
+            + self.condition
+            + ("" if not self.is_default else "default")
+            + " (on line "
+            + str(self.line)
+            + ")"
+            + "\n"
+        )
 
         res += (tab * "\t") + "\telse:\n"
-        if (self.else_statement is not None):
+        if self.else_statement is not None:
             res += self.else_statement.print(tab + 2) + "\n"
 
         res += (tab * "\t") + "\tblock:\n"
@@ -59,6 +71,7 @@ class ConditionalStatement(Block):
         res = res[:-1]
 
         return res
+
 
 class Comment(CodeElement):
     def __init__(self, content: str) -> None:
@@ -69,7 +82,8 @@ class Comment(CodeElement):
         return self.content
 
     def print(self, tab) -> str:
-        return (tab * "\t") + self.content + ' (on line ' + str(self.line) + ')'
+        return (tab * "\t") + self.content + " (on line " + str(self.line) + ")"
+
 
 class KeyValue(CodeElement):
     def __init__(self, name: str, value: str, has_variable: bool):
@@ -79,11 +93,12 @@ class KeyValue(CodeElement):
         self.keyvalues: list = []
 
     def __repr__(self) -> str:
-        value = repr(self.value).split('\n')[0]
+        value = repr(self.value).split("\n")[0]
         if value == "None":
             return f"{self.name}:{value}:{self.keyvalues}"
         else:
             return f"{self.name}:{value}"
+
 
 class Variable(KeyValue):
     def __init__(self, name: str, value: str, has_variable: bool) -> None:
@@ -91,15 +106,38 @@ class Variable(KeyValue):
 
     def print(self, tab) -> str:
         if isinstance(self.value, str):
-            return (tab * "\t") + self.name + "->" + self.value + \
-                " (on line " + str(self.line) + f" {self.has_variable})"
+            return (
+                (tab * "\t")
+                + self.name
+                + "->"
+                + self.value
+                + " (on line "
+                + str(self.line)
+                + f" {self.has_variable})"
+            )
         elif isinstance(self.value, type(None)):
-            return (tab * "\t") + self.name + "->" + "None" + \
-                " variables:" + f" {self.keyvalues}" + \
-                " (on line " + str(self.line) + f" {self.has_variable})"
+            return (
+                (tab * "\t")
+                + self.name
+                + "->"
+                + "None"
+                + " variables:"
+                + f" {self.keyvalues}"
+                + " (on line "
+                + str(self.line)
+                + f" {self.has_variable})"
+            )
         else:
-            return (tab * "\t") + self.name + "->" + repr(self.value) + \
-                " (on line " + str(self.line) + f" {self.has_variable})"
+            return (
+                (tab * "\t")
+                + self.name
+                + "->"
+                + repr(self.value)
+                + " (on line "
+                + str(self.line)
+                + f" {self.has_variable})"
+            )
+
 
 class Attribute(KeyValue):
     def __init__(self, name: str, value: str, has_variable: bool) -> None:
@@ -107,15 +145,38 @@ class Attribute(KeyValue):
 
     def print(self, tab) -> str:
         if isinstance(self.value, str):
-            return (tab * "\t") + self.name + "->" + self.value + \
-                " (on line " + str(self.line) + f" {self.has_variable})"
+            return (
+                (tab * "\t")
+                + self.name
+                + "->"
+                + self.value
+                + " (on line "
+                + str(self.line)
+                + f" {self.has_variable})"
+            )
         elif isinstance(self.value, type(None)):
-            return (tab * "\t") + self.name + "->" + "None" + \
-                " attributes:" + f" {self.keyvalues}" + \
-                " (on line " + str(self.line) + f" {self.has_variable})"
+            return (
+                (tab * "\t")
+                + self.name
+                + "->"
+                + "None"
+                + " attributes:"
+                + f" {self.keyvalues}"
+                + " (on line "
+                + str(self.line)
+                + f" {self.has_variable})"
+            )
         else:
-            return (tab * "\t") + self.name + "->" + repr(self.value) + \
-                " (on line " + str(self.line) + f" {self.has_variable})"
+            return (
+                (tab * "\t")
+                + self.name
+                + "->"
+                + repr(self.value)
+                + " (on line "
+                + str(self.line)
+                + f" {self.has_variable})"
+            )
+
 
 class AtomicUnit(Block):
     def __init__(self, name: str, type: str) -> None:
@@ -131,8 +192,15 @@ class AtomicUnit(Block):
         return f"{self.name} {self.type}"
 
     def print(self, tab) -> str:
-        res = ((tab * "\t") + self.type + ' ' + self.name + " (on line " 
-                + str(self.line) + ")\n")
+        res = (
+            (tab * "\t")
+            + self.type
+            + " "
+            + self.name
+            + " (on line "
+            + str(self.line)
+            + ")\n"
+        )
 
         for attribute in self.attributes:
             res += attribute.print(tab + 1) + "\n"
@@ -143,6 +211,7 @@ class AtomicUnit(Block):
         res = res[:-1]
 
         return res
+
 
 class Dependency(CodeElement):
     def __init__(self, name: str) -> None:
@@ -155,12 +224,14 @@ class Dependency(CodeElement):
     def print(self, tab) -> str:
         return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
 
+
 class UnitBlockType(str, Enum):
     script = "script"
     tasks = "tasks"
     vars = "vars"
     block = "block"
     unknown = "unknown"
+
 
 class UnitBlock(Block):
     def __init__(self, name: str, type: UnitBlockType) -> None:
@@ -169,7 +240,7 @@ class UnitBlock(Block):
         self.comments: list[Comment] = []
         self.variables: list[Variable] = []
         self.atomic_units: list[AtomicUnit] = []
-        self.unit_blocks: list['UnitBlock'] = []
+        self.unit_blocks: list["UnitBlock"] = []
         self.attributes: list[Attribute] = []
         self.name: str = name
         self.path: str = ""
@@ -190,7 +261,7 @@ class UnitBlock(Block):
     def add_atomic_unit(self, a: AtomicUnit) -> None:
         self.atomic_units.append(a)
 
-    def add_unit_block(self, u: 'UnitBlock') -> None:
+    def add_unit_block(self, u: "UnitBlock") -> None:
         self.unit_blocks.append(u)
 
     def add_attribute(self, a: Attribute) -> None:
@@ -198,7 +269,7 @@ class UnitBlock(Block):
 
     def print(self, tab) -> str:
         res = (tab * "\t") + self.name + "\n"
-        
+
         res += (tab * "\t") + "\tdependencies:\n"
         for dependency in self.dependencies:
             res += dependency.print(tab + 2) + "\n"
@@ -229,6 +300,7 @@ class UnitBlock(Block):
 
         return res
 
+
 class File:
     def __init__(self, name) -> None:
         self.name: str = name
@@ -236,12 +308,13 @@ class File:
     def print(self, tab) -> str:
         return (tab * "\t") + self.name
 
+
 class Folder:
     def __init__(self, name) -> None:
         self.content: list = []
         self.name: str = name
 
-    def add_folder(self, folder: 'Folder') -> None:
+    def add_folder(self, folder: "Folder") -> None:
         self.content.append(folder)
 
     def add_file(self, file: File) -> None:
@@ -255,6 +328,7 @@ class Folder:
         res = res[:-1]
 
         return res
+
 
 class Module:
     def __init__(self, name, path) -> None:
@@ -281,6 +355,7 @@ class Module:
 
         return res
 
+
 class Project:
     def __init__(self, name) -> None:
         self.name: str = name
@@ -292,7 +367,7 @@ class Project:
 
     def add_module(self, m: Module):
         self.modules.append(m)
-    
+
     def add_block(self, u: UnitBlock):
         self.blocks.append(u)
 

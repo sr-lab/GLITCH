@@ -4,77 +4,116 @@ from typing import List, Callable
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error, SmellChecker
 
+
 class TerraformSmellChecker(SmellChecker):
-    def get_au(self, file: str, name: str, type: str, c = None):
+    def get_au(self, file: str, name: str, type: str, c=None):
         c = self.code if c is None else c
         if isinstance(c, Project):
             module_name = os.path.basename(os.path.dirname(file))
             for m in c.modules:
                 if m.name == module_name:
-                    return self.get_au(file, name, type, c = m)
+                    return self.get_au(file, name, type, c=m)
         elif isinstance(c, Module):
             for ub in c.blocks:
-                au = self.get_au(file, name, type, c = ub)
+                au = self.get_au(file, name, type, c=ub)
                 if au is not None:
                     return au
         elif isinstance(c, UnitBlock):
             for au in c.atomic_units:
-                if (au.type == type and au.name == name):
+                if au.type == type and au.name == name:
                     return au
         return None
 
-    def get_associated_au(self, file: str, type: str, attribute_name: str, pattern, attribute_parents: list, code = None):
+    def get_associated_au(
+        self,
+        file: str,
+        type: str,
+        attribute_name: str,
+        pattern,
+        attribute_parents: list,
+        code=None,
+    ):
         code = self.code if code is None else code
         if isinstance(code, Project):
             module_name = os.path.basename(os.path.dirname(file))
             for m in code.modules:
                 if m.name == module_name:
-                    return self.get_associated_au(file, type, attribute_name, pattern, attribute_parents, code = m)
+                    return self.get_associated_au(
+                        file, type, attribute_name, pattern, attribute_parents, code=m
+                    )
         elif isinstance(code, Module):
             for ub in code.blocks:
-                au = self.get_associated_au(file, type, attribute_name, pattern, attribute_parents, code = ub)
+                au = self.get_associated_au(
+                    file, type, attribute_name, pattern, attribute_parents, code=ub
+                )
                 if au is not None:
                     return au
         elif isinstance(code, UnitBlock):
             for au in code.atomic_units:
-                if (au.type == type and self.check_required_attribute(
-                        au.attributes, attribute_parents, attribute_name, None, pattern)):
+                if au.type == type and self.check_required_attribute(
+                    au.attributes, attribute_parents, attribute_name, None, pattern
+                ):
                     return au
         return None
-    
-    def get_attributes_with_name_and_value(self, attributes, parents, name, value = None, pattern = None):
+
+    def get_attributes_with_name_and_value(
+        self, attributes, parents, name, value=None, pattern=None
+    ):
         aux = []
         for a in attributes:
-            if a.name.split('dynamic.')[-1] == name and parents == [""]:
-                if ((value and a.value.lower() == value) or (pattern and re.match(pattern, a.value.lower()))):
+            if a.name.split("dynamic.")[-1] == name and parents == [""]:
+                if (value and a.value.lower() == value) or (
+                    pattern and re.match(pattern, a.value.lower())
+                ):
                     aux.append(a)
-                elif ((value and a.value.lower() != value) or (pattern and not re.match(pattern, a.value.lower()))):
+                elif (value and a.value.lower() != value) or (
+                    pattern and not re.match(pattern, a.value.lower())
+                ):
                     continue
-                elif (not value and not pattern):
+                elif not value and not pattern:
                     aux.append(a)
-            elif a.name.split('dynamic.')[-1] in parents:
-                aux += self.get_attributes_with_name_and_value(a.keyvalues, [""], name, value, pattern)
+            elif a.name.split("dynamic.")[-1] in parents:
+                aux += self.get_attributes_with_name_and_value(
+                    a.keyvalues, [""], name, value, pattern
+                )
             elif a.keyvalues != []:
-                aux += self.get_attributes_with_name_and_value(a.keyvalues, parents, name, value, pattern)
+                aux += self.get_attributes_with_name_and_value(
+                    a.keyvalues, parents, name, value, pattern
+                )
         return aux
 
-    def check_required_attribute(self, attributes, parents, name, value = None, pattern = None, return_all = False):
-        attributes = self.get_attributes_with_name_and_value(attributes, parents, name, value, pattern)
+    def check_required_attribute(
+        self, attributes, parents, name, value=None, pattern=None, return_all=False
+    ):
+        attributes = self.get_attributes_with_name_and_value(
+            attributes, parents, name, value, pattern
+        )
         if attributes != []:
             if return_all:
                 return attributes
             return attributes[0]
         else:
             return None
-        
-    def check_database_flags(self, au: AtomicUnit, file: str, smell: str, flag_name: str, safe_value: str, 
-                                required_flag = True):
-        database_flags = self.get_attributes_with_name_and_value(au.attributes, ["settings"], "database_flags")
+
+    def check_database_flags(
+        self,
+        au: AtomicUnit,
+        file: str,
+        smell: str,
+        flag_name: str,
+        safe_value: str,
+        required_flag=True,
+    ):
+        database_flags = self.get_attributes_with_name_and_value(
+            au.attributes, ["settings"], "database_flags"
+        )
         found_flag = False
         errors = []
         if database_flags != []:
             for flag in database_flags:
-                name = self.check_required_attribute(flag.keyvalues, [""], "name", flag_name)
+                name = self.check_required_attribute(
+                    flag.keyvalues, [""], "name", flag_name
+                )
                 if name is not None:
                     found_flag = True
                     value = self.check_required_attribute(flag.keyvalues, [""], "value")
@@ -82,14 +121,28 @@ class TerraformSmellChecker(SmellChecker):
                         errors.append(Error(smell, value, file, repr(value)))
                         break
                     elif not value and required_flag:
-                        errors.append(Error(smell, flag, file, repr(flag), 
-                            f"Suggestion: check for a required attribute with name 'value'."))
+                        errors.append(
+                            Error(
+                                smell,
+                                flag,
+                                file,
+                                repr(flag),
+                                f"Suggestion: check for a required attribute with name 'value'.",
+                            )
+                        )
                         break
         if not found_flag and required_flag:
-            errors.append(Error(smell, au, file, repr(au), 
-                f"Suggestion: check for a required flag '{flag_name}'."))
+            errors.append(
+                Error(
+                    smell,
+                    au,
+                    file,
+                    repr(au),
+                    f"Suggestion: check for a required flag '{flag_name}'.",
+                )
+            )
         return errors
-    
+
     def iterate_required_attributes(
         self, attributes: List[KeyValue], name: str, check: Callable[[KeyValue], bool]
     ):
@@ -103,15 +156,21 @@ class TerraformSmellChecker(SmellChecker):
             attribute = self.check_required_attribute(attributes, [""], f"{name}[{i}]")
 
         return False, None
-    
-    def _check_attribute(self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str) -> List[Error]:
+
+    def _check_attribute(
+        self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
+    ) -> List[Error]:
         pass
 
-    def __check_attribute(self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str) -> List[Error]:
+    def __check_attribute(
+        self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
+    ) -> List[Error]:
         errors = []
         errors += self._check_attribute(attribute, atomic_unit, parent_name, file)
         for attr_child in attribute.keyvalues:
-            errors += self.__check_attribute(attr_child, atomic_unit, attribute.name, file)
+            errors += self.__check_attribute(
+                attr_child, atomic_unit, attribute.name, file
+            )
         return errors
 
     def _check_attributes(self, atomic_unit: AtomicUnit, file: str) -> List[Error]:

@@ -225,7 +225,7 @@ class PStatement(ABC):
             fss = [fss.copy()]
         elif fss == []:
             fss = [FileSystemState()]
-        
+
         if vars is None:
             vars = {}
 
@@ -282,7 +282,7 @@ class PStatement(ABC):
                     if self.cons == PSkip() and self.alt == PSkip():
                         res_fss.append(fs)
                 continue
-            
+
             res_fss.append(fs)
 
         return res_fss

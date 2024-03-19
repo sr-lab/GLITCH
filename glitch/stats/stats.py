@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from glitch.repr.inter import *
 
+
 class Stats(ABC):
     def compute(self, c):
         if isinstance(c, Project):
@@ -63,6 +64,7 @@ class Stats(ABC):
     @abstractmethod
     def compute_comment(self, c: Comment):
         pass
+
 
 class FileStats(Stats):
     def __init__(self) -> None:

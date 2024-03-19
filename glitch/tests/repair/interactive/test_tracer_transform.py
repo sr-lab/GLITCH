@@ -3,7 +3,10 @@ import pytest
 import shutil
 import tempfile
 
-from glitch.repair.interactive.tracer.transform import get_affected_paths, get_file_system_state
+from glitch.repair.interactive.tracer.transform import (
+    get_affected_paths,
+    get_file_system_state,
+)
 from glitch.repair.interactive.tracer.model import *
 from glitch.repair.interactive.filesystem import *
 
@@ -36,6 +39,7 @@ dir1 = ""
 file2 = ""
 file3 = ""
 temp_dir = None
+
 
 @pytest.fixture
 def setup_file_system():

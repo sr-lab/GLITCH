@@ -67,15 +67,13 @@ class DeltaPCompiler:
                 label = labeled_script.get_label(attr)
             else:
                 # Creates sketched attribute
-                if attr_name == "state": # HACK
+                if attr_name == "state":  # HACK
                     attr = Attribute(
-                        attr_name, 
-                        DefaultValue.DEFAULT_STATE.const.value, 
-                        False
+                        attr_name, DefaultValue.DEFAULT_STATE.const.value, False
                     )
                 else:
                     attr = Attribute(attr_name, PEUndef(), False)
-                
+
                 attr.line, attr.column = (
                     DeltaPCompiler._sketched,
                     DeltaPCompiler._sketched,
@@ -173,10 +171,10 @@ class DeltaPCompiler:
 
     @staticmethod
     def __handle_atomic_unit(
-        statement: PStatement, 
-        atomic_unit: AtomicUnit, 
-        tech: Tech, 
-        labeled_script: LabeledUnitBlock
+        statement: PStatement,
+        atomic_unit: AtomicUnit,
+        tech: Tech,
+        labeled_script: LabeledUnitBlock,
     ) -> PStatement:
         attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
             atomic_unit.type, tech
@@ -192,9 +190,7 @@ class DeltaPCompiler:
 
     @staticmethod
     def __handle_conditional(
-        conditional: ConditionalStatement,
-        tech: Tech, 
-        labeled_script: LabeledUnitBlock
+        conditional: ConditionalStatement, tech: Tech, labeled_script: LabeledUnitBlock
     ) -> PStatement:
         body = PSkip()
         for stat in conditional.statements:
@@ -205,25 +201,23 @@ class DeltaPCompiler:
             elif isinstance(stat, ConditionalStatement):
                 body = PSeq(
                     body,
-                    DeltaPCompiler.__handle_conditional(
-                        stat, tech, labeled_script
-                    )
+                    DeltaPCompiler.__handle_conditional(stat, tech, labeled_script),
                 )
-        
-        else_statement = PSkip() 
+
+        else_statement = PSkip()
         if conditional.else_statement is not None:
             else_statement = DeltaPCompiler.__handle_conditional(
                 conditional.else_statement, tech, labeled_script
             )
-        
+
         DeltaPCompiler._condition += 1
         return PIf(
             # FIXME: This creates a placeholder since we will branch every time
             # There are cases that we can infer the value of the condition
             # The creation of these variables should be done in the solver
-            PEVar(f"dejavu-condition-{DeltaPCompiler._condition}"), 
-            body, 
-            else_statement
+            PEVar(f"dejavu-condition-{DeltaPCompiler._condition}"),
+            body,
+            else_statement,
         )
 
     @staticmethod
@@ -237,9 +231,10 @@ class DeltaPCompiler:
 
         for stat in script.statements:
             if isinstance(stat, ConditionalStatement):
-                statement = PSeq(statement, DeltaPCompiler.__handle_conditional(
-                    stat, tech, labeled_script
-                ))
+                statement = PSeq(
+                    statement,
+                    DeltaPCompiler.__handle_conditional(stat, tech, labeled_script),
+                )
 
         for atomic_unit in script.atomic_units:
             statement = DeltaPCompiler.__handle_atomic_unit(
