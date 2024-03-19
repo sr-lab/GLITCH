@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.design import DesignVisitor
-from glitch.parsers.cmof import TerraformParser
+from glitch.parsers.terraform import TerraformParser
 from glitch.tech import Tech
 
 class TestDesign(unittest.TestCase):

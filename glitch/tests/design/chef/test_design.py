@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.design import DesignVisitor
-from glitch.parsers.cmof import ChefParser
+from glitch.parsers.chef import ChefParser
 from glitch.tech import Tech
 
 class TestDesign(unittest.TestCase):

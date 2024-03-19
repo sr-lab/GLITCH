@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.security import SecurityVisitor
-from glitch.parsers.cmof import ChefParser
+from glitch.parsers.chef import ChefParser
 from glitch.tech import Tech
 
 class TestSecurity(unittest.TestCase):

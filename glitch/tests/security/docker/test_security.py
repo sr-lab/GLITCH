@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.security import SecurityVisitor
-from glitch.parsers.docker_parser import DockerParser
+from glitch.parsers.docker import DockerParser
 from glitch.repr.inter import UnitBlockType
 from glitch.tech import Tech
 

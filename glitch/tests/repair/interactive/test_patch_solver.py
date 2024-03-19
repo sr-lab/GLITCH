@@ -4,7 +4,8 @@ from tempfile import NamedTemporaryFile
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.solver import PatchSolver
 from glitch.repair.interactive.values import UNDEF
-from glitch.parsers.cmof import PuppetParser, AnsibleParser
+from glitch.parsers.puppet import PuppetParser
+from glitch.parsers.ansible import AnsibleParser
 from glitch.parsers.parser import Parser
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
