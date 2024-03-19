@@ -103,7 +103,6 @@ class SecurityVisitor(RuleVisitor):
             SecurityVisitor._REPLICATION = json.loads(config['security']['replication'])
         
         SecurityVisitor.__FILE_COMMANDS = json.loads(config['security']['file_commands'])
-        SecurityVisitor.__DOWNLOAD_COMMANDS = json.loads(config['security']['download_commands'])
         SecurityVisitor.__SHELL_RESOURCES = json.loads(config['security']['shell_resources'])
         SecurityVisitor.__IP_BIND_COMMANDS = json.loads(config['security']['ip_binding_commands'])
         SecurityVisitor.__OBSOLETE_COMMANDS = self._load_data_file("obsolete_commands")
