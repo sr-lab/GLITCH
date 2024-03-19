@@ -6,7 +6,6 @@ from glitch.repair.interactive.tracer.model import *
 from glitch.repair.interactive.filesystem import *
 
 
-# TODO: Add tests
 def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
     """Get all paths affected by the given syscalls.
 
@@ -52,7 +51,6 @@ def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
     return paths
 
 
-# TODO: Add tests
 def get_file_system_state(files: Set[str]) -> FileSystemState:
     """Get the file system state from the given set of files.
 
