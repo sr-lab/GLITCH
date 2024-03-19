@@ -51,11 +51,3 @@ class STrace(threading.Thread):
 
         return self.syscalls
 
-
-pid = "58988"
-workdir = subprocess.check_output(["pwdx", pid]).decode("utf-8").split(": ")[1].strip()
-affected_paths = get_affected_paths(workdir, STrace(pid).run())
-file_system = get_file_system_state(affected_paths)
-
-for path, state in file_system.state.items():
-    print(path, state)
