@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.design import DesignVisitor
-from glitch.parsers.docker_parser import DockerParser
+from glitch.parsers.docker import DockerParser
 from glitch.tech import Tech
 
 class TestDesign(unittest.TestCase):

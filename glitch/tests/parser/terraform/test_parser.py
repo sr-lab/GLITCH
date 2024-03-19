@@ -1,5 +1,5 @@
 import unittest
-from glitch.parsers.cmof import TerraformParser
+from glitch.parsers.terraform import TerraformParser
 
 class TestTerraform(unittest.TestCase):
     def __help_test(self, path, attributes):

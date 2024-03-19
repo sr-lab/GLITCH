@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.design import DesignVisitor
-from glitch.parsers.cmof import PuppetParser
+from glitch.parsers.puppet import PuppetParser
 from glitch.tech import Tech
 
 class TestDesign(unittest.TestCase):

@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.design import DesignVisitor
-from glitch.parsers.cmof import AnsibleParser
+from glitch.parsers.ansible import AnsibleParser
 from glitch.tech import Tech
 
 class TestDesign(unittest.TestCase):

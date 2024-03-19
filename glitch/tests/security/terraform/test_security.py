@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.security import SecurityVisitor
-from glitch.parsers.cmof import TerraformParser
+from glitch.parsers.terraform import TerraformParser
 from glitch.tech import Tech
 
 class TestSecurity(unittest.TestCase):

@@ -1,4 +1,4 @@
-from glitch.parsers.cmof import PuppetParser
+from glitch.parsers.puppet import PuppetParser
 from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.delta_p import *

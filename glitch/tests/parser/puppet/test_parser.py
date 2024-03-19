@@ -1,5 +1,5 @@
 import unittest
-from glitch.parsers.cmof import PuppetParser
+from glitch.parsers.puppet import PuppetParser
 from glitch.repr.inter import *
 
 class TestPuppetParser(unittest.TestCase):

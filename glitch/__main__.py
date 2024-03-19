@@ -1,12 +1,15 @@
 import click, os, sys
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import RulesListOption, get_smell_types, get_smells
-from glitch.parsers.docker_parser import DockerParser
+from glitch.parsers.docker import DockerParser
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
 from glitch.tech import Tech
 from glitch.repr.inter import UnitBlockType
-from glitch.parsers.cmof import AnsibleParser, ChefParser, PuppetParser, TerraformParser
+from glitch.parsers.ansible import AnsibleParser
+from glitch.parsers.chef import ChefParser
+from glitch.parsers.puppet import PuppetParser
+from glitch.parsers.terraform import TerraformParser
 from pkg_resources import resource_filename
 from alive_progress import alive_bar
 from pathlib import Path

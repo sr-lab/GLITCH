@@ -1,7 +1,7 @@
 import unittest
-from glitch.parsers.cmof import AnsibleParser
-from glitch.parsers.cmof import ChefParser
-from glitch.parsers.cmof import PuppetParser
+from glitch.parsers.ansible import AnsibleParser
+from glitch.parsers.chef import ChefParser
+from glitch.parsers.puppet import PuppetParser
 
 class TestAnsible(unittest.TestCase):
     def __test_parse_vars(self, path, vars):
