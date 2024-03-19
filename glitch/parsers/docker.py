@@ -1,4 +1,3 @@
-from typing import TextIO
 import ast
 import os.path
 import re

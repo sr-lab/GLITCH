@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from glitch.analysis.security import SecurityVisitor
@@ -18,6 +19,11 @@ class TestSecurity(unittest.TestCase):
         for i in range(n_errors):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        if os.path.exists("Dockerfile"):
+            os.remove("Dockerfile")
 
     def test_docker_admin(self):
         self.__help_test(
