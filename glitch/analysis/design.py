@@ -7,6 +7,7 @@ from glitch.tech import Tech
 
 from glitch.repr.inter import *
 
+
 class DesignVisitor(RuleVisitor):
     class ImproperAlignmentSmell(SmellChecker):
         def check(self, element, file: str):
@@ -16,11 +17,17 @@ class DesignVisitor(RuleVisitor):
                     first_line = a.code.split("\n")[0]
                     curr_id = len(first_line) - len(first_line.lstrip())
 
-                    if (identation is None):
+                    if identation is None:
                         identation = curr_id
-                    elif (identation != curr_id):
-                        return [Error('implementation_improper_alignment', 
-                            element, file, repr(element))]
+                    elif identation != curr_id:
+                        return [
+                            Error(
+                                "implementation_improper_alignment",
+                                element,
+                                file,
+                                repr(element),
+                            )
+                        ]
 
                 return []
             return []
@@ -40,25 +47,38 @@ class DesignVisitor(RuleVisitor):
             longest_ident = 0
             longest_split = ""
             for a in element.attributes:
-                if len(a.name) > longest and '=>' in a.code:
+                if len(a.name) > longest and "=>" in a.code:
                     longest = len(a.name)
-                    split = lines[a.line - 1].split('=>')[0]
+                    split = lines[a.line - 1].split("=>")[0]
                     longest_ident = len(split)
                     longest_split = split
-            if longest_split == "": return []
+            if longest_split == "":
+                return []
             elif len(longest_split) - 1 != len(longest_split.rstrip()):
-                return [Error('implementation_improper_alignment', 
-                    element, file, repr(element))]
+                return [
+                    Error(
+                        "implementation_improper_alignment",
+                        element,
+                        file,
+                        repr(element),
+                    )
+                ]
 
             for a in element.attributes:
                 first_line = lines[a.line - 1]
-                cur_arrow_column = len(first_line.split('=>')[0])
+                cur_arrow_column = len(first_line.split("=>")[0])
                 if cur_arrow_column != longest_ident:
-                    return [Error('implementation_improper_alignment', 
-                            element, file, repr(element))]
+                    return [
+                        Error(
+                            "implementation_improper_alignment",
+                            element,
+                            file,
+                            repr(element),
+                        )
+                    ]
 
             return []
-    
+
     class AnsibleImproperAlignmentSmell(SmellChecker):
         # YAML does not allow improper alignments (it also would have problems with generic attributes for all modules)
         def check(self, element: AtomicUnit, file: str):
@@ -83,7 +103,11 @@ class DesignVisitor(RuleVisitor):
                         order.append(4)
 
                 if order != sorted(order):
-                    return [Error('design_misplaced_attribute', element, file, repr(element))]
+                    return [
+                        Error(
+                            "design_misplaced_attribute", element, file, repr(element)
+                        )
+                    ]
             return []
 
     class PuppetMisplacedAttribute(SmellChecker):
@@ -91,14 +115,28 @@ class DesignVisitor(RuleVisitor):
             if isinstance(element, AtomicUnit):
                 for i, attr in enumerate(element.attributes):
                     if attr.name == "ensure" and i != 0:
-                        return [Error('design_misplaced_attribute', element, file, repr(element))]
+                        return [
+                            Error(
+                                "design_misplaced_attribute",
+                                element,
+                                file,
+                                repr(element),
+                            )
+                        ]
             elif isinstance(element, UnitBlock):
                 optional = False
                 for attr in element.attributes:
                     if attr.value is not None:
                         optional = True
                     elif optional == True:
-                        return [Error('design_misplaced_attribute', element, file, repr(element))]
+                        return [
+                            Error(
+                                "design_misplaced_attribute",
+                                element,
+                                file,
+                                repr(element),
+                            )
+                        ]
             return []
 
     def __init__(self, tech: Tech) -> None:
@@ -134,12 +172,16 @@ class DesignVisitor(RuleVisitor):
     def config(self, config_path: str):
         config = configparser.ConfigParser()
         config.read(config_path)
-        DesignVisitor.__EXEC = json.loads(config['design']['exec_atomic_units'])
-        DesignVisitor.__DEFAULT_VARIABLES = json.loads(config['design']['default_variables'])
-        if 'var_refer_symbol' not in config['design']:
+        DesignVisitor.__EXEC = json.loads(config["design"]["exec_atomic_units"])
+        DesignVisitor.__DEFAULT_VARIABLES = json.loads(
+            config["design"]["default_variables"]
+        )
+        if "var_refer_symbol" not in config["design"]:
             DesignVisitor.__VAR_REFER_SYMBOL = None
         else:
-            DesignVisitor.__VAR_REFER_SYMBOL = json.loads(config['design']['var_refer_symbol'])
+            DesignVisitor.__VAR_REFER_SYMBOL = json.loads(
+                config["design"]["var_refer_symbol"]
+            )
 
     def check_module(self, m: Module) -> list[Error]:
         errors = super().check_module(m)
@@ -155,7 +197,7 @@ class DesignVisitor(RuleVisitor):
             for au in ub.atomic_units:
                 if au.type in DesignVisitor.__EXEC:
                     count_execs += 1
-            
+
             for unitblock in ub.unit_blocks:
                 resources, execs = count_atomic_units(unitblock)
                 count_resources += resources
@@ -174,13 +216,13 @@ class DesignVisitor(RuleVisitor):
 
         self.first_non_comm_line = inf
         for i, line in enumerate(code_lines):
-            if not line.startswith(self.comment): 
+            if not line.startswith(self.comment):
                 self.first_non_comm_line = i + 1
-                break 
+                break
 
         self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
-           self.variables_names.append(attr.name)
+            self.variables_names.append(attr.name)
 
         errors = []
         # The order is important
@@ -200,16 +242,15 @@ class DesignVisitor(RuleVisitor):
         total_resources, total_execs = count_atomic_units(u)
 
         if total_execs > 2 and (total_execs / total_resources) > 0.20:
-            errors.append(Error('design_imperative_abstraction', u, u.path, repr(u)))
+            errors.append(Error("design_imperative_abstraction", u, u.path, repr(u)))
 
         for i, line in enumerate(code_lines):
-            if ("\t" in line):
-                error = Error('implementation_improper_alignment', 
-                    u, u.path, repr(u))
+            if "\t" in line:
+                error = Error("implementation_improper_alignment", u, u.path, repr(u))
                 error.line = i + 1
                 errors.append(error)
             if len(line) > 140:
-                error = Error('implementation_long_statement', u, u.path, line)
+                error = Error("implementation_long_statement", u, u.path, line)
                 error.line = i + 1
                 errors.append(error)
 
@@ -221,24 +262,38 @@ class DesignVisitor(RuleVisitor):
                 else:
                     count += 1
             return count
-        
+
         # The UnitBlock should not be of type vars, because these files are supposed to only
         # have variables
-        if count_variables(u.variables) / max(len(code_lines), 1) > 0.3 and u.type != UnitBlockType.vars:
-            errors.append(Error('implementation_too_many_variables', u, u.path, repr(u)))
+        if (
+            count_variables(u.variables) / max(len(code_lines), 1) > 0.3
+            and u.type != UnitBlockType.vars
+        ):
+            errors.append(
+                Error("implementation_too_many_variables", u, u.path, repr(u))
+            )
 
         if DesignVisitor.__VAR_REFER_SYMBOL is not None:
             # FIXME could be improved if we considered strings as part of the model
             for i, l in enumerate(code_lines):
-                for tuple in re.findall(r'(\'([^\\]|(\\(\n|.)))*?\')|(\"([^\\]|(\\(\n|.)))*?\")', l):
+                for tuple in re.findall(
+                    r"(\'([^\\]|(\\(\n|.)))*?\')|(\"([^\\]|(\\(\n|.)))*?\")", l
+                ):
                     for string in (tuple[0], tuple[4]):
-                        for var in self.variables_names + DesignVisitor.__DEFAULT_VARIABLES:
+                        for var in (
+                            self.variables_names + DesignVisitor.__DEFAULT_VARIABLES
+                        ):
                             if (DesignVisitor.__VAR_REFER_SYMBOL + var) in string[1:-1]:
-                                error = Error('implementation_unguarded_variable', u, u.path, string)
+                                error = Error(
+                                    "implementation_unguarded_variable",
+                                    u,
+                                    u.path,
+                                    string,
+                                )
                                 error.line = i + 1
                                 errors.append(error)
 
-        def get_line(i ,lines):
+        def get_line(i, lines):
             for j, line in lines:
                 if i < j:
                     return line
@@ -247,7 +302,7 @@ class DesignVisitor(RuleVisitor):
         current_line = 1
         i = 0
         for c in all_code:
-            if c == '\n':
+            if c == "\n":
                 lines.append((i, current_line))
                 current_line += 1
             elif not c.isspace():
@@ -270,7 +325,9 @@ class DesignVisitor(RuleVisitor):
                 for i in value:
                     if i not in checked:
                         line = get_line(i, lines)
-                        error = Error('design_duplicate_block', u, u.path, code_lines[line - 1])
+                        error = Error(
+                            "design_duplicate_block", u, u.path, code_lines[line - 1]
+                        )
                         error.line = line
                         errors.append(error)
                         checked.update(range(i, i + 150))
@@ -290,8 +347,10 @@ class DesignVisitor(RuleVisitor):
             errors += self.check_unitblock(ub)
 
         variable_size = self.variable_stack.pop()
-        if (variable_size == 0): self.variables_names = []
-        else: self.variables_names = self.variables_names[:variable_size]
+        if variable_size == 0:
+            self.variables_names = []
+        else:
+            self.variables_names = self.variables_names[:variable_size]
 
         return errors
 
@@ -304,23 +363,27 @@ class DesignVisitor(RuleVisitor):
         errors += self.misplaced_attr.check(au, file)
 
         if au.type in DesignVisitor.__EXEC:
-            if ("&&" in au.name or ";" in au.name or "|" in au.name):
-                errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
+            if "&&" in au.name or ";" in au.name or "|" in au.name:
+                errors.append(
+                    Error("design_multifaceted_abstraction", au, file, repr(au))
+                )
             else:
                 for attribute in au.attributes:
                     value = repr(attribute.value)
-                    if ("&&" in value or ";" in value or "|" in value):
-                        errors.append(Error("design_multifaceted_abstraction", au, file, repr(au)))
+                    if "&&" in value or ";" in value or "|" in value:
+                        errors.append(
+                            Error("design_multifaceted_abstraction", au, file, repr(au))
+                        )
                         break
-
 
         if au.type in DesignVisitor.__EXEC:
             lines = 0
             for attr in au.attributes:
-                for line in attr.code.split('\n'):
-                    if line.strip() != "": lines += 1
+                for line in attr.code.split("\n"):
+                    if line.strip() != "":
+                        lines += 1
 
-            if lines > 7: 
+            if lines > 7:
                 errors.append(Error("design_long_resource", au, file, repr(au)))
 
         return errors
@@ -328,7 +391,9 @@ class DesignVisitor(RuleVisitor):
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
         return []
 
-    def check_attribute(self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = "") -> list[Error]:
+    def check_attribute(
+        self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = ""
+    ) -> list[Error]:
         return []
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
@@ -338,5 +403,5 @@ class DesignVisitor(RuleVisitor):
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         errors = []
         if c.line >= self.first_non_comm_line:
-            errors.append(Error('design_avoid_comments', c, file, repr(c)))
+            errors.append(Error("design_avoid_comments", c, file, repr(c)))
         return errors

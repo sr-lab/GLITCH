@@ -27,12 +27,15 @@ class SecurityVisitor(RuleVisitor):
 
     class DockerNonOfficialImageSmell(SmellChecker):
         def check(self, element, file: str) -> List[Error]:
-            if not isinstance(element, UnitBlock) or \
-                    element.name is None or "Dockerfile" in element.name:
+            if (
+                not isinstance(element, UnitBlock)
+                or element.name is None
+                or "Dockerfile" in element.name
+            ):
                 return []
             image = element.name.split(":")
             if image[0] not in SecurityVisitor._DOCKER_OFFICIAL_IMAGES:
-                return [Error('sec_non_official_image', element, file, repr(element))]
+                return [Error("sec_non_official_image", element, file, repr(element))]
             return []
 
     def __init__(self, tech: Tech) -> None:
@@ -55,58 +58,126 @@ class SecurityVisitor(RuleVisitor):
     def config(self, config_path: str):
         config = configparser.ConfigParser()
         config.read(config_path)
-        SecurityVisitor.__WRONG_WORDS = json.loads(config['security']['suspicious_words'])
-        SecurityVisitor.__PASSWORDS = json.loads(config['security']['passwords'])
-        SecurityVisitor.__USERS = json.loads(config['security']['users'])
-        SecurityVisitor.__PROFILE = json.loads(config['security']['profile'])
-        SecurityVisitor.__SECRETS = json.loads(config['security']['secrets'])
-        SecurityVisitor.__MISC_SECRETS = json.loads(config['security']['misc_secrets'])
-        SecurityVisitor.__ROLES = json.loads(config['security']['roles'])
-        SecurityVisitor.__DOWNLOAD = json.loads(config['security']['download_extensions'])
-        SecurityVisitor.__SSH_DIR = json.loads(config['security']['ssh_dirs'])
-        SecurityVisitor.__ADMIN = json.loads(config['security']['admin'])
-        SecurityVisitor.__CHECKSUM = json.loads(config['security']['checksum'])
-        SecurityVisitor.__CRYPT = json.loads(config['security']['weak_crypt'])
-        SecurityVisitor.__CRYPT_WHITELIST = json.loads(config['security']['weak_crypt_whitelist'])
-        SecurityVisitor.__URL_WHITELIST = json.loads(config['security']['url_http_white_list'])
-        SecurityVisitor.__SECRETS_WHITELIST = json.loads(config['security']['secrets_white_list'])
-        SecurityVisitor.__SENSITIVE_DATA = json.loads(config['security']['sensitive_data'])
-        SecurityVisitor.__SECRET_ASSIGN = json.loads(config['security']['secret_value_assign'])
-        SecurityVisitor.__GITHUB_ACTIONS = json.loads(config['security']['github_actions_resources'])
-        
+        SecurityVisitor.__WRONG_WORDS = json.loads(
+            config["security"]["suspicious_words"]
+        )
+        SecurityVisitor.__PASSWORDS = json.loads(config["security"]["passwords"])
+        SecurityVisitor.__USERS = json.loads(config["security"]["users"])
+        SecurityVisitor.__PROFILE = json.loads(config["security"]["profile"])
+        SecurityVisitor.__SECRETS = json.loads(config["security"]["secrets"])
+        SecurityVisitor.__MISC_SECRETS = json.loads(config["security"]["misc_secrets"])
+        SecurityVisitor.__ROLES = json.loads(config["security"]["roles"])
+        SecurityVisitor.__DOWNLOAD = json.loads(
+            config["security"]["download_extensions"]
+        )
+        SecurityVisitor.__SSH_DIR = json.loads(config["security"]["ssh_dirs"])
+        SecurityVisitor.__ADMIN = json.loads(config["security"]["admin"])
+        SecurityVisitor.__CHECKSUM = json.loads(config["security"]["checksum"])
+        SecurityVisitor.__CRYPT = json.loads(config["security"]["weak_crypt"])
+        SecurityVisitor.__CRYPT_WHITELIST = json.loads(
+            config["security"]["weak_crypt_whitelist"]
+        )
+        SecurityVisitor.__URL_WHITELIST = json.loads(
+            config["security"]["url_http_white_list"]
+        )
+        SecurityVisitor.__SECRETS_WHITELIST = json.loads(
+            config["security"]["secrets_white_list"]
+        )
+        SecurityVisitor.__SENSITIVE_DATA = json.loads(
+            config["security"]["sensitive_data"]
+        )
+        SecurityVisitor.__SECRET_ASSIGN = json.loads(
+            config["security"]["secret_value_assign"]
+        )
+        SecurityVisitor.__GITHUB_ACTIONS = json.loads(
+            config["security"]["github_actions_resources"]
+        )
+
         if self.tech == Tech.terraform:
-            SecurityVisitor._INTEGRITY_POLICY = json.loads(config['security']['integrity_policy'])
-            SecurityVisitor._HTTPS_CONFIGS = json.loads(config['security']['ensure_https'])
-            SecurityVisitor._SSL_TLS_POLICY = json.loads(config['security']['ssl_tls_policy'])
-            SecurityVisitor._DNSSEC_CONFIGS = json.loads(config['security']['ensure_dnssec'])
-            SecurityVisitor._PUBLIC_IP_CONFIGS = json.loads(config['security']['use_public_ip'])
-            SecurityVisitor._POLICY_KEYWORDS = json.loads(config['security']['policy_keywords'])
-            SecurityVisitor._ACCESS_CONTROL_CONFIGS = json.loads(config['security']['insecure_access_control'])
-            SecurityVisitor._AUTHENTICATION = json.loads(config['security']['authentication'])
-            SecurityVisitor._POLICY_ACCESS_CONTROL = json.loads(config['security']['policy_insecure_access_control'])
-            SecurityVisitor._POLICY_AUTHENTICATION = json.loads(config['security']['policy_authentication'])
-            SecurityVisitor._MISSING_ENCRYPTION = json.loads(config['security']['missing_encryption'])
-            SecurityVisitor._CONFIGURATION_KEYWORDS = json.loads(config['security']['configuration_keywords'])
-            SecurityVisitor._ENCRYPT_CONFIG = json.loads(config['security']['encrypt_configuration'])
-            SecurityVisitor._FIREWALL_CONFIGS = json.loads(config['security']['firewall'])
-            SecurityVisitor._MISSING_THREATS_DETECTION_ALERTS = json.loads(config['security']['missing_threats_detection_alerts'])
-            SecurityVisitor._PASSWORD_KEY_POLICY = json.loads(config['security']['password_key_policy'])
-            SecurityVisitor._KEY_MANAGEMENT = json.loads(config['security']['key_management'])
-            SecurityVisitor._NETWORK_SECURITY_RULES = json.loads(config['security']['network_security_rules'])
-            SecurityVisitor._PERMISSION_IAM_POLICIES = json.loads(config['security']['permission_iam_policies'])
-            SecurityVisitor._GOOGLE_IAM_MEMBER = json.loads(config['security']['google_iam_member_resources'])
-            SecurityVisitor._LOGGING = json.loads(config['security']['logging'])
-            SecurityVisitor._GOOGLE_SQL_DATABASE_LOG_FLAGS = json.loads(config['security']['google_sql_database_log_flags'])
-            SecurityVisitor._POSSIBLE_ATTACHED_RESOURCES = json.loads(config['security']['possible_attached_resources_aws_route53'])
-            SecurityVisitor._VERSIONING = json.loads(config['security']['versioning'])
-            SecurityVisitor._NAMING = json.loads(config['security']['naming'])
-            SecurityVisitor._REPLICATION = json.loads(config['security']['replication'])
-        
-        SecurityVisitor.__FILE_COMMANDS = json.loads(config['security']['file_commands'])
-        SecurityVisitor.__SHELL_RESOURCES = json.loads(config['security']['shell_resources'])
-        SecurityVisitor.__IP_BIND_COMMANDS = json.loads(config['security']['ip_binding_commands'])
+            SecurityVisitor._INTEGRITY_POLICY = json.loads(
+                config["security"]["integrity_policy"]
+            )
+            SecurityVisitor._HTTPS_CONFIGS = json.loads(
+                config["security"]["ensure_https"]
+            )
+            SecurityVisitor._SSL_TLS_POLICY = json.loads(
+                config["security"]["ssl_tls_policy"]
+            )
+            SecurityVisitor._DNSSEC_CONFIGS = json.loads(
+                config["security"]["ensure_dnssec"]
+            )
+            SecurityVisitor._PUBLIC_IP_CONFIGS = json.loads(
+                config["security"]["use_public_ip"]
+            )
+            SecurityVisitor._POLICY_KEYWORDS = json.loads(
+                config["security"]["policy_keywords"]
+            )
+            SecurityVisitor._ACCESS_CONTROL_CONFIGS = json.loads(
+                config["security"]["insecure_access_control"]
+            )
+            SecurityVisitor._AUTHENTICATION = json.loads(
+                config["security"]["authentication"]
+            )
+            SecurityVisitor._POLICY_ACCESS_CONTROL = json.loads(
+                config["security"]["policy_insecure_access_control"]
+            )
+            SecurityVisitor._POLICY_AUTHENTICATION = json.loads(
+                config["security"]["policy_authentication"]
+            )
+            SecurityVisitor._MISSING_ENCRYPTION = json.loads(
+                config["security"]["missing_encryption"]
+            )
+            SecurityVisitor._CONFIGURATION_KEYWORDS = json.loads(
+                config["security"]["configuration_keywords"]
+            )
+            SecurityVisitor._ENCRYPT_CONFIG = json.loads(
+                config["security"]["encrypt_configuration"]
+            )
+            SecurityVisitor._FIREWALL_CONFIGS = json.loads(
+                config["security"]["firewall"]
+            )
+            SecurityVisitor._MISSING_THREATS_DETECTION_ALERTS = json.loads(
+                config["security"]["missing_threats_detection_alerts"]
+            )
+            SecurityVisitor._PASSWORD_KEY_POLICY = json.loads(
+                config["security"]["password_key_policy"]
+            )
+            SecurityVisitor._KEY_MANAGEMENT = json.loads(
+                config["security"]["key_management"]
+            )
+            SecurityVisitor._NETWORK_SECURITY_RULES = json.loads(
+                config["security"]["network_security_rules"]
+            )
+            SecurityVisitor._PERMISSION_IAM_POLICIES = json.loads(
+                config["security"]["permission_iam_policies"]
+            )
+            SecurityVisitor._GOOGLE_IAM_MEMBER = json.loads(
+                config["security"]["google_iam_member_resources"]
+            )
+            SecurityVisitor._LOGGING = json.loads(config["security"]["logging"])
+            SecurityVisitor._GOOGLE_SQL_DATABASE_LOG_FLAGS = json.loads(
+                config["security"]["google_sql_database_log_flags"]
+            )
+            SecurityVisitor._POSSIBLE_ATTACHED_RESOURCES = json.loads(
+                config["security"]["possible_attached_resources_aws_route53"]
+            )
+            SecurityVisitor._VERSIONING = json.loads(config["security"]["versioning"])
+            SecurityVisitor._NAMING = json.loads(config["security"]["naming"])
+            SecurityVisitor._REPLICATION = json.loads(config["security"]["replication"])
+
+        SecurityVisitor.__FILE_COMMANDS = json.loads(
+            config["security"]["file_commands"]
+        )
+        SecurityVisitor.__SHELL_RESOURCES = json.loads(
+            config["security"]["shell_resources"]
+        )
+        SecurityVisitor.__IP_BIND_COMMANDS = json.loads(
+            config["security"]["ip_binding_commands"]
+        )
         SecurityVisitor.__OBSOLETE_COMMANDS = self._load_data_file("obsolete_commands")
-        SecurityVisitor._DOCKER_OFFICIAL_IMAGES = self._load_data_file("official_docker_images")
+        SecurityVisitor._DOCKER_OFFICIAL_IMAGES = self._load_data_file(
+            "official_docker_images"
+        )
 
     @staticmethod
     def _load_data_file(file: str) -> List[str]:
@@ -132,70 +203,80 @@ class SecurityVisitor(RuleVisitor):
                     if not isinstance(value, str):
                         continue
                     if a.name in ["mode", "m"] and re.search(
-                            r'(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})',
-                            value
-                            ):
-                        errors.append(Error('sec_full_permission_filesystem', a, file, repr(a)))
+                        r"(?:^0?777$)|(?:(?:^|(?:ugo)|o|a)\+[rwx]{3})", value
+                    ):
+                        errors.append(
+                            Error("sec_full_permission_filesystem", a, file, repr(a))
+                        )
 
         if au.type in SecurityVisitor.__OBSOLETE_COMMANDS:
-            errors.append(Error('sec_obsolete_command', au, file, repr(au)))
+            errors.append(Error("sec_obsolete_command", au, file, repr(au)))
         elif any(au.type.endswith(res) for res in SecurityVisitor.__SHELL_RESOURCES):
             for attr in au.attributes:
-                if isinstance(attr.value, str) and attr.value.split(" ")[0] in SecurityVisitor.__OBSOLETE_COMMANDS:
-                    errors.append(Error('sec_obsolete_command', attr, file, repr(attr)))
+                if (
+                    isinstance(attr.value, str)
+                    and attr.value.split(" ")[0] in SecurityVisitor.__OBSOLETE_COMMANDS
+                ):
+                    errors.append(Error("sec_obsolete_command", attr, file, repr(attr)))
                     break
-        
+
         for checker in self.checkers:
             checker.code = self.code
             errors += checker.check(au, file)
-        
+
         if self.__is_http_url(au.name):
-            errors.append(Error('sec_https', au, file, repr(au)))
+            errors.append(Error("sec_https", au, file, repr(au)))
         if self.__is_weak_crypt(au.type, au.name):
-            errors.append(Error('sec_weak_crypt', au, file, repr(au)))
+            errors.append(Error("sec_weak_crypt", au, file, repr(au)))
 
         return errors
 
     def check_dependency(self, d: Dependency, file: str) -> List[Error]:
         return []
 
-    def __check_keyvalue(self, c: KeyValue, file: str, au_type = None, parent_name: str = ""):
+    def __check_keyvalue(
+        self, c: KeyValue, file: str, au_type=None, parent_name: str = ""
+    ):
         errors = []
         c.name = c.name.strip().lower()
-        
-        if (isinstance(c.value, type(None))):
+
+        if isinstance(c.value, type(None)):
             for child in c.keyvalues:
                 errors += self.check_element(child, file, au_type, c.name)
             return errors
-        elif (isinstance(c.value, str)):
+        elif isinstance(c.value, str):
             c.value = c.value.strip().lower()
         else:
             errors += self.check_element(c.value, file)
             c.value = repr(c.value)
 
         if self.__is_http_url(c.value):
-            errors.append(Error('sec_https', c, file, repr(c)))
+            errors.append(Error("sec_https", c, file, repr(c)))
 
-        if re.match(r'(?:https?://|^)0.0.0.0', c.value) or\
-            (c.name == "ip" and c.value in {"*", '::'}) or\
-            (c.name in SecurityVisitor.__IP_BIND_COMMANDS and
-             (c.value == True or c.value in {'*', '::'})):
-            errors.append(Error('sec_invalid_bind', c, file, repr(c)))
+        if (
+            re.match(r"(?:https?://|^)0.0.0.0", c.value)
+            or (c.name == "ip" and c.value in {"*", "::"})
+            or (
+                c.name in SecurityVisitor.__IP_BIND_COMMANDS
+                and (c.value == True or c.value in {"*", "::"})
+            )
+        ):
+            errors.append(Error("sec_invalid_bind", c, file, repr(c)))
 
         if self.__is_weak_crypt(c.value, c.name):
-            errors.append(Error('sec_weak_crypt', c, file, repr(c)))
+            errors.append(Error("sec_weak_crypt", c, file, repr(c)))
 
         for check in SecurityVisitor.__CHECKSUM:
-            if (check in c.name and (c.value == 'no' or c.value == 'false')):
-                errors.append(Error('sec_no_int_check', c, file, repr(c)))
+            if check in c.name and (c.value == "no" or c.value == "false"):
+                errors.append(Error("sec_no_int_check", c, file, repr(c)))
                 break
 
-        for item in (SecurityVisitor.__ROLES + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), c.name)):
-                if (len(c.value) > 0 and not c.has_variable):
+        for item in SecurityVisitor.__ROLES + SecurityVisitor.__USERS:
+            if re.match(r"[_A-Za-z0-9$\/\.\[\]-]*{text}\b".format(text=item), c.name):
+                if len(c.value) > 0 and not c.has_variable:
                     for admin in SecurityVisitor.__ADMIN:
                         if admin in c.value:
-                            errors.append(Error('sec_def_admin', c, file, repr(c)))
+                            errors.append(Error("sec_def_admin", c, file, repr(c)))
                             break
 
         def get_au(c, name: str, type: str):
@@ -211,7 +292,7 @@ class SecurityVisitor(RuleVisitor):
                         return au
             elif isinstance(c, UnitBlock):
                 for au in c.atomic_units:
-                    if (au.type == type and au.name == name):
+                    if au.type == type and au.name == name:
                         return au
             return None
 
@@ -234,62 +315,81 @@ class SecurityVisitor(RuleVisitor):
 
         # only for terraform
         var = None
-        if (c.has_variable and self.tech == Tech.terraform):
-            value = re.sub(r'^\${(.*)}$', r'\1', c.value)
-            if value.startswith("var."):   # input variable (atomic unit with type variable)
+        if c.has_variable and self.tech == Tech.terraform:
+            value = re.sub(r"^\${(.*)}$", r"\1", c.value)
+            if value.startswith(
+                "var."
+            ):  # input variable (atomic unit with type variable)
                 au = get_au(self.code, value.strip("var."), "variable")
                 if au != None:
                     for attribute in au.attributes:
                         if attribute.name == "default":
                             var = attribute
-            elif value.startswith("local."):    # local value (variable)
+            elif value.startswith("local."):  # local value (variable)
                 var = get_module_var(self.code, value.strip("local."))
 
-        for item in (SecurityVisitor.__PASSWORDS + 
-                SecurityVisitor.__SECRETS + SecurityVisitor.__USERS):
-            if (re.match(r'[_A-Za-z0-9$\/\.\[\]-]*{text}\b'.format(text=item), c.name) 
-                and c.name.split("[")[0] not in SecurityVisitor.__SECRETS_WHITELIST + SecurityVisitor.__PROFILE):
-                if (not c.has_variable or var):
-                    
+        for item in (
+            SecurityVisitor.__PASSWORDS
+            + SecurityVisitor.__SECRETS
+            + SecurityVisitor.__USERS
+        ):
+            if (
+                re.match(r"[_A-Za-z0-9$\/\.\[\]-]*{text}\b".format(text=item), c.name)
+                and c.name.split("[")[0]
+                not in SecurityVisitor.__SECRETS_WHITELIST + SecurityVisitor.__PROFILE
+            ):
+                if not c.has_variable or var:
                     if not c.has_variable:
-                        if (item in SecurityVisitor.__PASSWORDS and len(c.value) == 0):
-                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                        if item in SecurityVisitor.__PASSWORDS and len(c.value) == 0:
+                            errors.append(Error("sec_empty_pass", c, file, repr(c)))
                             break
                     if var is not None:
-                        if (item in SecurityVisitor.__PASSWORDS and var.value != None and len(var.value) == 0):
-                            errors.append(Error('sec_empty_pass', c, file, repr(c)))
+                        if (
+                            item in SecurityVisitor.__PASSWORDS
+                            and var.value != None
+                            and len(var.value) == 0
+                        ):
+                            errors.append(Error("sec_empty_pass", c, file, repr(c)))
                             break
 
-                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
-                    if (item in SecurityVisitor.__PASSWORDS):
-                        errors.append(Error('sec_hard_pass', c, file, repr(c)))
-                    elif (item in SecurityVisitor.__USERS):
-                        errors.append(Error('sec_hard_user', c, file, repr(c)))
+                    errors.append(Error("sec_hard_secr", c, file, repr(c)))
+                    if item in SecurityVisitor.__PASSWORDS:
+                        errors.append(Error("sec_hard_pass", c, file, repr(c)))
+                    elif item in SecurityVisitor.__USERS:
+                        errors.append(Error("sec_hard_user", c, file, repr(c)))
 
                     break
 
         for item in SecurityVisitor.__SSH_DIR:
             if item.lower() in c.name:
-                if len(c.value) > 0 and '/id_rsa' in c.value:
-                    errors.append(Error('sec_hard_secr', c, file, repr(c)))
+                if len(c.value) > 0 and "/id_rsa" in c.value:
+                    errors.append(Error("sec_hard_secr", c, file, repr(c)))
 
         for item in SecurityVisitor.__MISC_SECRETS:
-            if (re.match(r'([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)'.format(text=item), c.name)
-                    and len(c.value) > 0 and not c.has_variable):
-                errors.append(Error('sec_hard_secr', c, file, repr(c)))
+            if (
+                re.match(
+                    r"([_A-Za-z0-9$-]*[-_]{text}([-_].*)?$)|(^{text}([-_].*)?$)".format(
+                        text=item
+                    ),
+                    c.name,
+                )
+                and len(c.value) > 0
+                and not c.has_variable
+            ):
+                errors.append(Error("sec_hard_secr", c, file, repr(c)))
 
         for item in SecurityVisitor.__SENSITIVE_DATA:
             if item.lower() in c.name:
-                for item_value in (SecurityVisitor.__SECRET_ASSIGN):
+                for item_value in SecurityVisitor.__SECRET_ASSIGN:
                     if item_value in c.value.lower():
-                        errors.append(Error('sec_hard_secr', c, file, repr(c)))
-                        if ("password" in item_value):
-                            errors.append(Error('sec_hard_pass', c, file, repr(c)))
+                        errors.append(Error("sec_hard_secr", c, file, repr(c)))
+                        if "password" in item_value:
+                            errors.append(Error("sec_hard_pass", c, file, repr(c)))
 
-        if (au_type in SecurityVisitor.__GITHUB_ACTIONS and c.name == "plaintext_value"):
-            errors.append(Error('sec_hard_secr', c, file, repr(c)))
-        
-        if (c.has_variable and var is not None):
+        if au_type in SecurityVisitor.__GITHUB_ACTIONS and c.name == "plaintext_value":
+            errors.append(Error("sec_hard_secr", c, file, repr(c)))
+
+        if c.has_variable and var is not None:
             c.has_variable = var.has_variable
             c.value = var.value
 
@@ -299,7 +399,9 @@ class SecurityVisitor(RuleVisitor):
 
         return errors
 
-    def check_attribute(self, a: Attribute, file: str, au_type = None, parent_name: str = "") -> list[Error]:
+    def check_attribute(
+        self, a: Attribute, file: str, au_type=None, parent_name: str = ""
+    ) -> list[Error]:
         return self.__check_keyvalue(a, file, au_type, parent_name)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
@@ -307,14 +409,14 @@ class SecurityVisitor(RuleVisitor):
 
     def check_comment(self, c: Comment, file: str) -> List[Error]:
         errors = []
-        lines = c.content.split('\n')
+        lines = c.content.split("\n")
         stop = False
         for word in SecurityVisitor.__WRONG_WORDS:
             for line in lines:
                 tokenizer = WordPunctTokenizer()
                 tokens = tokenizer.tokenize(line.lower())
                 if word in tokens:
-                    errors.append(Error('sec_susp_comm', c, file, line))
+                    errors.append(Error("sec_susp_comm", c, file, line))
                     stop = True
             if stop:
                 break
@@ -335,7 +437,7 @@ class SecurityVisitor(RuleVisitor):
             condition = condition.else_statement
 
         if not has_default:
-            return errors + [Error('sec_no_default_switch', c, file, repr(c))]
+            return errors + [Error("sec_no_default_switch", c, file, repr(c))]
 
         return errors
 
@@ -363,21 +465,33 @@ class SecurityVisitor(RuleVisitor):
     @staticmethod
     def check_integrity_check(au: AtomicUnit, path: str) -> Optional[Tuple[str, Error]]:
         for item in SecurityVisitor.__DOWNLOAD:
-            if not re.search(r'(http|https|www)[^ ,]*\.{text}'.format(text=item), au.name):
+            if not re.search(
+                r"(http|https|www)[^ ,]*\.{text}".format(text=item), au.name
+            ):
                 continue
             if SecurityVisitor.__has_integrity_check(au.attributes):
                 return None
-            return os.path.basename(au.name), Error('sec_no_int_check', au, path, repr(au))
+            return os.path.basename(au.name), Error(
+                "sec_no_int_check", au, path, repr(au)
+            )
 
         for a in au.attributes:
-            value = a.value.strip().lower() if isinstance(a.value, str) else repr(a.value).strip().lower()
+            value = (
+                a.value.strip().lower()
+                if isinstance(a.value, str)
+                else repr(a.value).strip().lower()
+            )
 
             for item in SecurityVisitor.__DOWNLOAD:
-                if not re.search(r'(http|https|www)[^ ,]*\.{text}'.format(text=item), value):
+                if not re.search(
+                    r"(http|https|www)[^ ,]*\.{text}".format(text=item), value
+                ):
                     continue
                 if SecurityVisitor.__has_integrity_check(au.attributes):
                     return None
-                return os.path.basename(a.value), Error('sec_no_int_check', au, path, repr(a))
+                return os.path.basename(a.value), Error(
+                    "sec_no_int_check", au, path, repr(a)
+                )
         return None
 
     @staticmethod
@@ -388,7 +502,11 @@ class SecurityVisitor(RuleVisitor):
             return os.path.basename(au.name)
 
         for a in au.attributes:
-            value = a.value.strip().lower() if isinstance(a.value, str) else repr(a.value).strip().lower()
+            value = (
+                a.value.strip().lower()
+                if isinstance(a.value, str)
+                else repr(a.value).strip().lower()
+            )
             if any(d in value for d in SecurityVisitor.__DOWNLOAD):
                 return os.path.basename(au.name)
         return None
@@ -402,20 +520,28 @@ class SecurityVisitor(RuleVisitor):
 
     @staticmethod
     def __is_http_url(value: str) -> bool:
-        if (re.match(SecurityVisitor.__URL_REGEX, value) and
-                ('http' in value or 'www' in value) and 'https' not in value):
+        if (
+            re.match(SecurityVisitor.__URL_REGEX, value)
+            and ("http" in value or "www" in value)
+            and "https" not in value
+        ):
             return True
         try:
             parsed_url = urlparse(value)
-            return parsed_url.scheme == 'http' and \
-                    parsed_url.hostname not in SecurityVisitor.__URL_WHITELIST
+            return (
+                parsed_url.scheme == "http"
+                and parsed_url.hostname not in SecurityVisitor.__URL_WHITELIST
+            )
         except ValueError:
             return False
 
     @staticmethod
     def __is_weak_crypt(value: str, name: str) -> bool:
         if any(crypt in value for crypt in SecurityVisitor.__CRYPT):
-            whitelist = any(word in name or word in value for word in SecurityVisitor.__CRYPT_WHITELIST)
+            whitelist = any(
+                word in name or word in value
+                for word in SecurityVisitor.__CRYPT_WHITELIST
+            )
             return not whitelist
         return False
 

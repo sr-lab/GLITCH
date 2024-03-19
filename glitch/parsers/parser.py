@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 
 from glitch.repr.inter import UnitBlockType
 
+
 class Parser(ABC):
     def parse(self, path: str, type: UnitBlockType, is_module: bool) -> Module:
         if is_module:

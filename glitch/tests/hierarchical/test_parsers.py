@@ -3,13 +3,16 @@ from glitch.parsers.ansible import AnsibleParser
 from glitch.parsers.chef import ChefParser
 from glitch.parsers.puppet import PuppetParser
 
+
 class TestAnsible(unittest.TestCase):
     def __test_parse_vars(self, path, vars):
         with open(path, "r") as file:
-            unitblock = AnsibleParser._AnsibleParser__parse_vars_file(self, "test", file)
+            unitblock = AnsibleParser._AnsibleParser__parse_vars_file(
+                self, "test", file
+            )
             self.assertEqual(str(unitblock.variables), vars)
         file.close()
-      
+
     def __test_parse_attributes(self, path, attributes):
         with open(path, "r") as file:
             unitblock = AnsibleParser._AnsibleParser__parse_playbook(self, "test", file)
@@ -20,10 +23,12 @@ class TestAnsible(unittest.TestCase):
     def test_hierarchichal_vars(self):
         vars = "[test[0]:None:[test1[0]:\"['1', '2']\"], test[1]:\"['3', '4']\", test:\"['x', 'y', '23']\", test2[0]:\"['2', '5', '6']\", vars:None:[factorial_of:'5', factorial_value:'1']]"
         self.__test_parse_vars("tests/hierarchical/ansible/vars.yml", vars)
-    
+
     def test_hierarchical_attributes(self):
         attributes = "[hosts:'localhost', debug:None:[msg:'The factorial of 5 is {{ factorial_value }}', seq[0]:None:[test:'something'], seq:\"['y', 'z']\", hash:None:[test1:'1', test2:'2']]]"
-        self.__test_parse_attributes("tests/hierarchical/ansible/attributes.yml", attributes)
+        self.__test_parse_attributes(
+            "tests/hierarchical/ansible/attributes.yml", attributes
+        )
 
 
 class TestPuppet(unittest.TestCase):
@@ -46,5 +51,5 @@ class TestChef(unittest.TestCase):
         self.__test_parse_vars("tests/hierarchical/chef/vars.rb", vars)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -91,11 +91,11 @@ def setup_patch_solver(
 
 
 def patch_solver_apply(
-    solver: PatchSolver, 
-    model: ModelRef, 
-    filesystem: FileSystemState, 
+    solver: PatchSolver,
+    model: ModelRef,
+    filesystem: FileSystemState,
     tech: Tech,
-    n_filesystems: int = 1
+    n_filesystems: int = 1,
 ):
     solver.apply_patch(model, labeled_script)
     statement = DeltaPCompiler.compile(labeled_script, tech)
@@ -105,7 +105,8 @@ def patch_solver_apply(
 
 
 # TODO: Refactor tests
-    
+
+
 def test_patch_solver_if():
     setup_patch_solver(
         puppet_script_4, PuppetParser(), UnitBlockType.script, Tech.puppet
@@ -184,6 +185,7 @@ def test_patch_solver_owner():
 
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
+
 def test_patch_solver_two_files():
     setup_patch_solver(
         puppet_script_3, PuppetParser(), UnitBlockType.script, Tech.puppet
@@ -196,7 +198,7 @@ def test_patch_solver_two_files():
     assert len(models) == 1
     model = models[0]
     assert model[solver.sum_var] == 6
-    
+
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
 
@@ -216,10 +218,7 @@ def test_patch_solver_delete_file():
     assert model[solver.unchanged[2]] == 0
     assert model[solver.unchanged[3]] == 0
     assert model[solver.unchanged[4]] == 0
-    assert (
-        model[solver.vars["content-1"]]
-        == UNDEF
-    )
+    assert model[solver.vars["content-1"]] == UNDEF
     assert model[solver.vars["state-2"]] == "absent"
     assert model[solver.vars["mode-3"]] == UNDEF
     assert model[solver.vars["owner-4"]] == UNDEF
@@ -274,10 +273,7 @@ def test_patch_solver_mode_ansible():
     assert model[solver.vars["state-1"]] == "present"
     assert model[solver.vars["owner-2"]] == "web_admin"
     assert model[solver.vars["mode-3"]] == "0777"
-    assert (
-        model[solver.vars["sketched-content-4"]]
-        == UNDEF
-    )
+    assert model[solver.vars["sketched-content-4"]] == UNDEF
     patch_solver_apply(solver, model, filesystem, Tech.ansible)
 
 

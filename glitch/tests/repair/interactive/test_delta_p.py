@@ -135,6 +135,7 @@ def test_delta_p_to_filesystems_default_state():
     fss = statement.to_filesystems()
     assert len(fss) == 1
     assert fss[0].state == {
-        "/root/.ssh/config": 
-            File("0600", "root", "template('fuel/root_ssh_config.erb')") 
+        "/root/.ssh/config": File(
+            "0600", "root", "template('fuel/root_ssh_config.erb')"
+        )
     }

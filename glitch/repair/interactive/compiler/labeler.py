@@ -27,12 +27,12 @@ class LabeledUnitBlock:
         self, name: str, codeelement: CodeElement, sketched: bool = False
     ) -> int:
         """Adds a label to the code element with the given name.
-        
+
         Args:
             name (str): The name of the code element.
             codeelement (CodeElement): The code element to be labeled.
             sketched (bool): Whether the code element is sketched.
-        
+
         Returns:
             int: The label of the code element.
         """
@@ -45,12 +45,12 @@ class LabeledUnitBlock:
             self.__label_to_var[self.__label] = f"sketched-{var}"
         self.__label += 1
         return self.__label - 1
-    
+
     def add_sketch_location(
         self, sketch_location: CodeElement, codeelement: CodeElement
     ):
         """Defines where a sketched code element is defined in the script.
-        
+
         Args:
             sketch_location (CodeElement): The code element where the sketched code element is defined.
             codeelement (CodeElement): The sketched code element.
@@ -78,12 +78,12 @@ class LabeledUnitBlock:
             CodeElement: The code element with the given label.
         """
         return self.__label_to_codeelement[label]
-    
+
     def remove_label(self, codeelement: CodeElement):
         """Removes the label of the code element.
-        
+
         Args:
-            codeelement (CodeElement): The code element. 
+            codeelement (CodeElement): The code element.
         """
         label = self.get_label(codeelement)
         del self.__codeelement_to_label[codeelement]
@@ -92,18 +92,18 @@ class LabeledUnitBlock:
 
     def get_var(self, label: int) -> str:
         """Returns the variable with the given label.
-        
+
         Args:
             label (int): The label of the variable.
         """
         return self.__label_to_var[label]
-    
+
     def get_sketch_location(self, codeelement: CodeElement) -> CodeElement:
         """Returns the location where the sketched code element is defined.
-        
+
         Args:
             codeelement (CodeElement): The sketched code element.
-            
+
         Returns:
             CodeElement: The location where the sketched code element is defined.
         """
@@ -116,7 +116,7 @@ class GLITCHLabeler:
         labeled: LabeledUnitBlock, atomic_unit: AtomicUnit, attribute: Attribute
     ):
         """Labels an attribute.
-        
+
         Args:
             labeled (LabeledUnitBlock): The labeled script.
             atomic_unit (AtomicUnit): The attribute's atomic unit.
@@ -127,11 +127,9 @@ class GLITCHLabeler:
         labeled.add_label(name, attribute)
 
     @staticmethod
-    def label_atomic_unit(
-        labeled: LabeledUnitBlock, atomic_unit: AtomicUnit
-    ):
+    def label_atomic_unit(labeled: LabeledUnitBlock, atomic_unit: AtomicUnit):
         """Labels an atomic unit.
-        
+
         Args:
             labeled (LabeledUnitBlock): The labeled script.
             atomic_unit (AtomicUnit): The atomic unit.
@@ -142,7 +140,7 @@ class GLITCHLabeler:
     @staticmethod
     def label_variable(labeled: LabeledUnitBlock, variable: Variable):
         """Labels a variable.
-        
+
         Args:
             labeled (LabeledUnitBlock): The labeled script.
             variable (Variable): The variable.
@@ -150,11 +148,9 @@ class GLITCHLabeler:
         labeled.add_label(variable.name, variable)
 
     @staticmethod
-    def label_conditional(
-        labeled: LabeledUnitBlock, conditional: ConditionalStatement
-    ):
+    def label_conditional(labeled: LabeledUnitBlock, conditional: ConditionalStatement):
         """Labels a conditional statement.
-        
+
         Args:
             labeled (LabeledUnitBlock): The labeled script.
             conditional (ConditionalStatement): The conditional statement.
@@ -168,18 +164,16 @@ class GLITCHLabeler:
                 GLITCHLabeler.label_variable(labeled, statement)
 
         if conditional.else_statement is not None:
-            GLITCHLabeler.label_conditional(
-                labeled, conditional.else_statement
-            )
+            GLITCHLabeler.label_conditional(labeled, conditional.else_statement)
 
     @staticmethod
     def label(script: UnitBlock, tech: Tech) -> LabeledUnitBlock:
         """Labels a script.
-        
+
         Args:
             script (UnitBlock): The script being labeled.
             tech (Tech): The tech being considered.
-        
+
         Returns:
             LabeledUnitBlock: The labeled script.
         """

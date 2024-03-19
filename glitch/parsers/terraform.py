@@ -10,21 +10,23 @@ from glitch.repr.inter import *
 class TerraformParser(p.Parser):
     @staticmethod
     def __get_element_code(start_line, end_line, code):
-        lines = code[start_line-1:end_line]
-        res = ''
+        lines = code[start_line - 1 : end_line]
+        res = ""
         for line in lines:
             res += line
         return res
 
-
     def parse_keyvalues(self, unit_block: UnitBlock, keyvalues, code, type: str):
         def create_keyvalue(start_line, end_line, name: str, value: str):
-            has_variable = ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
-            pattern = r'^[+-]?\d+(\.\d+)?$'
-            if (has_variable and re.match(pattern, re.sub(r'^\${(.*)}$', r'\1', value))):
-                value = re.sub(r'^\${(.*)}$', r'\1', value)
+            has_variable = (
+                ("${" in f"{value}") and ("}" in f"{value}") if value != None else False
+            )
+            pattern = r"^[+-]?\d+(\.\d+)?$"
+            if has_variable and re.match(pattern, re.sub(r"^\${(.*)}$", r"\1", value)):
+                value = re.sub(r"^\${(.*)}$", r"\1", value)
                 has_variable = False
-            if value == "null": value = ""
+            if value == "null":
+                value = ""
 
             if isinstance(value, int):
                 value = str(value)
@@ -34,9 +36,11 @@ class TerraformParser(p.Parser):
             elif type == "variable":
                 keyvalue = Variable(str(name), value, has_variable)
             keyvalue.line = start_line
-            keyvalue.code = TerraformParser.__get_element_code(start_line, end_line, code)
+            keyvalue.code = TerraformParser.__get_element_code(
+                start_line, end_line, code
+            )
             return keyvalue
-        
+
         def process_list(name, value, start_line, end_line):
             for i, v in enumerate(value):
                 if isinstance(v, dict):
@@ -51,44 +55,70 @@ class TerraformParser(p.Parser):
 
         k_values = []
         for name, keyvalue in keyvalues.items():
-            if name == "__start_line__" or name == "__end_line__": 
+            if name == "__start_line__" or name == "__end_line__":
                 continue
 
-            if isinstance(keyvalue, dict):          # Note: local values (variables) can only enter here
+            if isinstance(
+                keyvalue, dict
+            ):  # Note: local values (variables) can only enter here
                 value = keyvalue["value"]
-                if isinstance(value, dict):     # (ex: labels = {})
-                    k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, None)
+                if isinstance(value, dict):  # (ex: labels = {})
+                    k = create_keyvalue(
+                        keyvalue["__start_line__"], keyvalue["__end_line__"], name, None
+                    )
                     k.keyvalues = self.parse_keyvalues(unit_block, value, code, type)
                     k_values.append(k)
-                elif isinstance(value, list):   # (ex: x = [1,2,3])
-                    process_list(name, value, keyvalue["__start_line__"], keyvalue["__end_line__"])
-                else:   # (ex: x = 'test')
-                    if value == None:   # (ex: x = null)
+                elif isinstance(value, list):  # (ex: x = [1,2,3])
+                    process_list(
+                        name,
+                        value,
+                        keyvalue["__start_line__"],
+                        keyvalue["__end_line__"],
+                    )
+                else:  # (ex: x = 'test')
+                    if value == None:  # (ex: x = null)
                         value = "null"
-                    k = create_keyvalue(keyvalue["__start_line__"], keyvalue["__end_line__"], name, value)
-                    k_values.append(k)    
+                    k = create_keyvalue(
+                        keyvalue["__start_line__"],
+                        keyvalue["__end_line__"],
+                        name,
+                        value,
+                    )
+                    k_values.append(k)
             elif isinstance(keyvalue, list) and type == "attribute":
-            # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
+                # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
                 try:
                     for block_attributes in keyvalue:
-                        k = create_keyvalue(block_attributes["__start_line__"], 
-                                block_attributes["__end_line__"], name, None)
-                        k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                        k = create_keyvalue(
+                            block_attributes["__start_line__"],
+                            block_attributes["__end_line__"],
+                            name,
+                            None,
+                        )
+                        k.keyvalues = self.parse_keyvalues(
+                            unit_block, block_attributes, code, type
+                        )
                         k_values.append(k)
                 except KeyError:
                     for block in keyvalue:
                         for block_name, block_attributes in block.items():
-                            k = create_keyvalue(block_attributes["__start_line__"], 
-                                    block_attributes["__end_line__"], f"{name}.{block_name}", None)
-                            k.keyvalues = self.parse_keyvalues(unit_block, block_attributes, code, type)
+                            k = create_keyvalue(
+                                block_attributes["__start_line__"],
+                                block_attributes["__end_line__"],
+                                f"{name}.{block_name}",
+                                None,
+                            )
+                            k.keyvalues = self.parse_keyvalues(
+                                unit_block, block_attributes, code, type
+                            )
                             k_values.append(k)
-                    
-                    
+
         return k_values
 
-
     def parse_atomic_unit(self, type: str, unit_block: UnitBlock, dict, code):
-        def create_atomic_unit(start_line, end_line, type: str, name: str, code) -> AtomicUnit:
+        def create_atomic_unit(
+            start_line, end_line, type: str, name: str, code
+        ) -> AtomicUnit:
             au = AtomicUnit(name, type)
             au.line = start_line
             au.code = TerraformParser.__get_element_code(start_line, end_line, code)
@@ -97,15 +127,30 @@ class TerraformParser(p.Parser):
         def parse_resource():
             for resource_type, resource in dict.items():
                 for name, attributes in resource.items():
-                    au = create_atomic_unit(attributes['__start_line__'], 
-                            attributes['__end_line__'], f"{type}.{resource_type}", name, code)
-                    au.attributes = self.parse_keyvalues(unit_block, attributes, code, "attribute")
+                    au = create_atomic_unit(
+                        attributes["__start_line__"],
+                        attributes["__end_line__"],
+                        f"{type}.{resource_type}",
+                        name,
+                        code,
+                    )
+                    au.attributes = self.parse_keyvalues(
+                        unit_block, attributes, code, "attribute"
+                    )
                     unit_block.add_atomic_unit(au)
 
         def parse_simple_unit():
             for name, attributes in dict.items():
-                au = create_atomic_unit(attributes['__start_line__'], attributes['__end_line__'], type, name, code)
-                au.attributes = self.parse_keyvalues(unit_block, attributes, code, "attribute")
+                au = create_atomic_unit(
+                    attributes["__start_line__"],
+                    attributes["__end_line__"],
+                    type,
+                    name,
+                    code,
+                )
+                au.attributes = self.parse_keyvalues(
+                    unit_block, attributes, code, "attribute"
+                )
                 unit_block.add_atomic_unit(au)
 
         if type in ["resource", "data"]:
@@ -113,17 +158,22 @@ class TerraformParser(p.Parser):
         elif type in ["variable", "module", "output"]:
             parse_simple_unit()
 
-
     def parse_comments(self, unit_block: UnitBlock, comments, code):
         def create_comment(value, start_line, end_line, code):
             c = Comment(value)
             c.line = start_line
             c.code = TerraformParser.__get_element_code(start_line, end_line, code)
             return c
-        
-        for comment in comments:
-            unit_block.add_comment(create_comment(comment["value"], comment["__start_line__"], comment["__end_line__"], code))
 
+        for comment in comments:
+            unit_block.add_comment(
+                create_comment(
+                    comment["value"],
+                    comment["__start_line__"],
+                    comment["__end_line__"],
+                    code,
+                )
+            )
 
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
         unit_block = UnitBlock(path, type)
@@ -141,7 +191,9 @@ class TerraformParser(p.Parser):
                         self.parse_comments(unit_block, value, code)
                     elif key == "locals":
                         for local in value:
-                            unit_block.variables += self.parse_keyvalues(unit_block, local, code, "variable")
+                            unit_block.variables += self.parse_keyvalues(
+                                unit_block, local, code, "variable"
+                            )
                     elif key in ["provider", "terraform"]:
                         continue
                     else:
@@ -150,26 +202,26 @@ class TerraformParser(p.Parser):
             throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
         return unit_block
 
-
     def parse_module(self, path: str) -> Module:
         res: Module = Module(os.path.basename(os.path.normpath(path)), path)
         super().parse_file_structure(res.folder, path)
 
-        files = [f.path for f in os.scandir(f"{path}") 
-            if f.is_file() and not f.is_symlink()]
+        files = [
+            f.path for f in os.scandir(f"{path}") if f.is_file() and not f.is_symlink()
+        ]
         for f in files:
             unit_block = self.parse_file(f, "unknown")
             res.add_block(unit_block)
-        
-        return res
 
+        return res
 
     def parse_folder(self, path: str) -> Project:
         res: Project = Project(os.path.basename(os.path.normpath(path)))
         res.add_module(self.parse_module(path))
 
-        subfolders = [f.path for f in os.scandir(f"{path}") 
-            if f.is_dir() and not f.is_symlink()]
+        subfolders = [
+            f.path for f in os.scandir(f"{path}") if f.is_dir() and not f.is_symlink()
+        ]
         for d in subfolders:
             aux = self.parse_folder(d)
             res.blocks += aux.blocks

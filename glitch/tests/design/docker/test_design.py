@@ -4,14 +4,20 @@ from glitch.analysis.design import DesignVisitor
 from glitch.parsers.docker import DockerParser
 from glitch.tech import Tech
 
+
 class TestDesign(unittest.TestCase):
     def __help_test(self, path, n_errors, codes, lines):
         parser = DockerParser()
         inter = parser.parse(path, "script", False)
         analysis = DesignVisitor(Tech.docker)
         analysis.config("configs/default.ini")
-        errors = list(filter(lambda e: e.code.startswith('design_')
-                or e.code.startswith('implementation_'), set(analysis.check(inter))))
+        errors = list(
+            filter(
+                lambda e: e.code.startswith("design_")
+                or e.code.startswith("implementation_"),
+                set(analysis.check(inter)),
+            )
+        )
         errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))
         self.assertEqual(len(errors), n_errors)
         for i in range(n_errors):
@@ -21,7 +27,9 @@ class TestDesign(unittest.TestCase):
     def test_docker_long_statement(self):
         self.__help_test(
             "tests/design/docker/files/long_statement.Dockerfile",
-            1, ["implementation_long_statement"], [4]
+            1,
+            ["implementation_long_statement"],
+            [4],
         )
 
     def test_docker_improper_alignment(self):
@@ -43,7 +51,8 @@ class TestDesign(unittest.TestCase):
             [
                 "design_duplicate_block",
                 "design_duplicate_block",
-            ], [1, 9]
+            ],
+            [1, 9],
         )
 
     def test_docker_avoid_comments(self):
@@ -52,7 +61,8 @@ class TestDesign(unittest.TestCase):
             1,
             [
                 "design_avoid_comments",
-            ], [1]
+            ],
+            [1],
         )
 
     def test_docker_too_many_variables(self):
@@ -61,5 +71,6 @@ class TestDesign(unittest.TestCase):
             1,
             [
                 "implementation_too_many_variables",
-            ], [1]
+            ],
+            [1],
         )

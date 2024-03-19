@@ -50,4 +50,3 @@ class STrace(threading.Thread):
             self.syscalls.append(syscall)
 
         return self.syscalls
-

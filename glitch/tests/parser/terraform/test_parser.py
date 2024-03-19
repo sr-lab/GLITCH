@@ -1,46 +1,61 @@
 import unittest
 from glitch.parsers.terraform import TerraformParser
 
+
 class TestTerraform(unittest.TestCase):
     def __help_test(self, path, attributes):
         unitblock = TerraformParser().parse_file(path, None)
         au = unitblock.atomic_units[0]
         self.assertEqual(str(au.attributes), attributes)
-    
+
     def __help_test_comments(self, path, comments):
         unitblock = TerraformParser().parse_file(path, None)
         self.assertEqual(str(unitblock.comments), comments)
 
     def test_terraform_null_value(self):
         attributes = "[account_id:'']"
-        self.__help_test("tests/parser/terraform/files/null_value_assign.tf", attributes)
+        self.__help_test(
+            "tests/parser/terraform/files/null_value_assign.tf", attributes
+        )
 
     def test_terraform_empty_string(self):
         attributes = "[account_id:'']"
-        self.__help_test("tests/parser/terraform/files/empty_string_assign.tf", attributes)
+        self.__help_test(
+            "tests/parser/terraform/files/empty_string_assign.tf", attributes
+        )
 
     def test_terraform_boolean_value(self):
         attributes = "[account_id:'True']"
-        self.__help_test("tests/parser/terraform/files/boolean_value_assign.tf", attributes)
+        self.__help_test(
+            "tests/parser/terraform/files/boolean_value_assign.tf", attributes
+        )
 
     def test_terraform_multiline_string(self):
         attributes = "[user_data:'    #!/bin/bash\\n    sudo apt-get update\\n    sudo apt-get install -y apache2\\n    sudo systemctl start apache2']"
-        self.__help_test("tests/parser/terraform/files/multiline_string_assign.tf", attributes)
+        self.__help_test(
+            "tests/parser/terraform/files/multiline_string_assign.tf", attributes
+        )
 
     def test_terraform_value_has_variable(self):
-        attributes =  "[access:None:[user_by_email:'${google_service_account.bqowner.email}'], test:'${var.value1}']"
-        self.__help_test("tests/parser/terraform/files/value_has_variable.tf", attributes)
+        attributes = "[access:None:[user_by_email:'${google_service_account.bqowner.email}'], test:'${var.value1}']"
+        self.__help_test(
+            "tests/parser/terraform/files/value_has_variable.tf", attributes
+        )
 
     def test_terraform_dict_value(self):
-        attributes =  "[labels:None:[env:'default']]"
-        self.__help_test("tests/parser/terraform/files/dict_value_assign.tf", attributes)
+        attributes = "[labels:None:[env:'default']]"
+        self.__help_test(
+            "tests/parser/terraform/files/dict_value_assign.tf", attributes
+        )
 
     def test_terraform_list_value(self):
-        attributes =  "[keys[0]:'value1', keys[1][0]:'1', keys[1][1]:None:[key2:'value2'], keys[2]:None:[key3:'value3']]"
-        self.__help_test("tests/parser/terraform/files/list_value_assign.tf", attributes)
+        attributes = "[keys[0]:'value1', keys[1][0]:'1', keys[1][1]:None:[key2:'value2'], keys[2]:None:[key3:'value3']]"
+        self.__help_test(
+            "tests/parser/terraform/files/list_value_assign.tf", attributes
+        )
 
     def test_terraform_dynamic_block(self):
-        attributes =  "[dynamic.setting:None:[content:None:[namespace:'${setting.value[\"namespace\"]}']]]"
+        attributes = "[dynamic.setting:None:[content:None:[namespace:'${setting.value[\"namespace\"]}']]]"
         self.__help_test("tests/parser/terraform/files/dynamic_block.tf", attributes)
 
     def test_terraform_comments(self):

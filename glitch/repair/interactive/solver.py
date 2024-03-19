@@ -17,7 +17,7 @@ from z3 import (
     Sum,
     ModelRef,
     Z3PPObject,
-    Context
+    Context,
 )
 
 from glitch.repair.interactive.filesystem import FileSystemState
@@ -42,11 +42,11 @@ class PatchSolver:
         owner_fun: Fun
 
     def __init__(
-        self, 
-        statement: PStatement, 
-        filesystem: FileSystemState, 
+        self,
+        statement: PStatement,
+        filesystem: FileSystemState,
         timeout: int = 180,
-        ctx: Optional[Context] = None
+        ctx: Optional[Context] = None,
     ):
         # FIXME: the filesystem in here should be generated from
         # checking the affected paths in statement
@@ -310,10 +310,11 @@ class PatchSolver:
     def __find_atomic_unit(
         labeled_script: LabeledUnitBlock, attribute: Attribute
     ) -> AtomicUnit:
-        def aux_find_atomic_unit(
-            code_element: CodeElement
-        ) -> AtomicUnit:
-            if isinstance(code_element, AtomicUnit) and attribute in code_element.attributes:
+        def aux_find_atomic_unit(code_element: CodeElement) -> AtomicUnit:
+            if (
+                isinstance(code_element, AtomicUnit)
+                and attribute in code_element.attributes
+            ):
                 return code_element
             elif isinstance(code_element, Block):
                 for statement in code_element.statements:
@@ -322,8 +323,9 @@ class PatchSolver:
                         return result
             return None
 
-        code_elements = (labeled_script.script.statements 
-                         + labeled_script.script.atomic_units)
+        code_elements = (
+            labeled_script.script.statements + labeled_script.script.atomic_units
+        )
         for code_element in code_elements:
             result = aux_find_atomic_unit(code_element)
             if result is not None:
@@ -361,9 +363,7 @@ class PatchSolver:
                 atomic_unit.attributes.append(codeelement)
                 # Remove sketch label and add regular label
                 labeled_script.remove_label(codeelement)
-                GLITCHLabeler.label_attribute(
-                    labeled_script, atomic_unit, codeelement
-                )
+                GLITCHLabeler.label_attribute(labeled_script, atomic_unit, codeelement)
             else:
                 atomic_unit = PatchSolver.__find_atomic_unit(
                     labeled_script, codeelement
