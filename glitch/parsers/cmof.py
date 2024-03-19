@@ -153,6 +153,7 @@ class AnsibleParser(p.Parser):
             if (value in ["null", "~"]): value = ""
             a = Attribute(name, value, has_variable)
             a.line = token.start_mark.line + 1
+            a.column = token.start_mark.column + 1
             if val == None:
                 a.code = AnsibleParser.__get_element_code(token, token, code)
             else:
@@ -1283,14 +1284,28 @@ class PuppetParser(p.Parser):
             if lamb != "": return [res] + lamb 
             else: return res
         elif (isinstance(codeelement, puppetmodel.If)):
-            # FIXME Conditionals are not yet supported
-            res = list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), 
-                    codeelement.block))
+            condition = PuppetParser.__process_codeelement(
+                codeelement.condition, path, code
+            )
+            condition = ConditionalStatement(
+                condition, ConditionalStatement.ConditionType.IF
+            )
+            body = list(
+                map(
+                    lambda ce: PuppetParser.__process_codeelement(ce, path, code), 
+                    codeelement.block
+                )
+            )
+            for statement in body:
+                condition.add_statement(statement)
+            
             if (codeelement.elseblock is not None):
-                res += PuppetParser.__process_codeelement(codeelement.elseblock, path, code)
-            return res
+                condition.else_statement = PuppetParser.__process_codeelement(
+                    codeelement.elseblock, path, code
+                )
+            return condition
         elif (isinstance(codeelement, puppetmodel.Unless)):
-            # FIXME Conditionals are not yet supported
+            # FIXME Unless is not yet supported
             res = list(map(lambda ce: PuppetParser.__process_codeelement(ce, path, code), 
                     codeelement.block))
             if (codeelement.elseblock is not None):

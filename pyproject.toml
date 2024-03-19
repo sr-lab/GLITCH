@@ -21,6 +21,7 @@ glitch-python-hcl2 = "0.1.4"
 dockerfile-parse = "2.0.0"
 bashlex = "0.18"
 requests = "^2.31.0"
+z3-solver = "^4.12.4.0"
 nltk = "^3.8.1"
 
 [tool.poetry.group.dev.dependencies]

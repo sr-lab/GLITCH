@@ -7,6 +7,14 @@ class CodeElement(ABC):
         self.column: int = -1
         self.code: str = ""
 
+    def __hash__(self) -> int:
+        return hash(self.line) * hash(self.column)
+    
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, CodeElement):
+            return False
+        return self.line == o.line and self.column == o.column
+
     def __str__(self) -> str:
         return self.__repr__()
 
