@@ -1,25 +1,28 @@
 import os
-import ruamel.yaml as yaml
-from ruamel.yaml import (
+import glitch.parsers.parser as p
+
+from typing import List, TextIO, Tuple, Union, Any, Optional, Callable
+from ruamel.yaml.main import YAML
+from ruamel.yaml.nodes import (
     Node,
     ScalarNode,
     MappingNode,
     SequenceNode,
-    CommentToken,
     CollectionNode,
 )
+from ruamel.yaml.tokens import Token, CommentToken
 from glitch.exceptions import EXCEPTIONS, throw_exception
-from typing import List, Tuple
-
-import glitch.parsers.parser as p
 from glitch.repr.inter import *
+
+
+RecursiveTokenList = List[Union[Token, "RecursiveTokenList", None]]
 
 
 class AnsibleParser(p.Parser):
     @staticmethod
-    def __get_yaml_comments(d: Node, file):
-        def extract_from_token(tokenlist):
-            res = []
+    def __get_yaml_comments(d: Node, file: TextIO):
+        def extract_from_token(tokenlist: RecursiveTokenList) -> List[Tuple[int, str]]:
+            res: List[Tuple[int, str]] = []
             for token in tokenlist:
                 if token is None:
                     continue
@@ -29,8 +32,8 @@ class AnsibleParser(p.Parser):
                     res.append((token.start_mark.line, token.value))
             return res
 
-        def yaml_comments(d: Node) -> List[Tuple[str, str]]:
-            res: List[Tuple[str, str]] = []
+        def yaml_comments(d: Node) -> List[Tuple[int, str]]:
+            res: List[Tuple[int, str]] = []
 
             if isinstance(d, MappingNode):
                 if d.comment is not None:
@@ -55,7 +58,7 @@ class AnsibleParser(p.Parser):
         file.seek(0, 0)
         f_lines = file.readlines()
 
-        comments = []
+        comments: List[Tuple[int, str]] = []
         for c_group in yaml_comments(d):
             line = c_group[0]
             c_group_comments = c_group[1].strip().split("\n")
@@ -77,7 +80,9 @@ class AnsibleParser(p.Parser):
         return set(comments)
 
     @staticmethod
-    def __get_element_code(start_token, end_token, code):
+    def __get_element_code(
+        start_token: Token | Node, end_token: List[Token | Node] | Token | Node | str, code: List[str]
+    ):
         if isinstance(end_token, list) and len(end_token) > 0:
             end_token = end_token[-1]
         elif isinstance(end_token, list) or isinstance(end_token, str):
@@ -99,8 +104,16 @@ class AnsibleParser(p.Parser):
         return res
 
     @staticmethod
-    def __parse_vars(unit_block, cur_name: str, token, code, child: bool = False):
-        def create_variable(token, name: str, value, child: bool = False) -> Variable:
+    def __parse_vars(
+        unit_block: UnitBlock,
+        cur_name: str,
+        node: Node,
+        code: List[str],
+        child: bool = False,
+    ) -> List[Variable]:
+        def create_variable(
+            token: Token | Node, name: str, value: str | None, child: bool = False
+        ) -> Variable:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
             )
@@ -119,48 +132,49 @@ class AnsibleParser(p.Parser):
                 unit_block.add_variable(v)
             return v
 
-        variables = []
-        if isinstance(token, MappingNode):
+        variables: List[Variable] = []
+        if isinstance(node, MappingNode):
             if cur_name == "":
-                for key, v in token.value:
+                for key, v in node.value:
                     if hasattr(key, "value") and isinstance(key.value, str):
                         AnsibleParser.__parse_vars(
                             unit_block, key.value, v, code, child
                         )
                     elif isinstance(key.value, MappingNode):
                         AnsibleParser.__parse_vars(
-                            unit_block, cur_name, key.value[0][0], code, child
+                            unit_block, cur_name, key.value[0][0], code, child  # type: ignore
                         )
             else:
-                var = create_variable(token, cur_name, None, child)
-                for key, v in token.value:
+                var = create_variable(node, cur_name, None, child)
+                for key, v in node.value:
                     if hasattr(key, "value") and isinstance(key.value, str):
                         var.keyvalues += AnsibleParser.__parse_vars(
                             unit_block, key.value, v, code, True
                         )
                     elif isinstance(key.value, MappingNode):
                         var.keyvalues += AnsibleParser.__parse_vars(
-                            unit_block, cur_name, key.value[0][0], code, True
+                            unit_block, cur_name, key.value[0][0], code, True  # type: ignore
                         )
-        elif isinstance(token, ScalarNode):
-            create_variable(token, cur_name, str(token.value), child)
-        elif isinstance(token, SequenceNode):
-            value = []
-            for i, val in enumerate(token.value):
+        elif isinstance(node, ScalarNode):
+            create_variable(node, cur_name, str(node.value), child)
+        elif isinstance(node, SequenceNode):
+            value: List[Any] = []
+            for i, val in enumerate(node.value):
                 if isinstance(val, CollectionNode):
                     variables += AnsibleParser.__parse_vars(
                         unit_block, f"{cur_name}[{i}]", val, code, child
                     )
                 else:
                     value.append(val.value)
-            if len(value) > 0:
-                create_variable(val, cur_name, str(value), child)
+                
+            if len(value) > 0 and isinstance(node.value[-1], (Node, Token)):
+                create_variable(node.value[-1], cur_name, str(value), child)
 
         return variables
 
     @staticmethod
-    def __parse_attribute(cur_name: str, token, val, code):
-        def create_attribute(token, name: str, value) -> Attribute:
+    def __parse_attribute(cur_name: str, token: Token | Node, val: Any, code: List[str]) -> List[Attribute]:
+        def create_attribute(token: Token | Node, name: str, value: Any) -> Attribute:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
             )
@@ -177,10 +191,10 @@ class AnsibleParser(p.Parser):
 
             return a
 
-        attributes = []
+        attributes: List[Attribute] = []
         if isinstance(val, MappingNode):
             attribute = create_attribute(token, cur_name, None)
-            aux_attributes = []
+            aux_attributes: List[KeyValue] = []
             for aux, aux_val in val.value:
                 aux_attributes += AnsibleParser.__parse_attribute(
                     f"{aux.value}", aux, aux_val, code
@@ -189,7 +203,7 @@ class AnsibleParser(p.Parser):
         elif isinstance(val, ScalarNode):
             create_attribute(token, cur_name, str(val.value))
         elif isinstance(val, SequenceNode):
-            value = []
+            value: List[Any] = []
             for i, v in enumerate(val.value):
                 if not isinstance(v, ScalarNode):
                     attributes += AnsibleParser.__parse_attribute(
@@ -204,9 +218,10 @@ class AnsibleParser(p.Parser):
         return attributes
 
     @staticmethod
-    def __parse_tasks(unit_block, tasks, code) -> None:
+    def __parse_tasks(unit_block: UnitBlock, tasks: Node, code: List[str]) -> None:
         for task in tasks.value:
-            atomic_units, attributes = [], []
+            atomic_units = []
+            attributes: List[Attribute] = []
             type, name, line = "", "", 0
             is_block = False
 
@@ -276,15 +291,18 @@ class AnsibleParser(p.Parser):
                     au.code = code[au.line - 1]
                 unit_block.add_atomic_unit(au)
 
-    def __parse_playbook(self, name: str, file, parsed_file=None) -> UnitBlock:
+    def __parse_playbook(self, name: str, file: TextIO, parsed_file: Optional[Node]=None) -> Optional[UnitBlock]:
         try:
             if parsed_file is None:
-                parsed_file = yaml.YAML().compose(file)
+                parsed_file = YAML().compose(file)
             unit_block = UnitBlock(name, UnitBlockType.script)
             unit_block.path = file.name
             file.seek(0, 0)
             code = file.readlines()
             code.append("")  # HACK allows to parse code in the end of the file
+
+            if parsed_file is None:
+                return unit_block
 
             for p in parsed_file.value:
                 # Plays are unit blocks inside a unit block
@@ -316,10 +334,10 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_PLAYBOOK"], file.name)
             return None
 
-    def __parse_tasks_file(self, name: str, file, parsed_file=None) -> UnitBlock:
+    def __parse_tasks_file(self, name: str, file: TextIO, parsed_file: Optional[Node]=None) -> Optional[UnitBlock]:
         try:
             if parsed_file is None:
-                parsed_file = yaml.YAML().compose(file)
+                parsed_file = YAML().compose(file)
             unit_block = UnitBlock(name, UnitBlockType.tasks)
             unit_block.path = file.name
             file.seek(0, 0)
@@ -341,10 +359,10 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_TASKS_FILE"], file.name)
             return None
 
-    def __parse_vars_file(self, name: str, file, parsed_file=None) -> UnitBlock:
+    def __parse_vars_file(self, name: str, file: TextIO, parsed_file: Optional[Node]=None) -> Optional[UnitBlock]:
         try:
             if parsed_file is None:
-                parsed_file = yaml.YAML().compose(file)
+                parsed_file = YAML().compose(file)
             unit_block = UnitBlock(name, UnitBlockType.vars)
             unit_block.path = file.name
             file.seek(0, 0)
@@ -367,7 +385,7 @@ class AnsibleParser(p.Parser):
             return None
 
     @staticmethod
-    def __apply_to_files(module, path, p_function) -> None:
+    def __apply_to_files(module: Module | Project, path: str, p_function: Callable[[str, TextIO], Optional[UnitBlock]]) -> None:
         if os.path.exists(path) and os.path.isdir(path) and not os.path.islink(path):
             files = [
                 f
@@ -451,18 +469,18 @@ class AnsibleParser(p.Parser):
 
         return res
 
-    def parse_file(self, path: str, blocktype: UnitBlockType) -> UnitBlock:
+    def parse_file(self, path: str, type: UnitBlockType) -> Optional[UnitBlock]:
         with open(path) as f:
             try:
-                parsed_file = yaml.YAML().compose(f)
+                parsed_file = YAML().compose(f)
                 f.seek(0, 0)
             except:
                 throw_exception(EXCEPTIONS["ANSIBLE_COULD_NOT_PARSE"], path)
                 return None
 
-            if blocktype == UnitBlockType.unknown:
+            if type == UnitBlockType.unknown:
                 if isinstance(parsed_file, MappingNode):
-                    blocktype = UnitBlockType.vars
+                    type = UnitBlockType.vars
                 elif (
                     isinstance(parsed_file, SequenceNode)
                     and len(parsed_file.value) > 0
@@ -475,19 +493,19 @@ class AnsibleParser(p.Parser):
                             hosts = True
                             break
 
-                    blocktype = UnitBlockType.script if hosts else UnitBlockType.tasks
+                    type = UnitBlockType.script if hosts else UnitBlockType.tasks
                 elif (
                     isinstance(parsed_file, SequenceNode)
                     and len(parsed_file.value) == 0
                 ):
-                    blocktype = UnitBlockType.script
+                    type = UnitBlockType.script
                 else:
                     throw_exception(EXCEPTIONS["ANSIBLE_FILE_TYPE"], path)
                     return None
 
-            if blocktype == UnitBlockType.script:
+            if type == UnitBlockType.script:
                 return self.__parse_playbook(path, f, parsed_file=parsed_file)
-            elif blocktype == UnitBlockType.tasks:
+            elif type == UnitBlockType.tasks:
                 return self.__parse_tasks_file(path, f, parsed_file=parsed_file)
-            elif blocktype == UnitBlockType.vars:
+            elif type == UnitBlockType.vars:
                 return self.__parse_vars_file(path, f, parsed_file=parsed_file)

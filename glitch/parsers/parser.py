@@ -18,7 +18,7 @@ class Parser(ABC):
             return self.parse_folder(path)
 
     @abstractmethod
-    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
+    def parse_file(self, path: str, type: UnitBlockType) -> Optional[UnitBlock]:
         pass
 
     @abstractmethod
@@ -29,7 +29,7 @@ class Parser(ABC):
     def parse_module(self, path: str) -> Module:
         pass
 
-    def parse_file_structure(self, folder, path) -> None:
+    def parse_file_structure(self, folder: Folder, path: str) -> None:
         for f in os.listdir(path):
             if os.path.islink(os.path.join(path, f)):
                 continue

@@ -15,13 +15,13 @@ from glitch.parsers.chef import ChefParser
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from pkg_resources import resource_filename
-from alive_progress import alive_bar                 # type: ignore
+from alive_progress import alive_bar  # type: ignore
 
 
 # NOTE: These are necessary in order for python to load the visitors.
 # Otherwise, python will not consider these types of rules.
-from glitch.analysis.design import DesignVisitor     # type: ignore
-from glitch.analysis.security import SecurityVisitor # type: ignore
+from glitch.analysis.design import DesignVisitor  # type: ignore
+from glitch.analysis.security import SecurityVisitor  # type: ignore
 
 
 def parse_and_check(
@@ -177,7 +177,7 @@ def glitch(
             with alive_bar(
                 len(iac_files),
                 title=f"ANALYZING ALL FILES WITH EXTENSIONS {includeall}",
-            ) as bar: # type: ignore
+            ) as bar:  # type: ignore
                 for file in iac_files:
                     parse_and_check(
                         type, file, module, parser, analyses, errors, file_stats
@@ -185,7 +185,7 @@ def glitch(
                     bar()
         else:
             subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
-            with alive_bar(len(subfolders), title="ANALYZING SUBFOLDERS") as bar: # type: ignore
+            with alive_bar(len(subfolders), title="ANALYZING SUBFOLDERS") as bar:  # type: ignore
                 for d in subfolders:
                     parse_and_check(
                         type, d, module, parser, analyses, errors, file_stats
@@ -194,7 +194,7 @@ def glitch(
 
         files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
 
-        with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar: # type: ignore
+        with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:  # type: ignore
             for file in files:
                 parse_and_check(
                     type, file, module, parser, analyses, errors, file_stats

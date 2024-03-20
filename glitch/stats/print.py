@@ -4,7 +4,10 @@ from typing import List, Dict, Set, Tuple
 from glitch.analysis.rules import Error
 from glitch.stats.stats import FileStats
 
-def print_stats(errors: List[Error], smells: List[str], file_stats: FileStats, format: str) -> None:
+
+def print_stats(
+    errors: List[Error], smells: List[str], file_stats: FileStats, format: str
+) -> None:
     total_files = len(file_stats.files)
     occurrences: Dict[str, int] = {}
     files_with_the_smell: Dict[str, Set[str]] = {"Combined": set()}
@@ -49,16 +52,16 @@ def print_stats(errors: List[Error], smells: List[str], file_stats: FileStats, f
             "Smell density (Smell/KLoC)",
             "Proportion of scripts (%)",
         ]
-        
-        table.align["Smell"] = "r"                          # type: ignore
-        table.align["Occurrences"] = "l"                    # type: ignore
-        table.align["Smell density (Smell/KLoC)"] = "l"     # type: ignore          
-        table.align["Proportion of scripts (%)"] = "l"      # type: ignore
+
+        table.align["Smell"] = "r"  # type: ignore
+        table.align["Occurrences"] = "l"  # type: ignore
+        table.align["Smell density (Smell/KLoC)"] = "l"  # type: ignore
+        table.align["Proportion of scripts (%)"] = "l"  # type: ignore
         smells_info = stats_info[:-1]
 
         smells_info = map(
-            lambda smell: (smell[0].split(" - ")[0], smell[1], smell[2], smell[3]), 
-            smells_info
+            lambda smell: (smell[0].split(" - ")[0], smell[1], smell[2], smell[3]),
+            smells_info,
         )
         smells_info = sorted(smells_info, key=lambda x: x[0])
 
@@ -68,24 +71,26 @@ def print_stats(errors: List[Error], smells: List[str], file_stats: FileStats, f
                 if len(str(s)) > biggest_value[i]:
                     biggest_value[i] = len(str(s))
 
-            table.add_row(stats) # type: ignore
+            table.add_row(stats)  # type: ignore
 
         div_row = [i * "-" for i in biggest_value]
-        table.add_row(div_row) # type: ignore
-        table.add_row(stats_info[-1]) # type: ignore
+        table.add_row(div_row)  # type: ignore
+        table.add_row(stats_info[-1])  # type: ignore
         print(table)
 
         attributes = PrettyTable()
         attributes.field_names = ["Total IaC files", "Lines of Code"]
-        attributes.add_row([total_files, file_stats.loc]) # type: ignore
+        attributes.add_row([total_files, file_stats.loc])  # type: ignore
         print(attributes)
     elif format == "latex":
         smells_info = stats_info[:-1]
         smells_info = sorted(smells_info, key=lambda x: x[0])
-        smells_info = list(map(
-            lambda smell: (smell[0].split(" - ")[0], smell[1], smell[2], smell[3]), 
-            smells_info
-        ))
+        smells_info = list(
+            map(
+                lambda smell: (smell[0].split(" - ")[0], smell[1], smell[2], smell[3]),
+                smells_info,
+            )
+        )
         smells_info.append(stats_info[-1])
         table = pd.DataFrame(
             smells_info,
@@ -97,8 +102,8 @@ def print_stats(errors: List[Error], smells: List[str], file_stats: FileStats, f
             ],
         )
         latex = (
-            table.style.hide(axis="index")                   # type: ignore
-            .format(escape=None, precision=2, thousands=",") # type: ignore
+            table.style.hide(axis="index")  # type: ignore
+            .format(escape=None, precision=2, thousands=",")  # type: ignore
             .to_latex()
         )
         combined = latex[: latex.rfind("\\\\")].rfind("\\\\")
@@ -110,7 +115,7 @@ def print_stats(errors: List[Error], smells: List[str], file_stats: FileStats, f
             columns=["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"],
         )
         print(
-            attributes.style.hide(axis="index")              # type: ignore
-            .format(escape=None, precision=2, thousands=",") # type: ignore
+            attributes.style.hide(axis="index")  # type: ignore
+            .format(escape=None, precision=2, thousands=",")  # type: ignore
             .to_latex()
         )

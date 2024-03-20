@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import List
 
 
 class CodeElement(ABC):
@@ -86,11 +87,11 @@ class Comment(CodeElement):
 
 
 class KeyValue(CodeElement):
-    def __init__(self, name: str, value: str, has_variable: bool) -> None:
+    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
         self.name: str = name
-        self.value: str = value
+        self.value: str | None = value
         self.has_variable: bool = has_variable
-        self.keyvalues: list = []
+        self.keyvalues: List[KeyValue] = []
 
     def __repr__(self) -> str:
         value = repr(self.value).split("\n")[0]
@@ -101,7 +102,7 @@ class KeyValue(CodeElement):
 
 
 class Variable(KeyValue):
-    def __init__(self, name: str, value: str, has_variable: bool) -> None:
+    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
         super().__init__(name, value, has_variable)
 
     def print(self, tab) -> str:
