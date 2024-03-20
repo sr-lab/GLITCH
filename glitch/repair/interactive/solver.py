@@ -47,7 +47,7 @@ class PatchSolver:
         filesystem: FileSystemState,
         timeout: int = 180,
         ctx: Optional[Context] = None,
-    ):
+    ) -> None:
         # FIXME: the filesystem in here should be generated from
         # checking the affected paths in statement
         self.solver = Solver(ctx=ctx)
@@ -123,7 +123,7 @@ class PatchSolver:
 
         raise ValueError(f"Not supported {expr}")
 
-    def __generate_hard_constraints(self, filesystem: FileSystemState):
+    def __generate_hard_constraints(self, filesystem: FileSystemState) -> None:
         for path, state in filesystem.state.items():
             self.solver.add(self.__funs.state_fun(path) == StringVal(str(state)))
             content, mode, owner = UNDEF, UNDEF, UNDEF
@@ -337,7 +337,9 @@ class PatchSolver:
     def __is_sketch(self, codeelement: CodeElement) -> bool:
         return codeelement.line < 0 and codeelement.column < 0
 
-    def apply_patch(self, model_ref: ModelRef, labeled_script: LabeledUnitBlock):
+    def apply_patch(
+        self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
+    ) -> None:
         changed = []
 
         for label, unchanged in self.unchanged.items():

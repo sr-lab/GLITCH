@@ -1,10 +1,13 @@
+from typing import Dict, Optional, Union, List
+from abc import ABC, abstractmethod
 from glitch.tech import Tech
 from glitch.repr.inter import *
-from abc import ABC, abstractmethod
+
+ErrorDict = Dict[str, Union[Union[Tech, str], "ErrorDict"]]
 
 
 class Error:
-    ERRORS = {
+    ERRORS: ErrorDict = {
         "security": {
             "sec_https": "Use of HTTP without TLS - The developers should always favor the usage of HTTPS. (CWE-319)",
             "sec_susp_comm": "Suspicious comment - Comments with keywords such as TODO HACK or FIXME may reveal problems possibly exploitable. (CWE-546)",
@@ -59,11 +62,11 @@ class Error:
         },
     }
 
-    ALL_ERRORS = {}
+    ALL_ERRORS: Dict[str, str] = {}
 
     @staticmethod
-    def agglomerate_errors():
-        def aux_agglomerate_errors(key, errors):
+    def agglomerate_errors() -> None:
+        def aux_agglomerate_errors(key: str, errors: Union[str, ErrorDict]) -> None:
             if isinstance(errors, dict):
                 for k, v in errors.items():
                     aux_agglomerate_errors(k, v)
@@ -73,7 +76,7 @@ class Error:
         aux_agglomerate_errors("", Error.ERRORS)
 
     def __init__(
-        self, code: str, el, path: str, repr: str, opt_msg: str = None
+        self, code: str, el, path: str, repr: str, opt_msg: Optional[str] = None
     ) -> None:
         self.code: str = code
         self.el = el
@@ -129,13 +132,13 @@ class RuleVisitor(ABC):
         self.tech = tech
         self.code = None
 
-    def check(self, code) -> list[Error]:
+    def check(self, code: Project | Module | UnitBlock) -> List[Error]:
         self.code = code
         if isinstance(code, Project):
             return self.check_project(code)
         elif isinstance(code, Module):
             return self.check_module(code)
-        elif isinstance(code, UnitBlock):
+        else:
             return self.check_unitblock(code)
 
     def check_element(

@@ -6,7 +6,7 @@ from glitch.tech import Tech
 
 
 class TestSecurity(unittest.TestCase):
-    def __help_test(self, path, n_errors, codes, lines):
+    def __help_test(self, path, n_errors: int, codes, lines) -> None:
         parser = ChefParser()
         inter = parser.parse(path, "script", False)
         analysis = SecurityVisitor(Tech.chef)
@@ -20,13 +20,13 @@ class TestSecurity(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
 
-    def test_chef_http(self):
+    def test_chef_http(self) -> None:
         self.__help_test("tests/security/chef/files/http.rb", 1, ["sec_https"], [3])
 
-    def test_chef_susp_comment(self):
+    def test_chef_susp_comment(self) -> None:
         self.__help_test("tests/security/chef/files/susp.rb", 1, ["sec_susp_comm"], [1])
 
-    def test_chef_def_admin(self):
+    def test_chef_def_admin(self) -> None:
         self.__help_test(
             "tests/security/chef/files/admin.rb",
             3,
@@ -34,17 +34,17 @@ class TestSecurity(unittest.TestCase):
             [8, 8, 8],
         )
 
-    def test_chef_empt_pass(self):
+    def test_chef_empt_pass(self) -> None:
         self.__help_test(
             "tests/security/chef/files/empty.rb", 1, ["sec_empty_pass"], [1]
         )
 
-    def test_chef_weak_crypt(self):
+    def test_chef_weak_crypt(self) -> None:
         self.__help_test(
             "tests/security/chef/files/weak_crypt.rb", 1, ["sec_weak_crypt"], [4]
         )
 
-    def test_chef_hard_secr(self):
+    def test_chef_hard_secr(self) -> None:
         self.__help_test(
             "tests/security/chef/files/hard_secr.rb",
             2,
@@ -52,17 +52,17 @@ class TestSecurity(unittest.TestCase):
             [8, 8],
         )
 
-    def test_chef_invalid_bind(self):
+    def test_chef_invalid_bind(self) -> None:
         self.__help_test(
             "tests/security/chef/files/inv_bind.rb", 1, ["sec_invalid_bind"], [7]
         )
 
-    def test_chef_int_check(self):
+    def test_chef_int_check(self) -> None:
         self.__help_test(
             "tests/security/chef/files/int_check.rb", 1, ["sec_no_int_check"], [1]
         )
 
-    def test_chef_missing_default(self):
+    def test_chef_missing_default(self) -> None:
         self.__help_test(
             "tests/security/chef/files/missing_default.rb",
             1,
@@ -70,7 +70,7 @@ class TestSecurity(unittest.TestCase):
             [2],
         )
 
-    def test_chef_full_permission(self):
+    def test_chef_full_permission(self) -> None:
         self.__help_test(
             "tests/security/chef/files/full_permission.rb",
             1,
@@ -78,7 +78,7 @@ class TestSecurity(unittest.TestCase):
             [3],
         )
 
-    def test_chef_obs_command(self):
+    def test_chef_obs_command(self) -> None:
         self.__help_test(
             "tests/security/chef/files/obs_command.rb", 1, ["sec_obsolete_command"], [2]
         )

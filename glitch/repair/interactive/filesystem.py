@@ -32,7 +32,7 @@ class Nil(State):
 
 
 class FileSystemState:
-    def __init__(self):
+    def __init__(self) -> None:
         self.state: Dict[str, State] = {}
 
     def copy(self):

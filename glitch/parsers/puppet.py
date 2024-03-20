@@ -10,14 +10,14 @@ from glitch.repr.inter import *
 
 class PuppetParser(p.Parser):
     @staticmethod
-    def __process_unitblock_component(ce, unit_block: UnitBlock):
-        def get_var(parent_name, vars):
+    def __process_unitblock_component(ce, unit_block: UnitBlock) -> None:
+        def get_var(parent_name: str, vars):
             for var in vars:
                 if var.name == parent_name:
                     return var
             return None
 
-        def add_variable_to_unit_block(variable, unit_block_vars):
+        def add_variable_to_unit_block(variable, unit_block_vars) -> None:
             var_name = variable.name
             var = get_var(var_name, unit_block_vars)
             if var and var.value == None and variable.value == None:

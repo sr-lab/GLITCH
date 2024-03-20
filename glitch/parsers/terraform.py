@@ -5,6 +5,7 @@ import glitch.parsers.parser as p
 
 from glitch.exceptions import EXCEPTIONS, throw_exception
 from glitch.repr.inter import *
+from typing import Sequence
 
 
 class TerraformParser(p.Parser):
@@ -41,7 +42,7 @@ class TerraformParser(p.Parser):
             )
             return keyvalue
 
-        def process_list(name, value, start_line, end_line):
+        def process_list(name: str, value, start_line, end_line) -> None:
             for i, v in enumerate(value):
                 if isinstance(v, dict):
                     k = create_keyvalue(start_line, end_line, name + f"[{i}]", None)
@@ -115,7 +116,7 @@ class TerraformParser(p.Parser):
 
         return k_values
 
-    def parse_atomic_unit(self, type: str, unit_block: UnitBlock, dict, code):
+    def parse_atomic_unit(self, type: str, unit_block: UnitBlock, dict, code) -> None:
         def create_atomic_unit(
             start_line, end_line, type: str, name: str, code
         ) -> AtomicUnit:
@@ -124,7 +125,7 @@ class TerraformParser(p.Parser):
             au.code = TerraformParser.__get_element_code(start_line, end_line, code)
             return au
 
-        def parse_resource():
+        def parse_resource() -> None:
             for resource_type, resource in dict.items():
                 for name, attributes in resource.items():
                     au = create_atomic_unit(
@@ -139,7 +140,7 @@ class TerraformParser(p.Parser):
                     )
                     unit_block.add_atomic_unit(au)
 
-        def parse_simple_unit():
+        def parse_simple_unit() -> None:
             for name, attributes in dict.items():
                 au = create_atomic_unit(
                     attributes["__start_line__"],
@@ -158,7 +159,9 @@ class TerraformParser(p.Parser):
         elif type in ["variable", "module", "output"]:
             parse_simple_unit()
 
-    def parse_comments(self, unit_block: UnitBlock, comments, code):
+    def parse_comments(
+        self, unit_block: UnitBlock, comments: Sequence[str], code
+    ) -> None:
         def create_comment(value, start_line, end_line, code):
             c = Comment(value)
             c.line = start_line

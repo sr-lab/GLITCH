@@ -1,12 +1,15 @@
 import os
 from glitch.repr.inter import *
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from glitch.repr.inter import UnitBlockType
 
 
 class Parser(ABC):
-    def parse(self, path: str, type: UnitBlockType, is_module: bool) -> Module:
+    def parse(
+        self, path: str, type: UnitBlockType, is_module: bool
+    ) -> Optional[Module | Project | UnitBlock]:
         if is_module:
             return self.parse_module(path)
         elif os.path.isfile(path):
@@ -26,7 +29,7 @@ class Parser(ABC):
     def parse_module(self, path: str) -> Module:
         pass
 
-    def parse_file_structure(self, folder, path):
+    def parse_file_structure(self, folder, path) -> None:
         for f in os.listdir(path):
             if os.path.islink(os.path.join(path, f)):
                 continue

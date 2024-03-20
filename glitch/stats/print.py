@@ -1,13 +1,13 @@
-from glob import escape
 import pandas as pd
-from glitch.analysis.rules import Error
 from prettytable import PrettyTable
+from typing import List, Dict, Set, Tuple
+from glitch.analysis.rules import Error
+from glitch.stats.stats import FileStats
 
-
-def print_stats(errors, smells, file_stats, format):
+def print_stats(errors: List[Error], smells: List[str], file_stats: FileStats, format: str) -> None:
     total_files = len(file_stats.files)
-    occurrences = {}
-    files_with_the_smell = {"Combined": set()}
+    occurrences: Dict[str, int] = {}
+    files_with_the_smell: Dict[str, Set[str]] = {"Combined": set()}
 
     for smell in smells:
         occurrences[smell] = 0
@@ -18,27 +18,27 @@ def print_stats(errors, smells, file_stats, format):
         files_with_the_smell[error.code].add(error.path)
         files_with_the_smell["Combined"].add(error.path)
 
-    stats_info = []
+    stats_info: List[Tuple[str, int, float, float]] = []
     total_occur = 0
     total_smell_density = 0
     for code, n in occurrences.items():
         total_occur += n
         total_smell_density += round(n / (file_stats.loc / 1000), 2)
         stats_info.append(
-            [
+            (
                 Error.ALL_ERRORS[code],
                 n,
                 round(n / (file_stats.loc / 1000), 2),
                 round((len(files_with_the_smell[code]) / total_files) * 100, 2),
-            ]
+            )
         )
     stats_info.append(
-        [
+        (
             "Combined",
             total_occur,
             total_smell_density,
             round((len(files_with_the_smell["Combined"]) / total_files) * 100, 2),
-        ]
+        )
     )
 
     if format == "prettytable":
@@ -49,13 +49,17 @@ def print_stats(errors, smells, file_stats, format):
             "Smell density (Smell/KLoC)",
             "Proportion of scripts (%)",
         ]
-        table.align["Smell"] = "r"
-        table.align["Occurrences"] = "l"
-        table.align["Smell density (Smell/KLoC)"] = "l"
-        table.align["Proportion of scripts (%)"] = "l"
+        
+        table.align["Smell"] = "r"                          # type: ignore
+        table.align["Occurrences"] = "l"                    # type: ignore
+        table.align["Smell density (Smell/KLoC)"] = "l"     # type: ignore          
+        table.align["Proportion of scripts (%)"] = "l"      # type: ignore
         smells_info = stats_info[:-1]
-        for smell in smells_info:
-            smell[0] = smell[0].split(" - ")[0]
+
+        smells_info = map(
+            lambda smell: (smell[0].split(" - ")[0], smell[1], smell[2], smell[3]), 
+            smells_info
+        )
         smells_info = sorted(smells_info, key=lambda x: x[0])
 
         biggest_value = [len(name) for name in table.field_names]
@@ -64,22 +68,24 @@ def print_stats(errors, smells, file_stats, format):
                 if len(str(s)) > biggest_value[i]:
                     biggest_value[i] = len(str(s))
 
-            table.add_row(stats)
+            table.add_row(stats) # type: ignore
 
         div_row = [i * "-" for i in biggest_value]
-        table.add_row(div_row)
-        table.add_row(stats_info[-1])
+        table.add_row(div_row) # type: ignore
+        table.add_row(stats_info[-1]) # type: ignore
         print(table)
 
         attributes = PrettyTable()
         attributes.field_names = ["Total IaC files", "Lines of Code"]
-        attributes.add_row([total_files, file_stats.loc])
+        attributes.add_row([total_files, file_stats.loc]) # type: ignore
         print(attributes)
     elif format == "latex":
         smells_info = stats_info[:-1]
         smells_info = sorted(smells_info, key=lambda x: x[0])
-        for smell in smells_info:
-            smell[0] = smell[0].split(" - ")[0]
+        smells_info = list(map(
+            lambda smell: (smell[0].split(" - ")[0], smell[1], smell[2], smell[3]), 
+            smells_info
+        ))
         smells_info.append(stats_info[-1])
         table = pd.DataFrame(
             smells_info,
@@ -87,16 +93,16 @@ def print_stats(errors, smells, file_stats, format):
                 "\\textbf{Smell}",
                 "\\textbf{Occurrences}",
                 "\\textbf{Smell density (Smell/KLoC)}",
-                "\\textbf{Proportion of scripts (\%)}",
+                "\\textbf{Proportion of scripts (%)}",
             ],
         )
         latex = (
-            table.style.hide(axis="index")
-            .format(escape=None, precision=2, thousands=",")
+            table.style.hide(axis="index")                   # type: ignore
+            .format(escape=None, precision=2, thousands=",") # type: ignore
             .to_latex()
         )
         combined = latex[: latex.rfind("\\\\")].rfind("\\\\")
-        latex = latex[:combined] + "\\\\\n\midrule\n" + latex[combined + 3 :]
+        latex = latex[:combined] + "\\\\\n\\midrule\n" + latex[combined + 3 :]
         print(latex)
 
         attributes = pd.DataFrame(
@@ -104,7 +110,7 @@ def print_stats(errors, smells, file_stats, format):
             columns=["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"],
         )
         print(
-            attributes.style.hide(axis="index")
-            .format(escape=None, precision=2, thousands=",")
+            attributes.style.hide(axis="index")              # type: ignore
+            .format(escape=None, precision=2, thousands=",") # type: ignore
             .to_latex()
         )

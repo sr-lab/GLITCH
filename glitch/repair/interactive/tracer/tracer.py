@@ -11,7 +11,7 @@ from glitch.repair.interactive.tracer.transform import (
 
 
 class STrace(threading.Thread):
-    def __init__(self, pid: str):
+    def __init__(self, pid: str) -> None:
         threading.Thread.__init__(self)
         self.syscalls: List[Syscall] = []
         self.pid = pid

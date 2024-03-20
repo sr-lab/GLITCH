@@ -1,6 +1,6 @@
 import click
 
-from typing import List
+from typing import Optional, List, Tuple, Iterable
 from glitch.tech import Tech
 from glitch.analysis.rules import Error
 
@@ -9,21 +9,21 @@ class RulesListOption(click.Option):
     def __init__(
         self,
         param_decls=None,
-        show_default=False,
-        prompt=False,
-        confirmation_prompt=False,
-        hide_input=False,
-        is_flag=None,
+        show_default: bool = False,
+        prompt: bool = False,
+        confirmation_prompt: bool = False,
+        hide_input: bool = False,
+        is_flag: Optional[bool] = None,
         flag_value=None,
-        multiple=False,
-        count=False,
-        allow_from_autoenv=True,
+        multiple: bool = False,
+        count: bool = False,
+        allow_from_autoenv: bool = True,
         type=None,
         help=None,
-        hidden=False,
-        show_choices=True,
-        show_envvar=False,
-    ):
+        hidden: bool = False,
+        show_choices: bool = True,
+        show_envvar: bool = False,
+    ) -> None:
         super().__init__(
             param_decls=param_decls,
             show_default=show_default,
@@ -44,16 +44,16 @@ class RulesListOption(click.Option):
         self.type = click.Choice(get_smell_types(), case_sensitive=False)
 
 
-def get_smell_types() -> List[str]:
+def get_smell_types() -> Tuple[str, ...]:
     """Get list of smell types.
 
     Returns:
         List[str]: List of smell types.
     """
-    return Error.ERRORS.keys()
+    return tuple(Error.ERRORS.keys())
 
 
-def get_smells(smell_types: List[str], tech: Tech) -> List[str]:
+def get_smells(smell_types: Iterable[str], tech: Tech) -> List[str]:
     """Get list of smells.
 
     Args:
@@ -75,7 +75,7 @@ def get_smells(smell_types: List[str], tech: Tech) -> List[str]:
     return smells
 
 
-def remove_unmatched_brackets(string):
+def remove_unmatched_brackets(string: str):
     stack, aux = [], ""
 
     for c in string:
@@ -101,7 +101,7 @@ def remove_unmatched_brackets(string):
 
 # Python program for KMP Algorithm (https://www.geeksforgeeks.org/python-program-for-kmp-algorithm-for-pattern-searching-2/)
 # Based on code by Bhavya Jain
-def kmp_search(pat, txt):
+def kmp_search(pat, txt: str):
     M = len(pat)
     N = len(txt)
     res = []
@@ -136,7 +136,7 @@ def kmp_search(pat, txt):
     return res
 
 
-def compute_LPS_array(pat, M, lps):
+def compute_LPS_array(pat, M, lps) -> None:
     len = 0  # length of the previous longest prefix suffix
     lps[0]
     i = 1

@@ -1,11 +1,16 @@
 import os
+from typing import Union, Set
 from abc import ABC, abstractmethod
 
 from glitch.repr.inter import *
 
+CodeElementDict = dict[
+    Union["CodeElementDict", CodeElement], Union["CodeElementDict", CodeElement]
+]
+
 
 class Stats(ABC):
-    def compute(self, c):
+    def compute(self, c: CodeElement | Project | Module | CodeElementDict) -> None:
         if isinstance(c, Project):
             self.compute_project(c)
         elif isinstance(c, Module):
@@ -69,16 +74,16 @@ class Stats(ABC):
 class FileStats(Stats):
     def __init__(self) -> None:
         super().__init__()
-        self.files = set()
+        self.files: Set[str] = set()
         self.loc = 0
 
-    def compute_project(self, p: Project):
+    def compute_project(self, p: Project) -> None:
         for m in p.modules:
             self.compute(m)
         for u in p.blocks:
             self.compute(u)
 
-    def compute_module(self, m: Module):
+    def compute_module(self, m: Module) -> None:
         for u in m.blocks:
             self.compute(u)
         if os.path.isfile(m.path) and m.path not in self.files:
@@ -86,7 +91,7 @@ class FileStats(Stats):
             with open(m.path, "r") as f:
                 self.loc += len(f.readlines())
 
-    def compute_unitblock(self, u: UnitBlock):
+    def compute_unitblock(self, u: UnitBlock) -> None:
         for ub in u.unit_blocks:
             self.compute(ub)
         if os.path.isfile(u.path) and u.path not in self.files:
@@ -97,20 +102,20 @@ class FileStats(Stats):
                 except UnicodeDecodeError:
                     pass
 
-    def compute_atomicunit(self, au: AtomicUnit):
+    def compute_atomicunit(self, au: AtomicUnit) -> None:
         pass
 
-    def compute_dependency(self, d: Dependency):
+    def compute_dependency(self, d: Dependency) -> None:
         pass
 
-    def compute_attribute(self, a: Attribute):
+    def compute_attribute(self, a: Attribute) -> None:
         pass
 
-    def compute_variable(self, v: Variable):
+    def compute_variable(self, v: Variable) -> None:
         pass
 
-    def compute_condition(self, c: ConditionalStatement):
+    def compute_condition(self, c: ConditionalStatement) -> None:
         pass
 
-    def compute_comment(self, c: Comment):
+    def compute_comment(self, c: Comment) -> None:
         pass

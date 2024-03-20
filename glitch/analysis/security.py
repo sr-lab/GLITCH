@@ -55,7 +55,7 @@ class SecurityVisitor(RuleVisitor):
     def get_name() -> str:
         return "security"
 
-    def config(self, config_path: str):
+    def config(self, config_path: str) -> None:
         config = configparser.ConfigParser()
         config.read(config_path)
         SecurityVisitor.__WRONG_WORDS = json.loads(

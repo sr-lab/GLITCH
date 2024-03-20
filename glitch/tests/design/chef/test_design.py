@@ -6,7 +6,7 @@ from glitch.tech import Tech
 
 
 class TestDesign(unittest.TestCase):
-    def __help_test(self, path, n_errors, codes, lines):
+    def __help_test(self, path, n_errors: int, codes, lines) -> None:
         parser = ChefParser()
         inter = parser.parse(path, "script", False)
         analysis = DesignVisitor(Tech.chef)
@@ -24,7 +24,7 @@ class TestDesign(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
 
-    def test_chef_long_statement(self):
+    def test_chef_long_statement(self) -> None:
         self.__help_test(
             "tests/design/chef/files/long_statement.rb",
             1,
@@ -32,7 +32,7 @@ class TestDesign(unittest.TestCase):
             [6],
         )
 
-    def test_chef_improper_alignment(self):
+    def test_chef_improper_alignment(self) -> None:
         self.__help_test(
             "tests/design/chef/files/improper_alignment.rb",
             1,
@@ -40,7 +40,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_chef_duplicate_block(self):
+    def test_chef_duplicate_block(self) -> None:
         self.__help_test(
             "tests/design/chef/files/duplicate_block.rb",
             4,
@@ -53,7 +53,7 @@ class TestDesign(unittest.TestCase):
             [3, 4, 9, 10],
         )
 
-    def test_chef_avoid_comments(self):
+    def test_chef_avoid_comments(self) -> None:
         self.__help_test(
             "tests/design/chef/files/avoid_comments.rb",
             1,
@@ -63,7 +63,7 @@ class TestDesign(unittest.TestCase):
             [7],
         )
 
-    def test_chef_long_resource(self):
+    def test_chef_long_resource(self) -> None:
         self.__help_test(
             "tests/design/chef/files/long_resource.rb",
             1,
@@ -73,7 +73,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_chef_multifaceted_abstraction(self):
+    def test_chef_multifaceted_abstraction(self) -> None:
         self.__help_test(
             "tests/design/chef/files/multifaceted_abstraction.rb",
             1,
@@ -83,7 +83,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_chef_misplaced_attribute(self):
+    def test_chef_misplaced_attribute(self) -> None:
         self.__help_test(
             "tests/design/chef/files/misplaced_attribute.rb",
             1,
@@ -93,7 +93,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_chef_too_many_variables(self):
+    def test_chef_too_many_variables(self) -> None:
         self.__help_test(
             "tests/design/chef/files/too_many_variables.rb",
             1,

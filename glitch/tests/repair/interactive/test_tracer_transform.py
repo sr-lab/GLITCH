@@ -11,7 +11,7 @@ from glitch.repair.interactive.tracer.model import *
 from glitch.repair.interactive.filesystem import *
 
 
-def test_get_affected_paths():
+def test_get_affected_paths() -> None:
     sys_calls = [
         SOpen("open", ["file1", [OpenFlag.O_WRONLY]], 0),
         SOpenAt("openat", ["0", "file2", [OpenFlag.O_WRONLY]], 0),
@@ -63,7 +63,7 @@ def teardown_file_system():
     shutil.rmtree(temp_dir.name)
 
 
-def test_get_file_system_state(setup_file_system, teardown_file_system):
+def test_get_file_system_state(setup_file_system, teardown_file_system) -> None:
     file4 = os.path.join(dir1, "file4")
 
     files = {dir1, file2, file3, file4}

@@ -1,6 +1,7 @@
 import os
 import ruamel.yaml as yaml
 from ruamel.yaml import (
+    Node,
     ScalarNode,
     MappingNode,
     SequenceNode,
@@ -8,6 +9,7 @@ from ruamel.yaml import (
     CollectionNode,
 )
 from glitch.exceptions import EXCEPTIONS, throw_exception
+from typing import List, Tuple
 
 import glitch.parsers.parser as p
 from glitch.repr.inter import *
@@ -15,7 +17,7 @@ from glitch.repr.inter import *
 
 class AnsibleParser(p.Parser):
     @staticmethod
-    def __get_yaml_comments(d, file):
+    def __get_yaml_comments(d: Node, file):
         def extract_from_token(tokenlist):
             res = []
             for token in tokenlist:
@@ -27,8 +29,8 @@ class AnsibleParser(p.Parser):
                     res.append((token.start_mark.line, token.value))
             return res
 
-        def yaml_comments(d):
-            res = []
+        def yaml_comments(d: Node) -> List[Tuple[str, str]]:
+            res: List[Tuple[str, str]] = []
 
             if isinstance(d, MappingNode):
                 if d.comment is not None:
@@ -97,8 +99,8 @@ class AnsibleParser(p.Parser):
         return res
 
     @staticmethod
-    def __parse_vars(unit_block, cur_name, token, code, child=False):
-        def create_variable(token, name, value, child=False) -> Variable:
+    def __parse_vars(unit_block, cur_name: str, token, code, child: bool = False):
+        def create_variable(token, name: str, value, child: bool = False) -> Variable:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
             )
@@ -157,8 +159,8 @@ class AnsibleParser(p.Parser):
         return variables
 
     @staticmethod
-    def __parse_attribute(cur_name, token, val, code):
-        def create_attribute(token, name, value) -> Attribute:
+    def __parse_attribute(cur_name: str, token, val, code):
+        def create_attribute(token, name: str, value) -> Attribute:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
             )
@@ -202,7 +204,7 @@ class AnsibleParser(p.Parser):
         return attributes
 
     @staticmethod
-    def __parse_tasks(unit_block, tasks, code):
+    def __parse_tasks(unit_block, tasks, code) -> None:
         for task in tasks.value:
             atomic_units, attributes = [], []
             type, name, line = "", "", 0
@@ -274,7 +276,7 @@ class AnsibleParser(p.Parser):
                     au.code = code[au.line - 1]
                 unit_block.add_atomic_unit(au)
 
-    def __parse_playbook(self, name, file, parsed_file=None) -> UnitBlock:
+    def __parse_playbook(self, name: str, file, parsed_file=None) -> UnitBlock:
         try:
             if parsed_file is None:
                 parsed_file = yaml.YAML().compose(file)
@@ -314,7 +316,7 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_PLAYBOOK"], file.name)
             return None
 
-    def __parse_tasks_file(self, name, file, parsed_file=None) -> UnitBlock:
+    def __parse_tasks_file(self, name: str, file, parsed_file=None) -> UnitBlock:
         try:
             if parsed_file is None:
                 parsed_file = yaml.YAML().compose(file)
@@ -339,7 +341,7 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_TASKS_FILE"], file.name)
             return None
 
-    def __parse_vars_file(self, name, file, parsed_file=None) -> UnitBlock:
+    def __parse_vars_file(self, name: str, file, parsed_file=None) -> UnitBlock:
         try:
             if parsed_file is None:
                 parsed_file = yaml.YAML().compose(file)
@@ -365,7 +367,7 @@ class AnsibleParser(p.Parser):
             return None
 
     @staticmethod
-    def __apply_to_files(module, path, p_function):
+    def __apply_to_files(module, path, p_function) -> None:
         if os.path.exists(path) and os.path.isdir(path) and not os.path.islink(path):
             files = [
                 f
@@ -406,7 +408,7 @@ class AnsibleParser(p.Parser):
 
         return res
 
-    def parse_folder(self, path: str, root=True) -> Project:
+    def parse_folder(self, path: str, root: bool = True) -> Project:
         """
         It follows the sample directory layout found in:
         https://docs.ansible.com/ansible/latest/user_guide/sample_setup.html#sample-directory-layout

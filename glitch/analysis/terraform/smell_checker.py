@@ -1,6 +1,6 @@
 import os
 import re
-from typing import List, Callable
+from typing import Optional, List, Callable
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error, SmellChecker
 
@@ -29,7 +29,7 @@ class TerraformSmellChecker(SmellChecker):
         file: str,
         type: str,
         attribute_name: str,
-        pattern,
+        pattern: str,
         attribute_parents: list,
         code=None,
     ):
@@ -57,7 +57,7 @@ class TerraformSmellChecker(SmellChecker):
         return None
 
     def get_attributes_with_name_and_value(
-        self, attributes, parents, name, value=None, pattern=None
+        self, attributes, parents, name: str, value=None, pattern: Optional[str] = None
     ):
         aux = []
         for a in attributes:
@@ -83,7 +83,13 @@ class TerraformSmellChecker(SmellChecker):
         return aux
 
     def check_required_attribute(
-        self, attributes, parents, name, value=None, pattern=None, return_all=False
+        self,
+        attributes,
+        parents,
+        name: str,
+        value=None,
+        pattern: Optional[str] = None,
+        return_all: bool = False,
     ):
         attributes = self.get_attributes_with_name_and_value(
             attributes, parents, name, value, pattern
@@ -102,7 +108,7 @@ class TerraformSmellChecker(SmellChecker):
         smell: str,
         flag_name: str,
         safe_value: str,
-        required_flag=True,
+        required_flag: bool = True,
     ):
         database_flags = self.get_attributes_with_name_and_value(
             au.attributes, ["settings"], "database_flags"

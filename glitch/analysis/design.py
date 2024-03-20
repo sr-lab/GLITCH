@@ -169,7 +169,7 @@ class DesignVisitor(RuleVisitor):
     def get_name() -> str:
         return "design"
 
-    def config(self, config_path: str):
+    def config(self, config_path: str) -> None:
         config = configparser.ConfigParser()
         config.read(config_path)
         DesignVisitor.__EXEC = json.loads(config["design"]["exec_atomic_units"])

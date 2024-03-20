@@ -4,7 +4,7 @@ from glitch.repr.inter import *
 
 
 class TestPuppetParser(unittest.TestCase):
-    def test_puppet_parser_if(self):
+    def test_puppet_parser_if(self) -> None:
         unit_block = PuppetParser().parse_file("tests/parser/puppet/files/if.pp", None)
         assert len(unit_block.statements) == 1
         assert isinstance(unit_block.statements[0], ConditionalStatement)

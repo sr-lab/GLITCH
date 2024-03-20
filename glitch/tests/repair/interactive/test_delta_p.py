@@ -8,7 +8,7 @@ from glitch.tests.repair.interactive.delta_p.delta_p_puppet_scripts import *
 from tempfile import NamedTemporaryFile
 
 
-def test_delta_p_compiler_puppet():
+def test_delta_p_compiler_puppet() -> None:
     puppet_script = """
     file { '/var/www/customers/public_html/index.php':
         path => '/var/www/customers/public_html/index.php',
@@ -37,7 +37,7 @@ def test_delta_p_compiler_puppet():
     assert statement == delta_p_puppet
 
 
-def test_delta_p_compiler_puppet_2():
+def test_delta_p_compiler_puppet_2() -> None:
     puppet_script = """
     file {'/usr/sbin/policy-rc.d':
         ensure  => absent,
@@ -62,7 +62,7 @@ def test_delta_p_compiler_puppet_2():
     assert statement == delta_p_puppet_2
 
 
-def test_delta_p_compiler_puppet_if():
+def test_delta_p_compiler_puppet_if() -> None:
     puppet_script = """
 if $x == 'absent' {
     file {'/usr/sbin/policy-rc.d':
@@ -85,7 +85,7 @@ if $x == 'absent' {
     assert statement == delta_p_puppet_if
 
 
-def test_delta_p_compiler_puppet_default_state():
+def test_delta_p_compiler_puppet_default_state() -> None:
     puppet_script = """
 file { '/root/.ssh/config':
   content => template('fuel/root_ssh_config.erb'),
@@ -104,7 +104,7 @@ file { '/root/.ssh/config':
     assert statement == delta_p_puppet_default_state
 
 
-def test_delta_p_to_filesystems():
+def test_delta_p_to_filesystems() -> None:
     statement = delta_p_puppet
     fss = statement.to_filesystems()
     assert len(fss) == 1
@@ -115,14 +115,14 @@ def test_delta_p_to_filesystems():
     }
 
 
-def test_delta_p_to_filesystems_2():
+def test_delta_p_to_filesystems_2() -> None:
     statement = delta_p_puppet_2
     fss = statement.to_filesystems()
     assert len(fss) == 1
     assert fss[0].state == {"/usr/sbin/policy-rc.d": Nil()}
 
 
-def test_delta_p_to_filesystems_if():
+def test_delta_p_to_filesystems_if() -> None:
     statement = delta_p_puppet_if
     fss = statement.to_filesystems()
     assert len(fss) == 2
@@ -130,7 +130,7 @@ def test_delta_p_to_filesystems_if():
     assert fss[1].state == {"/usr/sbin/policy-rc.d": File(None, None, None)}
 
 
-def test_delta_p_to_filesystems_default_state():
+def test_delta_p_to_filesystems_default_state() -> None:
     statement = delta_p_puppet_default_state
     fss = statement.to_filesystems()
     assert len(fss) == 1

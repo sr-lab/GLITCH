@@ -29,7 +29,7 @@ class Block(CodeElement):
         super().__init__()
         self.statements = []
 
-    def add_statement(self, statement):
+    def add_statement(self, statement) -> None:
         self.statements.append(statement)
 
 
@@ -38,7 +38,7 @@ class ConditionalStatement(Block):
         IF = 1
         SWITCH = 2
 
-    def __init__(self, condition: str, type, is_default=False) -> None:
+    def __init__(self, condition: str, type, is_default: bool = False) -> None:
         super().__init__()
         self.condition: str = condition
         self.else_statement = None
@@ -86,7 +86,7 @@ class Comment(CodeElement):
 
 
 class KeyValue(CodeElement):
-    def __init__(self, name: str, value: str, has_variable: bool):
+    def __init__(self, name: str, value: str, has_variable: bool) -> None:
         self.name: str = name
         self.value: str = value
         self.has_variable: bool = has_variable
@@ -302,7 +302,7 @@ class UnitBlock(Block):
 
 
 class File:
-    def __init__(self, name) -> None:
+    def __init__(self, name: str) -> None:
         self.name: str = name
 
     def print(self, tab) -> str:
@@ -310,7 +310,7 @@ class File:
 
 
 class Folder:
-    def __init__(self, name) -> None:
+    def __init__(self, name: str) -> None:
         self.content: list = []
         self.name: str = name
 
@@ -331,7 +331,7 @@ class Folder:
 
 
 class Module:
-    def __init__(self, name, path) -> None:
+    def __init__(self, name: str, path) -> None:
         self.name: str = name
         self.path: str = path
         self.blocks: list[UnitBlock] = []
@@ -357,7 +357,7 @@ class Module:
 
 
 class Project:
-    def __init__(self, name) -> None:
+    def __init__(self, name: str) -> None:
         self.name: str = name
         self.modules: list[Module] = []
         self.blocks: list[UnitBlock] = []
@@ -365,10 +365,10 @@ class Project:
     def __repr__(self) -> str:
         return self.name
 
-    def add_module(self, m: Module):
+    def add_module(self, m: Module) -> None:
         self.modules.append(m)
 
-    def add_block(self, u: UnitBlock):
+    def add_block(self, u: UnitBlock) -> None:
         self.blocks.append(u)
 
     def print(self, tab) -> str:

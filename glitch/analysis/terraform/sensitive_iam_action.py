@@ -8,7 +8,7 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
     def check(self, element, file: str):
         errors = []
 
-        def convert_string_to_dict(input_string):
+        def convert_string_to_dict(input_string: str):
             cleaned_string = input_string.strip()
             try:
                 dict_data = json.loads(cleaned_string)

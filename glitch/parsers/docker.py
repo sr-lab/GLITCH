@@ -129,7 +129,7 @@ class DockerParser(p.Parser):
         return u
 
     @staticmethod
-    def __parse_instruction(element: DFPStructure, unit_block: UnitBlock):
+    def __parse_instruction(element: DFPStructure, unit_block: UnitBlock) -> None:
         instruction = element.instruction
         if instruction in ["ENV", "USER", "ARG", "LABEL"]:
             unit_block.variables += DockerParser.__create_variable_block(element)
@@ -253,7 +253,7 @@ class DockerParser(p.Parser):
         return bool(s for s in structure if s.instruction == "USER")
 
     @staticmethod
-    def __add_user_tag(structure: List[DFPStructure]):
+    def __add_user_tag(structure: List[DFPStructure]) -> None:
         if len([s for s in structure if s.instruction == "USER"]) > 0:
             return
 
@@ -299,7 +299,7 @@ class ShellCommand:
 
 
 class CommandParser:
-    def __init__(self, command: DFPStructure):
+    def __init__(self, command: DFPStructure) -> None:
         value = (
             command.content.replace("RUN ", "")
             if command.instruction == "RUN"
@@ -359,7 +359,7 @@ class CommandParser:
         return command[start : end + 1], sum(1 for c in command if c == "\n")
 
     @staticmethod
-    def __parse_shell_command(command: ShellCommand):
+    def __parse_shell_command(command: ShellCommand) -> None:
         if command.command == "chmod":
             reference = [arg for arg in command.args if "--reference" in arg]
             command.args = [arg for arg in command.args if not arg.startswith("-")]
@@ -373,7 +373,7 @@ class CommandParser:
             CommandParser.__parse_general_command(command)
 
     @staticmethod
-    def __parse_general_command(command: ShellCommand):
+    def __parse_general_command(command: ShellCommand) -> None:
         args = command.args.copy()
         # TODO: Solve issue where last argument is part of a parameter
         main_arg_index = -1 if not args[-1].startswith("-") else 0

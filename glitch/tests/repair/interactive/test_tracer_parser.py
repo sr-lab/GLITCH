@@ -1,7 +1,7 @@
 from glitch.repair.interactive.tracer.parser import *
 
 
-def test_tracer_parser_rename():
+def test_tracer_parser_rename() -> None:
     parsed = parse_tracer_output('[pid 18040] rename("test", "test~") = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "rename"
@@ -10,7 +10,7 @@ def test_tracer_parser_rename():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_stat():
+def test_tracer_parser_stat() -> None:
     parsed = parse_tracer_output(
         '[pid 255] stat("/usr/share/vim/vimfiles/after/scripts.vim", 0x7fffc2269490) = -1 ENOENT (No such file or directory)'
     )
@@ -21,7 +21,7 @@ def test_tracer_parser_stat():
     assert parsed.exitCode == -1
 
 
-def test_tracer_parser_open():
+def test_tracer_parser_open() -> None:
     parsed = parse_tracer_output(
         '[pid 255] open("/lib/x86_64-linux-gnu/libpthread.so.0", O_RDONLY|O_CLOEXEC) = 3'
     )
@@ -32,7 +32,7 @@ def test_tracer_parser_open():
     assert parsed.exitCode == 3
 
 
-def test_tracer_parser_open_mode():
+def test_tracer_parser_open_mode() -> None:
     parsed = parse_tracer_output(
         '[pid 105] open("/var/lib/apt/extended_states.tmp", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 25'
     )
@@ -44,7 +44,7 @@ def test_tracer_parser_open_mode():
     assert parsed.exitCode == 25
 
 
-def test_tracer_parser_openat():
+def test_tracer_parser_openat() -> None:
     parsed = parse_tracer_output(
         '[pid 33096] openat(AT_FDCWD, "/usr/lib/python3/dist-packages/mercurial/__pycache__/error.cpython-310.pyc", O_RDONLY|O_CLOEXEC) = 3'
     )
@@ -59,7 +59,7 @@ def test_tracer_parser_openat():
     assert parsed.exitCode == 3
 
 
-def test_tracer_parser_openat_mode():
+def test_tracer_parser_openat_mode() -> None:
     parsed = parse_tracer_output(
         '[pid 33096] openat(AT_FDCWD, "/usr/lib/python3/dist-packages/mercurial/__pycache__/error.cpython-310.pyc", O_RDONLY|O_CLOEXEC, 0666) = 3'
     )
@@ -75,7 +75,7 @@ def test_tracer_parser_openat_mode():
     assert parsed.exitCode == 3
 
 
-def test_tracer_parser_newfstatat():
+def test_tracer_parser_newfstatat() -> None:
     parsed = parse_tracer_output(
         '[pid 33096] newfstatat(AT_FDCWD, "/usr/lib/python3/dist-packages/mercurial/error.py", {st_dev=makedev(0x103, 0x3), st_ino=14852531, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=8377, st_atime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_atime_nsec=917367753, st_mtime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_mtime_nsec=917367753, st_ctime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_ctime_nsec=917367753}, 0) = 0'
     )
@@ -104,7 +104,7 @@ def test_tracer_parser_newfstatat():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_newfstatat_empty_path():
+def test_tracer_parser_newfstatat_empty_path() -> None:
     parsed = parse_tracer_output(
         '[pid 33096] newfstatat(3, "", {st_dev=makedev(0x103, 0x3), st_ino=14852531, st_mode=S_IFREG|0644, st_nlink=1, st_uid=0, st_gid=0, st_blksize=4096, st_blocks=24, st_size=8377, st_atime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_atime_nsec=917367753, st_mtime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_mtime_nsec=917367753, st_ctime=1684251578 /* 2023-05-16T16:39:38.917367753+0100 */, st_ctime_nsec=917367753}, AT_EMPTY_PATH) = 0'
     )
@@ -133,7 +133,7 @@ def test_tracer_parser_newfstatat_empty_path():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_no_pid():
+def test_tracer_parser_no_pid() -> None:
     parsed = parse_tracer_output('openat(AT_FDCWD, "/dev/null", O_RDWR|O_NOCTTY) = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "openat"
@@ -143,7 +143,7 @@ def test_tracer_parser_no_pid():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_write():
+def test_tracer_parser_write() -> None:
     parsed = parse_tracer_output('write(2, "o", 1) = 1')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "write"
@@ -151,7 +151,7 @@ def test_tracer_parser_write():
     assert parsed.exitCode == 1
 
 
-def test_tracer_parser_execve():
+def test_tracer_parser_execve() -> None:
     parsed = parse_tracer_output(
         'execve("/usr/bin/ls", ["ls"], ["SHELL=/bin/zsh", "LSCOLORS=Gxfxcxdxbxegedabagacad"]) = 0'
     )
@@ -165,7 +165,7 @@ def test_tracer_parser_execve():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_faccessat2():
+def test_tracer_parser_faccessat2() -> None:
     parsed = parse_tracer_output(
         '[pid 47072] faccessat2(AT_FDCWD, "/usr/lib/command-not-found", X_OK, AT_EACCESS) = 0'
     )
@@ -180,7 +180,7 @@ def test_tracer_parser_faccessat2():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_mkdirat():
+def test_tracer_parser_mkdirat() -> None:
     parsed = parse_tracer_output('[pid 36388] mkdirat(AT_FDCWD, "test23456", 0777) = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "mkdirat"
@@ -188,7 +188,7 @@ def test_tracer_parser_mkdirat():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_mkdir():
+def test_tracer_parser_mkdir() -> None:
     parsed = parse_tracer_output('[pid 36388] mkdir("test23456", 0777) = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "mkdir"
@@ -196,7 +196,7 @@ def test_tracer_parser_mkdir():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_rmdir():
+def test_tracer_parser_rmdir() -> None:
     parsed = parse_tracer_output('[pid 36152] rmdir("test23456") = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "rmdir"
@@ -204,7 +204,7 @@ def test_tracer_parser_rmdir():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_unlink():
+def test_tracer_parser_unlink() -> None:
     parsed = parse_tracer_output(
         '[pid 47072] unlink("/home/test/.zsh_history.LOCK") = 0'
     )
@@ -214,7 +214,7 @@ def test_tracer_parser_unlink():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_unlinkat():
+def test_tracer_parser_unlinkat() -> None:
     parsed = parse_tracer_output(
         '[pid 32850] unlinkat(AT_FDCWD, "test234", AT_REMOVEDIR) = 0'
     )
@@ -224,7 +224,7 @@ def test_tracer_parser_unlinkat():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_unlinkat_0():
+def test_tracer_parser_unlinkat_0() -> None:
     parsed = parse_tracer_output('[pid 32850] unlinkat(AT_FDCWD, "test234", 0) = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "unlinkat"
@@ -232,7 +232,7 @@ def test_tracer_parser_unlinkat_0():
     assert parsed.exitCode == 0
 
 
-def test_tracer_parser_chdir():
+def test_tracer_parser_chdir() -> None:
     parsed = parse_tracer_output('[pid 32850] chdir("/home/test") = 0')
     assert isinstance(parsed, Syscall)
     assert parsed.cmd == "chdir"

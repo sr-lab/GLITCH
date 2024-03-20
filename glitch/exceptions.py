@@ -15,5 +15,5 @@ EXCEPTIONS = {
 }
 
 
-def throw_exception(exception, *args):
+def throw_exception(exception: str, *args: str) -> None:
     print(exception.format(*args), file=sys.stderr)

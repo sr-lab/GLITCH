@@ -9,7 +9,7 @@ class TerraformAttachedResource(TerraformSmellChecker):
         errors = []
         if isinstance(element, AtomicUnit):
 
-            def check_attached_resource(attributes, resource_types):
+            def check_attached_resource(attributes, resource_types) -> bool:
                 for a in attributes:
                     if a.value != None:
                         for resource_type in resource_types:

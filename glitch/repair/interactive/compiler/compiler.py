@@ -13,12 +13,12 @@ class DeltaPCompiler:
     _condition = 0
 
     class __Attributes:
-        def __init__(self, au_type: str, tech: Tech):
+        def __init__(self, au_type: str, tech: Tech) -> None:
             self.au_type = NamesDatabase.get_au_type(au_type, tech)
             self.__tech = tech
             self.__attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
 
-        def add_attribute(self, attribute: Attribute):
+        def add_attribute(self, attribute: Attribute) -> None:
             attr_name = NamesDatabase.get_attr_name(
                 attribute.name, self.au_type, self.__tech
             )
