@@ -28,9 +28,9 @@ class CodeElement(ABC):
 class Block(CodeElement):
     def __init__(self) -> None:
         super().__init__()
-        self.statements = []
+        self.statements: List["ConditionalStatement"] = []
 
-    def add_statement(self, statement) -> None:
+    def add_statement(self, statement: "ConditionalStatement") -> None:
         self.statements.append(statement)
 
 
@@ -42,7 +42,7 @@ class ConditionalStatement(Block):
     def __init__(self, condition: str, type, is_default: bool = False) -> None:
         super().__init__()
         self.condition: str = condition
-        self.else_statement = None
+        self.else_statement: ConditionalStatement | None = None
         self.is_default = is_default
         self.type = type
 

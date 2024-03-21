@@ -1,24 +1,24 @@
 import os
+import sys
 import re
 import tempfile
+import glitch.parsers.parser as p
+
 from string import Template
 from pkg_resources import resource_filename
-from glitch.exceptions import EXCEPTIONS, throw_exception
-
-import glitch.parsers.parser as p
+from typing import Any, List, Tuple, Callable
 from glitch.repr.inter import *
 from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
+from glitch.exceptions import EXCEPTIONS, throw_exception
 
+ChefValue = Tuple[str, str]| str | int | bool | List["ChefValue"]
 
 class ChefParser(p.Parser):
     class Node:
-        id: str
-        args: list
-
-        def __init__(self, id, args) -> None:
-            self.id = id
-            self.args = args
+        def __init__(self, id: str, args: List[Any]) -> None:
+            self.id: str = id
+            self.args: List[Any] = args
 
         def __repr__(self) -> str:
             return str(self.id)
@@ -30,15 +30,15 @@ class ChefParser(p.Parser):
             return reversed(self.args)
 
     @staticmethod
-    def _check_id(ast, ids):
+    def _check_id(ast: Any, ids: List[Any]) -> bool:
         return isinstance(ast, ChefParser.Node) and ast.id in ids
 
     @staticmethod
-    def _check_node(ast, ids, size: int):
+    def _check_node(ast: Any, ids: List[Any], size: int) -> bool:
         return ChefParser._check_id(ast, ids) and len(ast.args) == size
 
     @staticmethod
-    def _check_has_variable(ast):
+    def _check_has_variable(ast: Node) -> bool:
         references = ["vcall", "call", "aref", "fcall", "var_ref"]
         if ChefParser._check_id(ast, ["args_add_block"]):
             return ChefParser._check_id(ast.args[0][0], references)
@@ -54,16 +54,16 @@ class ChefParser(p.Parser):
             return ChefParser._check_id(ast, references)
 
     @staticmethod
-    def _get_content_bounds(ast, source):
-        def is_bounds(l):
+    def _get_content_bounds(ast: Any, source: List[str]) -> Tuple[int, int, int, int]:
+        def is_bounds(l: Any) -> bool:
             return (
                 isinstance(l, list)
-                and len(l) == 2
+                and len(l) == 2 # type: ignore
                 and isinstance(l[0], int)
                 and isinstance(l[1], int)
             )
 
-        start_line, start_column = float("inf"), float("inf")
+        start_line, start_column = sys.maxsize, sys.maxsize
         end_line, end_column = 0, 0
         bounded_structures = [
             "brace_block",
@@ -111,7 +111,7 @@ class ChefParser(p.Parser):
 
             # We have to consider extra characters which correspond
             # to enclosing characters of these structures
-            if start_line != float("inf") and ChefParser._check_id(
+            if start_line != sys.maxsize and ChefParser._check_id(
                 ast, bounded_structures
             ):
                 r_brackets = ["}", ")", "]", '"', "'"]
@@ -147,11 +147,11 @@ class ChefParser(p.Parser):
         return (start_line, start_column, end_line, end_column)
 
     @staticmethod
-    def _get_content(ast, source):
+    def _get_content(ast: Any, source: List[str]) -> str:
         empty_structures = {"string_literal": "", "hash": "{}", "array": "[]"}
 
         if isinstance(ast, list):
-            return "".join(list(map(lambda a: ChefParser._get_content(a, source), ast)))
+            return "".join(list(map(lambda a: ChefParser._get_content(a, source), ast))) # type: ignore
 
         if (ast.id in empty_structures and len(ast.args) == 0) or (
             ast.id == "string_literal" and len(ast.args[0].args) == 0
@@ -161,7 +161,7 @@ class ChefParser(p.Parser):
         bounds = ChefParser._get_content_bounds(ast, source)
 
         res = ""
-        if bounds[0] == float("inf"):
+        if bounds[0] == sys.maxsize:
             return res
 
         for l in range(bounds[0] - 1, bounds[2]):
@@ -184,13 +184,13 @@ class ChefParser(p.Parser):
         return remove_unmatched_brackets(res)
 
     @staticmethod
-    def _get_source(ast, source):
+    def _get_source(ast: Any, source: List[str]) -> str:
         bounds = ChefParser._get_content_bounds(ast, source)
         return "".join(source[bounds[0] - 1 : bounds[2]])
 
     class Checker:
-        def __init__(self, source) -> None:
-            self.tests_ast_stack = []
+        def __init__(self, source: List[str]) -> None:
+            self.tests_ast_stack: List[Tuple[List[Callable[[Any], bool]], Any]] = []
             self.source = source
 
         def check(self) -> bool:
@@ -207,19 +207,19 @@ class ChefParser(p.Parser):
                 status = self.check()
             return status
 
-        def push(self, tests, ast) -> None:
+        def push(self, tests: List[Callable[[Any], bool]], ast: Any) -> None:
             self.tests_ast_stack.append((tests, ast))
 
         def pop(self):
             return self.tests_ast_stack.pop()
 
     class ResourceChecker(Checker):
-        def __init__(self, atomic_unit, source, ast) -> None:
+        def __init__(self, atomic_unit: AtomicUnit, source: List[str], ast: Any) -> None:
             super().__init__(source)
             self.push([self.is_block_resource, self.is_inline_resource], ast)
             self.atomic_unit = atomic_unit
 
-        def is_block_resource(self, ast) -> bool:
+        def is_block_resource(self, ast: Any) -> bool:
             if (
                 ChefParser._check_node(ast, ["method_add_block"], 2)
                 and ChefParser._check_node(ast.args[0], ["command"], 2)
@@ -234,7 +234,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_inline_resource(self, ast) -> bool:
+        def is_inline_resource(self, ast: Any) -> bool:
             if (
                 ChefParser._check_node(ast, ["command"], 2)
                 and ChefParser._check_id(ast.args[0], ["@ident"])
@@ -255,7 +255,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_resource_def(self, ast) -> bool:
+        def is_resource_def(self, ast: Any) -> bool:
             if ChefParser._check_node(
                 ast.args[0], ["@ident"], 2
             ) and ChefParser._check_node(ast.args[1], ["args_add_block"], 2):
@@ -264,7 +264,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_resource_type(self, ast) -> bool:
+        def is_resource_type(self, ast: "ChefParser.Node") -> bool:
             if (
                 isinstance(ast.args[0], str)
                 and isinstance(ast.args[1], list)
@@ -282,7 +282,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_resource_name(self, ast) -> bool:
+        def is_resource_name(self, ast: "ChefParser.Node") -> bool:
             if isinstance(ast.args[0][0], ChefParser.Node) and ast.args[1] is False:
                 resource_id = ast.args[0][0]
                 self.atomic_unit.name = ChefParser._get_content(
@@ -291,7 +291,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_inline_resource_name(self, ast) -> bool:
+        def is_inline_resource_name(self, ast: "ChefParser.Node") -> bool:
             if (
                 ChefParser._check_node(ast.args[0][0], ["method_add_block"], 2)
                 and ast.args[1] is False
@@ -304,13 +304,13 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_resource_body(self, ast) -> bool:
+        def is_resource_body(self, ast: "ChefParser.Node") -> bool:
             if ChefParser._check_id(ast.args[0], ["bodystmt"]):
                 self.push([self.is_attribute], ast.args[0].args[0])
                 return True
             return False
 
-        def is_resource_body_without_attributes(self, ast) -> bool:
+        def is_resource_body_without_attributes(self, ast: "ChefParser.Node") -> bool:
             if (
                 ChefParser._check_id(ast.args[0][0], ["string_literal"])
                 and ast.args[1] is False
@@ -321,7 +321,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_attribute(self, ast) -> bool:
+        def is_attribute(self, ast: Any) -> bool:
             if ChefParser._check_node(
                 ast, ["method_add_arg"], 2
             ) and ChefParser._check_id(ast.args[0], ["call"]):
@@ -348,25 +348,25 @@ class ChefParser(p.Parser):
                 a.code = ChefParser._get_source(ast, self.source)
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
-                for arg in reversed(ast):
+                for arg in reversed(ast): # type: ignore
                     self.push([self.is_attribute], arg)
 
             return True
 
     class VariableChecker(Checker):
-        def __init__(self, source, ast) -> None:
+        def __init__(self, source: List[str], ast: Any) -> None:
             super().__init__(source)
-            self.variables = []
+            self.variables: List[Variable] = []
             self.push([self.is_variable], ast)
 
-        def is_variable(self, ast) -> bool:
-            def create_variable(key, name: str, value, has_variable):
+        def is_variable(self, ast: Any) -> bool:
+            def create_variable(key: Any, name: str, value: str | None, has_variable: bool):
                 variable = Variable(name, value, has_variable)
                 variable.line = ChefParser._get_content_bounds(key, self.source)[0]
                 variable.code = ChefParser._get_source(ast, self.source)
                 return variable
 
-            def parse_variable(parent, ast, key, current_name: str, value_ast) -> None:
+            def parse_variable(parent: KeyValue | None, ast: Any, key: Any, current_name: str, value_ast: "ChefParser.Node") -> None:
                 if ChefParser._check_node(
                     value_ast, ["hash"], 1
                 ) and ChefParser._check_id(value_ast.args[0], ["assoclist_from_args"]):
@@ -420,7 +420,7 @@ class ChefParser(p.Parser):
                         variable = create_variable(ast.args[0], name, None, False)
                         if i == 0:
                             self.variables.append(variable)
-                        else:
+                        elif parent is not None:
                             parent.keyvalues.append(variable)
                         parent = variable
                 return True
@@ -428,12 +428,12 @@ class ChefParser(p.Parser):
             return False
 
     class IncludeChecker(Checker):
-        def __init__(self, source, ast) -> None:
+        def __init__(self, source: List[str], ast: Any) -> None:
             super().__init__(source)
             self.push([self.is_include], ast)
             self.code = ""
 
-        def is_include(self, ast) -> bool:
+        def is_include(self, ast: Any) -> bool:
             if (
                 ChefParser._check_node(ast, ["command"], 2)
                 and ChefParser._check_id(ast.args[0], ["@ident"])
@@ -445,7 +445,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_include_type(self, ast) -> bool:
+        def is_include_type(self, ast: "ChefParser.Node") -> bool:
             if (
                 isinstance(ast.args[0], str)
                 and isinstance(ast.args[1], list)
@@ -454,7 +454,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_include_name(self, ast) -> bool:
+        def is_include_name(self, ast: "ChefParser.Node") -> bool:
             if (
                 ChefParser._check_id(ast.args[0][0], ["string_literal"])
                 and ast.args[1] is False
@@ -468,11 +468,11 @@ class ChefParser(p.Parser):
 
     # FIXME only identifying case statement
     class ConditionChecker(Checker):
-        def __init__(self, source, ast) -> None:
+        def __init__(self, source: List[str], ast: Any) -> None:
             super().__init__(source)
             self.push([self.is_case], ast)
 
-        def is_case(self, ast) -> bool:
+        def is_case(self, ast: Any) -> bool:
             if ChefParser._check_node(ast, ["case"], 2):
                 self.case_head = ChefParser._get_content(ast.args[0], self.source)
                 self.condition = None
@@ -485,7 +485,7 @@ class ChefParser(p.Parser):
                 return True
             return False
 
-        def is_case_condition(self, ast) -> bool:
+        def is_case_condition(self, ast: Any) -> bool:
             if ChefParser._check_node(ast, ["when"], 3) or ChefParser._check_node(
                 ast, ["when"], 2
             ):
@@ -532,48 +532,48 @@ class ChefParser(p.Parser):
             return False
 
     @staticmethod
-    def __create_ast(l):
-        args = []
+    def __create_ast(l: List[ChefValue | "ChefParser.Node"]) -> "ChefParser.Node":
+        args: List[Any] = []
         for el in l[1:]:
             if isinstance(el, list):
                 if len(el) > 0 and isinstance(el[0], tuple) and el[0][0] == "id":
-                    args.append(ChefParser.__create_ast(el))
+                    args.append(ChefParser.__create_ast(el)) # type: ignore
                 else:
-                    arg = []
+                    arg: List["ChefParser.Node" | ChefValue] = []
                     for e in el:
                         if (
                             isinstance(e, list)
                             and isinstance(e[0], tuple)
                             and e[0][0] == "id"
                         ):
-                            arg.append(ChefParser.__create_ast(e))
+                            arg.append(ChefParser.__create_ast(e)) # type: ignore
                         else:
                             arg.append(e)
                     args.append(arg)
             else:
                 args.append(el)
 
-        return ChefParser.Node(l[0][1], args)
+        return ChefParser.Node(l[0][1], args) # type: ignore
 
     @staticmethod
-    def __transverse_ast(ast, unit_block, source) -> None:
-        def get_var(parent_name: str, vars):
+    def __transverse_ast(ast: Any, unit_block: UnitBlock, source: List[str]) -> None:
+        def get_var(parent_name: str, vars: List[Variable]):
             for var in vars:
                 if var.name == parent_name:
                     return var
             return None
 
-        def add_variable_to_unit_block(variable, unit_block_vars) -> None:
+        def add_variable_to_unit_block(variable: Variable, unit_block_vars: List[Variable]) -> None:
             var_name = variable.name
             var = get_var(var_name, unit_block_vars)
             if var and var.value == None and variable.value == None:
                 for v in variable.keyvalues:
-                    add_variable_to_unit_block(v, var.keyvalues)
+                    add_variable_to_unit_block(v, var.keyvalues) # type: ignore
             else:
                 unit_block_vars.append(variable)
 
         if isinstance(ast, list):
-            for arg in ast:
+            for arg in ast: # type: ignore
                 if isinstance(arg, (ChefParser.Node, list)):
                     ChefParser.__transverse_ast(arg, unit_block, source)
         else:
@@ -599,7 +599,8 @@ class ChefParser(p.Parser):
 
             if_checker = ChefParser.ConditionChecker(source, ast)
             if if_checker.check_all():
-                unit_block.add_statement(if_checker.condition)
+                if if_checker.condition is not None:
+                    unit_block.add_statement(if_checker.condition)
                 # Check blocks inside
                 ChefParser.__transverse_ast(
                     ast.args[len(ast.args) - 1], unit_block, source
@@ -611,7 +612,7 @@ class ChefParser(p.Parser):
                     ChefParser.__transverse_ast(arg, unit_block, source)
 
     @staticmethod
-    def __parse_recipe(path, file) -> UnitBlock:
+    def __parse_recipe(path: str, file: str) -> UnitBlock:
         with open(os.path.join(path, file)) as f:
             ripper = resource_filename(
                 "glitch.parsers", "resources/comments.rb.template"
