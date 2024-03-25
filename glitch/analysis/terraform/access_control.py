@@ -3,21 +3,21 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 
 class TerraformAccessControl(TerraformSmellChecker):
     def _check_attribute(
         self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
     ) -> List[Error]:
-        for item in SecurityVisitor._POLICY_KEYWORDS:
+        for item in SecurityVisitor.POLICY_KEYWORDS:
             if item.lower() == attribute.name:
-                for config in SecurityVisitor._POLICY_ACCESS_CONTROL:
-                    expr = config["keyword"].lower() + "\s*" + config["value"].lower()
+                for config in SecurityVisitor.POLICY_ACCESS_CONTROL:
+                    expr = config["keyword"].lower() + "\\s*" + config["value"].lower()
                     pattern = re.compile(rf"{expr}")
-                    allow_expr = '"effect":' + "\s*" + '"allow"'
+                    allow_expr = '"effect":' + "\\s*" + '"allow"'
                     allow_pattern = re.compile(rf"{allow_expr}")
-                    if re.search(pattern, attribute.value) and re.search(
+                    if isinstance(attribute.value, str) and re.search(pattern, attribute.value) and re.search(
                         allow_pattern, attribute.value
                     ):
                         return [
@@ -50,16 +50,18 @@ class TerraformAccessControl(TerraformSmellChecker):
             attribute.name == "email"
             and parent_name == "service_account"
             and atomic_unit.type == "resource.google_compute_instance"
+            and isinstance(attribute.value, str)
             and re.search(r".-compute@developer.gserviceaccount.com", attribute.value)
         ):
             return [Error("sec_access_control", attribute, file, repr(attribute))]
 
-        for config in SecurityVisitor._ACCESS_CONTROL_CONFIGS:
+        for config in SecurityVisitor.ACCESS_CONTROL_CONFIGS:
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
                 and parent_name in config["parents"]
                 and not attribute.has_variable
+                and isinstance(attribute.value, str)
                 and attribute.value.lower() not in config["values"]
                 and config["values"] != [""]
             ):
@@ -67,8 +69,8 @@ class TerraformAccessControl(TerraformSmellChecker):
 
         return []
 
-    def check(self, element, file: str):
-        errors = []
+    def check(self, element: CodeElement, file: str) -> List[Error]:
+        errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             if element.type == "resource.aws_api_gateway_method":
                 http_method = self.check_required_attribute(
@@ -77,7 +79,12 @@ class TerraformAccessControl(TerraformSmellChecker):
                 authorization = self.check_required_attribute(
                     element.attributes, [""], "authorization"
                 )
-                if http_method and authorization:
+                if (
+                    isinstance(http_method, KeyValue) 
+                    and isinstance(authorization, KeyValue)
+                    and http_method.value is not None
+                    and authorization.value is not None
+                ):
                     if (
                         http_method.value.lower() == "get"
                         and authorization.value.lower() == "none"
@@ -86,7 +93,8 @@ class TerraformAccessControl(TerraformSmellChecker):
                             element.attributes, [""], "api_key_required"
                         )
                         if (
-                            api_key_required
+                            isinstance(api_key_required, KeyValue)
+                            and api_key_required.value is not None
                             and f"{api_key_required.value}".lower() != "true"
                         ):
                             errors.append(
@@ -121,7 +129,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                 visibility = self.check_required_attribute(
                     element.attributes, [""], "visibility"
                 )
-                if visibility is not None:
+                if isinstance(visibility, KeyValue) and isinstance(visibility.value, str):
                     if visibility.value.lower() not in ["private", "internal"]:
                         errors.append(
                             Error(
@@ -132,7 +140,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                     private = self.check_required_attribute(
                         element.attributes, [""], "private"
                     )
-                    if private is not None:
+                    if isinstance(private, KeyValue) and isinstance(private.value, str):
                         if f"{private.value}".lower() != "true":
                             errors.append(
                                 Error(
@@ -158,7 +166,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                     "off",
                 )
             elif element.type == "resource.aws_s3_bucket":
-                expr = "\${aws_s3_bucket\." + f"{element.name}\."
+                expr = "\\${aws_s3_bucket\\." + f"{element.name}\\."
                 pattern = re.compile(rf"{expr}")
                 if (
                     self.get_associated_au(
@@ -181,7 +189,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                         )
                     )
 
-            for config in SecurityVisitor._ACCESS_CONTROL_CONFIGS:
+            for config in SecurityVisitor.ACCESS_CONTROL_CONFIGS:
                 if (
                     config["required"] == "yes"
                     and element.type in config["au_type"]

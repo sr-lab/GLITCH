@@ -94,76 +94,76 @@ class SecurityVisitor(RuleVisitor):
         )
 
         if self.tech == Tech.terraform:
-            SecurityVisitor._INTEGRITY_POLICY = json.loads(
+            SecurityVisitor.INTEGRITY_POLICY = json.loads(
                 config["security"]["integrity_policy"]
             )
-            SecurityVisitor._HTTPS_CONFIGS = json.loads(
+            SecurityVisitor.HTTPS_CONFIGS = json.loads(
                 config["security"]["ensure_https"]
             )
-            SecurityVisitor._SSL_TLS_POLICY = json.loads(
+            SecurityVisitor.SSL_TLS_POLICY = json.loads(
                 config["security"]["ssl_tls_policy"]
             )
-            SecurityVisitor._DNSSEC_CONFIGS = json.loads(
+            SecurityVisitor.DNSSEC_CONFIGS = json.loads(
                 config["security"]["ensure_dnssec"]
             )
-            SecurityVisitor._PUBLIC_IP_CONFIGS = json.loads(
+            SecurityVisitor.PUBLIC_IP_CONFIGS = json.loads(
                 config["security"]["use_public_ip"]
             )
-            SecurityVisitor._POLICY_KEYWORDS = json.loads(
+            SecurityVisitor.POLICY_KEYWORDS = json.loads(
                 config["security"]["policy_keywords"]
             )
-            SecurityVisitor._ACCESS_CONTROL_CONFIGS = json.loads(
+            SecurityVisitor.ACCESS_CONTROL_CONFIGS = json.loads(
                 config["security"]["insecure_access_control"]
             )
-            SecurityVisitor._AUTHENTICATION = json.loads(
+            SecurityVisitor.AUTHENTICATION = json.loads(
                 config["security"]["authentication"]
             )
-            SecurityVisitor._POLICY_ACCESS_CONTROL = json.loads(
+            SecurityVisitor.POLICY_ACCESS_CONTROL = json.loads(
                 config["security"]["policy_insecure_access_control"]
             )
-            SecurityVisitor._POLICY_AUTHENTICATION = json.loads(
+            SecurityVisitor.POLICY_AUTHENTICATION = json.loads(
                 config["security"]["policy_authentication"]
             )
-            SecurityVisitor._MISSING_ENCRYPTION = json.loads(
+            SecurityVisitor.MISSING_ENCRYPTION = json.loads(
                 config["security"]["missing_encryption"]
             )
-            SecurityVisitor._CONFIGURATION_KEYWORDS = json.loads(
+            SecurityVisitor.CONFIGURATION_KEYWORDS = json.loads(
                 config["security"]["configuration_keywords"]
             )
-            SecurityVisitor._ENCRYPT_CONFIG = json.loads(
+            SecurityVisitor.ENCRYPT_CONFIG = json.loads(
                 config["security"]["encrypt_configuration"]
             )
-            SecurityVisitor._FIREWALL_CONFIGS = json.loads(
+            SecurityVisitor.FIREWALL_CONFIGS = json.loads(
                 config["security"]["firewall"]
             )
-            SecurityVisitor._MISSING_THREATS_DETECTION_ALERTS = json.loads(
+            SecurityVisitor.MISSING_THREATS_DETECTION_ALERTS = json.loads(
                 config["security"]["missing_threats_detection_alerts"]
             )
-            SecurityVisitor._PASSWORD_KEY_POLICY = json.loads(
+            SecurityVisitor.PASSWORD_KEY_POLICY = json.loads(
                 config["security"]["password_key_policy"]
             )
-            SecurityVisitor._KEY_MANAGEMENT = json.loads(
+            SecurityVisitor.KEY_MANAGEMENT = json.loads(
                 config["security"]["key_management"]
             )
-            SecurityVisitor._NETWORK_SECURITY_RULES = json.loads(
+            SecurityVisitor.NETWORK_SECURITY_RULES = json.loads(
                 config["security"]["network_security_rules"]
             )
-            SecurityVisitor._PERMISSION_IAM_POLICIES = json.loads(
+            SecurityVisitor.PERMISSION_IAM_POLICIES = json.loads(
                 config["security"]["permission_iam_policies"]
             )
-            SecurityVisitor._GOOGLE_IAM_MEMBER = json.loads(
+            SecurityVisitor.GOOGLE_IAM_MEMBER = json.loads(
                 config["security"]["google_iam_member_resources"]
             )
-            SecurityVisitor._LOGGING = json.loads(config["security"]["logging"])
-            SecurityVisitor._GOOGLE_SQL_DATABASE_LOG_FLAGS = json.loads(
+            SecurityVisitor.LOGGING = json.loads(config["security"]["logging"])
+            SecurityVisitor.GOOGLE_SQL_DATABASE_LOG_FLAGS = json.loads(
                 config["security"]["google_sql_database_log_flags"]
             )
-            SecurityVisitor._POSSIBLE_ATTACHED_RESOURCES = json.loads(
+            SecurityVisitor.POSSIBLE_ATTACHED_RESOURCES = json.loads(
                 config["security"]["possible_attached_resources_aws_route53"]
             )
-            SecurityVisitor._VERSIONING = json.loads(config["security"]["versioning"])
-            SecurityVisitor._NAMING = json.loads(config["security"]["naming"])
-            SecurityVisitor._REPLICATION = json.loads(config["security"]["replication"])
+            SecurityVisitor.VERSIONING = json.loads(config["security"]["versioning"])
+            SecurityVisitor.NAMING = json.loads(config["security"]["naming"])
+            SecurityVisitor.REPLICATION = json.loads(config["security"]["replication"])
 
         SecurityVisitor.__FILE_COMMANDS = json.loads(
             config["security"]["file_commands"]
