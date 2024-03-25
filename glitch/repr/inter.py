@@ -185,9 +185,9 @@ class Attribute(KeyValue):
 
 
 class AtomicUnit(Block):
-    def __init__(self, name: str, type: str) -> None:
+    def __init__(self, name: str | None, type: str) -> None:
         super().__init__()
-        self.name: str = name
+        self.name: str | None = name
         self.type: str = type
         self.attributes: list[Attribute] = []
 
@@ -202,7 +202,7 @@ class AtomicUnit(Block):
             (tab * "\t")
             + self.type
             + " "
-            + self.name
+            + self.name if self.name is not None else ""
             + " (on line "
             + str(self.line)
             + ")\n"
@@ -344,6 +344,7 @@ class Module:
         self.name: str = name
         self.path: str = path
         self.blocks: list[UnitBlock] = []
+        self.modules: list[Module] = []
         self.folder: Folder = Folder(name)
 
     def __repr__(self) -> str:

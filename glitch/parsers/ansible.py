@@ -224,7 +224,7 @@ class AnsibleParser(p.Parser):
     @staticmethod
     def __parse_tasks(unit_block: UnitBlock, tasks: Node, code: List[str]) -> None:
         for task in tasks.value:
-            atomic_units = []
+            atomic_units: List[AtomicUnit] = []
             attributes: List[Attribute] = []
             type, name, line = "", "", 0
             is_block = False
@@ -251,7 +251,7 @@ class AnsibleParser(p.Parser):
                         type = key.value
                         line = task.start_mark.line + 1
 
-                        names = [n.strip() for n in name.split(",")]
+                        names: List[str] = [n.strip() for n in name.split(",")]
                         for name in names:
                             if name == "":
                                 continue

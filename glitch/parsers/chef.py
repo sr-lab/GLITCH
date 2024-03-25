@@ -649,6 +649,7 @@ class ChefParser(p.Parser):
                 throw_exception(
                     EXCEPTIONS["CHEF_COULD_NOT_PARSE"], os.path.join(path, file)
                 )
+                return unit_block
 
             with tempfile.NamedTemporaryFile(mode="w+") as tmp:
                 tmp.write(ripper_script)

@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Union
 
-import bashlex
+import bashlex # type: ignore
 from dockerfile_parse import DockerfileParser
 
 import glitch.parsers.parser as p
@@ -69,7 +69,7 @@ class DockerParser(p.Parser):
                 main_block.path = path
                 return main_block
         except Exception as e:
-            throw_exception(EXCEPTIONS["DOCKER_UNKNOW_ERROR"], e)
+            throw_exception(EXCEPTIONS["DOCKER_UNKNOW_ERROR"], str(e))
             main_block = UnitBlock(os.path.basename(path), type)
             main_block.path = path
             return main_block
@@ -175,7 +175,7 @@ class DockerParser(p.Parser):
     def __get_stages(
         stage_indexes: List[int], structure: List[DFPStructure]
     ) -> List[Tuple[str, List[DFPStructure]]]:
-        stages = []
+        stages: List[Tuple[str, List[DFPStructure]]] = []
         for i, stage_i in enumerate(stage_indexes):
             stage_image = structure[stage_i].value.split(" ")[0]
             stage_start = stage_i if i != 0 else 0
@@ -202,7 +202,7 @@ class DockerParser(p.Parser):
 
     @staticmethod
     def __create_variable_block(element: DFPStructure) -> List[Variable]:
-        variables = []
+        variables: List[Variable] = []
         if element.instruction == "USER":
             variables.append(Variable("user-profile", element.value, False))
         elif element.instruction == "ARG":
@@ -236,7 +236,7 @@ class DockerParser(p.Parser):
     def __parse_multiple_key_value_variables(
         content: str, base_line: int
     ) -> List[Variable]:
-        variables = []
+        variables: List[Variable] = []
         for i, line in enumerate(content.split("\n")):
             for match in re.finditer(
                 r"([\w_]*)=(?:(?:'|\")([\w\. <>@]*)(?:\"|')|([\w\.]*))", line
@@ -247,10 +247,6 @@ class DockerParser(p.Parser):
                 v.code = line
                 variables.append(v)
         return variables
-
-    @staticmethod
-    def __has_user_tag(structure: List[DFPStructure]) -> bool:
-        return bool(s for s in structure if s.instruction == "USER")
 
     @staticmethod
     def __add_user_tag(structure: List[DFPStructure]) -> None:
@@ -289,9 +285,9 @@ class ShellCommand:
             sudo.code = "sudo"
             sudo.line = self.line
             au.add_attribute(sudo)
-        for key, (value, code) in self.options.items():
+        for key, (value, _) in self.options.items():
             has_variable = "$" in value if isinstance(value, str) else False
-            attr = Attribute(key, value, has_variable)
+            attr = Attribute(key, value, has_variable) # type: ignore
             attr.code = self.code
             attr.line = self.line
             au.add_attribute(attr)
@@ -315,7 +311,7 @@ class CommandParser:
     def parse_command(self) -> List[AtomicUnit]:
         # TODO: Fix get commands lines for scripts with multiline values
         commands = self.__get_sub_commands()
-        aus = []
+        aus:List[AtomicUnit]  = []
         for line, c in commands:
             try:
                 aus.append(self.__parse_single_command(c, line))
@@ -354,7 +350,7 @@ class CommandParser:
             i for i, c in enumerate(command) if c not in ["\n", "", " ", "\r"]
         ]
         if not non_empty_indexes:
-            return []
+            return ([], 0)
         start, end = non_empty_indexes[0], non_empty_indexes[-1]
         return command[start : end + 1], sum(1 for c in command if c == "\n")
 
@@ -366,7 +362,7 @@ class CommandParser:
             command.main_arg = command.args[-1]
             if reference:
                 reference[0]
-                command.options["reference"] = (reference.split("=")[1], reference)
+                command.options["reference"] = (reference.split("=")[1], reference) # type: ignore
             else:
                 command.options["mode"] = command.args[0], command.args[0]
         else:
@@ -400,8 +396,8 @@ class CommandParser:
                 command.options[o] = args[i + 1], f"{code} {args[i+1]}"
 
     def __get_sub_commands(self) -> List[Tuple[int, List[str]]]:
-        commands = []
-        tmp = []
+        commands: List[Tuple[int, List[str]]] = []
+        tmp: List[str] = []
         lines = (
             self.command.split("\n")
             if not self.__contains_multi_line_values(self.command)
@@ -409,13 +405,13 @@ class CommandParser:
         )
         current_line = self.line
         for i, line in enumerate(lines):
-            for part in bashlex.split(line):
+            for part in bashlex.split(line): # type: ignore
                 if part in ["&&", "&", "|", ";"]:
                     commands.append((current_line, tmp))
                     current_line = self.line + i
                     tmp = []
                     continue
-                tmp.append(part)
+                tmp.append(part) # type: ignore
         commands.append((current_line, tmp))
         return commands
 

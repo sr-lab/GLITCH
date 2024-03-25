@@ -464,6 +464,9 @@ class SecurityVisitor(RuleVisitor):
     @staticmethod
     def check_integrity_check(au: AtomicUnit, path: str) -> Optional[Tuple[str, Error]]:
         for item in SecurityVisitor.__DOWNLOAD:
+            if not isinstance(au.name, str):
+                continue
+
             if not re.search(
                 r"(http|https|www)[^ ,]*\.{text}".format(text=item), au.name
             ):
@@ -495,7 +498,7 @@ class SecurityVisitor(RuleVisitor):
 
     @staticmethod
     def check_has_checksum(au: AtomicUnit) -> Optional[str]:
-        if au.type not in SecurityVisitor.__CHECKSUM:
+        if au.type not in SecurityVisitor.__CHECKSUM or au.name is None:
             return None
         if any(d in au.name for d in SecurityVisitor.__DOWNLOAD):
             return os.path.basename(au.name)
@@ -519,7 +522,10 @@ class SecurityVisitor(RuleVisitor):
         return False
 
     @staticmethod
-    def __is_http_url(value: str) -> bool:
+    def __is_http_url(value: str | None) -> bool:
+        if value is None:
+            return False
+
         if (
             re.match(SecurityVisitor.__URL_REGEX, value)
             and ("http" in value or "www" in value)
@@ -536,7 +542,10 @@ class SecurityVisitor(RuleVisitor):
             return False
 
     @staticmethod
-    def __is_weak_crypt(value: str, name: str) -> bool:
+    def __is_weak_crypt(value: str, name: str | None) -> bool:
+        if name is None:
+            return False
+
         if any(crypt in value for crypt in SecurityVisitor.__CRYPT):
             whitelist = any(
                 word in name or word in value
