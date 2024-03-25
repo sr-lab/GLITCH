@@ -1,16 +1,18 @@
-from cmath import inf
+
 import json
 import re
 import configparser
+
+from cmath import inf
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
 from glitch.tech import Tech
-
 from glitch.repr.inter import *
+from typing import List, Tuple, Dict, Set
 
 
 class DesignVisitor(RuleVisitor):
     class ImproperAlignmentSmell(SmellChecker):
-        def check(self, element, file: str):
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             if isinstance(element, AtomicUnit):
                 identation = None
                 for a in element.attributes:
@@ -36,7 +38,10 @@ class DesignVisitor(RuleVisitor):
         cached_file = ""
         lines = []
 
-        def check(self, element, file: str) -> list[Error]:
+        def check(self, element: CodeElement, file: str) -> List[Error]:
+            if not isinstance(element, AtomicUnit) and not isinstance(element, UnitBlock):
+                return []
+
             if DesignVisitor.PuppetImproperAlignmentSmell.cached_file != file:
                 with open(file, "r") as f:
                     DesignVisitor.PuppetImproperAlignmentSmell.lines = f.readlines()
@@ -81,17 +86,17 @@ class DesignVisitor(RuleVisitor):
 
     class AnsibleImproperAlignmentSmell(SmellChecker):
         # YAML does not allow improper alignments (it also would have problems with generic attributes for all modules)
-        def check(self, element: AtomicUnit, file: str):
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             return []
 
     class MisplacedAttribute(SmellChecker):
-        def check(self, element, file: str):
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             return []
 
     class ChefMisplacedAttribute(SmellChecker):
-        def check(self, element, file: str):
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             if isinstance(element, AtomicUnit):
-                order = []
+                order: List[int] = []
                 for attribute in element.attributes:
                     if attribute.name == "source":
                         order.append(1)
@@ -111,7 +116,7 @@ class DesignVisitor(RuleVisitor):
             return []
 
     class PuppetMisplacedAttribute(SmellChecker):
-        def check(self, element, file: str):
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             if isinstance(element, AtomicUnit):
                 for i, attr in enumerate(element.attributes):
                     if attr.name == "ensure" and i != 0:
@@ -161,8 +166,8 @@ class DesignVisitor(RuleVisitor):
         else:
             self.comment = "//"
 
-        self.variable_stack = []
-        self.variables_names = []
+        self.variable_stack: List[int] = []
+        self.variables_names: List[str] = []
         self.first_code_line = inf
 
     @staticmethod
@@ -179,7 +184,7 @@ class DesignVisitor(RuleVisitor):
         if "var_refer_symbol" not in config["design"]:
             DesignVisitor.__VAR_REFER_SYMBOL = None
         else:
-            DesignVisitor.__VAR_REFER_SYMBOL = json.loads(
+            DesignVisitor.__VAR_REFER_SYMBOL = json.loads( # type: ignore
                 config["design"]["var_refer_symbol"]
             )
 
@@ -190,8 +195,8 @@ class DesignVisitor(RuleVisitor):
         #     errors.append(Error('design_unnecessary_abstraction', m, m.path, repr(m)))
         return errors
 
-    def check_unitblock(self, u: UnitBlock) -> list[Error]:
-        def count_atomic_units(ub: UnitBlock):
+    def check_unitblock(self, u: UnitBlock) -> List[Error]:
+        def count_atomic_units(ub: UnitBlock) -> Tuple[int, int]:
             count_resources = len(ub.atomic_units)
             count_execs = 0
             for au in ub.atomic_units:
@@ -224,7 +229,7 @@ class DesignVisitor(RuleVisitor):
         for attr in u.attributes:
             self.variables_names.append(attr.name)
 
-        errors = []
+        errors: List[Error] = []
         # The order is important
         for au in u.atomic_units:
             errors += self.check_atomicunit(au, u.path)
@@ -254,7 +259,7 @@ class DesignVisitor(RuleVisitor):
                 error.line = i + 1
                 errors.append(error)
 
-        def count_variables(vars: list[Variable]):
+        def count_variables(vars: List[KeyValue]) -> int:
             count = 0
             for var in vars:
                 if isinstance(var.value, type(None)):
@@ -266,7 +271,7 @@ class DesignVisitor(RuleVisitor):
         # The UnitBlock should not be of type vars, because these files are supposed to only
         # have variables
         if (
-            count_variables(u.variables) / max(len(code_lines), 1) > 0.3
+            count_variables(u.variables) / max(len(code_lines), 1) > 0.3 # type: ignore
             and u.type != UnitBlockType.vars
         ):
             errors.append(
@@ -293,12 +298,13 @@ class DesignVisitor(RuleVisitor):
                                 error.line = i + 1
                                 errors.append(error)
 
-        def get_line(i, lines):
+        def get_line(i: int, lines: List[Tuple[int, int]]):
             for j, line in lines:
                 if i < j:
                     return line
+            raise RuntimeError("Line not found")
 
-        lines = []
+        lines: List[Tuple[int, int]] = []
         current_line = 1
         i = 0
         for c in all_code:
@@ -310,7 +316,7 @@ class DesignVisitor(RuleVisitor):
                 i += 1
         lines.append((i, current_line))
 
-        blocks = {}
+        blocks: Dict[int, List[int]] = {}
         for i in range(len(code) - 150):
             hash = code[i : i + 150].__hash__()
             if hash not in blocks:
@@ -319,7 +325,7 @@ class DesignVisitor(RuleVisitor):
                 blocks[hash].append(i)
 
         # Note: changing the structure to a set instead of a list increased the speed A LOT
-        checked = set()
+        checked: Set[int] = set()
         for _, value in blocks.items():
             if len(value) >= 2:
                 for i in value:
@@ -392,7 +398,7 @@ class DesignVisitor(RuleVisitor):
         return []
 
     def check_attribute(
-        self, a: Attribute, file: str, au: AtomicUnit = None, parent_name: str = ""
+        self, a: Attribute, file: str
     ) -> list[Error]:
         return []
 
@@ -401,7 +407,7 @@ class DesignVisitor(RuleVisitor):
         return []
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
-        errors = []
+        errors: List[Error] = []
         if c.line >= self.first_non_comm_line:
             errors.append(Error("design_avoid_comments", c, file, repr(c)))
         return errors

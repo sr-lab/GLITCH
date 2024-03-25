@@ -5,7 +5,7 @@ import glitch
 import configparser
 from urllib.parse import urlparse
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
-from nltk.tokenize import WordPunctTokenizer
+from nltk.tokenize import WordPunctTokenizer # type: ignore
 from typing import Tuple, List, Optional
 
 from glitch.tech import Tech
@@ -18,15 +18,15 @@ class SecurityVisitor(RuleVisitor):
     __URL_REGEX = r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
 
     class EmptyChecker(SmellChecker):
-        def check(self, element, file: str):
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             return []
 
     class NonOfficialImageSmell(SmellChecker):
-        def check(self, element, file: str) -> List[Error]:
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             return []
 
     class DockerNonOfficialImageSmell(SmellChecker):
-        def check(self, element, file: str) -> List[Error]:
+        def check(self, element: CodeElement, file: str) -> List[Error]:
             if (
                 not isinstance(element, UnitBlock)
                 or element.name is None
@@ -40,7 +40,7 @@ class SecurityVisitor(RuleVisitor):
 
     def __init__(self, tech: Tech) -> None:
         super().__init__(tech)
-        self.checkers = []
+        self.checkers: List[SmellChecker] = []
 
         if tech == Tech.terraform:
             for child in TerraformSmellChecker.__subclasses__():
@@ -194,11 +194,6 @@ class SecurityVisitor(RuleVisitor):
                 continue
             for a in au.attributes:
                 values = [a.value]
-                if isinstance(a.value, ConditionalStatement):
-                    statements = a.value.statements
-                    if len(statements) == 0:
-                        continue
-                    values = statements[0].values()
                 for value in values:
                     if not isinstance(value, str):
                         continue
@@ -208,6 +203,10 @@ class SecurityVisitor(RuleVisitor):
                         errors.append(
                             Error("sec_full_permission_filesystem", a, file, repr(a))
                         )
+
+        for attribute in au.attributes:
+            if au.type in SecurityVisitor.__GITHUB_ACTIONS and attribute.name == "plaintext_value":
+                errors.append(Error("sec_hard_secr", attribute, file, repr(attribute)))
 
         if au.type in SecurityVisitor.__OBSOLETE_COMMANDS:
             errors.append(Error("sec_obsolete_command", au, file, repr(au)))
@@ -235,16 +234,16 @@ class SecurityVisitor(RuleVisitor):
         return []
 
     def __check_keyvalue(
-        self, c: KeyValue, file: str, au_type=None, parent_name: str = ""
-    ):
-        errors = []
+        self, c: KeyValue, file: str
+    ) -> List[Error]:
+        errors: List[Error] = []
         c.name = c.name.strip().lower()
 
         if isinstance(c.value, type(None)):
             for child in c.keyvalues:
-                errors += self.check_element(child, file, au_type, c.name)
+                errors += self.check_element(child, file)
             return errors
-        elif isinstance(c.value, str):
+        elif isinstance(c.value, str): # type: ignore
             c.value = c.value.strip().lower()
         else:
             errors += self.check_element(c.value, file)
@@ -258,7 +257,7 @@ class SecurityVisitor(RuleVisitor):
             or (c.name == "ip" and c.value in {"*", "::"})
             or (
                 c.name in SecurityVisitor.__IP_BIND_COMMANDS
-                and (c.value == True or c.value in {"*", "::"})
+                and (c.value == True or c.value in {"*", "::"}) # type: ignore
             )
         ):
             errors.append(Error("sec_invalid_bind", c, file, repr(c)))
@@ -279,10 +278,10 @@ class SecurityVisitor(RuleVisitor):
                             errors.append(Error("sec_def_admin", c, file, repr(c)))
                             break
 
-        def get_au(c, name: str, type: str):
+        def get_au(c: Project | Module | UnitBlock | None, name: str, type: str) -> AtomicUnit | None:
             if isinstance(c, Project):
                 module_name = os.path.basename(os.path.dirname(file))
-                for m in self.code.modules:
+                for m in c.modules:
                     if m.name == module_name:
                         return get_au(m, name, type)
             elif isinstance(c, Module):
@@ -296,10 +295,10 @@ class SecurityVisitor(RuleVisitor):
                         return au
             return None
 
-        def get_module_var(c, name: str):
+        def get_module_var(c: Project | Module | UnitBlock | None, name: str) -> Variable | None:
             if isinstance(c, Project):
                 module_name = os.path.basename(os.path.dirname(file))
-                for m in self.code.modules:
+                for m in c.modules:
                     if m.name == module_name:
                         return get_module_var(m, name)
             elif isinstance(c, Module):
@@ -386,9 +385,6 @@ class SecurityVisitor(RuleVisitor):
                         if "password" in item_value:
                             errors.append(Error("sec_hard_pass", c, file, repr(c)))
 
-        if au_type in SecurityVisitor.__GITHUB_ACTIONS and c.name == "plaintext_value":
-            errors.append(Error("sec_hard_secr", c, file, repr(c)))
-
         if c.has_variable and var is not None:
             c.has_variable = var.has_variable
             c.value = var.value
@@ -400,21 +396,21 @@ class SecurityVisitor(RuleVisitor):
         return errors
 
     def check_attribute(
-        self, a: Attribute, file: str, au_type=None, parent_name: str = ""
+        self, a: Attribute, file: str
     ) -> list[Error]:
-        return self.__check_keyvalue(a, file, au_type, parent_name)
+        return self.__check_keyvalue(a, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
         return self.__check_keyvalue(v, file)
 
     def check_comment(self, c: Comment, file: str) -> List[Error]:
-        errors = []
+        errors: List[Error] = []
         lines = c.content.split("\n")
         stop = False
         for word in SecurityVisitor.__WRONG_WORDS:
             for line in lines:
                 tokenizer = WordPunctTokenizer()
-                tokens = tokenizer.tokenize(line.lower())
+                tokens = tokenizer.tokenize(line.lower()) # type: ignore
                 if word in tokens:
                     errors.append(Error("sec_susp_comm", c, file, line))
                     stop = True
@@ -489,9 +485,9 @@ class SecurityVisitor(RuleVisitor):
                     continue
                 if SecurityVisitor.__has_integrity_check(au.attributes):
                     return None
-                return os.path.basename(a.value), Error(
+                return os.path.basename(a.value), Error( # type: ignore
                     "sec_no_int_check", au, path, repr(a)
-                )
+                ) # type: ignore
         return None
 
     @staticmethod
@@ -517,6 +513,7 @@ class SecurityVisitor(RuleVisitor):
             name = attr.name.strip().lower()
             if any([check in name for check in SecurityVisitor.__CHECKSUM]):
                 return True
+        return False
 
     @staticmethod
     def __is_http_url(value: str) -> bool:

@@ -1,6 +1,7 @@
 import click
 
-from typing import Optional, List, Tuple, Iterable
+from click.types import ParamType
+from typing import Optional, List, Tuple, Iterable, Sequence, Any, Union
 from glitch.tech import Tech
 from glitch.analysis.rules import Error
 
@@ -8,18 +9,18 @@ from glitch.analysis.rules import Error
 class RulesListOption(click.Option):
     def __init__(
         self,
-        param_decls=None,
+        param_decls: Optional[Sequence[str]]=None,
         show_default: bool = False,
         prompt: bool = False,
         confirmation_prompt: bool = False,
         hide_input: bool = False,
         is_flag: Optional[bool] = None,
-        flag_value=None,
+        flag_value: Optional[Any] = None,
         multiple: bool = False,
         count: bool = False,
         allow_from_autoenv: bool = True,
-        type=None,
-        help=None,
+        type: Optional[Union[ParamType, Any]]=None,
+        help: Optional[str]=None,
         hidden: bool = False,
         show_choices: bool = True,
         show_envvar: bool = False,
@@ -64,19 +65,20 @@ def get_smells(smell_types: Iterable[str], tech: Tech) -> List[str]:
         List[str]: List of smells.
     """
 
-    smells = []
+    smells: List[str] = []
     for smell_type in smell_types:
         errors = Error.ERRORS[smell_type]
         for error in errors:
             if error == tech:
-                smells.extend(errors[error].keys())
+                smells.extend(errors[error].keys()) # type: ignore
             elif not isinstance(error, Tech):
                 smells.append(error)
     return smells
 
 
 def remove_unmatched_brackets(string: str):
-    stack, aux = [], ""
+    stack: List[str] = []
+    aux = ""
 
     for c in string:
         if c in ["(", "[", "{"]:
@@ -101,10 +103,10 @@ def remove_unmatched_brackets(string: str):
 
 # Python program for KMP Algorithm (https://www.geeksforgeeks.org/python-program-for-kmp-algorithm-for-pattern-searching-2/)
 # Based on code by Bhavya Jain
-def kmp_search(pat, txt: str):
+def kmp_search(pat: str, txt: str):
     M = len(pat)
     N = len(txt)
-    res = []
+    res: List[int] = []
 
     # create lps[] that will hold the longest prefix suffix
     # values for pattern
@@ -136,7 +138,7 @@ def kmp_search(pat, txt: str):
     return res
 
 
-def compute_LPS_array(pat, M, lps) -> None:
+def compute_LPS_array(pat: str, M: int, lps: List[int]) -> None:
     len = 0  # length of the previous longest prefix suffix
     lps[0]
     i = 1
