@@ -3,12 +3,6 @@ from dataclasses import dataclass
 
 
 class State:
-    def is_dir(self) -> bool:
-        return isinstance(self, Dir)
-
-    def is_file(self) -> bool:
-        return isinstance(self, File)
-
     def __str__(self) -> str:
         return self.__class__.__name__.lower()
 

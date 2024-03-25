@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from abc import ABC
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Callable, Sequence
 
 from glitch.repair.interactive.filesystem import *
 
@@ -121,17 +121,17 @@ class PConcat(PBinOp):
 
 
 class PStatement(ABC):
-    def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> Optional[str]:
+    def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> str:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
         elif isinstance(expr, PEVar):
             return self.__get_str(vars[expr.id], vars)
         elif isinstance(expr, PEUndef):
-            return None
+            return None # type: ignore
 
         raise RuntimeError(f"Unsupported expression, got {expr}")
 
-    def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr:
+    def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr | None:
         if isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition"):
             return expr
         if isinstance(expr, PEVar):
@@ -144,6 +144,8 @@ class PStatement(ABC):
                 return PEConst(PBool(True))
             else:
                 return PEConst(PBool(False))
+            
+        return None
         # TODO: Add support for other operators and expressions
 
     @staticmethod
@@ -162,7 +164,7 @@ class PStatement(ABC):
         """
 
         def minimize_aux(
-            statement: "PStatement", considered_paths: List[PExpr]
+            statement: "PStatement", considered_paths: Sequence[PExpr]
         ) -> "PStatement":
             # FIXME compile statement.path
             if isinstance(statement, PMkdir) and statement.path in considered_paths:
@@ -211,10 +213,10 @@ class PStatement(ABC):
 
             return PSkip()
 
-        considered_paths = list(
+        considered_paths_exprs = list(
             map(lambda path: PEConst(const=PStr(value=path)), considered_paths)
         )
-        return minimize_aux(statement, considered_paths)
+        return minimize_aux(statement, considered_paths_exprs)
 
     def to_filesystems(
         self,
@@ -229,9 +231,9 @@ class PStatement(ABC):
         if vars is None:
             vars = {}
 
-        res_fss = []
+        res_fss: List[FileSystemState] = []
         for fs in fss:
-            get_str = lambda expr: self.__get_str(expr, vars)
+            get_str: Callable[[PExpr], str] = lambda expr: self.__get_str(expr, vars)
 
             if isinstance(self, PSkip):
                 pass
@@ -241,20 +243,23 @@ class PStatement(ABC):
                 fs.state[get_str(self.path)] = File(None, None, None)
             elif isinstance(self, PWrite):
                 path, content = get_str(self.path), get_str(self.content)
-                if isinstance(fs.state[path], File):
-                    fs.state[path].content = content
+                file = fs.state.get(path)
+                if isinstance(file, File):
+                    file.content = content
             elif isinstance(self, PRm):
                 fs.state[get_str(self.path)] = Nil()
             elif isinstance(self, PCp):
                 fs.state[get_str(self.dst)] = fs.state[get_str(self.src)]
             elif isinstance(self, PChmod):
                 path, mode = get_str(self.path), get_str(self.mode)
-                if isinstance(fs.state[path], (File, Dir)):
-                    fs.state[path].mode = mode
+                file = fs.state.get(path)
+                if isinstance(file, (File, Dir)):
+                    file.mode = mode
             elif isinstance(self, PChown):
                 path, owner = get_str(self.path), get_str(self.owner)
-                if isinstance(fs.state[path], (File, Dir)):
-                    fs.state[path].owner = owner
+                file = fs.state.get(path)
+                if isinstance(file, (File, Dir)):
+                    file.owner = owner
             elif isinstance(self, PSeq):
                 fss_lhs = self.lhs.to_filesystems(fs, vars)
                 for fs_lhs in fss_lhs:
