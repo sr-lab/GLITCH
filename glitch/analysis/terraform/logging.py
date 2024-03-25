@@ -25,14 +25,18 @@ class TerraformLogging(TerraformSmellChecker):
             active = True
             for v in values[:]:
                 attribute_checked, _ = self.iterate_required_attributes(
-                    element.attributes, attribute_name, lambda x: isinstance(x.value, str) and x.value.lower() == v
+                    element.attributes,
+                    attribute_name,
+                    lambda x: isinstance(x.value, str) and x.value.lower() == v,
                 )
                 if attribute_checked:
                     values.remove(v)
                 active = active and attribute_checked
         else:
             active, _ = self.iterate_required_attributes(
-                element.attributes, attribute_name, lambda x: isinstance(x.value, str) and x.value.lower() in values
+                element.attributes,
+                attribute_name,
+                lambda x: isinstance(x.value, str) and x.value.lower() in values,
             )
 
         if attribute is None:
@@ -66,10 +70,16 @@ class TerraformLogging(TerraformSmellChecker):
         container_access_type = self.check_required_attribute(
             element.attributes, [""], "container_access_type"
         )
-        if container_access_type and isinstance(container_access_type, Attribute) and isinstance(container_access_type.value, str) and container_access_type.value.lower() not in [
-            "blob",
-            "private",
-        ]:
+        if (
+            container_access_type
+            and isinstance(container_access_type, Attribute)
+            and isinstance(container_access_type.value, str)
+            and container_access_type.value.lower()
+            not in [
+                "blob",
+                "private",
+            ]
+        ):
             errors.append(
                 Error(
                     "sec_logging",
@@ -155,7 +165,7 @@ class TerraformLogging(TerraformSmellChecker):
             return errors
 
         contains_blob_name, _ = self.iterate_required_attributes(
-            assoc_au.attributes, "blob_container_names", lambda x: x.value # type: ignore
+            assoc_au.attributes, "blob_container_names", lambda x: x.value  # type: ignore
         )
         if not contains_blob_name:
             errors.append(
@@ -170,13 +180,19 @@ class TerraformLogging(TerraformSmellChecker):
         return errors
 
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         if (
             attribute.name == "cloud_watch_logs_group_arn"
             and atomic_unit.type == "resource.aws_cloudtrail"
         ):
-            if isinstance(attribute.value, str) and re.match(r"^\${aws_cloudwatch_log_group\..", attribute.value):
+            if isinstance(attribute.value, str) and re.match(
+                r"^\${aws_cloudwatch_log_group\..", attribute.value
+            ):
                 aws_cloudwatch_log_group_name = attribute.value.split(".")[1]
                 if not self.get_au(
                     file,
@@ -212,8 +228,10 @@ class TerraformLogging(TerraformSmellChecker):
             )
         ) and (
             isinstance(attribute.value, str)
-            and (not attribute.value.isnumeric()
-            or (attribute.value.isnumeric() and int(attribute.value) < 90))
+            and (
+                not attribute.value.isnumeric()
+                or (attribute.value.isnumeric() and int(attribute.value) < 90)
+            )
         ):
             return [Error("sec_logging", attribute, file, repr(attribute))]
         elif (
@@ -222,8 +240,10 @@ class TerraformLogging(TerraformSmellChecker):
             and atomic_unit.type == "resource.azurerm_monitor_log_profile"
             and (
                 isinstance(attribute.value, str)
-                and (not attribute.value.isnumeric()
-                or (attribute.value.isnumeric() and int(attribute.value) < 365))
+                and (
+                    not attribute.value.isnumeric()
+                    or (attribute.value.isnumeric() and int(attribute.value) < 365)
+                )
             )
         ):
             return [Error("sec_logging", attribute, file, repr(attribute))]
@@ -286,9 +306,15 @@ class TerraformLogging(TerraformSmellChecker):
                             enabled = self.check_required_attribute(
                                 log.keyvalues, [""], "enabled"
                             )
-                            if isinstance(enabled, KeyValue) and f"{enabled.value}".lower() == "true":
+                            if (
+                                isinstance(enabled, KeyValue)
+                                and f"{enabled.value}".lower() == "true"
+                            ):
                                 active = True
-                            elif isinstance(enabled, KeyValue) and f"{enabled.value}".lower() != "true":
+                            elif (
+                                isinstance(enabled, KeyValue)
+                                and f"{enabled.value}".lower() != "true"
+                            ):
                                 a_list.append(enabled)
                     if not active and a_list == []:
                         errors.append(
@@ -419,7 +445,10 @@ class TerraformLogging(TerraformSmellChecker):
                         element.attributes, ["setting"], "value"
                     )
                     if isinstance(enabled, KeyValue):
-                        if isinstance(enabled.value, str) and enabled.value.lower() != "enabled":
+                        if (
+                            isinstance(enabled.value, str)
+                            and enabled.value.lower() != "enabled"
+                        ):
                             errors.append(
                                 Error("sec_logging", enabled, file, repr(enabled))
                             )

@@ -8,7 +8,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 class TerraformPermissionIAMPolicies(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         if (
             (attribute.name == "member" or attribute.name.split("[")[0] == "members")

@@ -8,7 +8,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 class TerraformKeyManagement(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         for config in SecurityVisitor.KEY_MANAGEMENT:
             if (
@@ -41,7 +45,9 @@ class TerraformKeyManagement(TerraformSmellChecker):
         ):
             expr1 = r"\d+\.\d{0,9}s"
             expr2 = r"\d+s"
-            if isinstance(attribute.value, str) and (re.search(expr1, attribute.value) or re.search(expr2, attribute.value)):
+            if isinstance(attribute.value, str) and (
+                re.search(expr1, attribute.value) or re.search(expr2, attribute.value)
+            ):
                 if int(attribute.value.split("s")[0]) > 7776000:
                     return [
                         Error("sec_key_management", attribute, file, repr(attribute))

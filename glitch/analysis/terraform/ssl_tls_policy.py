@@ -7,7 +7,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
 
 class TerraformSslTlsPolicy(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         for policy in SecurityVisitor.SSL_TLS_POLICY:
             if (
@@ -32,7 +36,11 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                 protocol = self.check_required_attribute(
                     element.attributes, [""], "protocol"
                 )
-                if isinstance(protocol, KeyValue) and isinstance(protocol.value, str) and protocol.value.lower() in ["https", "tls"]:
+                if (
+                    isinstance(protocol, KeyValue)
+                    and isinstance(protocol.value, str)
+                    and protocol.value.lower() in ["https", "tls"]
+                ):
                     ssl_policy = self.check_required_attribute(
                         element.attributes, [""], "ssl_policy"
                     )

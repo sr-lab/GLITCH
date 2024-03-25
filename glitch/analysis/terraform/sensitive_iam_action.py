@@ -31,9 +31,15 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
                 allow = self.check_required_attribute(
                     statement.keyvalues, [""], "effect"
                 )
-                if (isinstance(allow, KeyValue) and isinstance(allow.value, str) and allow.value.lower() == "allow") or (not allow):
+                if (
+                    isinstance(allow, KeyValue)
+                    and isinstance(allow.value, str)
+                    and allow.value.lower() == "allow"
+                ) or (not allow):
                     sensitive_action, action = self.iterate_required_attributes(
-                        statement.keyvalues, "actions", lambda x: isinstance(x.value, str) and "*" in x.value.lower()
+                        statement.keyvalues,
+                        "actions",
+                        lambda x: isinstance(x.value, str) and "*" in x.value.lower(),
                     )
                     if sensitive_action:
                         errors.append(
@@ -45,8 +51,8 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
                     wildcarded_resource, resource = self.iterate_required_attributes(
                         statement.keyvalues,
                         "resources",
-                        lambda x: isinstance(x.value, str) and ((x.value.lower() in ["*"])
-                        or (":*" in x.value.lower())),
+                        lambda x: isinstance(x.value, str)
+                        and ((x.value.lower() in ["*"]) or (":*" in x.value.lower())),
                     )
                     if wildcarded_resource:
                         errors.append(

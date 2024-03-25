@@ -8,7 +8,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 class TerraformAuthentication(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         for item in SecurityVisitor.POLICY_KEYWORDS:
             if item.lower() == attribute.name:
@@ -18,7 +22,9 @@ class TerraformAuthentication(TerraformSmellChecker):
                             config["keyword"].lower() + "\\s*" + config["value"].lower()
                         )
                         pattern = re.compile(rf"{expr}")
-                        if isinstance(attribute.value, str) and not re.search(pattern, attribute.value):
+                        if isinstance(attribute.value, str) and not re.search(
+                            pattern, attribute.value
+                        ):
                             return [
                                 Error(
                                     "sec_authentication",

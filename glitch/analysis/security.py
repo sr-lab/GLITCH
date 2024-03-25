@@ -5,7 +5,7 @@ import glitch
 import configparser
 from urllib.parse import urlparse
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
-from nltk.tokenize import WordPunctTokenizer # type: ignore
+from nltk.tokenize import WordPunctTokenizer  # type: ignore
 from typing import Tuple, List, Optional
 
 from glitch.tech import Tech
@@ -205,7 +205,10 @@ class SecurityVisitor(RuleVisitor):
                         )
 
         for attribute in au.attributes:
-            if au.type in SecurityVisitor.__GITHUB_ACTIONS and attribute.name == "plaintext_value":
+            if (
+                au.type in SecurityVisitor.__GITHUB_ACTIONS
+                and attribute.name == "plaintext_value"
+            ):
                 errors.append(Error("sec_hard_secr", attribute, file, repr(attribute)))
 
         if au.type in SecurityVisitor.__OBSOLETE_COMMANDS:
@@ -233,9 +236,7 @@ class SecurityVisitor(RuleVisitor):
     def check_dependency(self, d: Dependency, file: str) -> List[Error]:
         return []
 
-    def __check_keyvalue(
-        self, c: KeyValue, file: str
-    ) -> List[Error]:
+    def __check_keyvalue(self, c: KeyValue, file: str) -> List[Error]:
         errors: List[Error] = []
         c.name = c.name.strip().lower()
 
@@ -243,7 +244,7 @@ class SecurityVisitor(RuleVisitor):
             for child in c.keyvalues:
                 errors += self.check_element(child, file)
             return errors
-        elif isinstance(c.value, str): # type: ignore
+        elif isinstance(c.value, str):  # type: ignore
             c.value = c.value.strip().lower()
         else:
             errors += self.check_element(c.value, file)
@@ -257,7 +258,7 @@ class SecurityVisitor(RuleVisitor):
             or (c.name == "ip" and c.value in {"*", "::"})
             or (
                 c.name in SecurityVisitor.__IP_BIND_COMMANDS
-                and (c.value == True or c.value in {"*", "::"}) # type: ignore
+                and (c.value == True or c.value in {"*", "::"})  # type: ignore
             )
         ):
             errors.append(Error("sec_invalid_bind", c, file, repr(c)))
@@ -278,7 +279,9 @@ class SecurityVisitor(RuleVisitor):
                             errors.append(Error("sec_def_admin", c, file, repr(c)))
                             break
 
-        def get_au(c: Project | Module | UnitBlock | None, name: str, type: str) -> AtomicUnit | None:
+        def get_au(
+            c: Project | Module | UnitBlock | None, name: str, type: str
+        ) -> AtomicUnit | None:
             if isinstance(c, Project):
                 module_name = os.path.basename(os.path.dirname(file))
                 for m in c.modules:
@@ -295,7 +298,9 @@ class SecurityVisitor(RuleVisitor):
                         return au
             return None
 
-        def get_module_var(c: Project | Module | UnitBlock | None, name: str) -> Variable | None:
+        def get_module_var(
+            c: Project | Module | UnitBlock | None, name: str
+        ) -> Variable | None:
             if isinstance(c, Project):
                 module_name = os.path.basename(os.path.dirname(file))
                 for m in c.modules:
@@ -395,9 +400,7 @@ class SecurityVisitor(RuleVisitor):
 
         return errors
 
-    def check_attribute(
-        self, a: Attribute, file: str
-    ) -> list[Error]:
+    def check_attribute(self, a: Attribute, file: str) -> list[Error]:
         return self.__check_keyvalue(a, file)
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:
@@ -410,7 +413,7 @@ class SecurityVisitor(RuleVisitor):
         for word in SecurityVisitor.__WRONG_WORDS:
             for line in lines:
                 tokenizer = WordPunctTokenizer()
-                tokens = tokenizer.tokenize(line.lower()) # type: ignore
+                tokens = tokenizer.tokenize(line.lower())  # type: ignore
                 if word in tokens:
                     errors.append(Error("sec_susp_comm", c, file, line))
                     stop = True
@@ -485,9 +488,9 @@ class SecurityVisitor(RuleVisitor):
                     continue
                 if SecurityVisitor.__has_integrity_check(au.attributes):
                     return None
-                return os.path.basename(a.value), Error( # type: ignore
+                return os.path.basename(a.value), Error(  # type: ignore
                     "sec_no_int_check", au, path, repr(a)
-                ) # type: ignore
+                )  # type: ignore
         return None
 
     @staticmethod

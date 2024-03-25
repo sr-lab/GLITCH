@@ -1,4 +1,3 @@
-
 import json
 import re
 import configparser
@@ -39,7 +38,9 @@ class DesignVisitor(RuleVisitor):
         lines = []
 
         def check(self, element: CodeElement, file: str) -> List[Error]:
-            if not isinstance(element, AtomicUnit) and not isinstance(element, UnitBlock):
+            if not isinstance(element, AtomicUnit) and not isinstance(
+                element, UnitBlock
+            ):
                 return []
 
             if DesignVisitor.PuppetImproperAlignmentSmell.cached_file != file:
@@ -184,7 +185,7 @@ class DesignVisitor(RuleVisitor):
         if "var_refer_symbol" not in config["design"]:
             DesignVisitor.__VAR_REFER_SYMBOL = None
         else:
-            DesignVisitor.__VAR_REFER_SYMBOL = json.loads( # type: ignore
+            DesignVisitor.__VAR_REFER_SYMBOL = json.loads(  # type: ignore
                 config["design"]["var_refer_symbol"]
             )
 
@@ -271,7 +272,7 @@ class DesignVisitor(RuleVisitor):
         # The UnitBlock should not be of type vars, because these files are supposed to only
         # have variables
         if (
-            count_variables(u.variables) / max(len(code_lines), 1) > 0.3 # type: ignore
+            count_variables(u.variables) / max(len(code_lines), 1) > 0.3  # type: ignore
             and u.type != UnitBlockType.vars
         ):
             errors.append(
@@ -397,9 +398,7 @@ class DesignVisitor(RuleVisitor):
     def check_dependency(self, d: Dependency, file: str) -> list[Error]:
         return []
 
-    def check_attribute(
-        self, a: Attribute, file: str
-    ) -> list[Error]:
+    def check_attribute(self, a: Attribute, file: str) -> list[Error]:
         return []
 
     def check_variable(self, v: Variable, file: str) -> list[Error]:

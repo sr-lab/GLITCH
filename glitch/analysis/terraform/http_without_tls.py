@@ -7,7 +7,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 class TerraformHttpWithoutTls(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         for config in SecurityVisitor.HTTPS_CONFIGS:
             if (
@@ -27,7 +31,11 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
         if isinstance(element, AtomicUnit):
             if element.type == "data.http":
                 url = self.check_required_attribute(element.attributes, [""], "url")
-                if isinstance(url, KeyValue) and isinstance(url.value, str) and "${" in url.value:
+                if (
+                    isinstance(url, KeyValue)
+                    and isinstance(url.value, str)
+                    and "${" in url.value
+                ):
                     vars = url.value.split("${")
                     r = url.value.split("${")[1].split("}")[0]
                     for var in vars:

@@ -17,8 +17,10 @@ class TerraformAccessControl(TerraformSmellChecker):
                     pattern = re.compile(rf"{expr}")
                     allow_expr = '"effect":' + "\\s*" + '"allow"'
                     allow_pattern = re.compile(rf"{allow_expr}")
-                    if isinstance(attribute.value, str) and re.search(pattern, attribute.value) and re.search(
-                        allow_pattern, attribute.value
+                    if (
+                        isinstance(attribute.value, str)
+                        and re.search(pattern, attribute.value)
+                        and re.search(allow_pattern, attribute.value)
                     ):
                         return [
                             Error(
@@ -80,7 +82,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                     element.attributes, [""], "authorization"
                 )
                 if (
-                    isinstance(http_method, KeyValue) 
+                    isinstance(http_method, KeyValue)
                     and isinstance(authorization, KeyValue)
                     and http_method.value is not None
                     and authorization.value is not None
@@ -129,7 +131,9 @@ class TerraformAccessControl(TerraformSmellChecker):
                 visibility = self.check_required_attribute(
                     element.attributes, [""], "visibility"
                 )
-                if isinstance(visibility, KeyValue) and isinstance(visibility.value, str):
+                if isinstance(visibility, KeyValue) and isinstance(
+                    visibility.value, str
+                ):
                     if visibility.value.lower() not in ["private", "internal"]:
                         errors.append(
                             Error(

@@ -7,7 +7,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
 
 class TerraformThreatsDetection(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         for config in SecurityVisitor.MISSING_THREATS_DETECTION_ALERTS:
             if (

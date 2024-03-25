@@ -12,7 +12,8 @@ from glitch.parsers.ripper_parser import parser_yacc
 from glitch.helpers import remove_unmatched_brackets
 from glitch.exceptions import EXCEPTIONS, throw_exception
 
-ChefValue = Tuple[str, str]| str | int | bool | List["ChefValue"]
+ChefValue = Tuple[str, str] | str | int | bool | List["ChefValue"]
+
 
 class ChefParser(p.Parser):
     class Node:
@@ -58,7 +59,7 @@ class ChefParser(p.Parser):
         def is_bounds(l: Any) -> bool:
             return (
                 isinstance(l, list)
-                and len(l) == 2 # type: ignore
+                and len(l) == 2  # type: ignore
                 and isinstance(l[0], int)
                 and isinstance(l[1], int)
             )
@@ -151,7 +152,7 @@ class ChefParser(p.Parser):
         empty_structures = {"string_literal": "", "hash": "{}", "array": "[]"}
 
         if isinstance(ast, list):
-            return "".join(list(map(lambda a: ChefParser._get_content(a, source), ast))) # type: ignore
+            return "".join(list(map(lambda a: ChefParser._get_content(a, source), ast)))  # type: ignore
 
         if (ast.id in empty_structures and len(ast.args) == 0) or (
             ast.id == "string_literal" and len(ast.args[0].args) == 0
@@ -214,7 +215,9 @@ class ChefParser(p.Parser):
             return self.tests_ast_stack.pop()
 
     class ResourceChecker(Checker):
-        def __init__(self, atomic_unit: AtomicUnit, source: List[str], ast: Any) -> None:
+        def __init__(
+            self, atomic_unit: AtomicUnit, source: List[str], ast: Any
+        ) -> None:
             super().__init__(source)
             self.push([self.is_block_resource, self.is_inline_resource], ast)
             self.atomic_unit = atomic_unit
@@ -348,7 +351,7 @@ class ChefParser(p.Parser):
                 a.code = ChefParser._get_source(ast, self.source)
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
-                for arg in reversed(ast): # type: ignore
+                for arg in reversed(ast):  # type: ignore
                     self.push([self.is_attribute], arg)
 
             return True
@@ -360,13 +363,21 @@ class ChefParser(p.Parser):
             self.push([self.is_variable], ast)
 
         def is_variable(self, ast: Any) -> bool:
-            def create_variable(key: Any, name: str, value: str | None, has_variable: bool):
+            def create_variable(
+                key: Any, name: str, value: str | None, has_variable: bool
+            ):
                 variable = Variable(name, value, has_variable)
                 variable.line = ChefParser._get_content_bounds(key, self.source)[0]
                 variable.code = ChefParser._get_source(ast, self.source)
                 return variable
 
-            def parse_variable(parent: KeyValue | None, ast: Any, key: Any, current_name: str, value_ast: "ChefParser.Node") -> None:
+            def parse_variable(
+                parent: KeyValue | None,
+                ast: Any,
+                key: Any,
+                current_name: str,
+                value_ast: "ChefParser.Node",
+            ) -> None:
                 if ChefParser._check_node(
                     value_ast, ["hash"], 1
                 ) and ChefParser._check_id(value_ast.args[0], ["assoclist_from_args"]):
@@ -537,7 +548,7 @@ class ChefParser(p.Parser):
         for el in l[1:]:
             if isinstance(el, list):
                 if len(el) > 0 and isinstance(el[0], tuple) and el[0][0] == "id":
-                    args.append(ChefParser.__create_ast(el)) # type: ignore
+                    args.append(ChefParser.__create_ast(el))  # type: ignore
                 else:
                     arg: List["ChefParser.Node" | ChefValue] = []
                     for e in el:
@@ -546,14 +557,14 @@ class ChefParser(p.Parser):
                             and isinstance(e[0], tuple)
                             and e[0][0] == "id"
                         ):
-                            arg.append(ChefParser.__create_ast(e)) # type: ignore
+                            arg.append(ChefParser.__create_ast(e))  # type: ignore
                         else:
                             arg.append(e)
                     args.append(arg)
             else:
                 args.append(el)
 
-        return ChefParser.Node(l[0][1], args) # type: ignore
+        return ChefParser.Node(l[0][1], args)  # type: ignore
 
     @staticmethod
     def __transverse_ast(ast: Any, unit_block: UnitBlock, source: List[str]) -> None:
@@ -563,17 +574,19 @@ class ChefParser(p.Parser):
                     return var
             return None
 
-        def add_variable_to_unit_block(variable: Variable, unit_block_vars: List[Variable]) -> None:
+        def add_variable_to_unit_block(
+            variable: Variable, unit_block_vars: List[Variable]
+        ) -> None:
             var_name = variable.name
             var = get_var(var_name, unit_block_vars)
             if var and var.value == None and variable.value == None:
                 for v in variable.keyvalues:
-                    add_variable_to_unit_block(v, var.keyvalues) # type: ignore
+                    add_variable_to_unit_block(v, var.keyvalues)  # type: ignore
             else:
                 unit_block_vars.append(variable)
 
         if isinstance(ast, list):
-            for arg in ast: # type: ignore
+            for arg in ast:  # type: ignore
                 if isinstance(arg, (ChefParser.Node, list)):
                     ChefParser.__transverse_ast(arg, unit_block, source)
         else:

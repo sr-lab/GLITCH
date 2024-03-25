@@ -10,7 +10,10 @@ class TerraformAttachedResource(TerraformSmellChecker):
         errors: List[Error] = []
 
         if isinstance(element, AtomicUnit):
-            def check_attached_resource(attributes: List[KeyValue] | List[Attribute], resource_types: List[str]) -> bool:
+
+            def check_attached_resource(
+                attributes: List[KeyValue] | List[Attribute], resource_types: List[str]
+            ) -> bool:
                 for a in attributes:
                     if a.value != None:
                         for resource_type in resource_types:

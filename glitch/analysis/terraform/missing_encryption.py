@@ -8,7 +8,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 class TerraformMissingEncryption(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         for config in SecurityVisitor.MISSING_ENCRYPTION:
             if (
@@ -108,7 +112,10 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                     valid = False
                     while isinstance(resources, KeyValue):
                         a = resources
-                        if isinstance(resources.value, str) and resources.value.lower() == "secrets":
+                        if (
+                            isinstance(resources.value, str)
+                            and resources.value.lower() == "secrets"
+                        ):
                             valid = True
                             break
                         i += 1
@@ -116,7 +123,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                             element.attributes, ["encryption_config"], f"resources[{i}]"
                         )
                     if not valid:
-                        errors.append(Error("sec_missing_encryption", a, file, repr(a))) # type: ignore
+                        errors.append(Error("sec_missing_encryption", a, file, repr(a)))  # type: ignore
                 else:
                     errors.append(
                         Error(

@@ -7,7 +7,11 @@ from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
 
 class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         for policy in SecurityVisitor.PASSWORD_KEY_POLICY:
             if (
@@ -44,7 +48,11 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                                 repr(attribute),
                             )
                         ]
-                elif (policy["logic"] == "gte" and isinstance(attribute.value, str) and not attribute.value.isnumeric()) or (
+                elif (
+                    policy["logic"] == "gte"
+                    and isinstance(attribute.value, str)
+                    and not attribute.value.isnumeric()
+                ) or (
                     policy["logic"] == "gte"
                     and isinstance(attribute.value, str)
                     and attribute.value.isnumeric()
@@ -58,7 +66,11 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                             repr(attribute),
                         )
                     ]
-                elif (policy["logic"] == "lte" and isinstance(attribute.value, str) and not attribute.value.isnumeric()) or (
+                elif (
+                    policy["logic"] == "lte"
+                    and isinstance(attribute.value, str)
+                    and not attribute.value.isnumeric()
+                ) or (
                     policy["logic"] == "lte"
                     and isinstance(attribute.value, str)
                     and attribute.value.isnumeric()

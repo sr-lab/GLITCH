@@ -81,7 +81,9 @@ class AnsibleParser(p.Parser):
 
     @staticmethod
     def __get_element_code(
-        start_token: Token | Node, end_token: List[Token | Node] | Token | Node | str, code: List[str]
+        start_token: Token | Node,
+        end_token: List[Token | Node] | Token | Node | str,
+        code: List[str],
     ):
         if isinstance(end_token, list) and len(end_token) > 0:
             end_token = end_token[-1]
@@ -166,14 +168,16 @@ class AnsibleParser(p.Parser):
                     )
                 else:
                     value.append(val.value)
-                
+
             if len(value) > 0 and isinstance(node.value[-1], (Node, Token)):
                 create_variable(node.value[-1], cur_name, str(value), child)
 
         return variables
 
     @staticmethod
-    def __parse_attribute(cur_name: str, token: Token | Node, val: Any, code: List[str]) -> List[Attribute]:
+    def __parse_attribute(
+        cur_name: str, token: Token | Node, val: Any, code: List[str]
+    ) -> List[Attribute]:
         def create_attribute(token: Token | Node, name: str, value: Any) -> Attribute:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
@@ -291,7 +295,9 @@ class AnsibleParser(p.Parser):
                     au.code = code[au.line - 1]
                 unit_block.add_atomic_unit(au)
 
-    def __parse_playbook(self, name: str, file: TextIO, parsed_file: Optional[Node]=None) -> Optional[UnitBlock]:
+    def __parse_playbook(
+        self, name: str, file: TextIO, parsed_file: Optional[Node] = None
+    ) -> Optional[UnitBlock]:
         try:
             if parsed_file is None:
                 parsed_file = YAML().compose(file)
@@ -334,7 +340,9 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_PLAYBOOK"], file.name)
             return None
 
-    def __parse_tasks_file(self, name: str, file: TextIO, parsed_file: Optional[Node]=None) -> Optional[UnitBlock]:
+    def __parse_tasks_file(
+        self, name: str, file: TextIO, parsed_file: Optional[Node] = None
+    ) -> Optional[UnitBlock]:
         try:
             if parsed_file is None:
                 parsed_file = YAML().compose(file)
@@ -359,7 +367,9 @@ class AnsibleParser(p.Parser):
             throw_exception(EXCEPTIONS["ANSIBLE_TASKS_FILE"], file.name)
             return None
 
-    def __parse_vars_file(self, name: str, file: TextIO, parsed_file: Optional[Node]=None) -> Optional[UnitBlock]:
+    def __parse_vars_file(
+        self, name: str, file: TextIO, parsed_file: Optional[Node] = None
+    ) -> Optional[UnitBlock]:
         try:
             if parsed_file is None:
                 parsed_file = YAML().compose(file)
@@ -385,7 +395,11 @@ class AnsibleParser(p.Parser):
             return None
 
     @staticmethod
-    def __apply_to_files(module: Module | Project, path: str, p_function: Callable[[str, TextIO], Optional[UnitBlock]]) -> None:
+    def __apply_to_files(
+        module: Module | Project,
+        path: str,
+        p_function: Callable[[str, TextIO], Optional[UnitBlock]],
+    ) -> None:
         if os.path.exists(path) and os.path.isdir(path) and not os.path.islink(path):
             files = [
                 f

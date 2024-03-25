@@ -13,14 +13,18 @@ from typing import List, Any, Tuple, Dict
 
 class PuppetParser(p.Parser):
     @staticmethod
-    def __process_unitblock_component(ce: CodeElement | List[CodeElement], unit_block: UnitBlock) -> None:
+    def __process_unitblock_component(
+        ce: CodeElement | List[CodeElement], unit_block: UnitBlock
+    ) -> None:
         def get_var(parent_name: str, vars: List[KeyValue]):
             for var in vars:
                 if var.name == parent_name:
                     return var
             return None
 
-        def add_variable_to_unit_block(variable: KeyValue, unit_block_vars: List[KeyValue]) -> None:
+        def add_variable_to_unit_block(
+            variable: KeyValue, unit_block_vars: List[KeyValue]
+        ) -> None:
             var_name = variable.name
             var = get_var(var_name, unit_block_vars)
             if var and var.value == None and variable.value == None:
@@ -32,7 +36,7 @@ class PuppetParser(p.Parser):
         if isinstance(ce, Dependency):
             unit_block.add_dependency(ce)
         elif isinstance(ce, Variable):
-            add_variable_to_unit_block(ce, unit_block.variables) # type: ignore
+            add_variable_to_unit_block(ce, unit_block.variables)  # type: ignore
         elif isinstance(ce, AtomicUnit):
             unit_block.add_atomic_unit(ce)
         elif isinstance(ce, UnitBlock):
@@ -46,7 +50,9 @@ class PuppetParser(p.Parser):
                 PuppetParser.__process_unitblock_component(c, unit_block)
 
     @staticmethod
-    def __process_codeelement(codeelement: puppetmodel.CodeElement, path: str, code: List[str]):
+    def __process_codeelement(
+        codeelement: puppetmodel.CodeElement, path: str, code: List[str]
+    ):
         def get_code(ce: puppetmodel.CodeElement):
             if ce.line == ce.end_line:
                 res = code[ce.line - 1][max(0, ce.col - 1) : ce.end_col - 1]
@@ -61,7 +67,9 @@ class PuppetParser(p.Parser):
 
             return res
 
-        def process_hash_value(name: str, temp_value: Any) -> Tuple[str, Dict[str, Any]]:
+        def process_hash_value(
+            name: str, temp_value: Any
+        ) -> Tuple[str, Dict[str, Any]]:
             if "[" in name and "]" in name:
                 start = name.find("[") + 1
                 end = name.find("]")

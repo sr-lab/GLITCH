@@ -8,13 +8,19 @@ from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 class TerraformNaming(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute | KeyValue, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
         if attribute.name == "name" and atomic_unit.type in [
             "resource.azurerm_storage_account"
         ]:
             pattern = r"^[a-z0-9]{3,24}$"
-            if isinstance(attribute.value, str) and not re.match(pattern, attribute.value):
+            if isinstance(attribute.value, str) and not re.match(
+                pattern, attribute.value
+            ):
                 return [Error("sec_naming", attribute, file, repr(attribute))]
 
         for config in SecurityVisitor.NAMING:
@@ -78,7 +84,10 @@ class TerraformNaming(TerraformSmellChecker):
                 resource_labels = self.check_required_attribute(
                     element.attributes, [""], "resource_labels", None
                 )
-                if isinstance(resource_labels, KeyValue) and resource_labels.value is None:
+                if (
+                    isinstance(resource_labels, KeyValue)
+                    and resource_labels.value is None
+                ):
                     if resource_labels.keyvalues == []:
                         errors.append(
                             Error(

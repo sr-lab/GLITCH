@@ -39,7 +39,12 @@ class ConditionalStatement(Block):
         IF = 1
         SWITCH = 2
 
-    def __init__(self, condition: str, type: "ConditionalStatement.ConditionType", is_default: bool = False) -> None:
+    def __init__(
+        self,
+        condition: str,
+        type: "ConditionalStatement.ConditionType",
+        is_default: bool = False,
+    ) -> None:
         super().__init__()
         self.condition: str = condition
         self.else_statement: ConditionalStatement | None = None
@@ -315,7 +320,7 @@ class File:
 
 class Folder:
     def __init__(self, name: str) -> None:
-        self.content: List[Union["Folder", File]]= []
+        self.content: List[Union["Folder", File]] = []
         self.name: str = name
 
     def add_folder(self, folder: "Folder") -> None:

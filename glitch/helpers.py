@@ -9,7 +9,7 @@ from glitch.analysis.rules import Error
 class RulesListOption(click.Option):
     def __init__(
         self,
-        param_decls: Optional[Sequence[str]]=None,
+        param_decls: Optional[Sequence[str]] = None,
         show_default: bool = False,
         prompt: bool = False,
         confirmation_prompt: bool = False,
@@ -19,8 +19,8 @@ class RulesListOption(click.Option):
         multiple: bool = False,
         count: bool = False,
         allow_from_autoenv: bool = True,
-        type: Optional[Union[ParamType, Any]]=None,
-        help: Optional[str]=None,
+        type: Optional[Union[ParamType, Any]] = None,
+        help: Optional[str] = None,
         hidden: bool = False,
         show_choices: bool = True,
         show_envvar: bool = False,
@@ -70,7 +70,7 @@ def get_smells(smell_types: Iterable[str], tech: Tech) -> List[str]:
         errors = Error.ERRORS[smell_type]
         for error in errors:
             if error == tech:
-                smells.extend(errors[error].keys()) # type: ignore
+                smells.extend(errors[error].keys())  # type: ignore
             elif not isinstance(error, Tech):
                 smells.append(error)
     return smells

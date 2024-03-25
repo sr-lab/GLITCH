@@ -2,6 +2,7 @@
 from ply.lex import lex, LexToken
 from ply.yacc import yacc, YaccProduction
 
+
 def parser_yacc(script_ast: str):
     tokens = (
         "LPAREN",
@@ -25,7 +26,7 @@ def parser_yacc(script_ast: str):
 
     def t_INTEGER(t: LexToken):
         r"[0-9]+"
-        t.value = int(t.value) # type: ignore
+        t.value = int(t.value)  # type: ignore
         return t
 
     def t_STRING(t: LexToken):

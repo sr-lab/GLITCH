@@ -18,7 +18,6 @@ class Lexer:
     lineno: int
 
     def begin(self, state: str) -> None: ...
-
     def skip(self, n: int) -> None: ...
 
 class LexToken:
