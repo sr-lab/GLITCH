@@ -2,14 +2,18 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute
+from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
 
 
 class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
-        for policy in SecurityVisitor._PASSWORD_KEY_POLICY:
+        for policy in SecurityVisitor.PASSWORD_KEY_POLICY:
             if (
                 attribute.name == policy["attribute"]
                 and atomic_unit.type in policy["au_type"]
@@ -19,6 +23,7 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                 if policy["logic"] == "equal":
                     if (
                         "any_not_empty" in policy["values"]
+                        and isinstance(attribute.value, str)
                         and attribute.value.lower() == ""
                     ):
                         return [
@@ -32,6 +37,7 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                     elif (
                         "any_not_empty" not in policy["values"]
                         and not attribute.has_variable
+                        and isinstance(attribute.value, str)
                         and attribute.value.lower() not in policy["values"]
                     ):
                         return [
@@ -42,8 +48,13 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                                 repr(attribute),
                             )
                         ]
-                elif (policy["logic"] == "gte" and not attribute.value.isnumeric()) or (
+                elif (
                     policy["logic"] == "gte"
+                    and isinstance(attribute.value, str)
+                    and not attribute.value.isnumeric()
+                ) or (
+                    policy["logic"] == "gte"
+                    and isinstance(attribute.value, str)
                     and attribute.value.isnumeric()
                     and int(attribute.value) < int(policy["values"][0])
                 ):
@@ -55,8 +66,13 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                             repr(attribute),
                         )
                     ]
-                elif (policy["logic"] == "lte" and not attribute.value.isnumeric()) or (
+                elif (
                     policy["logic"] == "lte"
+                    and isinstance(attribute.value, str)
+                    and not attribute.value.isnumeric()
+                ) or (
+                    policy["logic"] == "lte"
+                    and isinstance(attribute.value, str)
                     and attribute.value.isnumeric()
                     and int(attribute.value) > int(policy["values"][0])
                 ):
@@ -71,10 +87,10 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
 
         return []
 
-    def check(self, element, file: str):
-        errors = []
+    def check(self, element: CodeElement, file: str) -> List[Error]:
+        errors: List[Error] = []
         if isinstance(element, AtomicUnit):
-            for policy in SecurityVisitor._PASSWORD_KEY_POLICY:
+            for policy in SecurityVisitor.PASSWORD_KEY_POLICY:
                 if (
                     policy["required"] == "yes"
                     and element.type in policy["au_type"]

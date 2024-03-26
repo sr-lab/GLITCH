@@ -1,6 +1,7 @@
 import click
 
-from typing import List
+from click.types import ParamType
+from typing import Optional, List, Tuple, Iterable, Sequence, Any, Union
 from glitch.tech import Tech
 from glitch.analysis.rules import Error
 
@@ -8,22 +9,22 @@ from glitch.analysis.rules import Error
 class RulesListOption(click.Option):
     def __init__(
         self,
-        param_decls=None,
-        show_default=False,
-        prompt=False,
-        confirmation_prompt=False,
-        hide_input=False,
-        is_flag=None,
-        flag_value=None,
-        multiple=False,
-        count=False,
-        allow_from_autoenv=True,
-        type=None,
-        help=None,
-        hidden=False,
-        show_choices=True,
-        show_envvar=False,
-    ):
+        param_decls: Optional[Sequence[str]] = None,
+        show_default: bool = False,
+        prompt: bool = False,
+        confirmation_prompt: bool = False,
+        hide_input: bool = False,
+        is_flag: Optional[bool] = None,
+        flag_value: Optional[Any] = None,
+        multiple: bool = False,
+        count: bool = False,
+        allow_from_autoenv: bool = True,
+        type: Optional[Union[ParamType, Any]] = None,
+        help: Optional[str] = None,
+        hidden: bool = False,
+        show_choices: bool = True,
+        show_envvar: bool = False,
+    ) -> None:
         super().__init__(
             param_decls=param_decls,
             show_default=show_default,
@@ -44,16 +45,16 @@ class RulesListOption(click.Option):
         self.type = click.Choice(get_smell_types(), case_sensitive=False)
 
 
-def get_smell_types() -> List[str]:
+def get_smell_types() -> Tuple[str, ...]:
     """Get list of smell types.
 
     Returns:
         List[str]: List of smell types.
     """
-    return Error.ERRORS.keys()
+    return tuple(Error.ERRORS.keys())
 
 
-def get_smells(smell_types: List[str], tech: Tech) -> List[str]:
+def get_smells(smell_types: Iterable[str], tech: Tech) -> List[str]:
     """Get list of smells.
 
     Args:
@@ -64,19 +65,20 @@ def get_smells(smell_types: List[str], tech: Tech) -> List[str]:
         List[str]: List of smells.
     """
 
-    smells = []
+    smells: List[str] = []
     for smell_type in smell_types:
         errors = Error.ERRORS[smell_type]
         for error in errors:
             if error == tech:
-                smells.extend(errors[error].keys())
+                smells.extend(errors[error].keys())  # type: ignore
             elif not isinstance(error, Tech):
                 smells.append(error)
     return smells
 
 
-def remove_unmatched_brackets(string):
-    stack, aux = [], ""
+def remove_unmatched_brackets(string: str):
+    stack: List[str] = []
+    aux = ""
 
     for c in string:
         if c in ["(", "[", "{"]:
@@ -101,10 +103,10 @@ def remove_unmatched_brackets(string):
 
 # Python program for KMP Algorithm (https://www.geeksforgeeks.org/python-program-for-kmp-algorithm-for-pattern-searching-2/)
 # Based on code by Bhavya Jain
-def kmp_search(pat, txt):
+def kmp_search(pat: str, txt: str):
     M = len(pat)
     N = len(txt)
-    res = []
+    res: List[int] = []
 
     # create lps[] that will hold the longest prefix suffix
     # values for pattern
@@ -136,7 +138,7 @@ def kmp_search(pat, txt):
     return res
 
 
-def compute_LPS_array(pat, M, lps):
+def compute_LPS_array(pat: str, M: int, lps: List[int]) -> None:
     len = 0  # length of the previous longest prefix suffix
     lps[0]
     i = 1

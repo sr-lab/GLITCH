@@ -1,3 +1,5 @@
+# type: ignore
+# TODO: The file needs a refactor so the types make sense
 import os
 import traceback
 from puppetparser.parser import parse as parse_puppet
@@ -6,18 +8,23 @@ from glitch.exceptions import EXCEPTIONS, throw_exception
 
 import glitch.parsers.parser as p
 from glitch.repr.inter import *
+from typing import List, Any, Tuple, Dict
 
 
 class PuppetParser(p.Parser):
     @staticmethod
-    def __process_unitblock_component(ce, unit_block: UnitBlock):
-        def get_var(parent_name, vars):
+    def __process_unitblock_component(
+        ce: CodeElement | List[CodeElement], unit_block: UnitBlock
+    ) -> None:
+        def get_var(parent_name: str, vars: List[KeyValue]):
             for var in vars:
                 if var.name == parent_name:
                     return var
             return None
 
-        def add_variable_to_unit_block(variable, unit_block_vars):
+        def add_variable_to_unit_block(
+            variable: KeyValue, unit_block_vars: List[KeyValue]
+        ) -> None:
             var_name = variable.name
             var = get_var(var_name, unit_block_vars)
             if var and var.value == None and variable.value == None:
@@ -29,7 +36,7 @@ class PuppetParser(p.Parser):
         if isinstance(ce, Dependency):
             unit_block.add_dependency(ce)
         elif isinstance(ce, Variable):
-            add_variable_to_unit_block(ce, unit_block.variables)
+            add_variable_to_unit_block(ce, unit_block.variables)  # type: ignore
         elif isinstance(ce, AtomicUnit):
             unit_block.add_atomic_unit(ce)
         elif isinstance(ce, UnitBlock):
@@ -43,8 +50,10 @@ class PuppetParser(p.Parser):
                 PuppetParser.__process_unitblock_component(c, unit_block)
 
     @staticmethod
-    def __process_codeelement(codeelement, path, code):
-        def get_code(ce):
+    def __process_codeelement(
+        codeelement: puppetmodel.CodeElement, path: str, code: List[str]
+    ):
+        def get_code(ce: puppetmodel.CodeElement):
             if ce.line == ce.end_line:
                 res = code[ce.line - 1][max(0, ce.col - 1) : ce.end_col - 1]
             else:
@@ -58,7 +67,9 @@ class PuppetParser(p.Parser):
 
             return res
 
-        def process_hash_value(name: str, temp_value):
+        def process_hash_value(
+            name: str, temp_value: Any
+        ) -> Tuple[str, Dict[str, Any]]:
             if "[" in name and "]" in name:
                 start = name.find("[") + 1
                 end = name.find("]")
@@ -69,7 +80,7 @@ class PuppetParser(p.Parser):
                     d[key_name] = temp_value
                     return n, d
                 else:
-                    new_d: dict = {}
+                    new_d: Dict[str, Any] = {}
                     new_d[key_name] = d
                     return n, new_d
             else:
@@ -89,18 +100,15 @@ class PuppetParser(p.Parser):
                 return str(
                     PuppetParser.__process_codeelement(codeelement.value, path, code)
                 )
-            elif codeelement.value == None:
+            elif codeelement.value is None:
                 return ""
             return str(codeelement.value)
         elif isinstance(codeelement, puppetmodel.Attribute):
             name = PuppetParser.__process_codeelement(codeelement.key, path, code)
-            if codeelement.value is not None:
-                temp_value = PuppetParser.__process_codeelement(
-                    codeelement.value, path, code
-                )
-                value = "" if temp_value == "undef" else temp_value
-            else:
-                value = None
+            temp_value = PuppetParser.__process_codeelement(
+                codeelement.value, path, code
+            )
+            value = "" if temp_value == "undef" else temp_value
             has_variable = not isinstance(value, str) or value.startswith("$")
             attribute = Attribute(name, value, has_variable)
             attribute.line, attribute.column = codeelement.line, codeelement.col
@@ -569,7 +577,7 @@ class PuppetParser(p.Parser):
                     PuppetParser.__process_codeelement(parsed_script, path, code),
                     unit_block,
                 )
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
         return unit_block

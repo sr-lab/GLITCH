@@ -6,7 +6,7 @@ from glitch.tech import Tech
 
 
 class TestSecurity(unittest.TestCase):
-    def __help_test(self, path, type, n_errors, codes, lines):
+    def __help_test(self, path, type, n_errors: int, codes, lines) -> None:
         parser = AnsibleParser()
         inter = parser.parse(path, type, False)
         analysis = SecurityVisitor(Tech.ansible)
@@ -20,17 +20,17 @@ class TestSecurity(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
 
-    def test_ansible_http(self):
+    def test_ansible_http(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/http.yml", "tasks", 1, ["sec_https"], [4]
         )
 
-    def test_ansible_susp_comment(self):
+    def test_ansible_susp_comment(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/susp.yml", "vars", 1, ["sec_susp_comm"], [9]
         )
 
-    def test_ansible_def_admin(self):
+    def test_ansible_def_admin(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/admin.yml",
             "tasks",
@@ -39,7 +39,7 @@ class TestSecurity(unittest.TestCase):
             [3, 3, 3],
         )
 
-    def test_ansible_empt_pass(self):
+    def test_ansible_empt_pass(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/empty.yml",
             "tasks",
@@ -48,7 +48,7 @@ class TestSecurity(unittest.TestCase):
             [8],
         )
 
-    def test_ansible_weak_crypt(self):
+    def test_ansible_weak_crypt(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/weak_crypt.yml",
             "tasks",
@@ -57,7 +57,7 @@ class TestSecurity(unittest.TestCase):
             [4, 7],
         )
 
-    def test_ansible_hard_secr(self):
+    def test_ansible_hard_secr(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/hard_secr.yml",
             "tasks",
@@ -66,7 +66,7 @@ class TestSecurity(unittest.TestCase):
             [7, 7, 8, 8],
         )
 
-    def test_ansible_invalid_bind(self):
+    def test_ansible_invalid_bind(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/inv_bind.yml",
             "tasks",
@@ -75,7 +75,7 @@ class TestSecurity(unittest.TestCase):
             [7],
         )
 
-    def test_ansible_int_check(self):
+    def test_ansible_int_check(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/int_check.yml",
             "tasks",
@@ -84,7 +84,7 @@ class TestSecurity(unittest.TestCase):
             [5],
         )
 
-    def test_ansible_full_perm(self):
+    def test_ansible_full_perm(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/full_permission.yml",
             "tasks",
@@ -93,7 +93,7 @@ class TestSecurity(unittest.TestCase):
             [7],
         )
 
-    def test_ansible_obs_command(self):
+    def test_ansible_obs_command(self) -> None:
         self.__help_test(
             "tests/security/ansible/files/obs_command.yml",
             "tasks",

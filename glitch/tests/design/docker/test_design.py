@@ -6,7 +6,7 @@ from glitch.tech import Tech
 
 
 class TestDesign(unittest.TestCase):
-    def __help_test(self, path, n_errors, codes, lines):
+    def __help_test(self, path, n_errors: int, codes, lines) -> None:
         parser = DockerParser()
         inter = parser.parse(path, "script", False)
         analysis = DesignVisitor(Tech.docker)
@@ -24,7 +24,7 @@ class TestDesign(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
 
-    def test_docker_long_statement(self):
+    def test_docker_long_statement(self) -> None:
         self.__help_test(
             "tests/design/docker/files/long_statement.Dockerfile",
             1,
@@ -32,7 +32,7 @@ class TestDesign(unittest.TestCase):
             [4],
         )
 
-    def test_docker_improper_alignment(self):
+    def test_docker_improper_alignment(self) -> None:
         # TODO: Fix smell, due to docker parsing method the attributes are not
         # detected in differents lines, making it impossible to trigger alignment
         pass
@@ -44,7 +44,7 @@ class TestDesign(unittest.TestCase):
         #     ], [1]
         # )
 
-    def test_docker_duplicate_block(self):
+    def test_docker_duplicate_block(self) -> None:
         self.__help_test(
             "tests/design/docker/files/duplicate_block.Dockerfile",
             2,
@@ -55,7 +55,7 @@ class TestDesign(unittest.TestCase):
             [1, 9],
         )
 
-    def test_docker_avoid_comments(self):
+    def test_docker_avoid_comments(self) -> None:
         self.__help_test(
             "tests/design/docker/files/avoid_comments.Dockerfile",
             1,
@@ -65,7 +65,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_docker_too_many_variables(self):
+    def test_docker_too_many_variables(self) -> None:
         self.__help_test(
             "tests/design/docker/files/too_many_variables.Dockerfile",
             1,

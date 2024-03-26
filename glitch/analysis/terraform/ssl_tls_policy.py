@@ -2,14 +2,18 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute
+from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
 
 
 class TerraformSslTlsPolicy(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
-        for policy in SecurityVisitor._SSL_TLS_POLICY:
+        for policy in SecurityVisitor.SSL_TLS_POLICY:
             if (
                 attribute.name == policy["attribute"]
                 and atomic_unit.type in policy["au_type"]
@@ -22,8 +26,8 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
 
         return []
 
-    def check(self, element, file: str):
-        errors = []
+    def check(self, element: CodeElement, file: str) -> List[Error]:
+        errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             if element.type in [
                 "resource.aws_alb_listener",
@@ -32,7 +36,11 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                 protocol = self.check_required_attribute(
                     element.attributes, [""], "protocol"
                 )
-                if protocol and protocol.value.lower() in ["https", "tls"]:
+                if (
+                    isinstance(protocol, KeyValue)
+                    and isinstance(protocol.value, str)
+                    and protocol.value.lower() in ["https", "tls"]
+                ):
                     ssl_policy = self.check_required_attribute(
                         element.attributes, [""], "ssl_policy"
                     )
@@ -47,7 +55,7 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                             )
                         )
 
-            for policy in SecurityVisitor._SSL_TLS_POLICY:
+            for policy in SecurityVisitor.SSL_TLS_POLICY:
                 if (
                     policy["required"] == "yes"
                     and element.type in policy["au_type"]

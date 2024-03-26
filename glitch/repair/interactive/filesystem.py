@@ -3,12 +3,6 @@ from dataclasses import dataclass
 
 
 class State:
-    def is_dir(self) -> bool:
-        return isinstance(self, Dir)
-
-    def is_file(self) -> bool:
-        return isinstance(self, File)
-
     def __str__(self) -> str:
         return self.__class__.__name__.lower()
 
@@ -32,7 +26,7 @@ class Nil(State):
 
 
 class FileSystemState:
-    def __init__(self):
+    def __init__(self) -> None:
         self.state: Dict[str, State] = {}
 
     def copy(self):

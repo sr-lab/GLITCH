@@ -1,10 +1,13 @@
+from typing import Dict, Optional, Union, List, Any
+from abc import ABC, abstractmethod
 from glitch.tech import Tech
 from glitch.repr.inter import *
-from abc import ABC, abstractmethod
+
+ErrorDict = Dict[str, Union[Union[Tech, str], "ErrorDict"]]
 
 
 class Error:
-    ERRORS = {
+    ERRORS: ErrorDict = {
         "security": {
             "sec_https": "Use of HTTP without TLS - The developers should always favor the usage of HTTPS. (CWE-319)",
             "sec_susp_comm": "Suspicious comment - Comments with keywords such as TODO HACK or FIXME may reveal problems possibly exploitable. (CWE-546)",
@@ -59,11 +62,11 @@ class Error:
         },
     }
 
-    ALL_ERRORS = {}
+    ALL_ERRORS: Dict[str, str] = {}
 
     @staticmethod
-    def agglomerate_errors():
-        def aux_agglomerate_errors(key, errors):
+    def agglomerate_errors() -> None:
+        def aux_agglomerate_errors(key: str, errors: Union[str, ErrorDict]) -> None:
             if isinstance(errors, dict):
                 for k, v in errors.items():
                     aux_agglomerate_errors(k, v)
@@ -73,7 +76,7 @@ class Error:
         aux_agglomerate_errors("", Error.ERRORS)
 
     def __init__(
-        self, code: str, el, path: str, repr: str, opt_msg: str = None
+        self, code: str, el: Any, path: str, repr: str, opt_msg: Optional[str] = None
     ) -> None:
         self.code: str = code
         self.el = el
@@ -110,7 +113,7 @@ class Error:
     def __hash__(self):
         return hash((self.code, self.path, self.line, self.opt_msg))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         if not isinstance(other, type(self)):
             return NotImplemented
         return (
@@ -129,24 +132,22 @@ class RuleVisitor(ABC):
         self.tech = tech
         self.code = None
 
-    def check(self, code) -> list[Error]:
+    def check(self, code: Project | Module | UnitBlock) -> List[Error]:
         self.code = code
         if isinstance(code, Project):
             return self.check_project(code)
         elif isinstance(code, Module):
             return self.check_module(code)
-        elif isinstance(code, UnitBlock):
+        else:
             return self.check_unitblock(code)
 
-    def check_element(
-        self, c, file: str, au_type=None, parent_name: str = ""
-    ) -> list[Error]:
+    def check_element(self, c: CodeElement, file: str) -> list[Error]:
         if isinstance(c, AtomicUnit):
             return self.check_atomicunit(c, file)
         elif isinstance(c, Dependency):
             return self.check_dependency(c, file)
         elif isinstance(c, Attribute):
-            return self.check_attribute(c, file, au_type, parent_name)
+            return self.check_attribute(c, file)
         elif isinstance(c, Variable):
             return self.check_variable(c, file)
         elif isinstance(c, ConditionalStatement):
@@ -154,13 +155,14 @@ class RuleVisitor(ABC):
         elif isinstance(c, Comment):
             return self.check_comment(c, file)
         elif isinstance(c, dict):
-            errors = []
-            for k, v in c.items():
-                errors += self.check_element(k, file) + self.check_element(v, file)
+            errors: List[Error] = []
+            for k, v in c.items():  # type: ignore
+                errors += self.check_element(k, file) + self.check_element(v, file)  # type: ignore
             return errors
         else:
             return []
 
+    @staticmethod
     @abstractmethod
     def get_name() -> str:
         pass
@@ -170,7 +172,7 @@ class RuleVisitor(ABC):
         pass
 
     def check_project(self, p: Project) -> list[Error]:
-        errors = []
+        errors: List[Error] = []
         for m in p.modules:
             errors += self.check_module(m)
 
@@ -180,14 +182,14 @@ class RuleVisitor(ABC):
         return errors
 
     def check_module(self, m: Module) -> list[Error]:
-        errors = []
+        errors: List[Error] = []
         for u in m.blocks:
             errors += self.check_unitblock(u)
 
         return errors
 
     def check_unitblock(self, u: UnitBlock) -> list[Error]:
-        errors = []
+        errors: List[Error] = []
         for au in u.atomic_units:
             errors += self.check_atomicunit(au, u.path)
         for c in u.comments:
@@ -204,9 +206,9 @@ class RuleVisitor(ABC):
         return errors
 
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
-        errors = []
+        errors: List[Error] = []
         for a in au.attributes:
-            errors += self.check_attribute(a, file, au.type)
+            errors += self.check_attribute(a, file)
 
         for s in au.statements:
             errors += self.check_element(s, file)
@@ -218,9 +220,7 @@ class RuleVisitor(ABC):
         pass
 
     @abstractmethod
-    def check_attribute(
-        self, a: Attribute, file: str, au_type: None, parent_name: str = ""
-    ) -> list[Error]:
+    def check_attribute(self, a: Attribute, file: str) -> list[Error]:
         pass
 
     @abstractmethod
@@ -228,7 +228,7 @@ class RuleVisitor(ABC):
         pass
 
     def check_condition(self, c: ConditionalStatement, file: str) -> list[Error]:
-        errors = []
+        errors: List[Error] = []
 
         for s in c.statements:
             errors += self.check_element(s, file)
@@ -245,8 +245,8 @@ Error.agglomerate_errors()
 
 class SmellChecker(ABC):
     def __init__(self) -> None:
-        self.code = None
+        self.code: Optional[Project | UnitBlock | Module] = None
 
     @abstractmethod
-    def check(self, element, file: str) -> list[Error]:
+    def check(self, element: CodeElement, file: str) -> list[Error]:
         pass

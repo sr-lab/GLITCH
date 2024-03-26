@@ -5,7 +5,7 @@ from glitch.tech import Tech
 
 
 class LabeledUnitBlock:
-    def __init__(self, script: UnitBlock, tech: Tech):
+    def __init__(self, script: UnitBlock, tech: Tech) -> None:
         """Initializes a new instance of a labeled unit block.
 
         Args:
@@ -48,7 +48,7 @@ class LabeledUnitBlock:
 
     def add_sketch_location(
         self, sketch_location: CodeElement, codeelement: CodeElement
-    ):
+    ) -> None:
         """Defines where a sketched code element is defined in the script.
 
         Args:
@@ -79,7 +79,7 @@ class LabeledUnitBlock:
         """
         return self.__label_to_codeelement[label]
 
-    def remove_label(self, codeelement: CodeElement):
+    def remove_label(self, codeelement: CodeElement) -> None:
         """Removes the label of the code element.
 
         Args:
@@ -114,7 +114,7 @@ class GLITCHLabeler:
     @staticmethod
     def label_attribute(
         labeled: LabeledUnitBlock, atomic_unit: AtomicUnit, attribute: Attribute
-    ):
+    ) -> None:
         """Labels an attribute.
 
         Args:
@@ -124,10 +124,10 @@ class GLITCHLabeler:
         """
         type = NamesDatabase.get_au_type(atomic_unit.type, labeled.tech)
         name = NamesDatabase.get_attr_name(attribute.name, type, labeled.tech)
-        labeled.add_label(name, attribute)
+        labeled.add_label(name, attribute)  # type: ignore
 
     @staticmethod
-    def label_atomic_unit(labeled: LabeledUnitBlock, atomic_unit: AtomicUnit):
+    def label_atomic_unit(labeled: LabeledUnitBlock, atomic_unit: AtomicUnit) -> None:
         """Labels an atomic unit.
 
         Args:
@@ -138,7 +138,7 @@ class GLITCHLabeler:
             GLITCHLabeler.label_attribute(labeled, atomic_unit, attribute)
 
     @staticmethod
-    def label_variable(labeled: LabeledUnitBlock, variable: Variable):
+    def label_variable(labeled: LabeledUnitBlock, variable: Variable) -> None:
         """Labels a variable.
 
         Args:
@@ -148,7 +148,9 @@ class GLITCHLabeler:
         labeled.add_label(variable.name, variable)
 
     @staticmethod
-    def label_conditional(labeled: LabeledUnitBlock, conditional: ConditionalStatement):
+    def label_conditional(
+        labeled: LabeledUnitBlock, conditional: ConditionalStatement
+    ) -> None:
         """Labels a conditional statement.
 
         Args:

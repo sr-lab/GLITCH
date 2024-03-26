@@ -1,19 +1,20 @@
 import json
+from typing import List, Dict
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.repr.inter import AtomicUnit
+from glitch.repr.inter import AtomicUnit, CodeElement, KeyValue
 
 
 class TerraformSensitiveIAMAction(TerraformSmellChecker):
-    def check(self, element, file: str):
-        errors = []
+    def check(self, element: CodeElement, file: str) -> List[Error]:
+        errors: List[Error] = []
 
-        def convert_string_to_dict(input_string):
+        def convert_string_to_dict(input_string: str):
             cleaned_string = input_string.strip()
             try:
                 dict_data = json.loads(cleaned_string)
                 return dict_data
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
                 return None
 
         if not isinstance(element, AtomicUnit):
@@ -25,14 +26,20 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
         statements = self.check_required_attribute(
             element.attributes, [""], "statement", return_all=True
         )
-        if statements is not None:
+        if isinstance(statements, list):
             for statement in statements:
                 allow = self.check_required_attribute(
                     statement.keyvalues, [""], "effect"
                 )
-                if (allow and allow.value.lower() == "allow") or (not allow):
+                if (
+                    isinstance(allow, KeyValue)
+                    and isinstance(allow.value, str)
+                    and allow.value.lower() == "allow"
+                ) or (not allow):
                     sensitive_action, action = self.iterate_required_attributes(
-                        statement.keyvalues, "actions", lambda x: "*" in x.value.lower()
+                        statement.keyvalues,
+                        "actions",
+                        lambda x: isinstance(x.value, str) and "*" in x.value.lower(),
                     )
                     if sensitive_action:
                         errors.append(
@@ -44,8 +51,8 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
                     wildcarded_resource, resource = self.iterate_required_attributes(
                         statement.keyvalues,
                         "resources",
-                        lambda x: (x.value.lower() in ["*"])
-                        or (":*" in x.value.lower()),
+                        lambda x: isinstance(x.value, str)
+                        and ((x.value.lower() in ["*"]) or (":*" in x.value.lower())),
                     )
                     if wildcarded_resource:
                         errors.append(
@@ -63,18 +70,18 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
             "resource.aws_iam_group_policy",
         ]:
             policy = self.check_required_attribute(element.attributes, [""], "policy")
-            if policy is None:
+            if not isinstance(policy, KeyValue) or not isinstance(policy.value, str):
                 return errors
 
             policy_dict = convert_string_to_dict(policy.value.lower())
             if not (policy_dict and policy_dict["statement"]):
                 return errors
 
-            statements = policy_dict["statement"]
+            policy_statements = policy_dict["statement"]
             if isinstance(statements, dict):
-                statements = [statements]
+                policy_statements: List[Dict[str, str | List[str]]] = [statements]
 
-            for statement in statements:
+            for statement in policy_statements:
                 if not (
                     statement["effect"]
                     and statement["action"]

@@ -6,7 +6,7 @@ from glitch.tech import Tech
 
 
 class TestSecurity(unittest.TestCase):
-    def __help_test(self, path, n_errors, codes, lines):
+    def __help_test(self, path, n_errors: int, codes, lines) -> None:
         parser = TerraformParser()
         inter = parser.parse(path, "script", False)
         analysis = SecurityVisitor(Tech.terraform)
@@ -21,17 +21,17 @@ class TestSecurity(unittest.TestCase):
             self.assertEqual(errors[i].line, lines[i])
 
     # testing previous implemented code smells
-    def test_terraform_http(self):
+    def test_terraform_http(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/http.tf", 1, ["sec_https"], [2]
         )
 
-    def test_terraform_susp_comment(self):
+    def test_terraform_susp_comment(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/susp.tf", 1, ["sec_susp_comm"], [8]
         )
 
-    def test_terraform_def_admin(self):
+    def test_terraform_def_admin(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/admin.tf",
             3,
@@ -39,17 +39,17 @@ class TestSecurity(unittest.TestCase):
             [2, 2, 2],
         )
 
-    def test_terraform_empt_pass(self):
+    def test_terraform_empt_pass(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/empty.tf", 1, ["sec_empty_pass"], [5]
         )
 
-    def test_terraform_weak_crypt(self):
+    def test_terraform_weak_crypt(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/weak_crypt.tf", 1, ["sec_weak_crypt"], [4]
         )
 
-    def test_terraform_hard_secr(self):
+    def test_terraform_hard_secr(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/hard_secr.tf",
             2,
@@ -57,14 +57,14 @@ class TestSecurity(unittest.TestCase):
             [5, 5],
         )
 
-    def test_terraform_invalid_bind(self):
+    def test_terraform_invalid_bind(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/inv_bind.tf", 1, ["sec_invalid_bind"], [19]
         )
 
     # testing new implemented code smells, or previous ones with new rules for Terraform
 
-    def test_terraform_insecure_access_control(self):
+    def test_terraform_insecure_access_control(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/access-to-bigquery-dataset.tf",
             1,
@@ -246,7 +246,7 @@ class TestSecurity(unittest.TestCase):
             [37, 44],
         )
 
-    def test_terraform_invalid_ip_binding(self):
+    def test_terraform_invalid_ip_binding(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/invalid-ip-binding/aws-ec2-vpc-no-public-egress-sgr.tf",
             2,
@@ -332,7 +332,7 @@ class TestSecurity(unittest.TestCase):
             [27],
         )
 
-    def test_terraform_disabled_authentication(self):
+    def test_terraform_disabled_authentication(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/disabled-authentication/azure-app-service-authentication-activated.tf",
             2,
@@ -364,7 +364,7 @@ class TestSecurity(unittest.TestCase):
             [7, 53],
         )
 
-    def test_terraform_missing_encryption(self):
+    def test_terraform_missing_encryption(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/missing-encryption/athena-enable-at-rest-encryption.tf",
             2,
@@ -556,7 +556,7 @@ class TestSecurity(unittest.TestCase):
             [1, 1, 4, 8, 13, 14],
         )
 
-    def test_terraform_hard_coded_secrets(self):
+    def test_terraform_hard_coded_secrets(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/hard-coded-secrets/encryption-key-in-plaintext.tf",
             1,
@@ -606,7 +606,7 @@ class TestSecurity(unittest.TestCase):
             [9],
         )
 
-    def test_terraform_public_ip(self):
+    def test_terraform_public_ip(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/public-ip/google-compute-intance-with-public-ip.tf",
             1,
@@ -632,7 +632,7 @@ class TestSecurity(unittest.TestCase):
             [3],
         )
 
-    def test_terraform_use_of_http_without_tls(self):
+    def test_terraform_use_of_http_without_tls(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/use-of-http-without-tls/azure-appservice-enforce-https.tf",
             2,
@@ -676,7 +676,7 @@ class TestSecurity(unittest.TestCase):
             [8],
         )
 
-    def test_terraform_ssl_tls_mtls_policy(self):
+    def test_terraform_ssl_tls_mtls_policy(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/ssl-tls-mtls-policy/api-gateway-secure-tls-policy.tf",
             2,
@@ -744,7 +744,7 @@ class TestSecurity(unittest.TestCase):
             [1, 45],
         )
 
-    def test_terraform_use_of_dns_without_dnssec(self):
+    def test_terraform_use_of_dns_without_dnssec(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/use-of-dns-without-dnssec/cloud-dns-without-dnssec.tf",
             2,
@@ -752,7 +752,7 @@ class TestSecurity(unittest.TestCase):
             [1, 6],
         )
 
-    def test_terraform_firewall_misconfiguration(self):
+    def test_terraform_firewall_misconfiguration(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/firewall-misconfiguration/alb-drop-invalid-headers.tf",
             2,
@@ -816,7 +816,7 @@ class TestSecurity(unittest.TestCase):
             [1, 1, 10],
         )
 
-    def test_terraform_missing_threats_detection_and_alerts(self):
+    def test_terraform_missing_threats_detection_and_alerts(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/missing-threats-detection-and-alerts/azure-database-disabled-alerts.tf",
             1,
@@ -860,7 +860,7 @@ class TestSecurity(unittest.TestCase):
             [1, 19],
         )
 
-    def test_terraform_weak_password_key_policy(self):
+    def test_terraform_weak_password_key_policy(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/weak-password-key-policy/aws-iam-no-password-reuse.tf",
             2,
@@ -922,7 +922,7 @@ class TestSecurity(unittest.TestCase):
             [1, 5],
         )
 
-    def test_terraform_integrity_policy(self):
+    def test_terraform_integrity_policy(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/integrity-policy/aws-ecr-immutable-repo.tf",
             2,
@@ -942,7 +942,7 @@ class TestSecurity(unittest.TestCase):
             [3],
         )
 
-    def test_terraform_sensitive_action_by_iam(self):
+    def test_terraform_sensitive_action_by_iam(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/sensitive-action-by-iam/aws-iam-no-policy-wildcards.tf",
             3,
@@ -954,7 +954,7 @@ class TestSecurity(unittest.TestCase):
             [7, 8, 20],
         )
 
-    def test_terraform_key_management(self):
+    def test_terraform_key_management(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/key-management/aws-cloudtrail-encryption-use-cmk.tf",
             2,
@@ -1100,7 +1100,7 @@ class TestSecurity(unittest.TestCase):
             [1, 8],
         )
 
-    def test_terraform_network_security_rules(self):
+    def test_terraform_network_security_rules(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/network-security-rules/aws-vpc-ec2-use-tcp.tf",
             1,
@@ -1166,7 +1166,7 @@ class TestSecurity(unittest.TestCase):
             [1, 5],
         )
 
-    def test_terraform_permission_of_iam_policies(self):
+    def test_terraform_permission_of_iam_policies(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/permission-of-iam-policies/default-service-account-not-used-at-folder-level.tf",
             2,
@@ -1216,7 +1216,7 @@ class TestSecurity(unittest.TestCase):
             [7],
         )
 
-    def test_terraform_logging(self):
+    def test_terraform_logging(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/logging/aws-api-gateway-enable-access-logging.tf",
             4,
@@ -1430,7 +1430,7 @@ class TestSecurity(unittest.TestCase):
             [11],
         )
 
-    def test_terraform_attached_resource(self):
+    def test_terraform_attached_resource(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/attached-resource/aws_route53_attached_resource.tf",
             2,
@@ -1438,7 +1438,7 @@ class TestSecurity(unittest.TestCase):
             [12, 16],
         )
 
-    def test_terraform_versioning(self):
+    def test_terraform_versioning(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/versioning/aws-s3-enable-versioning.tf",
             2,
@@ -1452,7 +1452,7 @@ class TestSecurity(unittest.TestCase):
             [1, 7],
         )
 
-    def test_terraform_naming(self):
+    def test_terraform_naming(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/naming/aws-ec2-description-to-security-group-rule.tf",
             2,
@@ -1490,7 +1490,7 @@ class TestSecurity(unittest.TestCase):
             [1, 19],
         )
 
-    def test_terraform_replication(self):
+    def test_terraform_replication(self) -> None:
         self.__help_test(
             "tests/security/terraform/files/replication/s3-bucket-cross-region-replication.tf",
             2,

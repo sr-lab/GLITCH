@@ -3,14 +3,18 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 
 class TerraformNetworkSecurityRules(TerraformSmellChecker):
     def _check_attribute(
-        self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
-        for rule in SecurityVisitor._NETWORK_SECURITY_RULES:
+        for rule in SecurityVisitor.NETWORK_SECURITY_RULES:
             if (
                 attribute.name == rule["attribute"]
                 and atomic_unit.type in rule["au_type"]
@@ -28,47 +32,71 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
 
         return []
 
-    def check(self, element, file: str):
-        errors = []
+    def check(self, element: CodeElement, file: str) -> List[Error]:
+        errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             if element.type == "resource.azurerm_network_security_rule":
                 access = self.check_required_attribute(
                     element.attributes, [""], "access"
                 )
-                if access and access.value.lower() == "allow":
+                if (
+                    isinstance(access, KeyValue)
+                    and isinstance(access.value, str)
+                    and access.value.lower() == "allow"
+                ):
                     protocol = self.check_required_attribute(
                         element.attributes, [""], "protocol"
                     )
-                    if protocol and protocol.value.lower() == "udp":
+                    if (
+                        isinstance(protocol, KeyValue)
+                        and isinstance(protocol.value, str)
+                        and protocol.value.lower() == "udp"
+                    ):
                         errors.append(
                             Error(
                                 "sec_network_security_rules", access, file, repr(access)
                             )
                         )
-                    elif protocol and protocol.value.lower() == "tcp":
+                    elif (
+                        isinstance(protocol, KeyValue)
+                        and isinstance(protocol.value, str)
+                        and protocol.value.lower() == "tcp"
+                    ):
                         dest_port_range = self.check_required_attribute(
                             element.attributes, [""], "destination_port_range"
                         )
-                        port = dest_port_range and dest_port_range.value.lower() in [
-                            "22",
-                            "3389",
-                            "*",
-                        ]
+                        port = (
+                            isinstance(dest_port_range, KeyValue)
+                            and isinstance(dest_port_range.value, str)
+                            and dest_port_range.value.lower()
+                            in [
+                                "22",
+                                "3389",
+                                "*",
+                            ]
+                        )
                         port_ranges, _ = self.iterate_required_attributes(
                             element.attributes,
                             "destination_port_ranges",
-                            lambda x: (x.value.lower() in ["22", "3389", "*"]),
+                            lambda x: (
+                                isinstance(x.value, str)
+                                and x.value.lower() in ["22", "3389", "*"]
+                            ),
                         )
 
                         if port or port_ranges:
                             source_address_prefix = self.check_required_attribute(
                                 element.attributes, [""], "source_address_prefix"
                             )
-                            if source_address_prefix and (
-                                source_address_prefix.value.lower()
-                                in ["*", "/0", "internet", "any"]
-                                or re.match(
-                                    r"^0.0.0.0", source_address_prefix.value.lower()
+                            if (
+                                isinstance(source_address_prefix, KeyValue)
+                                and isinstance(source_address_prefix.value, str)
+                                and (
+                                    source_address_prefix.value.lower()
+                                    in ["*", "/0", "internet", "any"]
+                                    or re.match(
+                                        r"^0.0.0.0", source_address_prefix.value.lower()
+                                    )
                                 )
                             ):
                                 errors.append(
@@ -83,35 +111,56 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                 access = self.check_required_attribute(
                     element.attributes, ["security_rule"], "access"
                 )
-                if access and access.value.lower() == "allow":
+                if (
+                    isinstance(access, KeyValue)
+                    and isinstance(access.value, str)
+                    and access.value.lower() == "allow"
+                ):
                     protocol = self.check_required_attribute(
                         element.attributes, ["security_rule"], "protocol"
                     )
-                    if protocol and protocol.value.lower() == "udp":
+                    if (
+                        isinstance(protocol, KeyValue)
+                        and isinstance(protocol.value, str)
+                        and protocol.value.lower() == "udp"
+                    ):
                         errors.append(
                             Error(
                                 "sec_network_security_rules", access, file, repr(access)
                             )
                         )
-                    elif protocol and protocol.value.lower() == "tcp":
+                    elif (
+                        isinstance(protocol, KeyValue)
+                        and isinstance(protocol.value, str)
+                        and protocol.value.lower() == "tcp"
+                    ):
                         dest_port_range = self.check_required_attribute(
                             element.attributes,
                             ["security_rule"],
                             "destination_port_range",
                         )
-                        if dest_port_range and dest_port_range.value.lower() in [
-                            "22",
-                            "3389",
-                            "*",
-                        ]:
+                        if (
+                            isinstance(dest_port_range, KeyValue)
+                            and isinstance(dest_port_range.value, str)
+                            and dest_port_range.value.lower()
+                            in [
+                                "22",
+                                "3389",
+                                "*",
+                            ]
+                        ):
                             source_address_prefix = self.check_required_attribute(
                                 element.attributes, [""], "source_address_prefix"
                             )
-                            if source_address_prefix and (
-                                source_address_prefix.value.lower()
-                                in ["*", "/0", "internet", "any"]
-                                or re.match(
-                                    r"^0.0.0.0", source_address_prefix.value.lower()
+                            if (
+                                isinstance(source_address_prefix, KeyValue)
+                                and isinstance(source_address_prefix.value, str)
+                                and (
+                                    source_address_prefix.value.lower()
+                                    in ["*", "/0", "internet", "any"]
+                                    or re.match(
+                                        r"^0.0.0.0", source_address_prefix.value.lower()
+                                    )
                                 )
                             ):
                                 errors.append(
@@ -123,7 +172,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                                     )
                                 )
 
-            for rule in SecurityVisitor._NETWORK_SECURITY_RULES:
+            for rule in SecurityVisitor.NETWORK_SECURITY_RULES:
                 if (
                     rule["required"] == "yes"
                     and element.type in rule["au_type"]

@@ -8,7 +8,7 @@ from glitch.tech import Tech
 
 
 class TestSecurity(unittest.TestCase):
-    def __help_test(self, path, n_errors, codes, lines):
+    def __help_test(self, path, n_errors: int, codes, lines) -> None:
         parser = DockerParser()
         inter = parser.parse(path, UnitBlockType.script, False)
         analysis = SecurityVisitor(Tech.docker)
@@ -27,7 +27,7 @@ class TestSecurity(unittest.TestCase):
         if os.path.exists("Dockerfile"):
             os.remove("Dockerfile")
 
-    def test_docker_admin(self):
+    def test_docker_admin(self) -> None:
         self.__help_test(
             "tests/security/docker/files/admin.Dockerfile",
             2,
@@ -35,13 +35,13 @@ class TestSecurity(unittest.TestCase):
             [2, 4],
         )
 
-    def test_docker_empty(self):
+    def test_docker_empty(self) -> None:
         self.__help_test(
             "tests/security/docker/files/empty.Dockerfile", 1, ["sec_empty_pass"], [4]
         )
         pass
 
-    def test_docker_full_permission(self):
+    def test_docker_full_permission(self) -> None:
         self.__help_test(
             "tests/security/docker/files/full_permission.Dockerfile",
             1,
@@ -49,7 +49,7 @@ class TestSecurity(unittest.TestCase):
             [3],
         )
 
-    def test_docker_hard_secret(self):
+    def test_docker_hard_secret(self) -> None:
         self.__help_test(
             "tests/security/docker/files/hard_secr.Dockerfile",
             2,
@@ -57,12 +57,12 @@ class TestSecurity(unittest.TestCase):
             [3, 3],
         )
 
-    def test_docker_http(self):
+    def test_docker_http(self) -> None:
         self.__help_test(
             "tests/security/docker/files/http.Dockerfile", 1, ["sec_https"], [5]
         )
 
-    def test_docker_int_check(self):
+    def test_docker_int_check(self) -> None:
         self.__help_test(
             "tests/security/docker/files/int_check.Dockerfile",
             1,
@@ -70,7 +70,7 @@ class TestSecurity(unittest.TestCase):
             [4],
         )
 
-    def test_docker_inv_bind(self):
+    def test_docker_inv_bind(self) -> None:
         self.__help_test(
             "tests/security/docker/files/inv_bind.Dockerfile",
             1,
@@ -78,7 +78,7 @@ class TestSecurity(unittest.TestCase):
             [4],
         )
 
-    def test_docker_non_official_image(self):
+    def test_docker_non_official_image(self) -> None:
         self.__help_test(
             "tests/security/docker/files/non_off_image.Dockerfile",
             1,
@@ -86,7 +86,7 @@ class TestSecurity(unittest.TestCase):
             [1],
         )
 
-    def test_docker_obs_command(self):
+    def test_docker_obs_command(self) -> None:
         self.__help_test(
             "tests/security/docker/files/obs_command.Dockerfile",
             1,
@@ -94,12 +94,12 @@ class TestSecurity(unittest.TestCase):
             [4],
         )
 
-    def test_docker_susp(self):
+    def test_docker_susp(self) -> None:
         self.__help_test(
             "tests/security/docker/files/susp.Dockerfile", 1, ["sec_susp_comm"], [3]
         )
 
-    def test_docker_weak_crypt(self):
+    def test_docker_weak_crypt(self) -> None:
         self.__help_test(
             "tests/security/docker/files/weak_crypt.Dockerfile",
             1,

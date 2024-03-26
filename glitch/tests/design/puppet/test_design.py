@@ -6,7 +6,7 @@ from glitch.tech import Tech
 
 
 class TestDesign(unittest.TestCase):
-    def __help_test(self, path, n_errors, codes, lines):
+    def __help_test(self, path, n_errors: int, codes, lines) -> None:
         parser = PuppetParser()
         inter = parser.parse(path, "script", False)
         analysis = DesignVisitor(Tech.puppet)
@@ -24,7 +24,7 @@ class TestDesign(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
 
-    def test_puppet_long_statement(self):
+    def test_puppet_long_statement(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/long_statement.pp",
             1,
@@ -32,7 +32,7 @@ class TestDesign(unittest.TestCase):
             [6],
         )
 
-    def test_puppet_improper_alignment(self):
+    def test_puppet_improper_alignment(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/improper_alignment.pp",
             1,
@@ -40,7 +40,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_puppet_duplicate_block(self):
+    def test_puppet_duplicate_block(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/duplicate_block.pp",
             2,
@@ -51,7 +51,7 @@ class TestDesign(unittest.TestCase):
             [1, 10],
         )
 
-    def test_puppet_avoid_comments(self):
+    def test_puppet_avoid_comments(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/avoid_comments.pp",
             1,
@@ -61,7 +61,7 @@ class TestDesign(unittest.TestCase):
             [5],
         )
 
-    def test_puppet_long_resource(self):
+    def test_puppet_long_resource(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/long_resource.pp",
             1,
@@ -71,7 +71,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_puppet_multifaceted_abstraction(self):
+    def test_puppet_multifaceted_abstraction(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/multifaceted_abstraction.pp",
             2,
@@ -79,7 +79,7 @@ class TestDesign(unittest.TestCase):
             [1, 2],
         )
 
-    def test_puppet_unguarded_variable(self):
+    def test_puppet_unguarded_variable(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/unguarded_variable.pp",
             1,
@@ -89,7 +89,7 @@ class TestDesign(unittest.TestCase):
             [12],
         )
 
-    def test_puppet_misplaced_attribute(self):
+    def test_puppet_misplaced_attribute(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/misplaced_attribute.pp",
             1,
@@ -99,7 +99,7 @@ class TestDesign(unittest.TestCase):
             [1],
         )
 
-    def test_puppet_too_many_variables(self):
+    def test_puppet_too_many_variables(self) -> None:
         self.__help_test(
             "tests/design/puppet/files/too_many_variables.pp",
             1,

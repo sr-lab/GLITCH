@@ -6,7 +6,7 @@ from glitch.tech import Tech
 
 
 class TestDesign(unittest.TestCase):
-    def __help_test(self, path, type, n_errors, codes, lines):
+    def __help_test(self, path, type, n_errors: int, codes, lines) -> None:
         parser = AnsibleParser()
         inter = parser.parse(path, type, False)
         analysis = DesignVisitor(Tech.ansible)
@@ -24,7 +24,7 @@ class TestDesign(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
 
-    def test_ansible_long_statement(self):
+    def test_ansible_long_statement(self) -> None:
         self.__help_test(
             "tests/design/ansible/files/long_statement.yml",
             "tasks",
@@ -34,7 +34,7 @@ class TestDesign(unittest.TestCase):
         )
 
     # Tabs
-    def test_ansible_improper_alignment(self):
+    def test_ansible_improper_alignment(self) -> None:
         self.__help_test(
             "tests/design/ansible/files/improper_alignment.yml",
             "tasks",
@@ -48,7 +48,7 @@ class TestDesign(unittest.TestCase):
             [2, 4, 5, 6],
         )
 
-    def test_ansible_duplicate_block(self):
+    def test_ansible_duplicate_block(self) -> None:
         self.__help_test(
             "tests/design/ansible/files/duplicate_block.yml",
             "tasks",
@@ -62,7 +62,7 @@ class TestDesign(unittest.TestCase):
             [2, 10, 25, 33],
         )
 
-    def test_ansible_avoid_comments(self):
+    def test_ansible_avoid_comments(self) -> None:
         self.__help_test(
             "tests/design/ansible/files/avoid_comments.yml",
             "tasks",
@@ -73,7 +73,7 @@ class TestDesign(unittest.TestCase):
             [11],
         )
 
-    def test_ansible_long_resource(self):
+    def test_ansible_long_resource(self) -> None:
         self.__help_test(
             "tests/design/ansible/files/long_resource.yml",
             "tasks",
@@ -85,7 +85,7 @@ class TestDesign(unittest.TestCase):
             [2, 2],
         )
 
-    def test_ansible_multifaceted_abstraction(self):
+    def test_ansible_multifaceted_abstraction(self) -> None:
         self.__help_test(
             "tests/design/ansible/files/multifaceted_abstraction.yml",
             "tasks",
@@ -96,7 +96,7 @@ class TestDesign(unittest.TestCase):
             [2, 2],
         )
 
-    def test_ansible_too_many_variables(self):
+    def test_ansible_too_many_variables(self) -> None:
         self.__help_test(
             "tests/design/ansible/files/too_many_variables.yml",
             "script",

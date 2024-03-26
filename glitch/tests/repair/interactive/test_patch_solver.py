@@ -79,7 +79,7 @@ def setup_patch_solver(
     parser: Parser,
     script_type: UnitBlockType,
     tech: Tech,
-):
+) -> None:
     global labeled_script, statement
     DeltaPCompiler._condition = 0
     with NamedTemporaryFile() as f:
@@ -96,7 +96,7 @@ def patch_solver_apply(
     filesystem: FileSystemState,
     tech: Tech,
     n_filesystems: int = 1,
-):
+) -> None:
     solver.apply_patch(model, labeled_script)
     statement = DeltaPCompiler.compile(labeled_script, tech)
     filesystems = statement.to_filesystems()
@@ -107,7 +107,7 @@ def patch_solver_apply(
 # TODO: Refactor tests
 
 
-def test_patch_solver_if():
+def test_patch_solver_if() -> None:
     setup_patch_solver(
         puppet_script_4, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
@@ -133,7 +133,7 @@ def test_patch_solver_if():
     patch_solver_apply(solver, models[0], filesystem, Tech.puppet, n_filesystems=2)
 
 
-def test_patch_solver_mode():
+def test_patch_solver_mode() -> None:
     setup_patch_solver(
         puppet_script_1, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
@@ -163,7 +163,7 @@ def test_patch_solver_mode():
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
 
-def test_patch_solver_owner():
+def test_patch_solver_owner() -> None:
     setup_patch_solver(
         puppet_script_2, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
@@ -186,7 +186,7 @@ def test_patch_solver_owner():
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
 
-def test_patch_solver_two_files():
+def test_patch_solver_two_files() -> None:
     setup_patch_solver(
         puppet_script_3, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
@@ -202,7 +202,7 @@ def test_patch_solver_two_files():
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
 
-def test_patch_solver_delete_file():
+def test_patch_solver_delete_file() -> None:
     setup_patch_solver(
         puppet_script_1, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
@@ -225,7 +225,7 @@ def test_patch_solver_delete_file():
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
 
-def test_patch_solver_remove_content():
+def test_patch_solver_remove_content() -> None:
     setup_patch_solver(
         puppet_script_1, PuppetParser(), UnitBlockType.script, Tech.puppet
     )
@@ -250,7 +250,7 @@ def test_patch_solver_remove_content():
     patch_solver_apply(solver, model, filesystem, Tech.puppet)
 
 
-def test_patch_solver_mode_ansible():
+def test_patch_solver_mode_ansible() -> None:
     setup_patch_solver(
         ansible_script_1, AnsibleParser(), UnitBlockType.tasks, Tech.ansible
     )
@@ -277,7 +277,7 @@ def test_patch_solver_mode_ansible():
     patch_solver_apply(solver, model, filesystem, Tech.ansible)
 
 
-def test_patch_solver_new_attribute_difficult_name():
+def test_patch_solver_new_attribute_difficult_name() -> None:
     """
     This test requires the solver to create a new attribute "state".
     However, the attribute "state" should be called "ensure" in Puppet,

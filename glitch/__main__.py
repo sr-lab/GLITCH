@@ -1,4 +1,7 @@
 import click, os, sys
+
+from pathlib import Path
+from typing import Tuple, List, Set, Optional
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import RulesListOption, get_smell_types, get_smells
 from glitch.parsers.docker import DockerParser
@@ -6,26 +9,35 @@ from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
 from glitch.tech import Tech
 from glitch.repr.inter import UnitBlockType
+from glitch.parsers.parser import Parser
 from glitch.parsers.ansible import AnsibleParser
 from glitch.parsers.chef import ChefParser
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from pkg_resources import resource_filename
-from alive_progress import alive_bar
-from pathlib import Path
+from alive_progress import alive_bar  # type: ignore
+
 
 # NOTE: These are necessary in order for python to load the visitors.
 # Otherwise, python will not consider these types of rules.
-from glitch.analysis.design import DesignVisitor
-from glitch.analysis.security import SecurityVisitor
+from glitch.analysis.design import DesignVisitor  # type: ignore
+from glitch.analysis.security import SecurityVisitor  # type: ignore
 
 
-def parse_and_check(type, path, module, parser, analyses, errors, stats):
+def parse_and_check(
+    type: UnitBlockType,
+    path: str,
+    module: bool,
+    parser: Parser,
+    analyses: List[RuleVisitor],
+    errors: List[Error],
+    stats: FileStats,
+) -> None:
     inter = parser.parse(path, type, module)
     if inter != None:
         for analysis in analyses:
             errors += analysis.check(inter)
-    stats.compute(inter)
+        stats.compute(inter)
 
 
 @click.command(
@@ -33,7 +45,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 )
 @click.option(
     "--tech",
-    type=click.Choice(Tech),
+    type=click.Choice([t.value for t in Tech]),
     required=True,
     help="The IaC technology in which the scripts analyzed are written in.",
 )
@@ -46,7 +58,7 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 )
 @click.option(
     "--type",
-    type=click.Choice(UnitBlockType),
+    type=click.Choice([t.value for t in UnitBlockType]),
     default=UnitBlockType.unknown,
     help="The type of scripts being analyzed.",
 )
@@ -97,19 +109,22 @@ def parse_and_check(type, path, module, parser, analyses, errors, stats):
 @click.argument("path", type=click.Path(exists=True), required=True)
 @click.argument("output", type=click.Path(), required=False)
 def glitch(
-    tech,
-    type,
-    path,
-    config,
-    module,
-    csv,
-    dataset,
-    includeall,
-    smell_types,
-    output,
-    tableformat,
-    linter,
+    tech: str,
+    type: str,
+    path: str,
+    config: str,
+    module: bool,
+    csv: bool,
+    dataset: bool,
+    includeall: Tuple[str, ...],
+    smell_types: Tuple[str, ...],
+    output: Optional[str],
+    tableformat: str,
+    linter: bool,
 ):
+    tech = Tech(tech)
+    type = UnitBlockType(type)
+
     if config != "configs/default.ini" and not os.path.exists(config):
         raise click.BadOptionUsage(
             "config", f"Invalid value for 'config': Path '{config}' does not exist."
@@ -138,7 +153,7 @@ def glitch(
     if smell_types == ():
         smell_types = get_smell_types()
 
-    analyses = []
+    analyses: List[RuleVisitor] = []
     rules = RuleVisitor.__subclasses__()
     for r in rules:
         if smell_types == () or r.get_name() in smell_types:
@@ -146,10 +161,10 @@ def glitch(
             analysis.config(config)
             analyses.append(analysis)
 
-    errors = []
+    errors: List[Error] = []
     if dataset:
         if includeall != ():
-            iac_files = []
+            iac_files: Set[str] = set()
             for root, _, files in os.walk(path):
                 for name in files:
                     name_split = name.split(".")
@@ -157,13 +172,12 @@ def glitch(
                         name_split[-1] in includeall
                         and not Path(os.path.join(root, name)).is_symlink()
                     ):
-                        iac_files.append(os.path.join(root, name))
-            iac_files = set(iac_files)
+                        iac_files.add(os.path.join(root, name))
 
             with alive_bar(
                 len(iac_files),
                 title=f"ANALYZING ALL FILES WITH EXTENSIONS {includeall}",
-            ) as bar:
+            ) as bar:  # type: ignore
                 for file in iac_files:
                     parse_and_check(
                         type, file, module, parser, analyses, errors, file_stats
@@ -171,7 +185,7 @@ def glitch(
                     bar()
         else:
             subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
-            with alive_bar(len(subfolders), title="ANALYZING SUBFOLDERS") as bar:
+            with alive_bar(len(subfolders), title="ANALYZING SUBFOLDERS") as bar:  # type: ignore
                 for d in subfolders:
                     parse_and_check(
                         type, d, module, parser, analyses, errors, file_stats
@@ -180,7 +194,7 @@ def glitch(
 
         files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
 
-        with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:
+        with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:  # type: ignore
             for file in files:
                 parse_and_check(
                     type, file, module, parser, analyses, errors, file_stats
@@ -212,7 +226,7 @@ def glitch(
         print_stats(errors, get_smells(smell_types, tech), file_stats, tableformat)
 
 
-def main():
+def main() -> None:
     glitch(prog_name="glitch")
 
 

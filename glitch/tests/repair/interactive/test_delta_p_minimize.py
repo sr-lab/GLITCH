@@ -1,7 +1,7 @@
 from glitch.repair.interactive.delta_p import *
 
 
-def test_delta_p_minimize_let():
+def test_delta_p_minimize_let() -> None:
     statement = PLet(
         "x",
         "test1",
@@ -13,7 +13,7 @@ def test_delta_p_minimize_let():
     assert isinstance(minimized, PSkip)
 
 
-def test_delta_p_minimize_seq():
+def test_delta_p_minimize_seq() -> None:
     statement = PSeq(
         PCreate(PEConst(const=PStr(value="test1"))),
         PCreate(PEConst(const=PStr(value="test2"))),
@@ -31,7 +31,7 @@ def test_delta_p_minimize_seq():
     assert isinstance(minimized, PSkip)
 
 
-def test_delta_p_minimize_if():
+def test_delta_p_minimize_if() -> None:
     statement = PIf(
         PBool(True),
         PCreate(PEConst(const=PStr(value="test2"))),

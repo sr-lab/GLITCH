@@ -1,12 +1,20 @@
 import os
 import re
-from typing import List, Callable
+
+from re import Pattern
+from typing import Optional, List, Callable, Any
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error, SmellChecker
 
 
 class TerraformSmellChecker(SmellChecker):
-    def get_au(self, file: str, name: str, type: str, c=None):
+    def get_au(
+        self,
+        file: str,
+        name: str,
+        type: str,
+        c: Project | Module | UnitBlock | None = None,
+    ) -> Optional[AtomicUnit]:
         c = self.code if c is None else c
         if isinstance(c, Project):
             module_name = os.path.basename(os.path.dirname(file))
@@ -29,10 +37,10 @@ class TerraformSmellChecker(SmellChecker):
         file: str,
         type: str,
         attribute_name: str,
-        pattern,
-        attribute_parents: list,
-        code=None,
-    ):
+        pattern: Pattern[str],
+        attribute_parents: List[str],
+        code: Project | Module | UnitBlock | None = None,
+    ) -> Optional[AtomicUnit]:
         code = self.code if code is None else code
         if isinstance(code, Project):
             module_name = os.path.basename(os.path.dirname(file))
@@ -57,17 +65,30 @@ class TerraformSmellChecker(SmellChecker):
         return None
 
     def get_attributes_with_name_and_value(
-        self, attributes, parents, name, value=None, pattern=None
-    ):
-        aux = []
+        self,
+        attributes: List[KeyValue] | List[Attribute],
+        parents: List[str],
+        name: str,
+        value: Optional[Any] = None,
+        pattern: Optional[Pattern[str]] = None,
+    ) -> List[KeyValue]:
+        aux: List[KeyValue] = []
         for a in attributes:
             if a.name.split("dynamic.")[-1] == name and parents == [""]:
-                if (value and a.value.lower() == value) or (
-                    pattern and re.match(pattern, a.value.lower())
+                if (
+                    value and isinstance(a.value, str) and a.value.lower() == value
+                ) or (
+                    pattern
+                    and isinstance(a.value, str)
+                    and re.match(pattern, a.value.lower())
                 ):
                     aux.append(a)
-                elif (value and a.value.lower() != value) or (
-                    pattern and not re.match(pattern, a.value.lower())
+                elif (
+                    value and isinstance(a.value, str) and a.value.lower() != value
+                ) or (
+                    pattern
+                    and isinstance(a.value, str)
+                    and not re.match(pattern, a.value.lower())
                 ):
                     continue
                 elif not value and not pattern:
@@ -83,17 +104,23 @@ class TerraformSmellChecker(SmellChecker):
         return aux
 
     def check_required_attribute(
-        self, attributes, parents, name, value=None, pattern=None, return_all=False
-    ):
+        self,
+        attributes: List[Attribute] | List[KeyValue],
+        parents: List[str],
+        name: str,
+        value: Optional[Any] = None,
+        pattern: Optional[Pattern[str]] = None,
+        return_all: bool = False,
+    ) -> Union[Optional[KeyValue], List[KeyValue]]:
         attributes = self.get_attributes_with_name_and_value(
             attributes, parents, name, value, pattern
         )
         if attributes != []:
             if return_all:
-                return attributes
+                return attributes  # type: ignore
             return attributes[0]
-        else:
-            return None
+
+        return None
 
     def check_database_flags(
         self,
@@ -102,13 +129,13 @@ class TerraformSmellChecker(SmellChecker):
         smell: str,
         flag_name: str,
         safe_value: str,
-        required_flag=True,
-    ):
+        required_flag: bool = True,
+    ) -> List[Error]:
         database_flags = self.get_attributes_with_name_and_value(
             au.attributes, ["settings"], "database_flags"
         )
         found_flag = False
-        errors = []
+        errors: List[Error] = []
         if database_flags != []:
             for flag in database_flags:
                 name = self.check_required_attribute(
@@ -117,7 +144,11 @@ class TerraformSmellChecker(SmellChecker):
                 if name is not None:
                     found_flag = True
                     value = self.check_required_attribute(flag.keyvalues, [""], "value")
-                    if value and value.value.lower() != safe_value:
+                    if (
+                        isinstance(value, KeyValue)
+                        and isinstance(value.value, str)
+                        and value.value.lower() != safe_value
+                    ):
                         errors.append(Error(smell, value, file, repr(value)))
                         break
                     elif not value and required_flag:
@@ -144,12 +175,15 @@ class TerraformSmellChecker(SmellChecker):
         return errors
 
     def iterate_required_attributes(
-        self, attributes: List[KeyValue], name: str, check: Callable[[KeyValue], bool]
+        self,
+        attributes: List[KeyValue] | List[Attribute],
+        name: str,
+        check: Callable[[KeyValue], bool],
     ):
         i = 0
         attribute = self.check_required_attribute(attributes, [""], f"{name}[{i}]")
 
-        while attribute:
+        while isinstance(attribute, KeyValue):
             if check(attribute):
                 return True, attribute
             i += 1
@@ -158,14 +192,22 @@ class TerraformSmellChecker(SmellChecker):
         return False, None
 
     def _check_attribute(
-        self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
-        pass
+        return []
 
     def __check_attribute(
-        self, attribute: Attribute, atomic_unit: AtomicUnit, parent_name: str, file: str
+        self,
+        attribute: Attribute | KeyValue,
+        atomic_unit: AtomicUnit,
+        parent_name: str,
+        file: str,
     ) -> List[Error]:
-        errors = []
+        errors: List[Error] = []
         errors += self._check_attribute(attribute, atomic_unit, parent_name, file)
         for attr_child in attribute.keyvalues:
             errors += self.__check_attribute(
@@ -174,7 +216,7 @@ class TerraformSmellChecker(SmellChecker):
         return errors
 
     def _check_attributes(self, atomic_unit: AtomicUnit, file: str) -> List[Error]:
-        errors = []
+        errors: List[Error] = []
         for attribute in atomic_unit.attributes:
             errors += self.__check_attribute(attribute, atomic_unit, "", file)
         return errors
