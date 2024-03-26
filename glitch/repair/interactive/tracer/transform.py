@@ -1,6 +1,6 @@
 import os
 from pwd import getpwuid
-from typing import Set
+from typing import Set, Callable
 
 from glitch.repair.interactive.tracer.model import *
 from glitch.repair.interactive.filesystem import *
@@ -17,7 +17,7 @@ def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
         Set[str]: A set of all paths affected by the given syscalls.
     """
 
-    def abspath(workdir, path):
+    def abspath(workdir: str, path: str):
         if os.path.isabs(path):
             return path
         return os.path.realpath(os.path.join(workdir, path))
@@ -61,8 +61,8 @@ def get_file_system_state(files: Set[str]) -> FileSystemState:
         FileSystemState: The file system state.
     """
     fs = FileSystemState()
-    get_owner = lambda f: getpwuid(os.stat(f).st_uid).pw_name
-    get_mode = lambda f: oct(os.stat(f).st_mode & 0o777)[2:]
+    get_owner: Callable[[str], str] = lambda f: getpwuid(os.stat(f).st_uid).pw_name
+    get_mode: Callable[[str], str] = lambda f: oct(os.stat(f).st_mode & 0o777)[2:]
 
     for file in files:
         if not os.path.exists(file):

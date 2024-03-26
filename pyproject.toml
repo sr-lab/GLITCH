@@ -37,4 +37,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.pyright]
 typeCheckingMode = "strict"
 stubPath = "stubs"
-exclude = ["glitch/tests", ".venv"]
+exclude = ["glitch/tests", ".venv", "scripts/"]

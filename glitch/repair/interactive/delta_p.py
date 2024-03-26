@@ -213,7 +213,7 @@ class PStatement(ABC):
 
             return PSkip()
 
-        considered_paths_exprs = list(
+        considered_paths_exprs: List[PEConst] = list(
             map(lambda path: PEConst(const=PStr(value=path)), considered_paths)
         )
         return minimize_aux(statement, considered_paths_exprs)

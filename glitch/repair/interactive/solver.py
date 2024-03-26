@@ -358,8 +358,6 @@ class PatchSolver:
                 name = NamesDatabase.reverse_attr_name(
                     codeelement.name, atomic_unit_type, labeled_script.tech
                 )
-                if name is None:
-                    raise RuntimeError("Attribute name not found")
                 codeelement.name = name
                 atomic_unit.attributes.append(codeelement)
                 # Remove sketch label and add regular label

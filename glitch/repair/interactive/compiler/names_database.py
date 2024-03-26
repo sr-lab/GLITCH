@@ -19,10 +19,11 @@ class NamesDatabase:
                 return "file"
             case "ansible.builtin.file", Tech.ansible:
                 return "file"
-        return None
+            case _: pass
+        return type
 
     @staticmethod
-    def reverse_attr_name(name: str, au_type: str, tech: Tech) -> Optional[str]:
+    def reverse_attr_name(name: str, au_type: str, tech: Tech) -> str:
         """Returns the technology-specific name of the attribute with the given name, atomic unit type and tech.
 
         Args:
@@ -46,12 +47,13 @@ class NamesDatabase:
                 return "state"
             case "state", "file", Tech.puppet:
                 return "ensure"
-        return None
+            case _: pass
+        return name
 
     @staticmethod
     def reverse_attr_value(
         value: str, attr_name: str, au_type: str, tech: Tech
-    ) -> Optional[str]:
+    ) -> str:
         """Returns the technology-specific value of the attribute with the given value, attribute name, atomic unit type and tech.
 
         Args:
@@ -66,10 +68,11 @@ class NamesDatabase:
         match value, attr_name, au_type, tech:
             case "present", "state", "file", Tech.ansible:
                 return "file"
+            case _: pass
         return value
 
     @staticmethod
-    def get_attr_name(name: str, au_type: str, tech: Tech) -> Optional[str]:
+    def get_attr_name(name: str, au_type: str, tech: Tech) -> str:
         """Returns the generic name of the attribute with the given name, atomic unit type and tech.
 
         Args:
@@ -95,8 +98,9 @@ class NamesDatabase:
                 return "state"
             case "state", "file", Tech.ansible:
                 return "state"
+            case _: pass
 
-        return None
+        return name
 
     @staticmethod
     def get_attr_value(
@@ -119,5 +123,6 @@ class NamesDatabase:
                 return "present"
             case "touch", "state", "file", Tech.ansible:
                 return "present"
+            case _: pass
 
         return value

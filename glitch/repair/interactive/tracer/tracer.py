@@ -4,10 +4,6 @@ import threading
 from typing import List
 from glitch.repair.interactive.tracer.parser import parse_tracer_output
 from glitch.repair.interactive.tracer.model import get_syscall_with_type, Syscall
-from glitch.repair.interactive.tracer.transform import (
-    get_affected_paths,
-    get_file_system_state,
-)
 
 
 class STrace(threading.Thread):
@@ -16,7 +12,7 @@ class STrace(threading.Thread):
         self.syscalls: List[Syscall] = []
         self.pid = pid
 
-    def run(self) -> None:
+    def run(self) -> List[Syscall]: # type: ignore
         proc = subprocess.Popen(
             [
                 "sudo",
@@ -35,6 +31,9 @@ class STrace(threading.Thread):
             bufsize=1,
             universal_newlines=True,
         )
+
+        if proc.stdout is None:
+            return self.syscalls
 
         for line in proc.stdout:
             if (

@@ -22,19 +22,19 @@ class DeltaPCompiler:
             attr_name = NamesDatabase.get_attr_name(
                 attribute.name, self.au_type, self.__tech
             )
-            if attr_name is not None:
-                self.__attributes[attr_name] = (
-                    DeltaPCompiler._compile_expr(
-                        NamesDatabase.get_attr_value(
-                            attribute.value,
-                            attr_name,
-                            self.au_type,
-                            self.__tech,
-                        ),
+
+            self.__attributes[attr_name] = ( # type: ignore
+                DeltaPCompiler._compile_expr(
+                    NamesDatabase.get_attr_value(
+                        attribute.value, # type: ignore
+                        attr_name,
+                        self.au_type,
                         self.__tech,
                     ),
-                    attribute,
-                )
+                    self.__tech,
+                ),
+                attribute,
+            )
 
         def get_attribute(self, attr_name: str) -> Optional[Attribute]:
             return self.__attributes.get(attr_name, (None, None))[1]
@@ -60,19 +60,19 @@ class DeltaPCompiler:
             attr_name: str,
             atomic_unit: AtomicUnit,
             labeled_script: LabeledUnitBlock,
-        ) -> Optional[Tuple[str, str]]:
+        ) -> Tuple[int, str]:
             attr = self.get_attribute(attr_name)
 
             if attr is not None:
                 label = labeled_script.get_label(attr)
             else:
                 # Creates sketched attribute
-                if attr_name == "state":  # HACK
+                if attr_name == "state" and isinstance(DefaultValue.DEFAULT_STATE.const, PStr):  # HACK
                     attr = Attribute(
                         attr_name, DefaultValue.DEFAULT_STATE.const.value, False
                     )
                 else:
-                    attr = Attribute(attr_name, PEUndef(), False)
+                    attr = Attribute(attr_name, PEUndef(), False) # type: ignore
 
                 attr.line, attr.column = (
                     DeltaPCompiler._sketched,
@@ -86,7 +86,7 @@ class DeltaPCompiler:
             return label, labeled_script.get_var(label)
 
     @staticmethod
-    def _compile_expr(expr: Optional[str], tech: Tech) -> PExpr:
+    def _compile_expr(expr: Optional[str], tech: Tech) -> Optional[PExpr]:
         # FIXME to fix this I need to extend GLITCH's IR
         if expr is None:
             return None
@@ -104,7 +104,7 @@ class DeltaPCompiler:
         path = attributes["path"]
         # The path may be defined as the name of the atomic unit
         if path == PEUndef():
-            path = PEConst(PStr(atomic_unit.name))
+            path = PEConst(PStr(atomic_unit.name)) # type: ignore
 
         state_label, state_var = attributes.create_label_var_pair(
             "state", atomic_unit, labeled_script

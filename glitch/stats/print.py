@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as pd # type: ignore
 from prettytable import PrettyTable
 from typing import List, Dict, Set, Tuple
 from glitch.analysis.rules import Error
@@ -101,21 +101,21 @@ def print_stats(
                 "\\textbf{Proportion of scripts (%)}",
             ],
         )
-        latex = (
+        latex = ( # type: ignore
             table.style.hide(axis="index")  # type: ignore
             .format(escape=None, precision=2, thousands=",")  # type: ignore
-            .to_latex()
+            .to_latex() # type: ignore
         )
-        combined = latex[: latex.rfind("\\\\")].rfind("\\\\")
-        latex = latex[:combined] + "\\\\\n\\midrule\n" + latex[combined + 3 :]
-        print(latex)
+        combined = latex[: latex.rfind("\\\\")].rfind("\\\\") # type: ignore
+        latex = latex[:combined] + "\\\\\n\\midrule\n" + latex[combined + 3 :] # type: ignore
+        print(latex) # type: ignore
 
         attributes = pd.DataFrame(
             [[total_files, file_stats.loc]],
-            columns=["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"],
+            columns=["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"], # type: ignore
         )
         print(
             attributes.style.hide(axis="index")  # type: ignore
             .format(escape=None, precision=2, thousands=",")  # type: ignore
-            .to_latex()
+            .to_latex() # type: ignore
         )
