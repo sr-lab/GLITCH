@@ -370,7 +370,9 @@ class DesignVisitor(RuleVisitor):
         errors += self.misplaced_attr.check(au, file)
 
         if au.type in DesignVisitor.__EXEC:
-            if isinstance(au.name, str) and ("&&" in au.name or ";" in au.name or "|" in au.name):
+            if isinstance(au.name, str) and (
+                "&&" in au.name or ";" in au.name or "|" in au.name
+            ):
                 errors.append(
                     Error("design_multifaceted_abstraction", au, file, repr(au))
                 )

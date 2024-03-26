@@ -12,7 +12,7 @@ class STrace(threading.Thread):
         self.syscalls: List[Syscall] = []
         self.pid = pid
 
-    def run(self) -> List[Syscall]: # type: ignore
+    def run(self) -> List[Syscall]:  # type: ignore
         proc = subprocess.Popen(
             [
                 "sudo",

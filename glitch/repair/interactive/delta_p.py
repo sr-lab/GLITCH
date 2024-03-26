@@ -127,7 +127,7 @@ class PStatement(ABC):
         elif isinstance(expr, PEVar):
             return self.__get_str(vars[expr.id], vars)
         elif isinstance(expr, PEUndef):
-            return None # type: ignore
+            return None  # type: ignore
 
         raise RuntimeError(f"Unsupported expression, got {expr}")
 
@@ -144,7 +144,7 @@ class PStatement(ABC):
                 return PEConst(PBool(True))
             else:
                 return PEConst(PBool(False))
-            
+
         return None
         # TODO: Add support for other operators and expressions
 

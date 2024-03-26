@@ -19,10 +19,16 @@ class TerraformParser(p.Parser):
             res += line
         return res
 
-    def parse_keyvalues(self, unit_block: UnitBlock, keyvalues: Dict[Any, Any], code: List[str], type: str) -> List[KeyValue]:
+    def parse_keyvalues(
+        self,
+        unit_block: UnitBlock,
+        keyvalues: Dict[Any, Any],
+        code: List[str],
+        type: str,
+    ) -> List[KeyValue]:
         def create_keyvalue(start_line: int, end_line: int, name: str, value: str):
             has_variable = (
-                ("${" in f"{value}") and ("}" in f"{value}") if value != None else False # type: ignore
+                ("${" in f"{value}") and ("}" in f"{value}") if value != None else False  # type: ignore
             )
             pattern = r"^[+-]?\d+(\.\d+)?$"
             if has_variable and re.match(pattern, re.sub(r"^\${(.*)}$", r"\1", value)):
@@ -43,13 +49,13 @@ class TerraformParser(p.Parser):
             keyvalue.code = TerraformParser.__get_element_code(
                 start_line, end_line, code
             )
-            
+
             return keyvalue
 
         def process_list(name: str, value: str, start_line: int, end_line: int) -> None:
             for i, v in enumerate(value):
                 if isinstance(v, dict):
-                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", None) # type: ignore
+                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", None)  # type: ignore
                     k.keyvalues = self.parse_keyvalues(unit_block, v, code, type)
                     k_values.append(k)
                 elif isinstance(v, list):
@@ -69,7 +75,7 @@ class TerraformParser(p.Parser):
                 value = keyvalue["value"]
                 if isinstance(value, dict):  # (ex: labels = {})
                     k = create_keyvalue(
-                        keyvalue["__start_line__"], keyvalue["__end_line__"], name, None # type: ignore
+                        keyvalue["__start_line__"], keyvalue["__end_line__"], name, None  # type: ignore
                     )
                     k.keyvalues = self.parse_keyvalues(unit_block, value, code, type)
                     k_values.append(k)
@@ -90,7 +96,7 @@ class TerraformParser(p.Parser):
                         value,
                     )
                     k_values.append(k)
-            elif isinstance(keyvalue, list) and type == "attribute": # type: ignore
+            elif isinstance(keyvalue, list) and type == "attribute":  # type: ignore
                 # block (ex: access {} or dynamic setting {}; blocks of attributes; not allowed inside local values (variables))
                 try:
                     for block_attributes in keyvalue:
@@ -120,7 +126,9 @@ class TerraformParser(p.Parser):
 
         return k_values
 
-    def parse_atomic_unit(self, type: str, unit_block: UnitBlock, dict, code: List[str]) -> None:
+    def parse_atomic_unit(
+        self, type: str, unit_block: UnitBlock, dict, code: List[str]
+    ) -> None:
         def create_atomic_unit(
             start_line: int, end_line: int, type: str, name: str, code: List[str]
         ) -> AtomicUnit:

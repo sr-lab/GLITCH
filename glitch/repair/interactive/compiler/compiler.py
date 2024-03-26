@@ -23,10 +23,10 @@ class DeltaPCompiler:
                 attribute.name, self.au_type, self.__tech
             )
 
-            self.__attributes[attr_name] = ( # type: ignore
+            self.__attributes[attr_name] = (  # type: ignore
                 DeltaPCompiler._compile_expr(
                     NamesDatabase.get_attr_value(
-                        attribute.value, # type: ignore
+                        attribute.value,  # type: ignore
                         attr_name,
                         self.au_type,
                         self.__tech,
@@ -67,12 +67,14 @@ class DeltaPCompiler:
                 label = labeled_script.get_label(attr)
             else:
                 # Creates sketched attribute
-                if attr_name == "state" and isinstance(DefaultValue.DEFAULT_STATE.const, PStr):  # HACK
+                if attr_name == "state" and isinstance(
+                    DefaultValue.DEFAULT_STATE.const, PStr
+                ):  # HACK
                     attr = Attribute(
                         attr_name, DefaultValue.DEFAULT_STATE.const.value, False
                     )
                 else:
-                    attr = Attribute(attr_name, PEUndef(), False) # type: ignore
+                    attr = Attribute(attr_name, PEUndef(), False)  # type: ignore
 
                 attr.line, attr.column = (
                     DeltaPCompiler._sketched,
@@ -104,7 +106,7 @@ class DeltaPCompiler:
         path = attributes["path"]
         # The path may be defined as the name of the atomic unit
         if path == PEUndef():
-            path = PEConst(PStr(atomic_unit.name)) # type: ignore
+            path = PEConst(PStr(atomic_unit.name))  # type: ignore
 
         state_label, state_var = attributes.create_label_var_pair(
             "state", atomic_unit, labeled_script

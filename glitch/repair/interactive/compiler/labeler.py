@@ -124,7 +124,7 @@ class GLITCHLabeler:
         """
         type = NamesDatabase.get_au_type(atomic_unit.type, labeled.tech)
         name = NamesDatabase.get_attr_name(attribute.name, type, labeled.tech)
-        labeled.add_label(name, attribute) # type: ignore
+        labeled.add_label(name, attribute)  # type: ignore
 
     @staticmethod
     def label_atomic_unit(labeled: LabeledUnitBlock, atomic_unit: AtomicUnit) -> None:

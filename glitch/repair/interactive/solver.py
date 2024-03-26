@@ -3,7 +3,7 @@ import time
 from copy import deepcopy
 from typing import List, Callable, Tuple, Any
 from z3 import (
-    Solver,      
+    Solver,
     sat,
     If,
     StringVal,
@@ -17,7 +17,7 @@ from z3 import (
     Sum,
     ModelRef,
     Context,
-    ExprRef
+    ExprRef,
 )
 
 from glitch.repair.interactive.filesystem import FileSystemState
@@ -117,7 +117,9 @@ class PatchSolver:
 
     def __generate_hard_constraints(self, filesystem: FileSystemState) -> None:
         for path, state in filesystem.state.items():
-            self.solver.add(self.__funs.state_fun(StringVal(path)) == StringVal(str(state)))
+            self.solver.add(
+                self.__funs.state_fun(StringVal(path)) == StringVal(str(state))
+            )
             content, mode, owner = UNDEF, UNDEF, UNDEF
 
             if isinstance(state, File):
@@ -126,7 +128,9 @@ class PatchSolver:
                 mode = UNDEF if state.mode is None else state.mode
                 owner = UNDEF if state.owner is None else state.owner
 
-            self.solver.add(self.__funs.contents_fun(StringVal(path) == StringVal(content)))
+            self.solver.add(
+                self.__funs.contents_fun(StringVal(path) == StringVal(content))
+            )
             self.solver.add(self.__funs.mode_fun(StringVal(path) == StringVal(mode)))
             self.solver.add(self.__funs.owner_fun(StringVal(path) == StringVal(owner)))
 
@@ -211,12 +215,12 @@ class PatchSolver:
             hole, var = String(f"loc-{statement.label}"), String(statement.id)
             self.holes[f"loc-{statement.label}"] = hole
             self.vars[statement.id] = var
-            unchanged = self.unchanged[statement.label] # type: ignore
+            unchanged = self.unchanged[statement.label]  # type: ignore
             constraints.append(
-                Or( # type: ignore
-                    And(unchanged == 1, var == self.__compile_expr(statement.expr)), # type: ignore
-                    And(unchanged == 0, var == hole), # type: ignore
-                ) # type: ignore
+                Or(  # type: ignore
+                    And(unchanged == 1, var == self.__compile_expr(statement.expr)),  # type: ignore
+                    And(unchanged == 0, var == hole),  # type: ignore
+                )  # type: ignore
             )
             body_constraints, funs = self.__generate_soft_constraints(
                 statement.body, funs
@@ -292,7 +296,7 @@ class PatchSolver:
 
             models.append(model)
             # Removes conditional variables that were not used
-            dvars = filter(lambda v: model[v] is not None, self.vars.values()) # type: ignore
+            dvars = filter(lambda v: model[v] is not None, self.vars.values())  # type: ignore
             self.solver.add(Not(And([v == model[v] for v in dvars])))
 
         if elapsed >= self.timeout:
@@ -336,7 +340,7 @@ class PatchSolver:
         changed: List[Tuple[int, Any]] = []
 
         for label, unchanged in self.unchanged.items():
-            if model_ref[unchanged] == 0: # type: ignore
+            if model_ref[unchanged] == 0:  # type: ignore
                 hole = self.holes[f"loc-{label}"]
                 changed.append((label, model_ref[hole]))
 
@@ -351,7 +355,7 @@ class PatchSolver:
                 atomic_unit = labeled_script.get_sketch_location(codeelement)
                 if not isinstance(atomic_unit, AtomicUnit):
                     raise RuntimeError("Atomic unit not found")
-                
+
                 atomic_unit_type = NamesDatabase.get_au_type(
                     atomic_unit.type, labeled_script.tech
                 )

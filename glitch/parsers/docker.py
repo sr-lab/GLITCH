@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Union
 
-import bashlex # type: ignore
+import bashlex  # type: ignore
 from dockerfile_parse import DockerfileParser
 
 import glitch.parsers.parser as p
@@ -287,7 +287,7 @@ class ShellCommand:
             au.add_attribute(sudo)
         for key, (value, _) in self.options.items():
             has_variable = "$" in value if isinstance(value, str) else False
-            attr = Attribute(key, value, has_variable) # type: ignore
+            attr = Attribute(key, value, has_variable)  # type: ignore
             attr.code = self.code
             attr.line = self.line
             au.add_attribute(attr)
@@ -311,7 +311,7 @@ class CommandParser:
     def parse_command(self) -> List[AtomicUnit]:
         # TODO: Fix get commands lines for scripts with multiline values
         commands = self.__get_sub_commands()
-        aus:List[AtomicUnit]  = []
+        aus: List[AtomicUnit] = []
         for line, c in commands:
             try:
                 aus.append(self.__parse_single_command(c, line))
@@ -362,7 +362,7 @@ class CommandParser:
             command.main_arg = command.args[-1]
             if reference:
                 reference[0]
-                command.options["reference"] = (reference.split("=")[1], reference) # type: ignore
+                command.options["reference"] = (reference.split("=")[1], reference)  # type: ignore
             else:
                 command.options["mode"] = command.args[0], command.args[0]
         else:
@@ -405,13 +405,13 @@ class CommandParser:
         )
         current_line = self.line
         for i, line in enumerate(lines):
-            for part in bashlex.split(line): # type: ignore
+            for part in bashlex.split(line):  # type: ignore
                 if part in ["&&", "&", "|", ";"]:
                     commands.append((current_line, tmp))
                     current_line = self.line + i
                     tmp = []
                     continue
-                tmp.append(part) # type: ignore
+                tmp.append(part)  # type: ignore
         commands.append((current_line, tmp))
         return commands
 

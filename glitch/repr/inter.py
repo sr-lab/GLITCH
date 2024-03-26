@@ -199,13 +199,9 @@ class AtomicUnit(Block):
 
     def print(self, tab: int) -> str:
         res = (
-            (tab * "\t")
-            + self.type
-            + " "
-            + self.name if self.name is not None else ""
-            + " (on line "
-            + str(self.line)
-            + ")\n"
+            (tab * "\t") + self.type + " " + self.name
+            if self.name is not None
+            else "" + " (on line " + str(self.line) + ")\n"
         )
 
         for attribute in self.attributes:

@@ -118,13 +118,13 @@ def parse_tracer_output(tracer_output: str, debug: bool = False) -> Syscall:
         r"[a-zA-Z][a-zA-Z0-9_]*"
         if t.value in [flag.name for flag in OpenFlag]:
             t.type = "OPEN_FLAG"
-            t.value = OpenFlag[t.value] # type: ignore
+            t.value = OpenFlag[t.value]  # type: ignore
         elif t.value in [flag.name for flag in ORedFlag]:
             t.type = "ORED_FLAG"
-            t.value = ORedFlag[t.value] # type: ignore
+            t.value = ORedFlag[t.value]  # type: ignore
         elif t.value in [flag.name for flag in UnlinkFlag]:
             t.type = "UNLINK_FLAG"
-            t.value = UnlinkFlag[t.value] # type: ignore
+            t.value = UnlinkFlag[t.value]  # type: ignore
         return t
 
     def t_STRING(t: LexToken):
