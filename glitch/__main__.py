@@ -1,3 +1,4 @@
+import json
 import click, os, sys
 
 from pathlib import Path
@@ -38,6 +39,17 @@ def parse_and_check(
         for analysis in analyses:
             errors += analysis.check(inter)
         stats.compute(inter)
+
+
+def repr_mode(
+    type: UnitBlockType,
+    path: str,
+    module: bool,
+    parser: Parser,
+) -> None:
+    inter = parser.parse(path, type, module)
+    if inter != None:
+        print(json.dumps(inter.as_dict(), indent=2))
 
 
 @click.command(
@@ -106,6 +118,14 @@ def parse_and_check(
     multiple=True,
     help="The type of smell_types being analyzed.",
 )
+# TODO: Add linter option to here
+@click.option(
+    "--mode",
+    type=click.Choice(["smell_detector", "repr"]),
+    help="The mode the tool is running in. If the mode is 'repr', the tool will only print the intermediate representation."
+    "The default mode is 'smell_detector'.",
+    default="smell_detector",
+)
 @click.argument("path", type=click.Path(exists=True), required=True)
 @click.argument("output", type=click.Path(), required=False)
 def glitch(
@@ -121,6 +141,7 @@ def glitch(
     output: Optional[str],
     tableformat: str,
     linter: bool,
+    mode: str,
 ):
     tech = Tech(tech)
     type = UnitBlockType(type)
@@ -149,6 +170,10 @@ def glitch(
         parser = TerraformParser()
         config = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
+
+    if mode == "repr":
+        repr_mode(type, path, module, parser)
+        return
 
     if smell_types == ():
         smell_types = get_smell_types()

@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from enum import Enum
-from typing import List, Union
+from typing import List, Union, Dict, Any
 
 
 class CodeElement(ABC):
@@ -20,9 +20,13 @@ class CodeElement(ABC):
     def __str__(self) -> str:
         return self.__repr__()
 
-    @abstractmethod
-    def print(self, tab: int) -> str:
-        pass
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "ir_type": self.__class__.__name__,
+            "line": self.line,
+            "column": self.column,
+            "code": self.code,
+        }
 
 
 class Block(CodeElement):
@@ -32,6 +36,12 @@ class Block(CodeElement):
 
     def add_statement(self, statement: "ConditionalStatement") -> None:
         self.statements.append(statement)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "statements": [s.as_dict() for s in self.statements],
+        }
 
 
 class ConditionalStatement(Block):
@@ -54,29 +64,14 @@ class ConditionalStatement(Block):
     def __repr__(self) -> str:
         return self.code.strip().split("\n")[0]
 
-    def print(self, tab: int) -> str:
-        res = (
-            (tab * "\t")
-            + str(self.type)
-            + " "
-            + self.condition
-            + ("" if not self.is_default else "default")
-            + " (on line "
-            + str(self.line)
-            + ")"
-            + "\n"
-        )
-
-        res += (tab * "\t") + "\telse:\n"
-        if self.else_statement is not None:
-            res += self.else_statement.print(tab + 2) + "\n"
-
-        res += (tab * "\t") + "\tblock:\n"
-        for statement in self.statements:
-            res += statement.print(tab + 2) + "\n"
-        res = res[:-1]
-
-        return res
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "condition": self.condition,
+            "type": self.type.name,
+            "is_default": self.is_default,
+            "else_statement": self.else_statement.to_dict() if self.else_statement else None,
+        }
 
 
 class Comment(CodeElement):
@@ -87,8 +82,11 @@ class Comment(CodeElement):
     def __repr__(self) -> str:
         return self.content
 
-    def print(self, tab: int) -> str:
-        return (tab * "\t") + self.content + " (on line " + str(self.line) + ")"
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "content": self.content,
+        }
 
 
 class KeyValue(CodeElement):
@@ -104,84 +102,25 @@ class KeyValue(CodeElement):
             return f"{self.name}:{value}:{self.keyvalues}"
         else:
             return f"{self.name}:{value}"
+        
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "name": self.name,
+            "value": self.value,
+            "has_variable": self.has_variable,
+            "keyvalues": [kv.as_dict() for kv in self.keyvalues],
+        }
 
 
 class Variable(KeyValue):
     def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
         super().__init__(name, value, has_variable)
 
-    def print(self, tab: int) -> str:
-        if isinstance(self.value, str):
-            return (
-                (tab * "\t")
-                + self.name
-                + "->"
-                + self.value
-                + " (on line "
-                + str(self.line)
-                + f" {self.has_variable})"
-            )
-        elif isinstance(self.value, type(None)):
-            return (
-                (tab * "\t")
-                + self.name
-                + "->"
-                + "None"
-                + " variables:"
-                + f" {self.keyvalues}"
-                + " (on line "
-                + str(self.line)
-                + f" {self.has_variable})"
-            )
-        else:
-            return (
-                (tab * "\t")
-                + self.name
-                + "->"
-                + repr(self.value)
-                + " (on line "
-                + str(self.line)
-                + f" {self.has_variable})"
-            )
-
 
 class Attribute(KeyValue):
     def __init__(self, name: str, value: str, has_variable: bool) -> None:
         super().__init__(name, value, has_variable)
-
-    def print(self, tab: int) -> str:
-        if isinstance(self.value, str):
-            return (
-                (tab * "\t")
-                + self.name
-                + "->"
-                + self.value
-                + " (on line "
-                + str(self.line)
-                + f" {self.has_variable})"
-            )
-        elif isinstance(self.value, type(None)):
-            return (
-                (tab * "\t")
-                + self.name
-                + "->"
-                + "None"
-                + " attributes:"
-                + f" {self.keyvalues}"
-                + " (on line "
-                + str(self.line)
-                + f" {self.has_variable})"
-            )
-        else:
-            return (
-                (tab * "\t")
-                + self.name
-                + "->"
-                + repr(self.value)
-                + " (on line "
-                + str(self.line)
-                + f" {self.has_variable})"
-            )
 
 
 class AtomicUnit(Block):
@@ -197,22 +136,13 @@ class AtomicUnit(Block):
     def __repr__(self) -> str:
         return f"{self.name} {self.type}"
 
-    def print(self, tab: int) -> str:
-        res = (
-            (tab * "\t") + self.type + " " + self.name
-            if self.name is not None
-            else "" + " (on line " + str(self.line) + ")\n"
-        )
-
-        for attribute in self.attributes:
-            res += attribute.print(tab + 1) + "\n"
-
-        res += (tab * "\t") + "block:\n"
-        for statement in self.statements:
-            res += statement.print(tab + 2) + "\n"
-        res = res[:-1]
-
-        return res
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "name": self.name,
+            "type": self.type,
+            "attributes": [a.as_dict() for a in self.attributes],
+        }
 
 
 class Dependency(CodeElement):
@@ -223,8 +153,11 @@ class Dependency(CodeElement):
     def __repr__(self) -> str:
         return self.name
 
-    def print(self, tab: int) -> str:
-        return (tab * "\t") + self.name + " (on line " + str(self.line) + ")"
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "name": self.name,
+        }
 
 
 class UnitBlockType(str, Enum):
@@ -269,49 +202,29 @@ class UnitBlock(Block):
     def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
 
-    def print(self, tab: int) -> str:
-        if self.name is not None:
-            res = (tab * "\t") + self.name + "\n"
-        else:
-            res = ""
-
-        res += (tab * "\t") + "\tdependencies:\n"
-        for dependency in self.dependencies:
-            res += dependency.print(tab + 2) + "\n"
-
-        res += (tab * "\t") + "\tcomments:\n"
-        for comment in self.comments:
-            res += comment.print(tab + 2) + "\n"
-
-        res += (tab * "\t") + "\tvariables:\n"
-        for variable in self.variables:
-            res += variable.print(tab + 2) + "\n"
-
-        res += (tab * "\t") + "\tattributes:\n"
-        for attribute in self.attributes:
-            res += attribute.print(tab + 2) + "\n"
-
-        res += (tab * "\t") + "\tatomic units:\n"
-        for atomic in self.atomic_units:
-            res += atomic.print(tab + 2) + "\n"
-
-        res += (tab * "\t") + "\tunit blocks:\n"
-        for unit_block in self.unit_blocks:
-            res += unit_block.print(tab + 2) + "\n"
-
-        res += (tab * "\t") + "\tblock:\n"
-        for statement in self.statements:
-            res += statement.print(tab + 2) + "\n"
-
-        return res
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "dependencies": [d.as_dict() for d in self.dependencies],
+            "comments": [c.as_dict() for c in self.comments],
+            "variables": [v.as_dict() for v in self.variables],
+            "atomic_units": [a.as_dict() for a in self.atomic_units],
+            "unit_blocks": [u.as_dict() for u in self.unit_blocks],
+            "attributes": [a.as_dict() for a in self.attributes],
+            "name": self.name,
+            "path": self.path,
+            "type": self.type,
+        }
 
 
 class File:
     def __init__(self, name: str) -> None:
         self.name: str = name
 
-    def print(self, tab: int) -> str:
-        return (tab * "\t") + self.name
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+        }
 
 
 class Folder:
@@ -325,14 +238,11 @@ class Folder:
     def add_file(self, file: File) -> None:
         self.content.append(file)
 
-    def print(self, tab: int) -> str:
-        res = (tab * "\t") + self.name + "\n"
-
-        for c in self.content:
-            res += c.print(tab + 1) + "\n"
-        res = res[:-1]
-
-        return res
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "content": [c.as_dict() for c in self.content],
+        }
 
 
 class Module:
@@ -349,17 +259,14 @@ class Module:
     def add_block(self, u: UnitBlock) -> None:
         self.blocks.append(u)
 
-    def print(self, tab: int) -> str:
-        res = (tab * "\t") + self.name + "\n"
-
-        res += (tab * "\t") + "\tblocks:\n"
-        for block in self.blocks:
-            res += block.print(tab + 2)
-
-        res += (tab * "\t") + "\tfile structure:\n"
-        res += self.folder.print(tab + 2)
-
-        return res
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "path": self.path,
+            "blocks": [b.as_dict() for b in self.blocks],
+            "modules": [m.as_dict() for m in self.modules],
+            "folder": self.folder.as_dict(),
+        }
 
 
 class Project:
@@ -377,15 +284,9 @@ class Project:
     def add_block(self, u: UnitBlock) -> None:
         self.blocks.append(u)
 
-    def print(self, tab: int) -> str:
-        res = self.name + "\n"
-
-        res += (tab * "\t") + "\tmodules:\n"
-        for module in self.modules:
-            res += module.print(tab + 2)
-
-        res += (tab * "\t") + "\tblocks:\n"
-        for block in self.blocks:
-            res += block.print(tab + 2)
-
-        return res
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "modules": [m.as_dict() for m in self.modules],
+            "blocks": [b.as_dict() for b in self.blocks],
+        }
