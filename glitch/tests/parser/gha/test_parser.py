@@ -90,6 +90,7 @@ class TestGithubActionsParser(unittest.TestCase):
         comments
         env (global)
         has_variable
+        defaults (job)
         """
         p = GithubActionsParser()
         ir = p.parse_file(
@@ -100,11 +101,22 @@ class TestGithubActionsParser(unittest.TestCase):
         assert ir.type == UnitBlockType.script
 
         assert len(ir.variables) == 1
+        assert isinstance(ir.variables[0], Variable)
         assert ir.variables[0].name == "build"
         assert ir.variables[0].value == "${{ github.workspace }}/build"
         assert ir.variables[0].has_variable
 
         assert len(ir.unit_blocks) == 1
+
+        assert len(ir.unit_blocks[0].variables) == 1
+        assert isinstance(ir.unit_blocks[0].variables[0], Variable)
+        assert ir.unit_blocks[0].variables[0].name == "run"
+        assert ir.unit_blocks[0].variables[0].value is None
+        assert not ir.unit_blocks[0].variables[0].has_variable
+        assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
+        assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "shell"
+        assert ir.unit_blocks[0].variables[0].keyvalues[0].value == "powershell"
+
         assert len(ir.unit_blocks[0].atomic_units) == 4
         assert ir.unit_blocks[0].atomic_units[1].name == "Configure CMake"
         assert ir.unit_blocks[0].atomic_units[1].type == "shell"

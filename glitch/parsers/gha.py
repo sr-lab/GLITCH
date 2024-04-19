@@ -110,9 +110,13 @@ class GithubActionsParser(YamlParser):
 
                     job.add_atomic_unit(au)
                 continue
-
-            # TODO: Add env and defaults
-            job.add_attribute(self.__parse_attribute(attr_key, attr_value, lines))
+            elif attr_key.value in ["env", "defaults"]:
+                for env_key, env_value in attr_value.value:
+                    job.add_variable(
+                        self.__parse_variable(env_key, env_value, lines)
+                    )
+            else:
+                job.add_attribute(self.__parse_attribute(attr_key, attr_value, lines))
 
         return job
 
