@@ -119,7 +119,7 @@ class Variable(KeyValue):
 
 
 class Attribute(KeyValue):
-    def __init__(self, name: str, value: str, has_variable: bool) -> None:
+    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
         super().__init__(name, value, has_variable)
 
 
