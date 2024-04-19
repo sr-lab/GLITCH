@@ -18,14 +18,14 @@ from pkg_resources import resource_filename
 
 class GithubActionsParser(p.Parser):
     @staticmethod
-    def __get_value(
-        node: Node
-    ) -> Any:
+    def __get_value(node: Node) -> Any:
         if isinstance(node, ScalarNode):
             return node.value
         elif isinstance(node, MappingNode):
             return {
-                GithubActionsParser.__get_value(key): GithubActionsParser.__get_value(value)
+                GithubActionsParser.__get_value(key): GithubActionsParser.__get_value(
+                    value
+                )
                 for key, value in node.value
             }
         elif isinstance(node, SequenceNode):
@@ -61,7 +61,7 @@ class GithubActionsParser(p.Parser):
             res += code[end_token.end_mark.line][: end_token.end_mark.column]
 
         return res
-    
+
     @staticmethod
     def __parse_attribute(key: Node, value: Node, lines: List[str]) -> Attribute:
         attrs: List[KeyValue] = []
@@ -69,26 +69,20 @@ class GithubActionsParser(p.Parser):
         if isinstance(value, MappingNode):
             attr_value = None
             for k, v in value.value:
-                attrs.append(
-                    GithubActionsParser.__parse_attribute(k, v, lines)
-                )
+                attrs.append(GithubActionsParser.__parse_attribute(k, v, lines))
         else:
             attr_value = GithubActionsParser.__get_value(value)
 
         attr = Attribute(
-            GithubActionsParser.__get_value(key), 
-            attr_value,
-            False # FIXME
+            GithubActionsParser.__get_value(key), attr_value, False  # FIXME
         )
         attr.line, attr.column = key.start_mark.line, key.start_mark.column
-        attr.code = GithubActionsParser.__get_code(
-            key, value, lines
-        )
+        attr.code = GithubActionsParser.__get_code(key, value, lines)
         for child in attrs:
             attr.keyvalues.append(child)
 
         return attr
-    
+
     def __parse_job(self, key: Node, value: Node, lines: List[str]) -> UnitBlock:
         job = UnitBlock(key.value, UnitBlockType.block)
         job.line, job.column = key.start_mark.line, key.start_mark.column
@@ -101,7 +95,7 @@ class GithubActionsParser(p.Parser):
                     name = "" if "name" not in step_dict else step_dict["name"]
                     if "run" in step_dict:
                         au_type = "shell"
-                    else: # uses
+                    else:  # uses
                         au_type = step_dict["uses"]
 
                     au = AtomicUnit(name, au_type)
@@ -112,20 +106,10 @@ class GithubActionsParser(p.Parser):
                         if key.value in ["with", "env"]:
                             for with_key, with_value in value.value:
                                 au.add_attribute(
-                                    self.__parse_attribute(
-                                        with_key, 
-                                        with_value, 
-                                        lines
-                                    )
+                                    self.__parse_attribute(with_key, with_value, lines)
                                 )
                         elif key.value not in ["name", "uses"]:
-                            au.add_attribute(
-                                self.__parse_attribute(
-                                    key, 
-                                    value,
-                                    lines
-                                )
-                            )
+                            au.add_attribute(self.__parse_attribute(key, value, lines))
 
                     job.add_atomic_unit(au)
                 continue
@@ -136,9 +120,7 @@ class GithubActionsParser(p.Parser):
         return job
 
     def parse_file(self, path: str, type: UnitBlockType) -> Optional[UnitBlock]:
-        schema = resource_filename(
-            "glitch.parsers", "resources/github_workflow.json"
-        )
+        schema = resource_filename("glitch.parsers", "resources/github_workflow.json")
 
         with open(path) as f:
             try:
@@ -148,17 +130,17 @@ class GithubActionsParser(p.Parser):
             except:
                 # TODO: Add logging
                 return None
-        
+
         if parsed_file is None or not isinstance(parsed_file, MappingNode):
             # TODO: Add logging
             return None
-        
+
         with open(path) as f:
             with open(schema) as f_schema:
                 schema = json.load(f_schema)
                 # TODO: catch exception
                 yaml = YAML()
-                jsonschema.validate(yaml.load(f.read()), schema) # type: ignore
+                jsonschema.validate(yaml.load(f.read()), schema)  # type: ignore
 
         parsed_file_value = self.__get_value(parsed_file)
         if "name" not in parsed_file_value:
@@ -174,9 +156,7 @@ class GithubActionsParser(p.Parser):
                     unit_block.add_unit_block(job)
                 continue
             elif key.value != "name":
-                unit_block.add_attribute(
-                    self.__parse_attribute(key, value, lines)
-                )
+                unit_block.add_attribute(self.__parse_attribute(key, value, lines))
 
         return unit_block
 

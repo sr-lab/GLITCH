@@ -70,7 +70,9 @@ class ConditionalStatement(Block):
             "condition": self.condition,
             "type": self.type.name,
             "is_default": self.is_default,
-            "else_statement": self.else_statement.to_dict() if self.else_statement else None,
+            "else_statement": self.else_statement.to_dict()
+            if self.else_statement
+            else None,
         }
 
 
@@ -102,7 +104,7 @@ class KeyValue(CodeElement):
             return f"{self.name}:{value}:{self.keyvalues}"
         else:
             return f"{self.name}:{value}"
-        
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),

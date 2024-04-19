@@ -12,8 +12,10 @@ class TestGithubActionsParser(unittest.TestCase):
         runs-on
         """
         p = GithubActionsParser()
-        ir = p.parse_file("tests/parser/gha/files/valid_workflow.yml", UnitBlockType.script)
-        
+        ir = p.parse_file(
+            "tests/parser/gha/files/valid_workflow.yml", UnitBlockType.script
+        )
+
         assert ir is not None
         assert isinstance(ir, UnitBlock)
         assert ir.type == UnitBlockType.script
@@ -48,7 +50,7 @@ class TestGithubActionsParser(unittest.TestCase):
 
         assert ir.unit_blocks[0].atomic_units[0].name == ""
         assert ir.unit_blocks[0].atomic_units[0].type == "actions/checkout@v3"
-        
+
         assert ir.unit_blocks[0].atomic_units[1].name == ""
         assert ir.unit_blocks[0].atomic_units[1].type == "ruby/setup-ruby@v1"
         assert len(ir.unit_blocks[0].atomic_units[1].attributes) == 1
@@ -65,11 +67,16 @@ class TestGithubActionsParser(unittest.TestCase):
         assert ir.unit_blocks[0].atomic_units[3].type == "shell"
         assert len(ir.unit_blocks[0].atomic_units[3].attributes) == 1
         assert ir.unit_blocks[0].atomic_units[3].attributes[0].name == "run"
-        assert ir.unit_blocks[0].atomic_units[3].attributes[0].value == "python -m pip install --upgrade pip\npython -m pip install -e .\n"
+        assert (
+            ir.unit_blocks[0].atomic_units[3].attributes[0].value
+            == "python -m pip install --upgrade pip\npython -m pip install -e .\n"
+        )
 
         assert ir.unit_blocks[0].atomic_units[4].name == "Run tests with pytest"
         assert ir.unit_blocks[0].atomic_units[4].type == "shell"
         assert len(ir.unit_blocks[0].atomic_units[4].attributes) == 1
         assert ir.unit_blocks[0].atomic_units[4].attributes[0].name == "run"
-        assert ir.unit_blocks[0].atomic_units[4].attributes[0].value == "cd glitch\npython -m unittest discover tests"
-
+        assert (
+            ir.unit_blocks[0].atomic_units[4].attributes[0].value
+            == "cd glitch\npython -m unittest discover tests"
+        )
