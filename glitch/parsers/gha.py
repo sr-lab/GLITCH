@@ -1,7 +1,7 @@
 import json
 import jsonschema
-import glitch.parsers.parser as p
 
+from glitch.parsers.yaml import YamlParser
 from typing import Optional
 from glitch.repr.inter import *
 from ruamel.yaml.main import YAML
@@ -12,11 +12,10 @@ from ruamel.yaml.nodes import (
     SequenceNode,
     CollectionNode,
 )
-from ruamel.yaml.tokens import Token
 from pkg_resources import resource_filename
 
 
-class GithubActionsParser(p.Parser):
+class GithubActionsParser(YamlParser):
     @staticmethod
     def __get_value(node: Node) -> Any:
         if isinstance(node, ScalarNode):
@@ -35,32 +34,28 @@ class GithubActionsParser(p.Parser):
         else:
             return None
 
-    # TODO: refactor to be in parent class of Ansible and GithubActions
     @staticmethod
-    def __get_code(
-        start_token: Token | Node,
-        end_token: List[Token | Node] | Token | Node | str,
-        code: List[str],
-    ):
-        if isinstance(end_token, list) and len(end_token) > 0:
-            end_token = end_token[-1]
-        elif isinstance(end_token, list) or isinstance(end_token, str):
-            end_token = start_token
+    def __parse_variable(key: Node, value: Node, lines: List[str]) -> Variable:
+        vars: List[KeyValue] = []
 
-        if start_token.start_mark.line == end_token.end_mark.line:
-            res = code[start_token.start_mark.line][
-                start_token.start_mark.column : end_token.end_mark.column
-            ]
+        if isinstance(value, MappingNode):
+            var_value = None
+            for k, v in value.value:
+                vars.append(GithubActionsParser.__parse_variable(k, v, lines))
         else:
-            res = code[start_token.start_mark.line]
+            var_value = GithubActionsParser.__get_value(value)
 
-        for line in range(start_token.start_mark.line + 1, end_token.end_mark.line):
-            res += code[line]
+        var = Variable(
+            GithubActionsParser.__get_value(key), var_value, False
+        )
+        if isinstance(var.value, str):
+            var.has_variable = "${{" in var.value
+        var.line, var.column = key.start_mark.line, key.start_mark.column
+        var.code = GithubActionsParser._get_code(key, value, lines)
+        for child in vars:
+            var.keyvalues.append(child)
 
-        if start_token.start_mark.line != end_token.end_mark.line:
-            res += code[end_token.end_mark.line][: end_token.end_mark.column]
-
-        return res
+        return var
 
     @staticmethod
     def __parse_attribute(key: Node, value: Node, lines: List[str]) -> Attribute:
@@ -74,10 +69,12 @@ class GithubActionsParser(p.Parser):
             attr_value = GithubActionsParser.__get_value(value)
 
         attr = Attribute(
-            GithubActionsParser.__get_value(key), attr_value, False  # FIXME
+            GithubActionsParser.__get_value(key), attr_value, False
         )
+        if isinstance(attr.value, str):
+            attr.has_variable = "${{" in attr.value
         attr.line, attr.column = key.start_mark.line, key.start_mark.column
-        attr.code = GithubActionsParser.__get_code(key, value, lines)
+        attr.code = GithubActionsParser._get_code(key, value, lines)
         for child in attrs:
             attr.keyvalues.append(child)
 
@@ -86,7 +83,7 @@ class GithubActionsParser(p.Parser):
     def __parse_job(self, key: Node, value: Node, lines: List[str]) -> UnitBlock:
         job = UnitBlock(key.value, UnitBlockType.block)
         job.line, job.column = key.start_mark.line, key.start_mark.column
-        job.code = self.__get_code(key, value, lines)
+        job.code = GithubActionsParser._get_code(key, value, lines)
 
         for attr_key, attr_value in value.value:
             if attr_key.value == "steps":
@@ -100,7 +97,7 @@ class GithubActionsParser(p.Parser):
 
                     au = AtomicUnit(name, au_type)
                     au.line, au.column = step.start_mark.line, step.start_mark.column
-                    au.code = self.__get_code(step, step, lines)
+                    au.code = GithubActionsParser._get_code(step, step, lines)
 
                     for key, value in step.value:
                         if key.value in ["with", "env"]:
@@ -149,14 +146,25 @@ class GithubActionsParser(p.Parser):
             unit_block = UnitBlock(parsed_file_value["name"], type)
 
         for key, value in parsed_file.value:
-            # TODO: Add env and defaults
+            if key.value in ["env", "defaults"]:
+                for env_key, env_value in value.value:
+                    unit_block.add_variable(
+                        self.__parse_variable(env_key, env_value, lines)
+                    )
             if key.value == "jobs":
                 for job_key, job_value in value.value:
                     job = self.__parse_job(job_key, job_value, lines)
                     unit_block.add_unit_block(job)
-                continue
             elif key.value != "name":
                 unit_block.add_attribute(self.__parse_attribute(key, value, lines))
+
+        with open(path) as f:
+            comments = list(GithubActionsParser._get_comments(parsed_file, f))
+            for comment in sorted(comments, key=lambda x: x[0]):
+                c = Comment(comment[1])
+                c.line = comment[0]
+                c.code = lines[c.line - 1]
+                unit_block.add_comment(c)
 
         return unit_block
 

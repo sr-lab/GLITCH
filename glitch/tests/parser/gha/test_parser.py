@@ -56,12 +56,14 @@ class TestGithubActionsParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].atomic_units[1].attributes) == 1
         assert ir.unit_blocks[0].atomic_units[1].attributes[0].name == "ruby-version"
         assert ir.unit_blocks[0].atomic_units[1].attributes[0].value == "2.7.4"
+        assert not ir.unit_blocks[0].atomic_units[1].attributes[0].has_variable
 
         assert ir.unit_blocks[0].atomic_units[2].name == "Install Python 3"
         assert ir.unit_blocks[0].atomic_units[2].type == "actions/setup-python@v4"
         assert len(ir.unit_blocks[0].atomic_units[2].attributes) == 1
         assert ir.unit_blocks[0].atomic_units[2].attributes[0].name == "python-version"
         assert ir.unit_blocks[0].atomic_units[2].attributes[0].value == "3.10.5"
+        assert not ir.unit_blocks[0].atomic_units[2].attributes[0].has_variable
 
         assert ir.unit_blocks[0].atomic_units[3].name == "Install dependencies"
         assert ir.unit_blocks[0].atomic_units[3].type == "shell"
@@ -71,6 +73,7 @@ class TestGithubActionsParser(unittest.TestCase):
             ir.unit_blocks[0].atomic_units[3].attributes[0].value
             == "python -m pip install --upgrade pip\npython -m pip install -e .\n"
         )
+        assert not ir.unit_blocks[0].atomic_units[3].attributes[0].has_variable
 
         assert ir.unit_blocks[0].atomic_units[4].name == "Run tests with pytest"
         assert ir.unit_blocks[0].atomic_units[4].type == "shell"
@@ -80,3 +83,40 @@ class TestGithubActionsParser(unittest.TestCase):
             ir.unit_blocks[0].atomic_units[4].attributes[0].value
             == "cd glitch\npython -m unittest discover tests"
         )
+        assert not ir.unit_blocks[0].atomic_units[4].attributes[0].has_variable
+
+    def test_gha_valid_workflow_2(self) -> None:
+        """
+        comments
+        env (global)
+        has_variable
+        """
+        p = GithubActionsParser()
+        ir = p.parse_file(
+            "tests/parser/gha/files/valid_workflow_2.yml", UnitBlockType.script
+        )
+        assert ir is not None
+        assert isinstance(ir, UnitBlock)
+        assert ir.type == UnitBlockType.script
+
+        assert len(ir.variables) == 1
+        assert ir.variables[0].name == "build"
+        assert ir.variables[0].value == "${{ github.workspace }}/build"
+        assert ir.variables[0].has_variable
+
+        assert len(ir.unit_blocks) == 1
+        assert len(ir.unit_blocks[0].atomic_units) == 4
+        assert ir.unit_blocks[0].atomic_units[1].name == "Configure CMake"
+        assert ir.unit_blocks[0].atomic_units[1].type == "shell"
+        assert len(ir.unit_blocks[0].atomic_units[1].attributes) == 1
+        assert ir.unit_blocks[0].atomic_units[1].attributes[0].name == "run"
+        assert ir.unit_blocks[0].atomic_units[1].attributes[0].value == "cmake -B ${{ env.build }}"
+        assert ir.unit_blocks[0].atomic_units[1].attributes[0].has_variable
+
+        assert len(ir.comments) == 24
+
+        assert ir.comments[0].content == "# https://github.com/actions/starter-workflows/blob/main/code-scanning/msvc.yml"
+        assert ir.comments[0].line == 1
+
+        assert ir.comments[9].content == "# for actions/checkout to fetch code"
+        assert ir.comments[9].line == 31
