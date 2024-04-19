@@ -13,6 +13,7 @@ from ruamel.yaml.nodes import (
     CollectionNode,
 )
 from pkg_resources import resource_filename
+from glitch.exceptions import EXCEPTIONS, throw_exception
 
 
 class GithubActionsParser(YamlParser):
@@ -129,19 +130,22 @@ class GithubActionsParser(YamlParser):
                 f.seek(0, 0)
                 lines = f.readlines()
             except:
-                # TODO: Add logging
+                throw_exception(EXCEPTIONS["GHA_COULD_NOT_PARSE"], path)
                 return None
 
         if parsed_file is None or not isinstance(parsed_file, MappingNode):
-            # TODO: Add logging
+            throw_exception(EXCEPTIONS["GHA_COULD_NOT_PARSE"], path)
             return None
 
         with open(path) as f:
             with open(schema) as f_schema:
                 schema = json.load(f_schema)
-                # TODO: catch exception
                 yaml = YAML()
-                jsonschema.validate(yaml.load(f.read()), schema)  # type: ignore
+                try:
+                    jsonschema.validate(yaml.load(f.read()), schema)  # type: ignore
+                except jsonschema.ValidationError:
+                    throw_exception(EXCEPTIONS["GHA_COULD_NOT_PARSE"], path)
+                    return None
 
         parsed_file_value = self.__get_value(parsed_file)
         if "name" not in parsed_file_value:
