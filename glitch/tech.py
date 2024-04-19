@@ -7,3 +7,4 @@ class Tech(str, Enum):
     puppet = "puppet"
     terraform = "terraform"
     docker = "docker"
+    gha = "github-actions"

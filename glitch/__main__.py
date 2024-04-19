@@ -15,6 +15,7 @@ from glitch.parsers.ansible import AnsibleParser
 from glitch.parsers.chef import ChefParser
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
+from glitch.parsers.gha import GithubActionsParser
 from pkg_resources import resource_filename
 from alive_progress import alive_bar  # type: ignore
 
@@ -169,6 +170,8 @@ def glitch(
     elif tech == Tech.terraform:
         parser = TerraformParser()
         config = resource_filename("glitch", "configs/terraform.ini")
+    elif tech == Tech.gha:
+        parser = GithubActionsParser()
     file_stats = FileStats()
 
     if mode == "repr":

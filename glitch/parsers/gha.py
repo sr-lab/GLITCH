@@ -149,9 +149,10 @@ class GithubActionsParser(YamlParser):
 
         parsed_file_value = self.__get_value(parsed_file)
         if "name" not in parsed_file_value:
-            unit_block = UnitBlock(path, type)
+            unit_block = UnitBlock("", type)
         else:
             unit_block = UnitBlock(parsed_file_value["name"], type)
+        unit_block.path = path
 
         for key, value in parsed_file.value:
             if key.value in ["env", "defaults"]:
