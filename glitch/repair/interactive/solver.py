@@ -129,10 +129,10 @@ class PatchSolver:
                 owner = UNDEF if state.owner is None else state.owner
 
             self.solver.add(
-                self.__funs.contents_fun(StringVal(path) == StringVal(content))
+                self.__funs.contents_fun(StringVal(path)) == StringVal(content)
             )
-            self.solver.add(self.__funs.mode_fun(StringVal(path) == StringVal(mode)))
-            self.solver.add(self.__funs.owner_fun(StringVal(path) == StringVal(owner)))
+            self.solver.add(self.__funs.mode_fun(StringVal(path)) == StringVal(mode))
+            self.solver.add(self.__funs.owner_fun(StringVal(path)) == StringVal(owner))
 
     def __generate_soft_constraints(
         self, statement: PStatement, funs: __Funs
