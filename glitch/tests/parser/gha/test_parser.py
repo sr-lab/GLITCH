@@ -122,12 +122,18 @@ class TestGithubActionsParser(unittest.TestCase):
         assert ir.unit_blocks[0].atomic_units[1].type == "shell"
         assert len(ir.unit_blocks[0].atomic_units[1].attributes) == 1
         assert ir.unit_blocks[0].atomic_units[1].attributes[0].name == "run"
-        assert ir.unit_blocks[0].atomic_units[1].attributes[0].value == "cmake -B ${{ env.build }}"
+        assert (
+            ir.unit_blocks[0].atomic_units[1].attributes[0].value
+            == "cmake -B ${{ env.build }}"
+        )
         assert ir.unit_blocks[0].atomic_units[1].attributes[0].has_variable
 
         assert len(ir.comments) == 24
 
-        assert ir.comments[0].content == "# https://github.com/actions/starter-workflows/blob/main/code-scanning/msvc.yml"
+        assert (
+            ir.comments[0].content
+            == "# https://github.com/actions/starter-workflows/blob/main/code-scanning/msvc.yml"
+        )
         assert ir.comments[0].line == 1
 
         assert ir.comments[9].content == "# for actions/checkout to fetch code"

@@ -22,7 +22,7 @@ from alive_progress import alive_bar  # type: ignore
 
 # NOTE: These are necessary in order for python to load the visitors.
 # Otherwise, python will not consider these types of rules.
-from glitch.analysis.design import DesignVisitor  # type: ignore
+from glitch.analysis.design.visitor import DesignVisitor  # type: ignore
 from glitch.analysis.security import SecurityVisitor  # type: ignore
 
 

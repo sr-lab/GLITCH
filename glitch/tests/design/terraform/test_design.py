@@ -1,6 +1,6 @@
 import unittest
 
-from glitch.analysis.design import DesignVisitor
+from glitch.analysis.design.visitor import DesignVisitor
 from glitch.parsers.terraform import TerraformParser
 from glitch.tech import Tech
 

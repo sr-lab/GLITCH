@@ -17,10 +17,6 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 class SecurityVisitor(RuleVisitor):
     __URL_REGEX = r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
 
-    class EmptyChecker(SmellChecker):
-        def check(self, element: CodeElement, file: str) -> List[Error]:
-            return []
-
     class NonOfficialImageSmell(SmellChecker):
         def check(self, element: CodeElement, file: str) -> List[Error]:
             return []

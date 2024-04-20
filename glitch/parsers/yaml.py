@@ -1,17 +1,13 @@
 import glitch.parsers.parser as p
 
 from typing import List, Tuple, TextIO, Union
-from ruamel.yaml.nodes import (
-    Node,
-    MappingNode,
-    SequenceNode,
-    ScalarNode
-)
+from ruamel.yaml.nodes import Node, MappingNode, SequenceNode, ScalarNode
 from ruamel.yaml.tokens import Token, CommentToken
 from abc import ABC
 
 
 RecursiveTokenList = List[Union[Token, "RecursiveTokenList", None]]
+
 
 class YamlParser(p.Parser, ABC):
     @staticmethod
@@ -39,18 +35,19 @@ class YamlParser(p.Parser, ABC):
             res += code[end_token.end_mark.line][: end_token.end_mark.column]
 
         return res
-    
+
     @staticmethod
     def _get_comments(d: Node, file: TextIO) -> set[Tuple[int, str]]:
         """Extracts comments from a YAML file and returns a set of tuples with the line number and the comment itself.
-        
+
         Args:
             d (Node): The root node of the YAML file.
             file (TextIO): The file object of the YAML file.
-            
+
         Returns:
             set[Tuple[int, str]]: A set of tuples with the line number and the comment itself.
         """
+
         def extract_from_token(tokenlist: RecursiveTokenList) -> List[Tuple[int, str]]:
             res: List[Tuple[int, str]] = []
             for token in tokenlist:

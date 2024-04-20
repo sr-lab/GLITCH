@@ -46,9 +46,7 @@ class GithubActionsParser(YamlParser):
         else:
             var_value = GithubActionsParser.__get_value(value)
 
-        var = Variable(
-            GithubActionsParser.__get_value(key), var_value, False
-        )
+        var = Variable(GithubActionsParser.__get_value(key), var_value, False)
         if isinstance(var.value, str):
             var.has_variable = "${{" in var.value
         var.line, var.column = key.start_mark.line, key.start_mark.column
@@ -69,9 +67,7 @@ class GithubActionsParser(YamlParser):
         else:
             attr_value = GithubActionsParser.__get_value(value)
 
-        attr = Attribute(
-            GithubActionsParser.__get_value(key), attr_value, False
-        )
+        attr = Attribute(GithubActionsParser.__get_value(key), attr_value, False)
         if isinstance(attr.value, str):
             attr.has_variable = "${{" in attr.value
         attr.line, attr.column = key.start_mark.line, key.start_mark.column
@@ -113,9 +109,7 @@ class GithubActionsParser(YamlParser):
                 continue
             elif attr_key.value in ["env", "defaults"]:
                 for env_key, env_value in attr_value.value:
-                    job.add_variable(
-                        self.__parse_variable(env_key, env_value, lines)
-                    )
+                    job.add_variable(self.__parse_variable(env_key, env_value, lines))
             else:
                 job.add_attribute(self.__parse_attribute(attr_key, attr_value, lines))
 
