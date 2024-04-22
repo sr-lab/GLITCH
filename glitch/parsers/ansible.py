@@ -34,6 +34,7 @@ class AnsibleParser(YamlParser):
                 value = ""
             v = Variable(name, value, has_variable)
             v.line = token.start_mark.line + 1
+            v.column = token.start_mark.column + 1
             if value == None:
                 v.code = AnsibleParser._get_code(token, token, code)
             else:
