@@ -1,7 +1,7 @@
 import os
-import glitch.parsers.parser as p
 
-from typing import List, TextIO, Tuple, Union, Any, Optional, Callable
+from glitch.parsers.yaml import YamlParser
+from typing import List, TextIO, Any, Optional, Callable
 from ruamel.yaml.main import YAML
 from ruamel.yaml.nodes import (
     Node,
@@ -10,101 +10,12 @@ from ruamel.yaml.nodes import (
     SequenceNode,
     CollectionNode,
 )
-from ruamel.yaml.tokens import Token, CommentToken
+from ruamel.yaml.tokens import Token
 from glitch.exceptions import EXCEPTIONS, throw_exception
 from glitch.repr.inter import *
 
 
-RecursiveTokenList = List[Union[Token, "RecursiveTokenList", None]]
-
-
-class AnsibleParser(p.Parser):
-    @staticmethod
-    def __get_yaml_comments(d: Node, file: TextIO):
-        def extract_from_token(tokenlist: RecursiveTokenList) -> List[Tuple[int, str]]:
-            res: List[Tuple[int, str]] = []
-            for token in tokenlist:
-                if token is None:
-                    continue
-                elif isinstance(token, list):
-                    res += extract_from_token(token)
-                elif isinstance(token, CommentToken):
-                    res.append((token.start_mark.line, token.value))
-            return res
-
-        def yaml_comments(d: Node) -> List[Tuple[int, str]]:
-            res: List[Tuple[int, str]] = []
-
-            if isinstance(d, MappingNode):
-                if d.comment is not None:
-                    for line, comment in extract_from_token(d.comment):
-                        res.append((line, comment))
-                for _, val in d.value:
-                    for line, comment in yaml_comments(val):
-                        res.append((line, comment))
-            elif isinstance(d, SequenceNode):
-                if d.comment is not None:
-                    for line, comment in extract_from_token(d.comment):
-                        res.append((line, comment))
-                for item in d.value:
-                    for line, comment in yaml_comments(item):
-                        res.append((line, comment))
-            elif isinstance(d, ScalarNode):
-                if d.comment is not None:
-                    res = extract_from_token(d.comment)
-
-            return res
-
-        file.seek(0, 0)
-        f_lines = file.readlines()
-
-        comments: List[Tuple[int, str]] = []
-        for c_group in yaml_comments(d):
-            line = c_group[0]
-            c_group_comments = c_group[1].strip().split("\n")
-
-            for i, comment in enumerate(c_group_comments):
-                if comment == "":
-                    continue
-                aux = line + i
-                comment = comment.strip()
-
-                while comment not in f_lines[aux]:
-                    aux += 1
-                comments.append((aux + 1, comment))
-
-        for i, line in enumerate(f_lines):
-            if line.strip().startswith("#"):
-                comments.append((i + 1, line.strip()))
-
-        return set(comments)
-
-    @staticmethod
-    def __get_element_code(
-        start_token: Token | Node,
-        end_token: List[Token | Node] | Token | Node | str,
-        code: List[str],
-    ):
-        if isinstance(end_token, list) and len(end_token) > 0:
-            end_token = end_token[-1]
-        elif isinstance(end_token, list) or isinstance(end_token, str):
-            end_token = start_token
-
-        if start_token.start_mark.line == end_token.end_mark.line:
-            res = code[start_token.start_mark.line][
-                start_token.start_mark.column : end_token.end_mark.column
-            ]
-        else:
-            res = code[start_token.start_mark.line]
-
-        for line in range(start_token.start_mark.line + 1, end_token.end_mark.line):
-            res += code[line]
-
-        if start_token.start_mark.line != end_token.end_mark.line:
-            res += code[end_token.end_mark.line][: end_token.end_mark.column]
-
-        return res
-
+class AnsibleParser(YamlParser):
     @staticmethod
     def __parse_vars(
         unit_block: UnitBlock,
@@ -124,9 +35,9 @@ class AnsibleParser(p.Parser):
             v = Variable(name, value, has_variable)
             v.line = token.start_mark.line + 1
             if value == None:
-                v.code = AnsibleParser.__get_element_code(token, token, code)
+                v.code = AnsibleParser._get_code(token, token, code)
             else:
-                v.code = AnsibleParser.__get_element_code(token, value, code)
+                v.code = AnsibleParser._get_code(token, value, code)
             v.code = "".join(code[token.start_mark.line : token.end_mark.line + 1])
 
             variables.append(v)
@@ -188,9 +99,9 @@ class AnsibleParser(p.Parser):
             a.line = token.start_mark.line + 1
             a.column = token.start_mark.column + 1
             if val == None:
-                a.code = AnsibleParser.__get_element_code(token, token, code)
+                a.code = AnsibleParser._get_code(token, token, code)
             else:
-                a.code = AnsibleParser.__get_element_code(token, val, code)
+                a.code = AnsibleParser._get_code(token, val, code)
             attributes.append(a)
 
             return a
@@ -329,7 +240,7 @@ class AnsibleParser(p.Parser):
 
                 unit_block.add_unit_block(play)
 
-            for comment in AnsibleParser.__get_yaml_comments(parsed_file, file):
+            for comment in AnsibleParser._get_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 c.code = code[c.line - 1]
@@ -356,7 +267,7 @@ class AnsibleParser(p.Parser):
                 return unit_block
 
             AnsibleParser.__parse_tasks(unit_block, parsed_file, code)
-            for comment in AnsibleParser.__get_yaml_comments(parsed_file, file):
+            for comment in AnsibleParser._get_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 c.code = code[c.line - 1]
@@ -383,7 +294,7 @@ class AnsibleParser(p.Parser):
                 return unit_block
 
             AnsibleParser.__parse_vars(unit_block, "", parsed_file, code)
-            for comment in AnsibleParser.__get_yaml_comments(parsed_file, file):
+            for comment in AnsibleParser._get_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
                 c.code = code[c.line - 1]

@@ -7,6 +7,7 @@ EXCEPTIONS = {
     "ANSIBLE_FILE_TYPE": "Ansible - Cannot detect file type: {}",
     "ANSIBLE_COULD_NOT_PARSE": "Ansible - Could not parse file: {}",
     "CHEF_COULD_NOT_PARSE": "Chef - Could not parse file: {}",
+    "GHA_COULD_NOT_PARSE": "Github Actions Workflow - Could not parse file: {}",
     "PUPPET_COULD_NOT_PARSE": "Puppet - Could not parse file: {}",
     "DOCKER_NOT_IMPLEMENTED": "Docker - Could not parse: {}",
     "DOCKER_UNKNOW_ERROR": "Docker - Unknown Error: {}",
