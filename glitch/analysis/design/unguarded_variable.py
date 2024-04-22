@@ -10,7 +10,10 @@ class UnguardedVariable(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
 
-        if isinstance(element, UnitBlock) and DesignVisitor.VAR_REFER_SYMBOL is not None:
+        if (
+            isinstance(element, UnitBlock)
+            and DesignVisitor.VAR_REFER_SYMBOL is not None
+        ):
             # FIXME could be improved if we considered strings as part of the model
             for i, l in enumerate(self.code_lines):
                 for tuple in re.findall(

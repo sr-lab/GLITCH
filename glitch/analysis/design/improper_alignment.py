@@ -11,7 +11,12 @@ class ImproperAlignmentTabsSmell(DesignSmellChecker):
             errors: List[Error] = []
             for i, line in enumerate(self.code_lines):
                 if "\t" in line:
-                    error = Error("implementation_improper_alignment", element, element.path, repr(element))
+                    error = Error(
+                        "implementation_improper_alignment",
+                        element,
+                        element.path,
+                        repr(element),
+                    )
                     error.line = i + 1
                     errors.append(error)
             return errors

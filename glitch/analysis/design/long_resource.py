@@ -6,7 +6,6 @@ from glitch.repr.inter import *
 
 
 class TooManyVariables(DesignSmellChecker):
-
     def check(self, element: CodeElement, file: str) -> List[Error]:
         if isinstance(element, AtomicUnit) and element.type in DesignVisitor.EXEC:
             lines = 0

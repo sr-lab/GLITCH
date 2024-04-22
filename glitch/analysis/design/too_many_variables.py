@@ -21,5 +21,12 @@ class TooManyVariables(DesignSmellChecker):
             if (
                 self.__count_variables(element.variables) / max(len(self.code_lines), 1) > 0.3  # type: ignore
             ):
-                return [Error("implementation_too_many_variables", element, element.path, repr(element))]
+                return [
+                    Error(
+                        "implementation_too_many_variables",
+                        element,
+                        element.path,
+                        repr(element),
+                    )
+                ]
         return []

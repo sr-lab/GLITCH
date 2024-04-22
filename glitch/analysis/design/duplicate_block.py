@@ -44,11 +44,13 @@ class UnguardedVariable(DesignSmellChecker):
                         if i not in checked:
                             line = self.__get_line(i, lines)
                             error = Error(
-                                "design_duplicate_block", element, element.path, self.code_lines[line - 1]
+                                "design_duplicate_block",
+                                element,
+                                element.path,
+                                self.code_lines[line - 1],
                             )
                             error.line = line
                             errors.append(error)
                             checked.update(range(i, i + 150))
-
 
         return errors
