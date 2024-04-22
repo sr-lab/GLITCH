@@ -5,7 +5,7 @@ from glitch.tech import Tech
 from glitch.repr.inter import *
 
 
-class ImproperAlignmentTabsSmell(DesignSmellChecker):
+class ImproperAlignmentTabs(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         if isinstance(element, UnitBlock):
             errors: List[Error] = []
@@ -23,7 +23,7 @@ class ImproperAlignmentTabsSmell(DesignSmellChecker):
         return []
 
 
-class ImproperAlignmentSmell(DesignSmellChecker):
+class ImproperAlignment(DesignSmellChecker):
     @staticmethod
     def ignore_techs() -> List[Tech]:
         return [Tech.puppet, Tech.ansible]
@@ -51,7 +51,7 @@ class ImproperAlignmentSmell(DesignSmellChecker):
         return []
 
 
-class PuppetImproperAlignmentSmell(DesignSmellChecker):
+class PuppetImproperAlignment(DesignSmellChecker):
     def __init__(self):
         self.cached_file = ""
         self.lines = []

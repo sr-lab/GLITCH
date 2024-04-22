@@ -4,7 +4,7 @@ from glitch.repr.inter import UnitBlockType
 from glitch.repr.inter import *
 
 
-class LongStatementSmell(DesignSmellChecker):
+class LongStatement(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
 

@@ -5,7 +5,7 @@ from glitch.analysis.design.smell_checker import DesignSmellChecker
 from glitch.repr.inter import *
 
 
-class ImperativeAbstractionSmell(DesignSmellChecker):
+class ImperativeAbstraction(DesignSmellChecker):
     def __count_atomic_units(self, ub: UnitBlock) -> Tuple[int, int]:
         count_resources = len(ub.atomic_units)
         count_execs = 0
