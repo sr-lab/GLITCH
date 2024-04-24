@@ -1,6 +1,7 @@
 from abc import ABC
 from enum import Enum
 from typing import List, Union, Dict, Any
+from types import NoneType
 
 
 class CodeElement(ABC):
@@ -111,9 +112,9 @@ class KeyValue(CodeElement):
         return {
             **super().as_dict(),
             "name": self.name,
-            # FIXME: In Puppet code, the value can be a ConditionalStatement.
+            # FIXME: In Puppet code, the value can be a ConditionalStatement or a dict.
             # The types need to be fixed.
-            "value": self.value if isinstance(self.value, str) else self.value.to_dict(),  # type: ignore
+            "value": self.value if not isinstance(self.value, CodeElement) else self.value.to_dict(),  # type: ignore
             "has_variable": self.has_variable,
             "keyvalues": [kv.as_dict() for kv in self.keyvalues],
         }
