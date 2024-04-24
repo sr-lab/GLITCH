@@ -84,13 +84,13 @@ class ConditionalStatement(Block):
     def __repr__(self) -> str:
         return self.code.strip().split("\n")[0]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
             "condition": self.condition,
             "type": self.type.name,
             "is_default": self.is_default,
-            "else_statement": self.else_statement.to_dict()
+            "else_statement": self.else_statement.as_dict()
             if self.else_statement
             else None,
         }
@@ -104,7 +104,7 @@ class Comment(CodeElement):
     def __repr__(self) -> str:
         return self.content
 
-    def to_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
             "content": self.content,
@@ -131,7 +131,7 @@ class KeyValue(CodeElement):
             "name": self.name,
             # FIXME: In Puppet code, the value can be a ConditionalStatement or a dict.
             # The types need to be fixed.
-            "value": self.value if not isinstance(self.value, CodeElement) else self.value.to_dict(),  # type: ignore
+            "value": self.value if not isinstance(self.value, CodeElement) else self.value.as_dict(),  # type: ignore
             "has_variable": self.has_variable,
             "keyvalues": [kv.as_dict() for kv in self.keyvalues],
         }
