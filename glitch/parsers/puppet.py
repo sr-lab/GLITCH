@@ -309,7 +309,10 @@ class PuppetParser(p.Parser):
                 args = []
                 for arg in codeelement.parameters:
                     attr = PuppetParser.__process_codeelement(arg, path, code)
-                    args.append(Variable(attr.name, "", True))
+                    variable = Variable(attr.name, "", True)
+                    variable.line = arg.line
+                    variable.column = arg.col
+                    args.append(Variable(variable))
                 return (
                     list(
                         map(

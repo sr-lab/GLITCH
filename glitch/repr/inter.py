@@ -1,7 +1,6 @@
 from abc import ABC
 from enum import Enum
 from typing import List, Union, Dict, Any
-from types import NoneType
 
 
 class CodeElement(ABC):
@@ -38,11 +37,29 @@ class Block(CodeElement):
     def add_statement(self, statement: "ConditionalStatement") -> None:
         self.statements.append(statement)
 
+    @staticmethod
+    def __as_dict_statement(
+        stat: Dict[str, Any] | List[Any] | CodeElement | str
+    ) -> Any:
+        if isinstance(stat, CodeElement):
+            return stat.as_dict()
+        elif isinstance(stat, dict):
+            for key, value in stat.items():
+                stat[key] = Block.__as_dict_statement(value)
+            return stat
+        elif isinstance(stat, list):
+            return [Block.__as_dict_statement(s) for s in stat]
+        else:
+            return stat
+
     def as_dict(self) -> Dict[str, Any]:
+        print(self.statements)
+        for statement in self.statements:
+            print(type(statement))
         return {
             **super().as_dict(),
             "statements": [
-                s.as_dict() if not isinstance(s, str) else s for s in self.statements
+                Block.__as_dict_statement(s) for s in self.statements  # type: ignore
             ],
         }
 
