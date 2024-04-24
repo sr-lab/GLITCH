@@ -31,7 +31,9 @@ class YamlParser(p.Parser, ABC):
         for line in range(start_token.start_mark.line + 1, end_token.end_mark.line):
             res += code[line]
 
-        if start_token.start_mark.line != end_token.end_mark.line:
+        # The end_mark.column > 0 avoids cases where the end token is in the last line
+        # leading to a index out of range error
+        if start_token.start_mark.line != end_token.end_mark.line and end_token.end_mark.column > 0:
             res += code[end_token.end_mark.line][: end_token.end_mark.column]
 
         return res
