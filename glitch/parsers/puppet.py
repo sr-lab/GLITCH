@@ -349,7 +349,13 @@ class PuppetParser(p.Parser):
                 )
             )
             for statement in body:
-                condition.add_statement(statement)
+                # FIXME: this should probably be more general (e.g. recursive lists)
+                if isinstance(statement, list):
+                    for s in statement:
+                        condition.add_statement(s)
+                # Avoids unsupported concepts
+                elif statement is not None:
+                    condition.add_statement(statement)
 
             if codeelement.elseblock is not None:
                 condition.else_statement = PuppetParser.__process_codeelement(

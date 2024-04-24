@@ -40,7 +40,9 @@ class Block(CodeElement):
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "statements": [s.as_dict() for s in self.statements],
+            "statements": [
+                s.as_dict() if not isinstance(s, str) else s for s in self.statements
+            ],
         }
 
 
@@ -109,7 +111,9 @@ class KeyValue(CodeElement):
         return {
             **super().as_dict(),
             "name": self.name,
-            "value": self.value,
+            # FIXME: In Puppet code, the value can be a ConditionalStatement.
+            # The types need to be fixed.
+            "value": self.value if isinstance(self.value, str) else self.value.to_dict(),  # type: ignore
             "has_variable": self.has_variable,
             "keyvalues": [kv.as_dict() for kv in self.keyvalues],
         }
