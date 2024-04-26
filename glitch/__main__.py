@@ -4,7 +4,7 @@ import click, os, sys
 from pathlib import Path
 from typing import Tuple, List, Set, Optional
 from glitch.analysis.rules import Error, RuleVisitor
-from glitch.helpers import RulesListOption, get_smell_types, get_smells
+from glitch.helpers import get_smell_types, get_smells
 from glitch.parsers.docker import DockerParser
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
@@ -26,7 +26,7 @@ from glitch.analysis.design.visitor import DesignVisitor  # type: ignore
 from glitch.analysis.security import SecurityVisitor  # type: ignore
 
 
-def parse_and_check(
+def __parse_and_check(
     type: UnitBlockType,
     path: str,
     module: bool,
@@ -40,6 +40,53 @@ def parse_and_check(
         for analysis in analyses:
             errors += analysis.check(inter)
         stats.compute(inter)
+
+
+def __get_parser(tech: Tech) -> Parser:
+    if tech == Tech.ansible:
+        return AnsibleParser()
+    elif tech == Tech.chef:
+        return ChefParser()
+    elif tech == Tech.puppet:
+        return PuppetParser()
+    elif tech == Tech.docker:
+        return DockerParser()
+    elif tech == Tech.terraform:
+        return TerraformParser()
+    elif tech == Tech.gha:
+        return GithubActionsParser()
+    else:
+        raise ValueError(f"Invalid tech: {tech}")
+
+
+def __get_paths_and_title(
+    folder_strategy: str, path: str, tech: Tech
+) -> Tuple[Set[str], str]:
+    paths: Set[str] = set()
+    title = ""
+
+    if folder_strategy == "dataset":
+        paths = set([f.path for f in os.scandir(f"{path}") if f.is_dir()])
+        title = "ANALYZING SUBFOLDERS"
+    elif folder_strategy == "include-all":
+        extensions = tech.extensions
+        for root, _, files in os.walk(path):
+            for name in files:
+                name_split = name.split(".")
+                if (
+                    name_split[-1] in extensions
+                    and not Path(os.path.join(root, name)).is_symlink()
+                ):
+                    paths.add(os.path.join(root, name))
+        title = f"ANALYZING ALL FILES WITH EXTENSIONS {extensions}"
+    elif folder_strategy == "project":
+        paths.add(path)
+        title = "ANALYZING PROJECT"
+    elif folder_strategy == "module":
+        paths.add(path)
+        title = "ANALYZING MODULE"
+
+    return paths, title
 
 
 def repr_mode(
@@ -58,94 +105,84 @@ def repr_mode(
 )
 @click.option(
     "--tech",
-    type=click.Choice([t.value for t in Tech]),
+    type=click.Choice([t.tech for t in Tech]),
     required=True,
-    help="The IaC technology in which the scripts analyzed are written in.",
+    help="The IaC technology to be considered.",
 )
 @click.option(
-    "--tableformat",
+    "--table-format",
     type=click.Choice(("prettytable", "latex")),
     required=False,
     default="prettytable",
-    help="The presentation format of the tables that show stats about the run.",
+    help="The presentation format of the tables that summarize the run.",
 )
 @click.option(
     "--type",
     type=click.Choice([t.value for t in UnitBlockType]),
     default=UnitBlockType.unknown,
-    help="The type of scripts being analyzed.",
+    help="The type of the scripts being analyzed.",
 )
 @click.option(
     "--config",
     type=click.Path(),
     default="configs/default.ini",
-    help="The path for a config file. Otherwise the default config will be used.",
+    help="The path for a config file. Otherwise the default config is used.",
 )
 @click.option(
-    "--module",
-    is_flag=True,
-    default=False,
-    help="Use this flag if the folder you are going to analyze is a module (e.g. Chef cookbook).",
-)
-@click.option(
-    "--dataset",
-    is_flag=True,
-    default=False,
-    help="Use this flag if the folder being analyzed is a dataset. A dataset is a folder with subfolders to be analyzed.",
+    "--folder-strategy",
+    type=click.Choice(["project", "module", "dataset", "include-all"]),
+    default="project",
+    help="The method used to handle the folder (if the path is a folder). "
+    "If 'project', the folder is parsed and analyzed as a Project construct. "
+    "If 'module', the folder is parsed and analyzed as a Module construct. "
+    "If 'dataset', each subfolder in the root folder is analyzed as a Project construct. "
+    "If 'include-all', all files inside the folder and its subfolders, and which extensions correspond to the technology being considered, are analyzed individually"
+    " (e.g. .yml and .yaml files for Ansible). "
+    "Defaults to 'project'.",
 )
 @click.option(
     "--linter",
     is_flag=True,
     default=False,
-    help="This flag changes the output to be more usable for other interfaces, such as, extensions for code editors.",
-)
-@click.option(
-    "--includeall",
-    multiple=True,
-    help="Some files are ignored when analyzing a folder. For instance, sometimes only some"
-    "folders in the folder structure are considered. Use this option if"
-    "you want to analyze all the files with a certain extension inside a folder. (e.g. --includeall yml)"
-    "This flag is only relevant if you are using the dataset flag.",
+    help="Changes the output to be more usable for other interfaces, such as, extensions for code editors.",
 )
 @click.option(
     "--csv",
     is_flag=True,
     default=False,
-    help="Use this flag if you want the output to be in CSV format.",
+    help="Changes the output to CSV format.",
 )
 @click.option(
-    "--smell_types",
-    cls=RulesListOption,
+    "--smell-types",
+    type=click.Choice(get_smell_types(), case_sensitive=False),
     multiple=True,
     help="The type of smell_types being analyzed.",
 )
-# TODO: Add linter option to here
 @click.option(
     "--mode",
     type=click.Choice(["smell_detector", "repr"]),
-    help="The mode the tool is running in. If the mode is 'repr', the tool will only print the intermediate representation."
-    "The default mode is 'smell_detector'.",
+    help="The mode the tool is running in. If the mode is 'repr', the output is the intermediate representation."
+    "Defaults to 'smell_detector'.",
     default="smell_detector",
 )
 @click.argument("path", type=click.Path(exists=True), required=True)
 @click.argument("output", type=click.Path(), required=False)
 def glitch(
-    tech: str,
+    tech: str,  # type: ignore
     type: str,
     path: str,
+    folder_strategy: str,
     config: str,
-    module: bool,
     csv: bool,
-    dataset: bool,
-    includeall: Tuple[str, ...],
     smell_types: Tuple[str, ...],
     output: Optional[str],
-    tableformat: str,
+    table_format: str,
     linter: bool,
     mode: str,
 ):
-    tech = Tech(tech)
+    tech: Tech = Tech[tech]
     type = UnitBlockType(type)
+    module = folder_strategy == "module"
 
     if config != "configs/default.ini" and not os.path.exists(config):
         raise click.BadOptionUsage(
@@ -158,20 +195,9 @@ def glitch(
     elif config == "configs/default.ini":
         config = resource_filename("glitch", "configs/default.ini")
 
-    parser = None
-    if tech == Tech.ansible:
-        parser = AnsibleParser()
-    elif tech == Tech.chef:
-        parser = ChefParser()
-    elif tech == Tech.puppet:
-        parser = PuppetParser()
-    elif tech == Tech.docker:
-        parser = DockerParser()
-    elif tech == Tech.terraform:
-        parser = TerraformParser()
+    parser = __get_parser(tech)
+    if tech == Tech.terraform:
         config = resource_filename("glitch", "configs/terraform.ini")
-    elif tech == Tech.gha:
-        parser = GithubActionsParser()
     file_stats = FileStats()
 
     if mode == "repr":
@@ -190,46 +216,14 @@ def glitch(
             analyses.append(analysis)
 
     errors: List[Error] = []
-    if dataset:
-        if includeall != ():
-            iac_files: Set[str] = set()
-            for root, _, files in os.walk(path):
-                for name in files:
-                    name_split = name.split(".")
-                    if (
-                        name_split[-1] in includeall
-                        and not Path(os.path.join(root, name)).is_symlink()
-                    ):
-                        iac_files.add(os.path.join(root, name))
+    paths: Set[str]
+    title: str
+    paths, title = __get_paths_and_title(folder_strategy, path, tech)
 
-            with alive_bar(
-                len(iac_files),
-                title=f"ANALYZING ALL FILES WITH EXTENSIONS {includeall}",
-            ) as bar:  # type: ignore
-                for file in iac_files:
-                    parse_and_check(
-                        type, file, module, parser, analyses, errors, file_stats
-                    )
-                    bar()
-        else:
-            subfolders = [f.path for f in os.scandir(f"{path}") if f.is_dir()]
-            with alive_bar(len(subfolders), title="ANALYZING SUBFOLDERS") as bar:  # type: ignore
-                for d in subfolders:
-                    parse_and_check(
-                        type, d, module, parser, analyses, errors, file_stats
-                    )
-                    bar()
-
-        files = [f.path for f in os.scandir(f"{path}") if f.is_file()]
-
-        with alive_bar(len(files), title="ANALYZING FILES IN ROOT FOLDER") as bar:  # type: ignore
-            for file in files:
-                parse_and_check(
-                    type, file, module, parser, analyses, errors, file_stats
-                )
-                bar()
-    else:
-        parse_and_check(type, path, module, parser, analyses, errors, file_stats)
+    with alive_bar(len(paths), title=title) as bar:  # type: ignore
+        for p in paths:
+            __parse_and_check(type, p, module, parser, analyses, errors, file_stats)
+            bar()
 
     errors = sorted(set(errors), key=lambda e: (e.path, e.line, e.code))
 
@@ -251,11 +245,12 @@ def glitch(
     if f != sys.stdout:
         f.close()
     if not linter:
-        print_stats(errors, get_smells(smell_types, tech), file_stats, tableformat)
+        print_stats(errors, get_smells(smell_types, tech), file_stats, table_format)
 
 
 def main() -> None:
     glitch(prog_name="glitch")
 
 
-main()
+if __name__ == "__main__":
+    main()

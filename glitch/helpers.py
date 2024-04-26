@@ -1,48 +1,6 @@
-import click
-
-from click.types import ParamType
-from typing import Optional, List, Tuple, Iterable, Sequence, Any, Union
+from typing import List, Tuple, Iterable
 from glitch.tech import Tech
 from glitch.analysis.rules import Error
-
-
-class RulesListOption(click.Option):
-    def __init__(
-        self,
-        param_decls: Optional[Sequence[str]] = None,
-        show_default: bool = False,
-        prompt: bool = False,
-        confirmation_prompt: bool = False,
-        hide_input: bool = False,
-        is_flag: Optional[bool] = None,
-        flag_value: Optional[Any] = None,
-        multiple: bool = False,
-        count: bool = False,
-        allow_from_autoenv: bool = True,
-        type: Optional[Union[ParamType, Any]] = None,
-        help: Optional[str] = None,
-        hidden: bool = False,
-        show_choices: bool = True,
-        show_envvar: bool = False,
-    ) -> None:
-        super().__init__(
-            param_decls=param_decls,
-            show_default=show_default,
-            prompt=prompt,
-            confirmation_prompt=confirmation_prompt,
-            hide_input=hide_input,
-            is_flag=is_flag,
-            flag_value=flag_value,
-            multiple=multiple,
-            count=count,
-            allow_from_autoenv=allow_from_autoenv,
-            type=type,
-            help=help,
-            hidden=hidden,
-            show_choices=show_choices,
-            show_envvar=show_envvar,
-        )
-        self.type = click.Choice(get_smell_types(), case_sensitive=False)
 
 
 def get_smell_types() -> Tuple[str, ...]:

@@ -31,7 +31,10 @@ class TestGithubActionsParser(unittest.TestCase):
         assert len(ir.attributes[0].keyvalues[0].keyvalues) == 1
         assert ir.attributes[0].keyvalues[0].keyvalues[0].name == "branches"
         assert ir.attributes[0].keyvalues[0].keyvalues[0].value == ["main"]
-        assert ir.attributes[0].keyvalues[0].keyvalues[0].code == "    branches:\n      - main\n  "
+        assert (
+            ir.attributes[0].keyvalues[0].keyvalues[0].code
+            == "    branches:\n      - main\n  "
+        )
 
         assert ir.attributes[0].keyvalues[1].name == "pull_request"
         assert ir.attributes[0].keyvalues[1].value is None
