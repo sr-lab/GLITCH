@@ -348,6 +348,7 @@ class ChefParser(p.Parser):
                     has_variable,
                 )
                 a.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                a.column = ChefParser._get_content_bounds(ast, self.source)[1]
                 a.code = ChefParser._get_source(ast, self.source)
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
@@ -368,6 +369,7 @@ class ChefParser(p.Parser):
             ):
                 variable = Variable(name, value, has_variable)
                 variable.line = ChefParser._get_content_bounds(key, self.source)[0]
+                variable.column = ChefParser._get_content_bounds(key, self.source)[1]
                 variable.code = ChefParser._get_source(ast, self.source)
                 return variable
 

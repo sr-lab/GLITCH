@@ -53,9 +53,6 @@ class Block(CodeElement):
             return stat
 
     def as_dict(self) -> Dict[str, Any]:
-        print(self.statements)
-        for statement in self.statements:
-            print(type(statement))
         return {
             **super().as_dict(),
             "statements": [
