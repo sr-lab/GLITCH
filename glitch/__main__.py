@@ -2,7 +2,7 @@ import json
 import click, os, sys
 
 from pathlib import Path
-from typing import Tuple, List, Set, Optional
+from typing import Tuple, List, Set, Optional, TextIO
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import get_smell_types, get_smells
 from glitch.parsers.docker import DockerParser
@@ -18,6 +18,7 @@ from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
 from pkg_resources import resource_filename
 from alive_progress import alive_bar  # type: ignore
+from concurrent.futures import ThreadPoolExecutor, Future
 
 
 # NOTE: These are necessary in order for python to load the visitors.
@@ -32,14 +33,30 @@ def __parse_and_check(
     module: bool,
     parser: Parser,
     analyses: List[RuleVisitor],
-    errors: List[Error],
     stats: FileStats,
-) -> None:
+) -> Set[Error]:
+    errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
+
     if inter != None:
         for analysis in analyses:
-            errors += analysis.check(inter)
+            errors.update(analysis.check(inter))
         stats.compute(inter)
+
+    return errors
+
+
+def __print_errors(errors: Set[Error], f: TextIO, linter: bool, csv: bool) -> None:
+    errors_sorted = sorted(errors, key=lambda e: (e.path, e.line, e.code))
+    if linter:
+        for error in errors_sorted:
+            print(Error.ALL_ERRORS[error.code] + "," + error.to_csv(), file=f)
+    elif csv:
+        for error in errors_sorted:
+            print(error.to_csv(), file=f)
+    else:
+        for error in errors_sorted:
+            print(error, file=f)
 
 
 def __get_parser(tech: Tech) -> Parser:
@@ -165,6 +182,12 @@ def repr_mode(
     "Defaults to 'smell_detector'.",
     default="smell_detector",
 )
+@click.option(
+    "--n-workers",
+    type=int,
+    help="Number of parallel workers to use. Defaults to 1.",
+    default=1,
+)
 @click.argument("path", type=click.Path(exists=True), required=True)
 @click.argument("output", type=click.Path(), required=False)
 def glitch(
@@ -179,6 +202,7 @@ def glitch(
     table_format: str,
     linter: bool,
     mode: str,
+    n_workers: int,
 ):
     tech: Tech = Tech[tech]
     type = UnitBlockType(type)
@@ -219,31 +243,26 @@ def glitch(
     paths: Set[str]
     title: str
     paths, title = __get_paths_and_title(folder_strategy, path, tech)
+    futures: List[Future[Set[Error]]] = []
+    executor = ThreadPoolExecutor(max_workers=n_workers)
 
     with alive_bar(len(paths), title=title) as bar:  # type: ignore
         for p in paths:
-            __parse_and_check(type, p, module, parser, analyses, errors, file_stats)
+            futures.append(
+                executor.submit(
+                    __parse_and_check, type, p, module, parser, analyses, file_stats
+                )
+            )
             bar()
 
-    errors = sorted(set(errors), key=lambda e: (e.path, e.line, e.code))
-
-    if output is None:
-        f = sys.stdout
-    else:
-        f = open(output, "w")
-
-    if linter:
-        for error in errors:
-            print(Error.ALL_ERRORS[error.code] + "," + error.to_csv(), file=f)
-    elif csv:
-        for error in errors:
-            print(error.to_csv(), file=f)
-    else:
-        for error in errors:
-            print(error, file=f)
-
+    f = sys.stdout if output is None else open(output, "w")
+    for future in futures:
+        new_errors = future.result()
+        errors.extend(new_errors)
+        __print_errors(new_errors, f, linter, csv)
     if f != sys.stdout:
         f.close()
+
     if not linter:
         print_stats(errors, get_smells(smell_types, tech), file_stats, table_format)
 
