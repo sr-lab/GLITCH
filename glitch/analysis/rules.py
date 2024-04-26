@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from glitch.tech import Tech
 from glitch.repr.inter import *
 
-ErrorDict = Dict[str, Union[Union[Tech, str], "ErrorDict"]]
+ErrorValue = Dict[Tech | str, Dict[str, str] | str]
+ErrorDict = Dict[str, ErrorValue]
 
 
 class Error:
@@ -66,11 +67,13 @@ class Error:
 
     @staticmethod
     def agglomerate_errors() -> None:
-        def aux_agglomerate_errors(key: str, errors: Union[str, ErrorDict]) -> None:
+        def aux_agglomerate_errors(
+            key: Tech | str, errors: Union[str, ErrorDict, ErrorValue, Dict[str, str]]
+        ) -> None:
             if isinstance(errors, dict):
                 for k, v in errors.items():
                     aux_agglomerate_errors(k, v)
-            else:
+            elif isinstance(key, str):
                 Error.ALL_ERRORS[key] = errors
 
         aux_agglomerate_errors("", Error.ERRORS)
