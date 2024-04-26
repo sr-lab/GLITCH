@@ -1,4 +1,5 @@
 import json
+import tqdm
 import click, os, sys
 
 from pathlib import Path
@@ -17,8 +18,7 @@ from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
 from pkg_resources import resource_filename
-from alive_progress import alive_bar  # type: ignore
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 
 
 # NOTE: These are necessary in order for python to load the visitors.
@@ -246,17 +246,15 @@ def glitch(
     futures: List[Future[Set[Error]]] = []
     executor = ThreadPoolExecutor(max_workers=n_workers)
 
-    with alive_bar(len(paths), title=title) as bar:  # type: ignore
-        for p in paths:
-            futures.append(
-                executor.submit(
-                    __parse_and_check, type, p, module, parser, analyses, file_stats
-                )
+    for p in paths:
+        futures.append(
+            executor.submit(
+                __parse_and_check, type, p, module, parser, analyses, file_stats
             )
-            bar()
+        )
 
     f = sys.stdout if output is None else open(output, "w")
-    for future in futures:
+    for future in tqdm.tqdm(as_completed(futures), total=len(futures), desc=title):
         new_errors = future.result()
         errors.extend(new_errors)
         __print_errors(new_errors, f, linter, csv)
