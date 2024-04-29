@@ -1,0 +1,19 @@
+name: Package and Release
+
+on:
+  push:
+    tags:
+      - '**'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v1
+
+      - name: test
+        uses: test
+        with:
+          args: test

@@ -31,6 +31,10 @@ class TestGithubActionsParser(unittest.TestCase):
         assert len(ir.attributes[0].keyvalues[0].keyvalues) == 1
         assert ir.attributes[0].keyvalues[0].keyvalues[0].name == "branches"
         assert ir.attributes[0].keyvalues[0].keyvalues[0].value == ["main"]
+        assert (
+            ir.attributes[0].keyvalues[0].keyvalues[0].code
+            == "    branches:\n      - main\n  "
+        )
 
         assert ir.attributes[0].keyvalues[1].name == "pull_request"
         assert ir.attributes[0].keyvalues[1].value is None
@@ -138,3 +142,13 @@ class TestGithubActionsParser(unittest.TestCase):
 
         assert ir.comments[9].content == "# for actions/checkout to fetch code"
         assert ir.comments[9].line == 31
+
+    def test_gha_index_out_of_range(self) -> None:
+        """
+        This file previously gave an index out of range even though it is valid.
+        """
+        p = GithubActionsParser()
+        ir = p.parse_file(
+            "tests/parser/gha/files/index_out_of_range.yml", UnitBlockType.script
+        )
+        assert ir is not None

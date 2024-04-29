@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/453066827.svg)](https://zenodo.org/badge/latestdoi/453066827)
 [![License: GPL-3.0](https://badgen.net/github/license/sr-lab/GLITCH)](https://www.gnu.org/licenses/gpl-3.0)
-[![Python Version](https://img.shields.io/badge/python-3.9+-blue)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/downloads/)
 [![Last release](https://badgen.net/github/release/sr-lab/GLITCH/)](https://github.com/sr-lab/GLITCH/releases)
 
 ![alt text](https://github.com/sr-lab/GLITCH/blob/main/logo.png?raw=true)
@@ -38,7 +38,8 @@ https://doi.org/10.1109/ASE56229.2023.00162
   title={Polyglot Code Smell Detection for Infrastructure as Code with GLITCH}, 
   year={2023},
   pages={2042-2045},
-  doi={10.1109/ASE56229.2023.00162}}
+  doi={10.1109/ASE56229.2023.00162}
+}
 ```
 
 ## Installation

@@ -25,7 +25,7 @@ class TooManyVariables(DesignSmellChecker):
                     Error(
                         "implementation_too_many_variables",
                         element,
-                        element.path,
+                        file,
                         repr(element),
                     )
                 ]

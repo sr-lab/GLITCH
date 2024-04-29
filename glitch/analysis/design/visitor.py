@@ -54,7 +54,7 @@ class DesignVisitor(RuleVisitor):
         #     errors.append(Error('design_unnecessary_abstraction', m, m.path, repr(m)))
         return errors
 
-    def check_unitblock(self, u: UnitBlock) -> List[Error]:
+    def check_unitblock(self, u: UnitBlock, file: str) -> List[Error]:
         if u.path != "":
             with open(u.path, "r") as f:
                 try:
@@ -78,33 +78,33 @@ class DesignVisitor(RuleVisitor):
         errors: List[Error] = []
         # The order is important
         for au in u.atomic_units:
-            errors += self.check_atomicunit(au, u.path)
+            errors += self.check_atomicunit(au, file)
         for v in u.variables:
-            errors += self.check_variable(v, u.path)
+            errors += self.check_variable(v, file)
         for a in u.attributes:
-            errors += self.check_attribute(a, u.path)
+            errors += self.check_attribute(a, file)
         for d in u.dependencies:
-            errors += self.check_dependency(d, u.path)
+            errors += self.check_dependency(d, file)
         for s in u.statements:
-            errors += self.check_element(s, u.path)
+            errors += self.check_element(s, file)
         for c in u.comments:
-            errors += self.check_comment(c, u.path)
+            errors += self.check_comment(c, file)
 
         # FIXME Needs to consider more things
         # if (len(u.statements) == 0 and len(u.atomic_units) == 0 and
         #         len(u.variables) == 0 and len(u.unit_blocks) == 0 and
         #             len(u.attributes) == 0):
-        #     errors.append(Error('design_unnecessary_abstraction', u, u.path, repr(u)))
+        #     errors.append(Error('design_unnecessary_abstraction', u, file, repr(u)))
 
         for checker in self.checkers:
             checker.code_lines = code_lines
             checker.variables_names = self.variables_names
-            errors += checker.check(u, u.path)
+            errors += checker.check(u, file)
 
         # The unit blocks inside should only be considered after in order to
         # have the correct variables
         for ub in u.unit_blocks:
-            errors += self.check_unitblock(ub)
+            errors += self.check_unitblock(ub, file)
 
         variable_size = self.variable_stack.pop()
         if variable_size == 0:

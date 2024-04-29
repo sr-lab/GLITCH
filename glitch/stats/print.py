@@ -26,13 +26,13 @@ def print_stats(
     total_smell_density = 0
     for code, n in occurrences.items():
         total_occur += n
-        total_smell_density += round(n / (file_stats.loc / 1000), 2)
+        total_smell_density += round(n / (max(1, file_stats.loc) / 1000), 2)
         stats_info.append(
             (
                 Error.ALL_ERRORS[code],
                 n,
-                round(n / (file_stats.loc / 1000), 2),
-                round((len(files_with_the_smell[code]) / total_files) * 100, 2),
+                round(n / (max(1, file_stats.loc) / 1000), 2),
+                round((len(files_with_the_smell[code]) / max(1, total_files)) * 100, 2),
             )
         )
     stats_info.append(
@@ -40,7 +40,9 @@ def print_stats(
             "Combined",
             total_occur,
             total_smell_density,
-            round((len(files_with_the_smell["Combined"]) / total_files) * 100, 2),
+            round(
+                (len(files_with_the_smell["Combined"]) / max(1, total_files)) * 100, 2
+            ),
         )
     )
 
