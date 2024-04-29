@@ -204,7 +204,10 @@ def glitch(
     mode: str,
     n_workers: int,
 ):
-    tech: Tech = Tech[tech]
+    for t in Tech:
+        if t.tech == tech:
+            tech: Tech = t
+
     type = UnitBlockType(type)
     module = folder_strategy == "module"
 
