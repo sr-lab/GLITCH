@@ -1,7 +1,7 @@
 import unittest
 
 from glitch.analysis.design.visitor import DesignVisitor
-from glitch.analysis.rules import Error  
+from glitch.analysis.rules import Error
 from glitch.parsers.gha import GithubActionsParser
 from glitch.tech import Tech
 from glitch.repr.inter import UnitBlockType
@@ -9,7 +9,9 @@ from typing import List
 
 
 class TestDesign(unittest.TestCase):
-    def __help_test(self, path: str, n_errors: int, codes: List[str], lines: List[int]) -> None:
+    def __help_test(
+        self, path: str, n_errors: int, codes: List[str], lines: List[int]
+    ) -> None:
         parser = GithubActionsParser()
         inter = parser.parse(path, UnitBlockType.script, False)
         assert inter is not None
@@ -20,7 +22,7 @@ class TestDesign(unittest.TestCase):
             filter(
                 lambda e: e.code.startswith("design_")
                 or e.code.startswith("implementation_"),
-                errors
+                errors,
             )
         )
         errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))

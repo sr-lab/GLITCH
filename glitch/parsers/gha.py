@@ -93,7 +93,10 @@ class GithubActionsParser(YamlParser):
                         au_type = step_dict["uses"]
 
                     au = AtomicUnit(name, au_type)
-                    au.line, au.column = step.start_mark.line + 1, step.start_mark.column + 1
+                    au.line, au.column = (
+                        step.start_mark.line + 1,
+                        step.start_mark.column + 1,
+                    )
                     au.code = GithubActionsParser._get_code(step, step, lines)
 
                     for key, value in step.value:

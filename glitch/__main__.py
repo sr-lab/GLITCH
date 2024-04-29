@@ -39,7 +39,7 @@ def __parse_and_check(
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
-    # Avoids problems with multiple threads (and possibly multiple files) 
+    # Avoids problems with multiple threads (and possibly multiple files)
     # sharing the same object
     analyses = deepcopy(analyses)
 
