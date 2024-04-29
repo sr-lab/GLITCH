@@ -145,7 +145,7 @@ class TestGithubActionsParser(unittest.TestCase):
 
     def test_gha_index_out_of_range(self) -> None:
         """
-        This file gave an index out of range even though it is valid.
+        This file previously gave an index out of range even though it is valid.
         """
         p = GithubActionsParser()
         ir = p.parse_file(

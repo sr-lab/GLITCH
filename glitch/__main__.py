@@ -19,6 +19,7 @@ from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
 from glitch.exceptions import throw_exception
 from pkg_resources import resource_filename
+from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 
 
@@ -38,6 +39,9 @@ def __parse_and_check(
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
+    # Avoids problems with multiple threads (and possibly multiple files) 
+    # sharing the same object
+    analyses = deepcopy(analyses)
 
     if inter != None:
         for analysis in analyses:
