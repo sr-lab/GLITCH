@@ -28,7 +28,7 @@ class ImperativeAbstraction(DesignSmellChecker):
                     Error(
                         "design_imperative_abstraction",
                         element,
-                        element.path,
+                        file,
                         repr(element),
                     )
                 ]

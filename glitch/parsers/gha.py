@@ -49,7 +49,7 @@ class GithubActionsParser(YamlParser):
         var = Variable(GithubActionsParser.__get_value(key), var_value, False)
         if isinstance(var.value, str):
             var.has_variable = "${{" in var.value
-        var.line, var.column = key.start_mark.line, key.start_mark.column
+        var.line, var.column = key.start_mark.line + 1, key.start_mark.column + 1
         var.code = GithubActionsParser._get_code(key, value, lines)
         for child in vars:
             var.keyvalues.append(child)
@@ -70,7 +70,7 @@ class GithubActionsParser(YamlParser):
         attr = Attribute(GithubActionsParser.__get_value(key), attr_value, False)
         if isinstance(attr.value, str):
             attr.has_variable = "${{" in attr.value
-        attr.line, attr.column = key.start_mark.line, key.start_mark.column
+        attr.line, attr.column = key.start_mark.line + 1, key.start_mark.column + 1
         attr.code = GithubActionsParser._get_code(key, value, lines)
         for child in attrs:
             attr.keyvalues.append(child)
@@ -79,7 +79,7 @@ class GithubActionsParser(YamlParser):
 
     def __parse_job(self, key: Node, value: Node, lines: List[str]) -> UnitBlock:
         job = UnitBlock(key.value, UnitBlockType.block)
-        job.line, job.column = key.start_mark.line, key.start_mark.column
+        job.line, job.column = key.start_mark.line + 1, key.start_mark.column + 1
         job.code = GithubActionsParser._get_code(key, value, lines)
 
         for attr_key, attr_value in value.value:
@@ -93,7 +93,7 @@ class GithubActionsParser(YamlParser):
                         au_type = step_dict["uses"]
 
                     au = AtomicUnit(name, au_type)
-                    au.line, au.column = step.start_mark.line, step.start_mark.column
+                    au.line, au.column = step.start_mark.line + 1, step.start_mark.column + 1
                     au.code = GithubActionsParser._get_code(step, step, lines)
 
                     for key, value in step.value:

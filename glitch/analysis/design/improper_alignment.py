@@ -14,7 +14,7 @@ class ImproperAlignmentTabs(DesignSmellChecker):
                     error = Error(
                         "implementation_improper_alignment",
                         element,
-                        element.path,
+                        file,
                         repr(element),
                     )
                     error.line = i + 1

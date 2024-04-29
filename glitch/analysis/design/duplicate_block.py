@@ -46,7 +46,7 @@ class UnguardedVariable(DesignSmellChecker):
                             error = Error(
                                 "design_duplicate_block",
                                 element,
-                                element.path,
+                                file,
                                 self.code_lines[line - 1],
                             )
                             error.line = line

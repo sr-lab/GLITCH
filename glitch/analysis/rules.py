@@ -142,7 +142,7 @@ class RuleVisitor(ABC):
         elif isinstance(code, Module):
             return self.check_module(code)
         else:
-            return self.check_unitblock(code)
+            return self.check_unitblock(code, code.path)
 
     def check_element(self, c: CodeElement, file: str) -> list[Error]:
         if isinstance(c, AtomicUnit):
@@ -180,31 +180,31 @@ class RuleVisitor(ABC):
             errors += self.check_module(m)
 
         for u in p.blocks:
-            errors += self.check_unitblock(u)
+            errors += self.check_unitblock(u, u.path)
 
         return errors
 
     def check_module(self, m: Module) -> list[Error]:
         errors: List[Error] = []
         for u in m.blocks:
-            errors += self.check_unitblock(u)
+            errors += self.check_unitblock(u, u.path)
 
         return errors
 
-    def check_unitblock(self, u: UnitBlock) -> list[Error]:
+    def check_unitblock(self, u: UnitBlock, file: str) -> list[Error]:
         errors: List[Error] = []
         for au in u.atomic_units:
-            errors += self.check_atomicunit(au, u.path)
+            errors += self.check_atomicunit(au, file)
         for c in u.comments:
-            errors += self.check_comment(c, u.path)
+            errors += self.check_comment(c, file)
         for v in u.variables:
-            errors += self.check_variable(v, u.path)
+            errors += self.check_variable(v, file)
         for ub in u.unit_blocks:
-            errors += self.check_unitblock(ub)
+            errors += self.check_unitblock(ub, file)
         for a in u.attributes:
-            errors += self.check_attribute(a, u.path)
+            errors += self.check_attribute(a, file)
         for s in u.statements:
-            errors += self.check_element(s, u.path)
+            errors += self.check_element(s, file)
 
         return errors
 

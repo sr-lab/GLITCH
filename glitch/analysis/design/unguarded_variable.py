@@ -27,7 +27,7 @@ class UnguardedVariable(DesignSmellChecker):
                                 error = Error(
                                     "implementation_unguarded_variable",
                                     element,
-                                    element.path,
+                                    file,
                                     string,
                                 )
                                 error.line = i + 1

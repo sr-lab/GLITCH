@@ -207,6 +207,12 @@ def glitch(
     for t in Tech:
         if t.tech == tech:
             tech: Tech = t
+            break
+    else:
+        raise click.BadOptionUsage(
+            "tech",
+            f"Invalid value for 'tech': '{tech}' is not a valid technology.",
+        )
 
     type = UnitBlockType(type)
     module = folder_strategy == "module"

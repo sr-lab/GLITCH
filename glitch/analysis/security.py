@@ -436,24 +436,24 @@ class SecurityVisitor(RuleVisitor):
 
         return errors
 
-    def check_unitblock(self, u: UnitBlock) -> List[Error]:
-        errors = super().check_unitblock(u)
+    def check_unitblock(self, u: UnitBlock, file: str) -> List[Error]:
+        errors = super().check_unitblock(u, file)
 
         # Missing integrity check changed to unit block since in Docker the integrity check is not an attribute of the
         # atomic unit but can be done on another atomic unit inside the same unit block.
         missing_integrity_checks = {}
         for au in u.atomic_units:
-            result = self.check_integrity_check(au, u.path)
+            result = self.check_integrity_check(au, file)
             if result is not None:
                 missing_integrity_checks[result[0]] = result[1]
                 continue
-            file = SecurityVisitor.check_has_checksum(au)
-            if file is not None:
-                if file in missing_integrity_checks:
-                    del missing_integrity_checks[file]
+            f = SecurityVisitor.check_has_checksum(au)
+            if f is not None:
+                if f in missing_integrity_checks:
+                    del missing_integrity_checks[f]
 
         errors += missing_integrity_checks.values()
-        errors += self.non_off_img.check(u, u.path)
+        errors += self.non_off_img.check(u, file)
 
         return errors
 

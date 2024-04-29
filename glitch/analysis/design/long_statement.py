@@ -12,7 +12,7 @@ class LongStatement(DesignSmellChecker):
             for i, line in enumerate(self.code_lines):
                 if len(line) > 140:
                     error = Error(
-                        "implementation_long_statement", element, element.path, line
+                        "implementation_long_statement", element, file, line
                     )
                     error.line = i + 1
                     errors.append(error)
