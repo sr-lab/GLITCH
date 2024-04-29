@@ -3,7 +3,7 @@ import tqdm
 import click, os, sys
 
 from pathlib import Path
-from typing import Tuple, List, Set, Optional, TextIO
+from typing import Tuple, List, Set, Optional, TextIO, Dict
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import get_smell_types, get_smells
 from glitch.parsers.docker import DockerParser
@@ -17,6 +17,7 @@ from glitch.parsers.chef import ChefParser
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
+from glitch.exceptions import throw_exception
 from pkg_resources import resource_filename
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 
@@ -253,6 +254,7 @@ def glitch(
     title: str
     paths, title = __get_paths_and_title(folder_strategy, path, tech)
     futures: List[Future[Set[Error]]] = []
+    future_to_path: Dict[Future[Set[Error]], str] = {}
     executor = ThreadPoolExecutor(max_workers=n_workers)
 
     for p in paths:
@@ -261,12 +263,16 @@ def glitch(
                 __parse_and_check, type, p, module, parser, analyses, file_stats
             )
         )
+        future_to_path[futures[-1]] = p
 
     f = sys.stdout if output is None else open(output, "w")
     for future in tqdm.tqdm(as_completed(futures), total=len(futures), desc=title):
-        new_errors = future.result()
-        errors.extend(new_errors)
-        __print_errors(new_errors, f, linter, csv)
+        try:
+            new_errors = future.result()
+            errors.extend(new_errors)
+            __print_errors(new_errors, f, linter, csv)
+        except:
+            throw_exception("Unknown Error: {}", future_to_path[future])
     if f != sys.stdout:
         f.close()
 

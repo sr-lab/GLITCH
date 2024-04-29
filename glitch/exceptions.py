@@ -1,4 +1,5 @@
 import sys
+import traceback
 
 EXCEPTIONS = {
     "ANSIBLE_PLAYBOOK": "Ansible - File is not a playbook: {}",
@@ -17,4 +18,7 @@ EXCEPTIONS = {
 
 
 def throw_exception(exception: str, *args: str) -> None:
-    print(exception.format(*args), file=sys.stderr)
+    print("Error:", exception.format(*args), file=sys.stderr)
+    print("=" * 20 + " Traceback " + "=" * 20, file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    print("=" * 51, file=sys.stderr)
