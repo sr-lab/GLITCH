@@ -24,13 +24,26 @@ class TestGithubActionsParser(unittest.TestCase):
         assert len(ir.attributes) == 1
         assert ir.attributes[0].name == "on"
         assert ir.attributes[0].value is None
+        assert ir.attributes[0].line == 2
+        assert ir.attributes[0].end_line == 10
+        assert ir.attributes[0].column == 1
+        assert ir.attributes[0].end_column == 1
         assert len(ir.attributes[0].keyvalues) == 2
 
         assert ir.attributes[0].keyvalues[0].name == "push"
         assert ir.attributes[0].keyvalues[0].value is None
+        assert ir.attributes[0].keyvalues[0].line == 3
+        assert ir.attributes[0].keyvalues[0].end_line == 6
+        assert ir.attributes[0].keyvalues[0].column == 3
+        assert ir.attributes[0].keyvalues[0].end_column == 3
         assert len(ir.attributes[0].keyvalues[0].keyvalues) == 1
+
         assert ir.attributes[0].keyvalues[0].keyvalues[0].name == "branches"
         assert ir.attributes[0].keyvalues[0].keyvalues[0].value == ["main"]
+        assert ir.attributes[0].keyvalues[0].keyvalues[0].line == 4
+        assert ir.attributes[0].keyvalues[0].keyvalues[0].end_line == 6
+        assert ir.attributes[0].keyvalues[0].keyvalues[0].column == 5
+        assert ir.attributes[0].keyvalues[0].keyvalues[0].end_column == 3
         assert (
             ir.attributes[0].keyvalues[0].keyvalues[0].code
             == "    branches:\n      - main\n  "
@@ -38,9 +51,18 @@ class TestGithubActionsParser(unittest.TestCase):
 
         assert ir.attributes[0].keyvalues[1].name == "pull_request"
         assert ir.attributes[0].keyvalues[1].value is None
+        assert ir.attributes[0].keyvalues[1].line == 6
+        assert ir.attributes[0].keyvalues[1].end_line == 10
+        assert ir.attributes[0].keyvalues[1].column == 3
+        assert ir.attributes[0].keyvalues[1].end_column == 1
+
         assert len(ir.attributes[0].keyvalues[1].keyvalues) == 1
         assert ir.attributes[0].keyvalues[1].keyvalues[0].name == "branches"
         assert ir.attributes[0].keyvalues[1].keyvalues[0].value == ["main"]
+        assert ir.attributes[0].keyvalues[1].keyvalues[0].line == 7
+        assert ir.attributes[0].keyvalues[1].keyvalues[0].end_line == 10
+        assert ir.attributes[0].keyvalues[1].keyvalues[0].column == 5
+        assert ir.attributes[0].keyvalues[1].keyvalues[0].end_column == 1
 
         assert len(ir.unit_blocks) == 1
         assert ir.unit_blocks[0].type == UnitBlockType.block
@@ -49,6 +71,10 @@ class TestGithubActionsParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].attributes) == 1
         assert ir.unit_blocks[0].attributes[0].name == "runs-on"
         assert ir.unit_blocks[0].attributes[0].value == "ubuntu-latest"
+        assert ir.unit_blocks[0].attributes[0].line == 12
+        assert ir.unit_blocks[0].attributes[0].end_line == 12
+        assert ir.unit_blocks[0].attributes[0].column == 5
+        assert ir.unit_blocks[0].attributes[0].end_column == 27
 
         assert len(ir.unit_blocks[0].atomic_units) == 5
 
@@ -60,6 +86,10 @@ class TestGithubActionsParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].atomic_units[1].attributes) == 1
         assert ir.unit_blocks[0].atomic_units[1].attributes[0].name == "ruby-version"
         assert ir.unit_blocks[0].atomic_units[1].attributes[0].value == "2.7.4"
+        assert ir.unit_blocks[0].atomic_units[1].attributes[0].line == 17
+        assert ir.unit_blocks[0].atomic_units[1].attributes[0].end_line == 17
+        assert ir.unit_blocks[0].atomic_units[1].attributes[0].column == 11
+        assert ir.unit_blocks[0].atomic_units[1].attributes[0].end_column == 32
         assert not ir.unit_blocks[0].atomic_units[1].attributes[0].has_variable
 
         assert ir.unit_blocks[0].atomic_units[2].name == "Install Python 3"
@@ -67,6 +97,10 @@ class TestGithubActionsParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].atomic_units[2].attributes) == 1
         assert ir.unit_blocks[0].atomic_units[2].attributes[0].name == "python-version"
         assert ir.unit_blocks[0].atomic_units[2].attributes[0].value == "3.10.5"
+        assert ir.unit_blocks[0].atomic_units[2].attributes[0].line == 21
+        assert ir.unit_blocks[0].atomic_units[2].attributes[0].end_line == 21
+        assert ir.unit_blocks[0].atomic_units[2].attributes[0].column == 11
+        assert ir.unit_blocks[0].atomic_units[2].attributes[0].end_column == 33
         assert not ir.unit_blocks[0].atomic_units[2].attributes[0].has_variable
 
         assert ir.unit_blocks[0].atomic_units[3].name == "Install dependencies"
@@ -77,6 +111,10 @@ class TestGithubActionsParser(unittest.TestCase):
             ir.unit_blocks[0].atomic_units[3].attributes[0].value
             == "python -m pip install --upgrade pip\npython -m pip install -e .\n"
         )
+        assert ir.unit_blocks[0].atomic_units[3].attributes[0].line == 23
+        assert ir.unit_blocks[0].atomic_units[3].attributes[0].end_line == 26
+        assert ir.unit_blocks[0].atomic_units[3].attributes[0].column == 9
+        assert ir.unit_blocks[0].atomic_units[3].attributes[0].end_column == 1
         assert not ir.unit_blocks[0].atomic_units[3].attributes[0].has_variable
 
         assert ir.unit_blocks[0].atomic_units[4].name == "Run tests with pytest"
@@ -87,6 +125,10 @@ class TestGithubActionsParser(unittest.TestCase):
             ir.unit_blocks[0].atomic_units[4].attributes[0].value
             == "cd glitch\npython -m unittest discover tests"
         )
+        assert ir.unit_blocks[0].atomic_units[4].attributes[0].line == 27
+        assert ir.unit_blocks[0].atomic_units[4].attributes[0].end_line == 29
+        assert ir.unit_blocks[0].atomic_units[4].attributes[0].column == 9
+        assert ir.unit_blocks[0].atomic_units[4].attributes[0].end_column == 44
         assert not ir.unit_blocks[0].atomic_units[4].attributes[0].has_variable
 
     def test_gha_valid_workflow_2(self) -> None:
