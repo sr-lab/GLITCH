@@ -46,11 +46,25 @@ class GithubActionsParser(YamlParser):
         else:
             var_value = GithubActionsParser.__get_value(value)
 
-        var = Variable(GithubActionsParser.__get_value(key), var_value, False)
-        if isinstance(var.value, str):
-            var.has_variable = "${{" in var.value
-        var.line, var.column = key.start_mark.line + 1, key.start_mark.column + 1
-        var.code = GithubActionsParser._get_code(key, value, lines)
+        name = GithubActionsParser.__get_value(key)
+        has_variable = False
+        if isinstance(var_value, str):
+            has_variable = "${{" in var_value
+        code = GithubActionsParser._get_code(key, value, lines)
+
+        var = Variable(
+            name,
+            var_value,
+            has_variable,
+            ElementInfo(
+                key.start_mark.line + 1,
+                key.start_mark.column + 1,
+                value.end_mark.line + 1,
+                value.end_mark.column + 1,
+                code,
+            ),
+        )
+
         for child in vars:
             var.keyvalues.append(child)
 
@@ -67,11 +81,24 @@ class GithubActionsParser(YamlParser):
         else:
             attr_value = GithubActionsParser.__get_value(value)
 
-        attr = Attribute(GithubActionsParser.__get_value(key), attr_value, False)
-        if isinstance(attr.value, str):
-            attr.has_variable = "${{" in attr.value
-        attr.line, attr.column = key.start_mark.line + 1, key.start_mark.column + 1
-        attr.code = GithubActionsParser._get_code(key, value, lines)
+        name = GithubActionsParser.__get_value(key)
+        has_variable = False
+        if isinstance(attr_value, str):
+            has_variable = "${{" in attr_value
+        code = GithubActionsParser._get_code(key, value, lines)
+
+        attr = Attribute(
+            name,
+            attr_value,
+            has_variable,
+            ElementInfo(
+                key.start_mark.line + 1,
+                key.start_mark.column + 1,
+                value.end_mark.line + 1,
+                value.end_mark.column + 1,
+                code,
+            ),
+        )
         for child in attrs:
             attr.keyvalues.append(child)
 

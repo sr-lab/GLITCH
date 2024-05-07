@@ -1,13 +1,32 @@
 from abc import ABC
 from enum import Enum
+from dataclasses import dataclass
 from typing import List, Union, Dict, Any
 
 
+@dataclass
+class ElementInfo:
+    line: int
+    column: int
+    end_line: int
+    end_column: int
+    code: str
+
+
 class CodeElement(ABC):
-    def __init__(self) -> None:
-        self.line: int = -1
-        self.column: int = -1
-        self.code: str = ""
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is not None:
+            self.line: int = info.line
+            self.column: int = info.column
+            self.end_line: int = info.end_line
+            self.end_column: int = info.end_column
+            self.code: str = info.code
+        else:
+            self.line: int = -1
+            self.column: int = -1
+            self.end_line: int = -1
+            self.end_column: int = -1
+            self.code: str = ""
 
     def __hash__(self) -> int:
         return hash(self.line) * hash(self.column)
@@ -109,7 +128,10 @@ class Comment(CodeElement):
 
 
 class KeyValue(CodeElement):
-    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
+    def __init__(
+        self, name: str, value: str | None, has_variable: bool, info: ElementInfo
+    ) -> None:
+        super().__init__(info)
         self.name: str = name
         self.value: str | None = value
         self.has_variable: bool = has_variable
@@ -135,13 +157,17 @@ class KeyValue(CodeElement):
 
 
 class Variable(KeyValue):
-    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
-        super().__init__(name, value, has_variable)
+    def __init__(
+        self, name: str, value: str | None, has_variable: bool, info: ElementInfo
+    ) -> None:
+        super().__init__(name, value, has_variable, info)
 
 
 class Attribute(KeyValue):
-    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
-        super().__init__(name, value, has_variable)
+    def __init__(
+        self, name: str, value: str | None, has_variable: bool, info: ElementInfo
+    ) -> None:
+        super().__init__(name, value, has_variable, info)
 
 
 class AtomicUnit(Block):

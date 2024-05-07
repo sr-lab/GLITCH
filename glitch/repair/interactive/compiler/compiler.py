@@ -71,10 +71,18 @@ class DeltaPCompiler:
                     DefaultValue.DEFAULT_STATE.const, PStr
                 ):  # HACK
                     attr = Attribute(
-                        attr_name, DefaultValue.DEFAULT_STATE.const.value, False
+                        attr_name, 
+                        DefaultValue.DEFAULT_STATE.const.value, 
+                        False,
+                        ElementInfo(-1, -1, -1, -1, "")
                     )
                 else:
-                    attr = Attribute(attr_name, PEUndef(), False)  # type: ignore
+                    attr = Attribute(
+                        attr_name, 
+                        PEUndef(), # type: ignore
+                        False,
+                        ElementInfo(-1, -1, -1, -1, "")
+                    )
 
                 attr.line, attr.column = (
                     DeltaPCompiler._sketched,

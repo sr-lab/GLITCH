@@ -32,15 +32,22 @@ class AnsibleParser(YamlParser):
             )
             if value in ["null", "~"]:
                 value = ""
-            v = Variable(name, value, has_variable)
-            v.line = token.start_mark.line + 1
-            v.column = token.start_mark.column + 1
-            if value == None:
-                v.code = AnsibleParser._get_code(token, token, code)
-            else:
-                v.code = AnsibleParser._get_code(token, value, code)
-            v.code = "".join(code[token.start_mark.line : token.end_mark.line + 1])
 
+            if value == None:
+                v_code = AnsibleParser._get_code(token, token, code)
+            else:
+                v_code = AnsibleParser._get_code(token, value, code)
+            v_code = "".join(code[token.start_mark.line : token.end_mark.line + 1])
+
+            info = ElementInfo(
+                token.start_mark.line + 1,
+                token.start_mark.column + 1,
+                token.end_mark.line + 1,
+                token.end_mark.column + 1,
+                v_code,
+            )
+
+            v = Variable(name, value, has_variable, info)
             variables.append(v)
             if not child:
                 unit_block.add_variable(v)
@@ -96,13 +103,21 @@ class AnsibleParser(YamlParser):
             )
             if value in ["null", "~"]:
                 value = ""
-            a = Attribute(name, value, has_variable)
-            a.line = token.start_mark.line + 1
-            a.column = token.start_mark.column + 1
+
             if val == None:
-                a.code = AnsibleParser._get_code(token, token, code)
+                a_code = AnsibleParser._get_code(token, token, code)
             else:
-                a.code = AnsibleParser._get_code(token, val, code)
+                a_code = AnsibleParser._get_code(token, val, code)
+
+            info = ElementInfo(
+                token.start_mark.line + 1,
+                token.start_mark.column + 1,
+                token.end_mark.line + 1,
+                token.end_mark.column + 1,
+                a_code,
+            )
+
+            a = Attribute(name, value, has_variable, info)
             attributes.append(a)
 
             return a

@@ -563,13 +563,13 @@ tests = ["pytest", "pytest-cov", "pytest-lazy-fixture"]
 
 [[package]]
 name = "puppetparser"
-version = "0.2.4"
+version = "0.2.5"
 description = "A parser from Puppet to an object model"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "puppetparser-0.2.4-py3-none-any.whl", hash = "sha256:3c625c7f8826f705b61c21aef5b59a759dd0ba79e72779ec9e664f900d8c713c"},
-    {file = "puppetparser-0.2.4.tar.gz", hash = "sha256:2db6273653e94f018582aa87da2780a5b7e2b2320cfa1485e312e4a16029accd"},
+    {file = "puppetparser-0.2.5-py3-none-any.whl", hash = "sha256:3e8e43ae3b26a845e09b3f736f688c6cf00316f6c9c2236bf864e0a7f53b09d8"},
+    {file = "puppetparser-0.2.5.tar.gz", hash = "sha256:4e82fe593d8a876af4fd8aeffcc9c6e2b379e75ec6f03473a06817d3540e6b4e"},
 ]
 
 [package.dependencies]
@@ -1050,4 +1050,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ec85f05b6e1f20f9903addf406af0151c60ba592ef3bc1582e0f7ea9cc680d38"
+content-hash = "9fc79bd23a61fc6627d60d3509398f857a55b9683289d61c0fa6dfb1866a9167"

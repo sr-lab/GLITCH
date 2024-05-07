@@ -26,7 +26,14 @@ class TerraformParser(p.Parser):
         code: List[str],
         type: str,
     ) -> List[KeyValue]:
-        def create_keyvalue(start_line: int, end_line: int, name: str, value: str):
+        def create_keyvalue(
+            start_line: int,
+            end_line: int,
+            start_col: int,
+            end_col: int,
+            name: str,
+            value: str,
+        ) -> KeyValue:
             has_variable = (
                 ("${" in f"{value}") and ("}" in f"{value}") if value != None else False  # type: ignore
             )
@@ -40,28 +47,37 @@ class TerraformParser(p.Parser):
             if isinstance(value, int):
                 value = str(value)
 
-            if type == "attribute":
-                keyvalue = Attribute(str(name), value, has_variable)
-            else:
-                keyvalue = Variable(str(name), value, has_variable)
+            kv_code = TerraformParser.__get_element_code(start_line, end_line, code)
+            info = ElementInfo(start_line, start_col, end_line, end_col, kv_code)
 
-            keyvalue.line = start_line
-            keyvalue.code = TerraformParser.__get_element_code(
-                start_line, end_line, code
-            )
+            if type == "attribute":
+                keyvalue = Attribute(str(name), value, has_variable, info)
+            else:
+                keyvalue = Variable(str(name), value, has_variable, info)
 
             return keyvalue
 
-        def process_list(name: str, value: str, start_line: int, end_line: int) -> None:
+        def process_list(
+            name: str,
+            value: str,
+            start_line: int,
+            end_line: int,
+            start_col: int,
+            end_col: int,
+        ) -> None:
             for i, v in enumerate(value):
                 if isinstance(v, dict):
-                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", None)  # type: ignore
+                    k = create_keyvalue(start_line, end_line, start_col, end_col, name + f"[{i}]", None)  # type: ignore
                     k.keyvalues = self.parse_keyvalues(unit_block, v, code, type)
                     k_values.append(k)
                 elif isinstance(v, list):
-                    process_list(name + f"[{i}]", v, start_line, end_line)
+                    process_list(
+                        name + f"[{i}]", v, start_line, end_line, start_col, end_col
+                    )
                 else:
-                    k = create_keyvalue(start_line, end_line, name + f"[{i}]", v)
+                    k = create_keyvalue(
+                        start_line, end_line, start_col, end_col, name + f"[{i}]", v
+                    )
                     k_values.append(k)
 
         k_values: List[KeyValue] = []
@@ -75,7 +91,12 @@ class TerraformParser(p.Parser):
                 value = keyvalue["value"]
                 if isinstance(value, dict):  # (ex: labels = {})
                     k = create_keyvalue(
-                        keyvalue["__start_line__"], keyvalue["__end_line__"], name, None  # type: ignore
+                        keyvalue["__start_line__"],
+                        keyvalue["__end_line__"],
+                        keyvalue["__start_col__"],
+                        keyvalue["__end_col__"],
+                        name,
+                        None,  # type: ignore
                     )
                     k.keyvalues = self.parse_keyvalues(unit_block, value, code, type)
                     k_values.append(k)
@@ -85,6 +106,8 @@ class TerraformParser(p.Parser):
                         value,
                         keyvalue["__start_line__"],
                         keyvalue["__end_line__"],
+                        keyvalue["__start_col__"],
+                        keyvalue["__end_col__"],
                     )
                 else:  # (ex: x = 'test')
                     if value == None:  # (ex: x = null)
@@ -92,6 +115,8 @@ class TerraformParser(p.Parser):
                     k = create_keyvalue(
                         keyvalue["__start_line__"],
                         keyvalue["__end_line__"],
+                        keyvalue["__start_col__"],
+                        keyvalue["__end_col__"],
                         name,
                         value,
                     )
@@ -103,6 +128,8 @@ class TerraformParser(p.Parser):
                         k = create_keyvalue(
                             block_attributes["__start_line__"],
                             block_attributes["__end_line__"],
+                            block_attributes["__start_col__"],
+                            block_attributes["__end_col__"],
                             name,
                             None,
                         )
@@ -116,6 +143,8 @@ class TerraformParser(p.Parser):
                             k = create_keyvalue(
                                 block_attributes["__start_line__"],
                                 block_attributes["__end_line__"],
+                                block_attributes["__start_col__"],
+                                block_attributes["__end_col__"],
                                 f"{name}.{block_name}",
                                 None,
                             )

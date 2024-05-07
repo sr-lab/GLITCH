@@ -110,9 +110,18 @@ class PuppetParser(p.Parser):
             )
             value = "" if temp_value == "undef" else temp_value
             has_variable = not isinstance(value, str) or value.startswith("$")
-            attribute = Attribute(name, value, has_variable)
-            attribute.line, attribute.column = codeelement.line, codeelement.col
-            attribute.code = get_code(codeelement)
+            attribute = Attribute(
+                name,
+                value,
+                has_variable,
+                ElementInfo(
+                    codeelement.line,
+                    codeelement.col,
+                    codeelement.end_line,
+                    codeelement.end_col,
+                    get_code(codeelement),
+                ),
+            )
             return attribute
         elif isinstance(codeelement, puppetmodel.Resource):
             resource: AtomicUnit = AtomicUnit(
@@ -178,9 +187,18 @@ class PuppetParser(p.Parser):
                 or temp_value.startswith("$")
                 or codeelement.default is None
             )
-            attribute = Attribute(name, value, has_variable)
-            attribute.line, attribute.column = codeelement.line, codeelement.col
-            attribute.code = get_code(codeelement)
+            attribute = Attribute(
+                name,
+                value,
+                has_variable,
+                ElementInfo(
+                    codeelement.line,
+                    codeelement.col,
+                    codeelement.end_line,
+                    codeelement.end_col,
+                    get_code(codeelement),
+                ),
+            )
             return attribute
         elif isinstance(codeelement, puppetmodel.Assignment):
             name = PuppetParser.__process_codeelement(codeelement.name, path, code)
@@ -195,14 +213,32 @@ class PuppetParser(p.Parser):
                 else:
                     value = None
                 has_variable = not isinstance(value, str) or value.startswith("$")
-                variable: Variable = Variable(name, value, has_variable)
-                variable.line, variable.column = codeelement.line, codeelement.col
-                variable.code = get_code(codeelement)
+                variable: Variable = Variable(
+                    name,
+                    value,
+                    has_variable,
+                    ElementInfo(
+                        codeelement.line,
+                        codeelement.col,
+                        codeelement.end_line,
+                        codeelement.end_col,
+                        get_code(codeelement),
+                    ),
+                )
                 return variable
             else:
-                variable: Variable = Variable(name, None, False)
-                variable.line, variable.column = codeelement.line, codeelement.col
-                variable.code = get_code(codeelement)
+                variable: Variable = Variable(
+                    name,
+                    None,
+                    False,
+                    ElementInfo(
+                        codeelement.line,
+                        codeelement.col,
+                        codeelement.end_line,
+                        codeelement.end_col,
+                        get_code(codeelement),
+                    ),
+                )
                 for key, value in temp_value.items():
                     variable.keyvalues.append(
                         PuppetParser.__process_codeelement(
@@ -309,10 +345,19 @@ class PuppetParser(p.Parser):
                 args = []
                 for arg in codeelement.parameters:
                     attr = PuppetParser.__process_codeelement(arg, path, code)
-                    variable = Variable(attr.name, "", True)
-                    variable.line = arg.line
-                    variable.column = arg.col
-                    args.append(Variable(variable))
+                    variable = Variable(
+                        attr.name,
+                        "",
+                        True,
+                        ElementInfo(
+                            arg.line,
+                            arg.col,
+                            arg.end_line,
+                            arg.end_col,
+                            get_code(arg),
+                        ),
+                    )
+                    args.append(variable)
                 return (
                     list(
                         map(

@@ -155,11 +155,37 @@ class DockerParser(p.Parser):
         elif instruction == "COPY":
             au = AtomicUnit("", "copy")
             paths = [v for v in element.value.split(" ") if not v.startswith("--")]
-            au.add_attribute(Attribute("src", str(paths[0:-1]), False))
-            au.add_attribute(Attribute("dest", paths[-1], False))
-            for attr in au.attributes:
-                attr.code = element.content
-                attr.line = element.startline + 1
+
+            src = str(paths[0:-1])
+            src_attr = Attribute(
+                "src", 
+                str(src), 
+                False,
+                ElementInfo(
+                    element.startline + 1,
+                    element.content.find(paths[0]),
+                    element.startline + 1,
+                    element.content.find(paths[-2]) + len(paths[-2]),
+                    " ".join(paths[0:-1])
+                )
+            )
+            au.add_attribute(src_attr)
+
+            dest = paths[-1]
+            dest_attr = Attribute(
+                "dest", 
+                dest, 
+                False,
+                ElementInfo(
+                    element.startline + 1,
+                    element.content.find(paths[-1]),
+                    element.startline + 1,
+                    element.content.find(paths[-1]) + len(paths[-1]),
+                    paths[-1]
+                )
+            )
+            au.add_attribute(dest_attr)
+
             au.code = element.content
             au.line = element.startline + 1
             unit_block.add_atomic_unit(au)
@@ -204,12 +230,36 @@ class DockerParser(p.Parser):
     def __create_variable_block(element: DFPStructure) -> List[Variable]:
         variables: List[Variable] = []
         if element.instruction == "USER":
-            variables.append(Variable("user-profile", element.value, False))
+            user_var = Variable(
+                "user-profile", 
+                element.value, 
+                False,
+                ElementInfo(
+                    element.startline + 1,
+                    0,
+                    element.startline + 1,
+                    len(element.content),
+                    element.content
+                )
+            )
+            variables.append(user_var)
         elif element.instruction == "ARG":
             value = element.value.split("=")
             arg = value[0]
             default = value[1] if len(value) == 2 else None
-            variables.append(Variable(arg, default if default else "ARG", True))
+            arg_var = Variable(
+                arg, 
+                default if default else "ARG", 
+                True,
+                ElementInfo(
+                    element.startline + 1,
+                    0,
+                    element.startline + 1,
+                    len(element.content),
+                    element.content
+                )
+            )
+            variables.append(arg_var)
         elif element.instruction == "ENV":
             if "=" in element.value:
                 # TODO: Improve code attribution for multiple values
@@ -219,7 +269,19 @@ class DockerParser(p.Parser):
             if len(element.value.split(" ")) != 2:
                 raise NotImplementedError()
             env, value = element.value.split(" ")
-            variables.append(Variable(env, value, value.startswith("$")))
+            env_var = Variable(
+                env,
+                value,
+                value.startswith("$"),
+                ElementInfo(
+                    element.startline + 1,
+                    0,
+                    element.startline + 1,
+                    len(element.content),
+                    element.content
+                )
+            )
+            variables.append(env_var)
         else:  # LABEL
             return DockerParser.__parse_multiple_key_value_variables(
                 element.content, element.startline
@@ -242,9 +304,19 @@ class DockerParser(p.Parser):
                 r"([\w_]*)=(?:(?:'|\")([\w\. <>@]*)(?:\"|')|([\w\.]*))", line
             ):
                 value = match.group(2) or match.group(3) or ""
-                v = Variable(match.group(1), value, value.startswith("$"))
-                v.line = base_line + i + 1
-                v.code = line
+                v = Variable(
+                    match.group(1), 
+                    value, 
+                    value.startswith("$"),
+                    ElementInfo(
+                        base_line + i + 1,
+                        # TODO: Fix the -1 values
+                        -1,
+                        -1,
+                        -1,
+                        line
+                    )
+                )
                 variables.append(v)
         return variables
 
@@ -281,15 +353,29 @@ class ShellCommand:
         au.line = self.line
         au.code = self.code
         if self.sudo:
-            sudo = Attribute("sudo", "True", False)
-            sudo.code = "sudo"
-            sudo.line = self.line
+            sudo = Attribute(
+                "sudo", 
+                "True", 
+                False,
+                # TODO: Fix the -1 values
+                ElementInfo(self.line, -1, -1, -1, "sudo")
+            )
             au.add_attribute(sudo)
         for key, (value, _) in self.options.items():
             has_variable = "$" in value if isinstance(value, str) else False
-            attr = Attribute(key, value, has_variable)  # type: ignore
-            attr.code = self.code
-            attr.line = self.line
+            attr = Attribute(
+                key, 
+                value, # type: ignore
+                has_variable,
+                ElementInfo(
+                    self.line,
+                    # TODO: Fix the -1 values
+                    -1,
+                    -1,
+                    -1,
+                    self.code
+                )
+            )
             au.add_attribute(attr)
         return au
 

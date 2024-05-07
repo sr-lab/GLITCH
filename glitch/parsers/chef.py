@@ -342,14 +342,21 @@ class ChefParser(p.Parser):
                 if value == "nil":
                     value = ""
                     has_variable = False
+                bounds = ChefParser._get_content_bounds(ast, self.source)
+                code = ChefParser._get_source(ast, self.source)
+
                 a = Attribute(
                     ChefParser._get_content(ast.args[0], self.source),
                     value,
                     has_variable,
+                    ElementInfo(
+                        bounds[0],
+                        bounds[1],
+                        bounds[2],
+                        bounds[3],
+                        code,
+                    ),
                 )
-                a.line = ChefParser._get_content_bounds(ast, self.source)[0]
-                a.column = ChefParser._get_content_bounds(ast, self.source)[1]
-                a.code = ChefParser._get_source(ast, self.source)
                 self.atomic_unit.add_attribute(a)
             elif isinstance(ast, (ChefParser.Node, list)):
                 for arg in reversed(ast):  # type: ignore
@@ -367,10 +374,20 @@ class ChefParser(p.Parser):
             def create_variable(
                 key: Any, name: str, value: str | None, has_variable: bool
             ):
-                variable = Variable(name, value, has_variable)
-                variable.line = ChefParser._get_content_bounds(key, self.source)[0]
-                variable.column = ChefParser._get_content_bounds(key, self.source)[1]
-                variable.code = ChefParser._get_source(ast, self.source)
+                bounds = ChefParser._get_content_bounds(key, self.source)
+                code = ChefParser._get_source(key, self.source)
+                variable = Variable(
+                    name,
+                    value,
+                    has_variable,
+                    ElementInfo(
+                        bounds[0],
+                        bounds[1],
+                        bounds[2],
+                        bounds[3],
+                        code,
+                    ),
+                )
                 return variable
 
             def parse_variable(
