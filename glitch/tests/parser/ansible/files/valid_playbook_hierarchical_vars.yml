@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    aqua_admin:
+      user: "{{ lookup('env', 'AQUA_ADMIN_USER') }}"

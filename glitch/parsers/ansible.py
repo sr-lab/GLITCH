@@ -20,12 +20,13 @@ class AnsibleParser(YamlParser):
     def __parse_vars(
         unit_block: UnitBlock,
         cur_name: str,
-        node: Node,
+        key_node: Node,
+        value_node: Node,
         code: List[str],
         child: bool = False,
     ) -> List[Variable]:
         def create_variable(
-            token: Token | Node, name: str, value: str | None, child: bool = False
+            token: Token | Node, name: str, value: str | None, val_node: Node, child: bool = False
         ) -> Variable:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
@@ -42,8 +43,8 @@ class AnsibleParser(YamlParser):
             info = ElementInfo(
                 token.start_mark.line + 1,
                 token.start_mark.column + 1,
-                token.end_mark.line + 1,
-                token.end_mark.column + 1,
+                val_node.end_mark.line + 1,
+                val_node.end_mark.column + 1,
                 v_code,
             )
 
@@ -54,42 +55,42 @@ class AnsibleParser(YamlParser):
             return v
 
         variables: List[Variable] = []
-        if isinstance(node, MappingNode):
+        if isinstance(value_node, MappingNode):
             if cur_name == "":
-                for key, v in node.value:
+                for key, v in value_node.value:
                     if hasattr(key, "value") and isinstance(key.value, str):
                         AnsibleParser.__parse_vars(
-                            unit_block, key.value, v, code, child
+                            unit_block, key.value, key, v, code, child
                         )
                     elif isinstance(key.value, MappingNode):
                         AnsibleParser.__parse_vars(
-                            unit_block, cur_name, key.value[0][0], code, child  # type: ignore
+                            unit_block, cur_name, key, key.value[0][0], code, child  # type: ignore
                         )
             else:
-                var = create_variable(node, cur_name, None, child)
-                for key, v in node.value:
+                var = create_variable(key_node, cur_name, None, value_node, child)
+                for key, v in value_node.value:
                     if hasattr(key, "value") and isinstance(key.value, str):
                         var.keyvalues += AnsibleParser.__parse_vars(
-                            unit_block, key.value, v, code, True
+                            unit_block, key.value, key, v, code, True
                         )
                     elif isinstance(key.value, MappingNode):
                         var.keyvalues += AnsibleParser.__parse_vars(
-                            unit_block, cur_name, key.value[0][0], code, True  # type: ignore
+                            unit_block, cur_name, key, key.value[0][0], code, True  # type: ignore
                         )
-        elif isinstance(node, ScalarNode):
-            create_variable(node, cur_name, str(node.value), child)
-        elif isinstance(node, SequenceNode):
+        elif isinstance(value_node, ScalarNode):
+            create_variable(key_node, cur_name, str(value_node.value), value_node, child)
+        elif isinstance(value_node, SequenceNode):
             value: List[Any] = []
-            for i, val in enumerate(node.value):
+            for i, val in enumerate(value_node.value):
                 if isinstance(val, CollectionNode):
                     variables += AnsibleParser.__parse_vars(
-                        unit_block, f"{cur_name}[{i}]", val, code, child
+                        unit_block, f"{cur_name}[{i}]", key_node, val, code, child
                     )
                 else:
                     value.append(val.value)
 
-            if len(value) > 0 and isinstance(node.value[-1], (Node, Token)):
-                create_variable(node.value[-1], cur_name, str(value), child)
+            if len(value) > 0 and isinstance(value_node.value[-1], (Node, Token)):
+                create_variable(key_node, cur_name, str(value), value_node.value[-1], child)
 
         return variables
 
@@ -97,7 +98,7 @@ class AnsibleParser(YamlParser):
     def __parse_attribute(
         cur_name: str, token: Token | Node, val: Any, code: List[str]
     ) -> List[Attribute]:
-        def create_attribute(token: Token | Node, name: str, value: Any) -> Attribute:
+        def create_attribute(token: Token | Node, name: str, value: Any, val_node: Node) -> Attribute:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
             )
@@ -112,8 +113,8 @@ class AnsibleParser(YamlParser):
             info = ElementInfo(
                 token.start_mark.line + 1,
                 token.start_mark.column + 1,
-                token.end_mark.line + 1,
-                token.end_mark.column + 1,
+                val_node.end_mark.line + 1,
+                val_node.end_mark.column + 1,
                 a_code,
             )
 
@@ -124,7 +125,7 @@ class AnsibleParser(YamlParser):
 
         attributes: List[Attribute] = []
         if isinstance(val, MappingNode):
-            attribute = create_attribute(token, cur_name, None)
+            attribute = create_attribute(token, cur_name, None, val)
             aux_attributes: List[KeyValue] = []
             for aux, aux_val in val.value:
                 aux_attributes += AnsibleParser.__parse_attribute(
@@ -132,7 +133,7 @@ class AnsibleParser(YamlParser):
                 )
             attribute.keyvalues = aux_attributes
         elif isinstance(val, ScalarNode):
-            create_attribute(token, cur_name, str(val.value))
+            create_attribute(token, cur_name, str(val.value), val)
         elif isinstance(val, SequenceNode):
             value: List[Any] = []
             for i, v in enumerate(val.value):
@@ -144,7 +145,7 @@ class AnsibleParser(YamlParser):
                     value.append(v.value)
 
             if len(value) > 0:
-                create_attribute(token, cur_name, str(value))
+                create_attribute(token, cur_name, str(value), val)
 
         return attributes
 
@@ -184,7 +185,7 @@ class AnsibleParser(YamlParser):
                                 continue
                             atomic_units.append(AtomicUnit(name, type))
 
-                    if isinstance(val, MappingNode):
+                    if isinstance(val, MappingNode) and key.value == type:
                         for atr, atr_val in val.value:
                             if atr.value != "name":
                                 attributes += AnsibleParser.__parse_attribute(
@@ -246,7 +247,7 @@ class AnsibleParser(YamlParser):
                     if key.value == "name" and play.name == "":
                         play.name = value.value
                     elif key.value == "vars":
-                        AnsibleParser.__parse_vars(play, "", value, code)
+                        AnsibleParser.__parse_vars(play, "", value, value, code)
                     elif key.value in ["tasks", "pre_tasks", "post_tasks", "handlers"]:
                         AnsibleParser.__parse_tasks(play, value, code)
                     else:
@@ -309,7 +310,7 @@ class AnsibleParser(YamlParser):
             if parsed_file is None:
                 return unit_block
 
-            AnsibleParser.__parse_vars(unit_block, "", parsed_file, code)
+            AnsibleParser.__parse_vars(unit_block, "", parsed_file, parsed_file, code)
             for comment in AnsibleParser._get_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]
