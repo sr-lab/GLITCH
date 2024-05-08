@@ -86,7 +86,8 @@ class ChefParser(p.Parser):
             # of the node (variable name, string...)
             end_line, end_column = (
                 ast.args[-1][0],
-                ast.args[-1][1] + len(ast.args[-2]) - 1,
+                # The parser returns \n as two different characters
+                ast.args[-1][1] + len(ast.args[-2].replace("\\n", "\n")) - 1,
             )
 
             # With identifiers we need to consider the : behind them
@@ -95,19 +96,19 @@ class ChefParser(p.Parser):
                 and source[start_line - 1][start_column - 1] == ":"
             ):
                 start_column -= 1
-            elif ChefParser._check_id(ast, ["@tstring_content"]):
-                end_line += ast.args[0].count("\\n")
 
         elif isinstance(ast, (list, ChefParser.Node)):
             for arg in ast:
                 bound = ChefParser._get_content_bounds(arg, source)
                 if bound[0] < start_line:
                     start_line = bound[0]
-                if bound[1] < start_column:
+                    start_column = bound[1]
+                if bound[0] == start_line and bound[1] < start_column:
                     start_column = bound[1]
                 if bound[2] > end_line:
                     end_line = bound[2]
-                if bound[3] > end_column:
+                    end_column = bound[3]
+                if bound[2] == end_line and bound[3] > end_column:
                     end_column = bound[3]
 
             # We have to consider extra characters which correspond
@@ -178,7 +179,6 @@ class ChefParser(p.Parser):
         if (ast.id == "method_add_block") and (ast.args[1].id == "do_block"):
             res += "\nend"
 
-        res = res.strip()
         if res.startswith(('"', "'")) and res.endswith(('"', "'")):
             res = res[1:-1]
 
@@ -351,9 +351,12 @@ class ChefParser(p.Parser):
                     has_variable,
                     ElementInfo(
                         bounds[0],
-                        bounds[1],
+                        bounds[1] + 1,
                         bounds[2],
-                        bounds[3],
+                        # We are considering a start at 0 and the index to be inclusive
+                        # so we need to add 2 to the end column since 
+                        # we want it to start at 1 and be exclusive
+                        bounds[3] + 2,
                         code,
                     ),
                 )
@@ -372,9 +375,11 @@ class ChefParser(p.Parser):
 
         def is_variable(self, ast: Any) -> bool:
             def create_variable(
-                key: Any, name: str, value: str | None, has_variable: bool
+                key: Any, value_ast: Any, name: str, value: str | None, has_variable: bool
             ):
                 bounds = ChefParser._get_content_bounds(key, self.source)
+                bounds_value = ChefParser._get_content_bounds(value_ast, self.source)
+
                 code = ChefParser._get_source(key, self.source)
                 variable = Variable(
                     name,
@@ -382,9 +387,12 @@ class ChefParser(p.Parser):
                     has_variable,
                     ElementInfo(
                         bounds[0],
-                        bounds[1],
-                        bounds[2],
-                        bounds[3],
+                        bounds[1] + 1,
+                        bounds_value[2],
+                        # We are considering a start at 0 and the index to be inclusive
+                        # so we need to add 2 to the end column since 
+                        # we want it to start at 1 and be exclusive
+                        bounds_value[3] + 2,
                         code,
                     ),
                 )
@@ -400,7 +408,7 @@ class ChefParser(p.Parser):
                 if ChefParser._check_node(
                     value_ast, ["hash"], 1
                 ) and ChefParser._check_id(value_ast.args[0], ["assoclist_from_args"]):
-                    variable = create_variable(key, current_name, None, False)
+                    variable = create_variable(key, value_ast, current_name, None, False)
                     if parent == None:
                         self.variables.append(variable)
                     else:
@@ -421,7 +429,7 @@ class ChefParser(p.Parser):
                         value = ""
                         has_variable = False
 
-                    variable = create_variable(key, current_name, value, has_variable)
+                    variable = create_variable(key, value_ast, current_name, value, has_variable)
 
                     if parent == None:
                         self.variables.append(variable)
@@ -447,7 +455,7 @@ class ChefParser(p.Parser):
                     if i == len(names) - 1:
                         parse_variable(parent, ast, ast.args[0], name, ast.args[1])
                     else:
-                        variable = create_variable(ast.args[0], name, None, False)
+                        variable = create_variable(ast.args[0], ast, name, None, False)
                         if i == 0:
                             self.variables.append(variable)
                         elif parent is not None:
