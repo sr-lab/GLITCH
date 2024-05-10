@@ -37,11 +37,12 @@ def test_cli_get_paths():
     assert paths == {"tests/cli/resources/chef_project"}
 
 
-def test_cli_analyze():
+def test_cli_lint():
     with NamedTemporaryFile() as f:
         run = subprocess.run(
             [
                 "glitch",
+                "lint",
                 "--tech",
                 "chef",
                 "--folder-strategy",

@@ -1,9 +1,10 @@
 import json
 import tqdm
+import functools
 import click, os, sys
 
 from pathlib import Path
-from typing import Tuple, List, Set, Optional, TextIO, Dict
+from typing import Tuple, List, Set, Optional, TextIO, Dict, Any
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import get_smell_types, get_smells
 from glitch.parsers.docker import DockerParser
@@ -50,6 +51,17 @@ def __parse_and_check(
         stats.compute(inter)
 
     return errors
+
+
+def __get_tech(tech: str) -> Tech:
+    for t in Tech:
+        if t.tech == tech:
+            return t
+
+    raise click.BadOptionUsage(
+        "tech",
+        f"Invalid value for 'tech': '{tech}' is not a valid technology.",
+    )
 
 
 def __print_errors(errors: Set[Error], f: TextIO, linter: bool, csv: bool) -> None:
@@ -112,15 +124,24 @@ def __get_paths_and_title(
     return paths, title
 
 
-def repr_mode(
-    type: UnitBlockType,
-    path: str,
-    module: bool,
-    parser: Parser,
-) -> None:
-    inter = parser.parse(path, type, module)
-    if inter != None:
-        print(json.dumps(inter.as_dict(), indent=2))
+def __common_params(func: Any) -> Any:
+    @click.option(
+        "--tech",
+        type=click.Choice([t.tech for t in Tech]),
+        required=True,
+        help="The IaC technology to be considered.",
+    )
+    @click.option(
+        "--type",
+        type=click.Choice([t.value for t in UnitBlockType]),
+        default=UnitBlockType.unknown,
+        help="The type of the scripts being analyzed.",
+    )
+    @click.argument("path", type=click.Path(exists=True), required=True)
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any):
+        return func(*args, **kwargs)
+    return wrapper
 
 
 @click.group()
@@ -133,24 +154,13 @@ def cli():
     "PATH is the file or folder to analyze.\n"
     "OUTPUT is an optional file to which we can redirect the smells output."
 )
-@click.option(
-    "--tech",
-    type=click.Choice([t.tech for t in Tech]),
-    required=True,
-    help="The IaC technology to be considered.",
-)
+@__common_params
 @click.option(
     "--table-format",
     type=click.Choice(("prettytable", "latex")),
     required=False,
     default="prettytable",
     help="The presentation format of the tables that summarize the run.",
-)
-@click.option(
-    "--type",
-    type=click.Choice([t.value for t in UnitBlockType]),
-    default=UnitBlockType.unknown,
-    help="The type of the scripts being analyzed.",
 )
 @click.option(
     "--config",
@@ -189,19 +199,11 @@ def cli():
     help="The type of smell_types being analyzed.",
 )
 @click.option(
-    "--mode",
-    type=click.Choice(["smell_detector", "repr"]),
-    help="The mode the tool is running in. If the mode is 'repr', the output is the intermediate representation."
-    "Defaults to 'smell_detector'.",
-    default="smell_detector",
-)
-@click.option(
     "--n-workers",
     type=int,
     help="Number of parallel workers to use. Defaults to 1.",
     default=1,
 )
-@click.argument("path", type=click.Path(exists=True), required=True)
 @click.argument("output", type=click.Path(), required=False)
 def lint(
     tech: str,  # type: ignore
@@ -214,19 +216,9 @@ def lint(
     output: Optional[str],
     table_format: str,
     linter: bool,
-    mode: str,
     n_workers: int,
 ):
-    for t in Tech:
-        if t.tech == tech:
-            tech: Tech = t
-            break
-    else:
-        raise click.BadOptionUsage(
-            "tech",
-            f"Invalid value for 'tech': '{tech}' is not a valid technology.",
-        )
-
+    tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
     module = folder_strategy == "module"
 
@@ -245,10 +237,6 @@ def lint(
     if tech == Tech.terraform:
         config = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
-
-    if mode == "repr":
-        repr_mode(type, path, module, parser)
-        return
 
     if smell_types == ():
         smell_types = get_smell_types()
@@ -293,28 +281,38 @@ def lint(
 
 
 @cli.command()
-@click.argument("path", type=click.Path(exists=True), required=True)
+@__common_params
 @click.argument("pid", type=int, required=True)
-@click.option(
-    "--tech",
-    type=click.Choice([t.tech for t in Tech]),
-    required=True,
-    help="The IaC technology to be considered.",
-)
-@click.option(
-    "--type",
-    type=click.Choice([t.value for t in UnitBlockType]),
-    default=UnitBlockType.unknown,
-    help="The type of the scripts being analyzed.",
-)
 def dejavu(
     path: str,
     pid: str,
-    tech: Tech,
+    tech: str,  # type: ignore
     type: UnitBlockType,
 ):
+    tech: Tech = __get_tech(tech)
     parser = __get_parser(tech)
     run_dejavu(path, pid, parser, type, tech)
+
+
+@cli.command()
+@__common_params
+@click.option(
+    "--module",
+    is_flag=True,
+    default=False,
+    help="True if the path is a module, false otherwise.",
+)
+def repr(
+    path: str,
+    type: UnitBlockType,
+    tech: str, # type: ignore
+    module: bool,
+) -> None:
+    tech: Tech = __get_tech(tech)
+    parser = __get_parser(tech)
+    inter = parser.parse(path, type, module)
+    if inter != None:
+        print(json.dumps(inter.as_dict(), indent=2))
 
 
 def main() -> None:
