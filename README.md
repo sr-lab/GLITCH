@@ -67,12 +67,12 @@ the VSCode extension._
 
 To explore all available options, use the command:
 ```
-glitch --help
+glitch lint --help
 ```
 
 To analyze a file or folder and retrieve CSV results, use the following command:
 ```
-glitch --tech (chef|puppet|ansible|terraform) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
+glitch lint --tech (chef|puppet|ansible|terraform) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
 ```
 
 If you want to consider the module structure you can add the flag ```--module```.
@@ -81,13 +81,13 @@ If you want to consider the module structure you can add the flag ```--module```
 
 If GLITCH was installed using Poetry, execute GLITCH commands as follows:
 ```
-poetry run glitch --help
+poetry run glitch lint --help
 ```
 
 Alternatively, you can use `poetry shell`:
 ```
 poetry shell
-glitch --help
+glitch lint --help
 ```
 
 ## Tests

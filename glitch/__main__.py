@@ -18,6 +18,7 @@ from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
 from glitch.exceptions import throw_exception
+from glitch.repair.interactive.main import run_dejavu
 from pkg_resources import resource_filename
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
@@ -122,8 +123,15 @@ def repr_mode(
         print(json.dumps(inter.as_dict(), indent=2))
 
 
-@click.command(
-    help="PATH is the file or folder to analyze. OUTPUT is an optional file to which we can redirect the smells output."
+@click.group()
+def cli():
+    pass
+
+
+@cli.command(
+    help="Lint the IaC scripts in the given PATH.\n"
+    "PATH is the file or folder to analyze.\n"
+    "OUTPUT is an optional file to which we can redirect the smells output."
 )
 @click.option(
     "--tech",
@@ -195,7 +203,7 @@ def repr_mode(
 )
 @click.argument("path", type=click.Path(exists=True), required=True)
 @click.argument("output", type=click.Path(), required=False)
-def glitch(
+def lint(
     tech: str,  # type: ignore
     type: str,
     path: str,
@@ -284,8 +292,33 @@ def glitch(
         print_stats(errors, get_smells(smell_types, tech), file_stats, table_format)
 
 
+@cli.command()
+@click.argument("path", type=click.Path(exists=True), required=True)
+@click.argument("pid", type=int, required=True)
+@click.option(
+    "--tech",
+    type=click.Choice([t.tech for t in Tech]),
+    required=True,
+    help="The IaC technology to be considered.",
+)
+@click.option(
+    "--type",
+    type=click.Choice([t.value for t in UnitBlockType]),
+    default=UnitBlockType.unknown,
+    help="The type of the scripts being analyzed.",
+)
+def dejavu(
+    path: str,
+    pid: str,
+    tech: Tech,
+    type: UnitBlockType,
+):
+    parser = __get_parser(tech)
+    run_dejavu(path, pid, parser, type, tech)
+
+
 def main() -> None:
-    glitch(prog_name="glitch")
+    cli(prog_name="glitch")
 
 
 if __name__ == "__main__":
