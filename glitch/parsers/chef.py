@@ -354,7 +354,7 @@ class ChefParser(p.Parser):
                         bounds[1] + 1,
                         bounds[2],
                         # We are considering a start at 0 and the index to be inclusive
-                        # so we need to add 2 to the end column since 
+                        # so we need to add 2 to the end column since
                         # we want it to start at 1 and be exclusive
                         bounds[3] + 2,
                         code,
@@ -375,7 +375,11 @@ class ChefParser(p.Parser):
 
         def is_variable(self, ast: Any) -> bool:
             def create_variable(
-                key: Any, value_ast: Any, name: str, value: str | None, has_variable: bool
+                key: Any,
+                value_ast: Any,
+                name: str,
+                value: str | None,
+                has_variable: bool,
             ):
                 bounds = ChefParser._get_content_bounds(key, self.source)
                 bounds_value = ChefParser._get_content_bounds(value_ast, self.source)
@@ -390,7 +394,7 @@ class ChefParser(p.Parser):
                         bounds[1] + 1,
                         bounds_value[2],
                         # We are considering a start at 0 and the index to be inclusive
-                        # so we need to add 2 to the end column since 
+                        # so we need to add 2 to the end column since
                         # we want it to start at 1 and be exclusive
                         bounds_value[3] + 2,
                         code,
@@ -408,7 +412,9 @@ class ChefParser(p.Parser):
                 if ChefParser._check_node(
                     value_ast, ["hash"], 1
                 ) and ChefParser._check_id(value_ast.args[0], ["assoclist_from_args"]):
-                    variable = create_variable(key, value_ast, current_name, None, False)
+                    variable = create_variable(
+                        key, value_ast, current_name, None, False
+                    )
                     if parent == None:
                         self.variables.append(variable)
                     else:
@@ -429,7 +435,9 @@ class ChefParser(p.Parser):
                         value = ""
                         has_variable = False
 
-                    variable = create_variable(key, value_ast, current_name, value, has_variable)
+                    variable = create_variable(
+                        key, value_ast, current_name, value, has_variable
+                    )
 
                     if parent == None:
                         self.variables.append(variable)

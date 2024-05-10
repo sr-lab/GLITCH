@@ -207,13 +207,12 @@ test = ["pytest (>=6)"]
 
 [[package]]
 name = "glitch-python-hcl2"
-version = "0.1.4"
+version = "0.2.2"
 description = "A parser for HCL2"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "glitch-python-hcl2-0.1.4.tar.gz", hash = "sha256:fc2961171706fc228607493c2a13f454e46aa04a28a448ab6d9d7d324494f60f"},
-    {file = "glitch_python_hcl2-0.1.4-py3-none-any.whl", hash = "sha256:3baeebd261413a4870f86d824e1fd48971bfb1473db500340c3d30588c4c5e90"},
+    {file = "glitch-python-hcl2-0.2.2.tar.gz", hash = "sha256:5282cceb8d0df792aa8d94e75baf5b19db1a1f6867fec4a2380ed903e3b3b316"},
 ]
 
 [package.dependencies]
@@ -1050,4 +1049,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "9fc79bd23a61fc6627d60d3509398f857a55b9683289d61c0fa6dfb1866a9167"
+content-hash = "608ec8c35c3c44b96779ddc2e809f4715b2d3917ef8015b31709864505376849"

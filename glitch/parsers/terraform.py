@@ -93,8 +93,8 @@ class TerraformParser(p.Parser):
                     k = create_keyvalue(
                         keyvalue["__start_line__"],
                         keyvalue["__end_line__"],
-                        keyvalue["__start_col__"],
-                        keyvalue["__end_col__"],
+                        keyvalue["__start_column__"],
+                        keyvalue["__end_column__"],
                         name,
                         None,  # type: ignore
                     )
@@ -106,8 +106,8 @@ class TerraformParser(p.Parser):
                         value,
                         keyvalue["__start_line__"],
                         keyvalue["__end_line__"],
-                        keyvalue["__start_col__"],
-                        keyvalue["__end_col__"],
+                        keyvalue["__start_column__"],
+                        keyvalue["__end_column__"],
                     )
                 else:  # (ex: x = 'test')
                     if value == None:  # (ex: x = null)
@@ -115,8 +115,8 @@ class TerraformParser(p.Parser):
                     k = create_keyvalue(
                         keyvalue["__start_line__"],
                         keyvalue["__end_line__"],
-                        keyvalue["__start_col__"],
-                        keyvalue["__end_col__"],
+                        keyvalue["__start_column__"],
+                        keyvalue["__end_column__"],
                         name,
                         value,
                     )
@@ -128,8 +128,8 @@ class TerraformParser(p.Parser):
                         k = create_keyvalue(
                             block_attributes["__start_line__"],
                             block_attributes["__end_line__"],
-                            block_attributes["__start_col__"],
-                            block_attributes["__end_col__"],
+                            block_attributes["__start_column__"],
+                            block_attributes["__end_column__"],
                             name,
                             None,
                         )
@@ -143,8 +143,8 @@ class TerraformParser(p.Parser):
                             k = create_keyvalue(
                                 block_attributes["__start_line__"],
                                 block_attributes["__end_line__"],
-                                block_attributes["__start_col__"],
-                                block_attributes["__end_col__"],
+                                block_attributes["__start_column__"],
+                                block_attributes["__end_column__"],
                                 f"{name}.{block_name}",
                                 None,
                             )

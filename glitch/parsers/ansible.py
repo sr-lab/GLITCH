@@ -26,7 +26,11 @@ class AnsibleParser(YamlParser):
         child: bool = False,
     ) -> List[Variable]:
         def create_variable(
-            token: Token | Node, name: str, value: str | None, val_node: Node, child: bool = False
+            token: Token | Node,
+            name: str,
+            value: str | None,
+            val_node: Node,
+            child: bool = False,
         ) -> Variable:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
@@ -78,7 +82,9 @@ class AnsibleParser(YamlParser):
                             unit_block, cur_name, key, key.value[0][0], code, True  # type: ignore
                         )
         elif isinstance(value_node, ScalarNode):
-            create_variable(key_node, cur_name, str(value_node.value), value_node, child)
+            create_variable(
+                key_node, cur_name, str(value_node.value), value_node, child
+            )
         elif isinstance(value_node, SequenceNode):
             value: List[Any] = []
             for i, val in enumerate(value_node.value):
@@ -90,7 +96,9 @@ class AnsibleParser(YamlParser):
                     value.append(val.value)
 
             if len(value) > 0 and isinstance(value_node.value[-1], (Node, Token)):
-                create_variable(key_node, cur_name, str(value), value_node.value[-1], child)
+                create_variable(
+                    key_node, cur_name, str(value), value_node.value[-1], child
+                )
 
         return variables
 
@@ -98,7 +106,9 @@ class AnsibleParser(YamlParser):
     def __parse_attribute(
         cur_name: str, token: Token | Node, val: Any, code: List[str]
     ) -> List[Attribute]:
-        def create_attribute(token: Token | Node, name: str, value: Any, val_node: Node) -> Attribute:
+        def create_attribute(
+            token: Token | Node, name: str, value: Any, val_node: Node
+        ) -> Attribute:
             has_variable = (
                 (("{{" in value) and ("}}" in value)) if value != None else False
             )

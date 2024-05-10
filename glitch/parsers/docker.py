@@ -158,31 +158,31 @@ class DockerParser(p.Parser):
 
             src = str(paths[0:-1])
             src_attr = Attribute(
-                "src", 
-                str(src), 
+                "src",
+                str(src),
                 False,
                 ElementInfo(
                     element.startline + 1,
                     element.content.find(paths[0]),
                     element.startline + 1,
                     element.content.find(paths[-2]) + len(paths[-2]),
-                    " ".join(paths[0:-1])
-                )
+                    " ".join(paths[0:-1]),
+                ),
             )
             au.add_attribute(src_attr)
 
             dest = paths[-1]
             dest_attr = Attribute(
-                "dest", 
-                dest, 
+                "dest",
+                dest,
                 False,
                 ElementInfo(
                     element.startline + 1,
                     element.content.find(paths[-1]),
                     element.startline + 1,
                     element.content.find(paths[-1]) + len(paths[-1]),
-                    paths[-1]
-                )
+                    paths[-1],
+                ),
             )
             au.add_attribute(dest_attr)
 
@@ -231,16 +231,16 @@ class DockerParser(p.Parser):
         variables: List[Variable] = []
         if element.instruction == "USER":
             user_var = Variable(
-                "user-profile", 
-                element.value, 
+                "user-profile",
+                element.value,
                 False,
                 ElementInfo(
                     element.startline + 1,
                     0,
                     element.startline + 1,
                     len(element.content),
-                    element.content
-                )
+                    element.content,
+                ),
             )
             variables.append(user_var)
         elif element.instruction == "ARG":
@@ -248,16 +248,16 @@ class DockerParser(p.Parser):
             arg = value[0]
             default = value[1] if len(value) == 2 else None
             arg_var = Variable(
-                arg, 
-                default if default else "ARG", 
+                arg,
+                default if default else "ARG",
                 True,
                 ElementInfo(
                     element.startline + 1,
                     0,
                     element.startline + 1,
                     len(element.content),
-                    element.content
-                )
+                    element.content,
+                ),
             )
             variables.append(arg_var)
         elif element.instruction == "ENV":
@@ -278,8 +278,8 @@ class DockerParser(p.Parser):
                     0,
                     element.startline + 1,
                     len(element.content),
-                    element.content
-                )
+                    element.content,
+                ),
             )
             variables.append(env_var)
         else:  # LABEL
@@ -305,8 +305,8 @@ class DockerParser(p.Parser):
             ):
                 value = match.group(2) or match.group(3) or ""
                 v = Variable(
-                    match.group(1), 
-                    value, 
+                    match.group(1),
+                    value,
                     value.startswith("$"),
                     ElementInfo(
                         base_line + i + 1,
@@ -314,8 +314,8 @@ class DockerParser(p.Parser):
                         -1,
                         -1,
                         -1,
-                        line
-                    )
+                        line,
+                    ),
                 )
                 variables.append(v)
         return variables
@@ -354,18 +354,18 @@ class ShellCommand:
         au.code = self.code
         if self.sudo:
             sudo = Attribute(
-                "sudo", 
-                "True", 
+                "sudo",
+                "True",
                 False,
                 # TODO: Fix the -1 values
-                ElementInfo(self.line, -1, -1, -1, "sudo")
+                ElementInfo(self.line, -1, -1, -1, "sudo"),
             )
             au.add_attribute(sudo)
         for key, (value, _) in self.options.items():
             has_variable = "$" in value if isinstance(value, str) else False
             attr = Attribute(
-                key, 
-                value, # type: ignore
+                key,
+                value,  # type: ignore
                 has_variable,
                 ElementInfo(
                     self.line,
@@ -373,8 +373,8 @@ class ShellCommand:
                     -1,
                     -1,
                     -1,
-                    self.code
-                )
+                    self.code,
+                ),
             )
             au.add_attribute(attr)
         return au

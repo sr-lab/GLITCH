@@ -7,7 +7,9 @@ from glitch.repr.inter import *
 class TestAnsibleParser(unittest.TestCase):
     def test_ansible_parser_valid_tasks(self) -> None:
         p = AnsibleParser()
-        ir = p.parse_file("tests/parser/ansible/files/valid_tasks.yml", UnitBlockType.tasks)
+        ir = p.parse_file(
+            "tests/parser/ansible/files/valid_tasks.yml", UnitBlockType.tasks
+        )
         assert ir is not None
 
         assert isinstance(ir, UnitBlock)
@@ -20,7 +22,10 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.atomic_units[0].attributes) == 4
 
         assert ir.atomic_units[0].attributes[0].name == "shell"
-        assert ir.atomic_units[0].attributes[0].value == "hostnamectl --machine=\"{{ inventory_hostname }}\" status | awk '/Machine ID/ {print $3}'"
+        assert (
+            ir.atomic_units[0].attributes[0].value
+            == "hostnamectl --machine=\"{{ inventory_hostname }}\" status | awk '/Machine ID/ {print $3}'"
+        )
         assert ir.atomic_units[0].attributes[0].line == 3
         assert ir.atomic_units[0].attributes[0].column == 3
         assert ir.atomic_units[0].attributes[0].end_line == 5
@@ -54,10 +59,12 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.atomic_units[0].attributes[3].keyvalues[0].column == 5
         assert ir.atomic_units[0].attributes[3].keyvalues[0].end_line == 8
         assert ir.atomic_units[0].attributes[3].keyvalues[0].end_column == 26
-    
+
     def test_ansible_parser_valid_playbook_vars(self) -> None:
         p = AnsibleParser()
-        ir = p.parse_file("tests/parser/ansible/files/valid_playbook_vars.yml", UnitBlockType.script)
+        ir = p.parse_file(
+            "tests/parser/ansible/files/valid_playbook_vars.yml", UnitBlockType.script
+        )
         assert ir is not None
 
         assert isinstance(ir, UnitBlock)
@@ -68,14 +75,20 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables) == 2
 
         assert ir.unit_blocks[0].variables[0].name == "aqua_admin_password"
-        assert ir.unit_blocks[0].variables[0].value == "{{ lookup('env', 'AQUA_ADMIN_PASSWORD') }}"
+        assert (
+            ir.unit_blocks[0].variables[0].value
+            == "{{ lookup('env', 'AQUA_ADMIN_PASSWORD') }}"
+        )
         assert ir.unit_blocks[0].variables[0].line == 6
         assert ir.unit_blocks[0].variables[0].column == 5
         assert ir.unit_blocks[0].variables[0].end_line == 6
         assert ir.unit_blocks[0].variables[0].end_column == 70
 
         assert ir.unit_blocks[0].variables[1].name == "aqua_sso_client_secret"
-        assert ir.unit_blocks[0].variables[1].value == "\"{{ lookup('env', 'AQUA_SSO_CLIENT_SECRET') }}\""
+        assert (
+            ir.unit_blocks[0].variables[1].value
+            == "\"{{ lookup('env', 'AQUA_SSO_CLIENT_SECRET') }}\""
+        )
         assert ir.unit_blocks[0].variables[1].line == 7
         assert ir.unit_blocks[0].variables[1].column == 5
         assert ir.unit_blocks[0].variables[1].end_line == 9
@@ -83,7 +96,10 @@ class TestAnsibleParser(unittest.TestCase):
 
     def test_ansible_parser_valid_playbook_hierarchical_vars(self) -> None:
         p = AnsibleParser()
-        ir = p.parse_file("tests/parser/ansible/files/valid_playbook_hierarchical_vars.yml", UnitBlockType.script)
+        ir = p.parse_file(
+            "tests/parser/ansible/files/valid_playbook_hierarchical_vars.yml",
+            UnitBlockType.script,
+        )
         assert ir is not None
 
         assert isinstance(ir, UnitBlock)
@@ -102,7 +118,10 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
 
         assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "user"
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].value == "{{ lookup('env', 'AQUA_ADMIN_USER') }}"
+        assert (
+            ir.unit_blocks[0].variables[0].keyvalues[0].value
+            == "{{ lookup('env', 'AQUA_ADMIN_USER') }}"
+        )
         assert ir.unit_blocks[0].variables[0].keyvalues[0].line == 7
         assert ir.unit_blocks[0].variables[0].keyvalues[0].column == 7
         assert ir.unit_blocks[0].variables[0].keyvalues[0].end_line == 7
@@ -110,7 +129,10 @@ class TestAnsibleParser(unittest.TestCase):
 
     def test_ansible_parser_valid_playbook_vars_list(self) -> None:
         p = AnsibleParser()
-        ir = p.parse_file("tests/parser/ansible/files/valid_playbook_vars_list.yml", UnitBlockType.script)
+        ir = p.parse_file(
+            "tests/parser/ansible/files/valid_playbook_vars_list.yml",
+            UnitBlockType.script,
+        )
         assert ir is not None
 
         assert isinstance(ir, UnitBlock)
@@ -142,7 +164,9 @@ class TestAnsibleParser(unittest.TestCase):
 
     def test_ansible_parser_valid_vars(self) -> None:
         p = AnsibleParser()
-        ir = p.parse_file("tests/parser/ansible/files/valid_vars.yml", UnitBlockType.vars)
+        ir = p.parse_file(
+            "tests/parser/ansible/files/valid_vars.yml", UnitBlockType.vars
+        )
         assert ir is not None
 
         assert isinstance(ir, UnitBlock)
@@ -155,4 +179,3 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.variables[0].column == 1
         assert ir.variables[0].end_line == 4
         assert ir.variables[0].end_column == 12
-
