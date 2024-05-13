@@ -48,6 +48,7 @@ def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
         elif isinstance(syscall, SChdir):
             workdir = syscall.path
 
+    paths = {path for path in paths if path != "/dev/null"}
     return paths
 
 

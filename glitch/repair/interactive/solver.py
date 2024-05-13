@@ -28,6 +28,8 @@ from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 from glitch.repr.inter import Attribute, AtomicUnit, CodeElement, Block
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
+from glitch.repair.interactive.compiler.template_database import TemplateDatabase
+from glitch.tech import Tech
 
 Fun = Callable[[ExprRef], ExprRef]
 
@@ -334,6 +336,51 @@ class PatchSolver:
     def __is_sketch(self, codeelement: CodeElement) -> bool:
         return codeelement.line < 0 and codeelement.column < 0
 
+    def __modify_attribute(
+        self,
+        path: str,
+        attribute: Attribute,
+        atomic_unit: AtomicUnit,
+        value: str,
+        tech: Tech,
+    ) -> None:
+        old_value = attribute.value
+        assert old_value is not None
+        attribute.value = value
+
+        with open(path, "r") as f:
+            lines = f.readlines()
+
+        if old_value == PEUndef():
+            last_attribute = atomic_unit.attributes[-1]
+            line = last_attribute.line + 1
+            col = len(lines[line - 2]) - len(lines[line - 2].lstrip())
+            new_line = TemplateDatabase.get_template(attribute, tech)
+            new_line = col * " " + new_line.format(attribute.name, f"'{value}'")
+            lines.insert(line - 1, new_line)
+        else:
+            old_line = lines[attribute.line - 1]
+            start = old_line[: attribute.end_column - 1].rfind(old_value)
+            new_line = old_line[:start] + value + old_line[start + len(old_value) :]
+            lines[attribute.line - 1] = new_line
+
+        with open(path, "w") as f:
+            f.writelines(lines)
+
+    def __delete_attribute(self, path: str, attribute: Attribute) -> None:
+        with open(path, "r") as f:
+            lines = f.readlines()
+
+        line = attribute.line - 1
+        lines[line] = (
+            lines[line][: attribute.column - 1] + lines[line][attribute.end_column :]
+        )
+        if lines[line].strip() == "":
+            lines.pop(line)
+
+        with open(path, "w") as f:
+            f.writelines(lines)
+
     def apply_patch(
         self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
     ) -> None:
@@ -376,7 +423,16 @@ class PatchSolver:
             if value == UNDEF and isinstance(atomic_unit, AtomicUnit):
                 atomic_unit.attributes.remove(codeelement)
                 labeled_script.remove_label(codeelement)
+                self.__delete_attribute(labeled_script.script.path, codeelement)
             elif isinstance(atomic_unit, AtomicUnit):
-                codeelement.value = NamesDatabase.reverse_attr_value(
+                value = NamesDatabase.reverse_attr_value(
                     value, codeelement.name, atomic_unit.type, labeled_script.tech
+                )
+
+                self.__modify_attribute(
+                    labeled_script.script.path,
+                    codeelement,
+                    atomic_unit,
+                    value,
+                    labeled_script.tech,
                 )

@@ -141,6 +141,7 @@ def __common_params(func: Any) -> Any:
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any):
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -282,7 +283,7 @@ def lint(
 
 @cli.command()
 @__common_params
-@click.argument("pid", type=int, required=True)
+@click.argument("pid", type=str, required=True)
 def dejavu(
     path: str,
     pid: str,
@@ -305,7 +306,7 @@ def dejavu(
 def repr(
     path: str,
     type: UnitBlockType,
-    tech: str, # type: ignore
+    tech: str,  # type: ignore
     module: bool,
 ) -> None:
     tech: Tech = __get_tech(tech)
