@@ -1,3 +1,5 @@
+import os
+import unittest
 from z3 import ModelRef
 from tempfile import NamedTemporaryFile
 
@@ -13,55 +15,348 @@ from glitch.repr.inter import UnitBlockType
 from glitch.tech import Tech
 
 
-puppet_script_1 = """
-file { '/var/www/customers/public_html/index.php':
-    path => '/var/www/customers/public_html/index.php',
-    content => '<html><body><h1>Hello World</h1></body></html>',
-    ensure => present,
-    mode => '0755',
-    owner => 'web_admin'
-}
-"""
+class TestPatchSolver(unittest.TestCase):
+    def setUp(self):
+        self.f = NamedTemporaryFile(mode="w+")
+        DeltaPCompiler._condition = 0  # type: ignore
+        self.labeled_script = None
+        self.statement = None
 
-puppet_script_2 = """
-    file { '/etc/icinga2/conf.d/test.conf':
-    ensure => file,
-    tag    => 'icinga2::config::file',
-    }
-"""
+    def tearDown(self) -> None:
+        self.f.close()
+        assert not os.path.exists(self.f.name)
 
-puppet_script_3 = """
-file { 'test1':
-    ensure => file,
-}
+    def __get_parser(self, tech: Tech) -> Parser:
+        if tech == Tech.puppet:
+            return PuppetParser()
+        elif tech == Tech.ansible:
+            return AnsibleParser()
+        else:
+            raise ValueError("Invalid tech")
 
-file { 'test2':
-    ensure => file,
-}
-"""
+    def _setup_patch_solver(
+        self,
+        script: str,
+        script_type: UnitBlockType,
+        tech: Tech,
+    ) -> None:
+        self.f.write(script)
+        self.f.flush()
+        parser = self.__get_parser(tech)
+        parsed_file = parser.parse_file(self.f.name, script_type)
+        assert parsed_file is not None
+        self.labeled_script = GLITCHLabeler.label(parsed_file, tech)
+        self.statement = DeltaPCompiler.compile(self.labeled_script, tech)
 
-puppet_script_4 = """
-if $x == 'absent' {
-    file {'/usr/sbin/policy-rc.d':
-        ensure  => absent,
-    }
-} else {
-    file {'/usr/sbin/policy-rc.d':
-        ensure  => present,
-    }
-}
-"""
+    def _patch_solver_apply(
+        self,
+        solver: PatchSolver,
+        model: ModelRef,
+        filesystem: FileSystemState,
+        tech: Tech,
+        final_file_content: str,
+        n_filesystems: int = 1,
+    ) -> None:
+        assert self.labeled_script is not None
+        solver.apply_patch(model, self.labeled_script)
+        statement = DeltaPCompiler.compile(self.labeled_script, tech)
+        filesystems = statement.to_filesystems()
+        assert len(filesystems) == n_filesystems
+        assert any(fs.state == filesystem.state for fs in filesystems)
+        with open(self.f.name) as f:
+            assert final_file_content == f.read()
 
-puppet_script_5 = """
-file { '/etc/dhcp/dhclient-enter-hooks':
-  content => template('fuel/dhclient-enter-hooks.erb'),
-  owner   => 'root',
-  group   => 'root',
-  mode    => '0755',
-}
-"""
 
-ansible_script_1 = """
+class TestPatchSolverPuppetScript1(TestPatchSolver):
+    def setUp(self) -> None:
+        super().setUp()
+        puppet_script_1 = """
+            file { '/var/www/customers/public_html/index.php':
+                path => '/var/www/customers/public_html/index.php',
+                content => '<html><body><h1>Hello World</h1></body></html>',
+                ensure => present,
+                mode => '0755',
+                owner => 'web_admin'
+            }
+        """
+        self._setup_patch_solver(puppet_script_1, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_remove_content(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = File(
+            mode="0755", owner="web_admin", content=None
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 3
+        assert model[solver.unchanged[1]] == 0
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 1
+        assert model[solver.unchanged[4]] == 1
+        assert model[solver.vars["content-1"]] == UNDEF
+        assert model[solver.vars["state-2"]] == "present"
+        assert model[solver.vars["mode-3"]] == "0755"
+        assert model[solver.vars["owner-4"]] == "web_admin"
+
+        result = """
+            file { '/var/www/customers/public_html/index.php':
+                path => '/var/www/customers/public_html/index.php',
+                ensure => present,
+                mode => '0755',
+                owner => 'web_admin'
+            }
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
+
+    def test_patch_solver_mode(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = File(
+            mode="0777",
+            owner="web_admin",
+            content="<html><body><h1>Hello World</h1></body></html>",
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 3
+        assert model[solver.unchanged[1]] == 1
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 0
+        assert model[solver.unchanged[4]] == 1
+        assert (
+            model[solver.vars["content-1"]]
+            == "<html><body><h1>Hello World</h1></body></html>"
+        )
+        assert model[solver.vars["state-2"]] == "present"
+        assert model[solver.vars["mode-3"]] == "0777"
+        assert model[solver.vars["owner-4"]] == "web_admin"
+
+        result = """
+            file { '/var/www/customers/public_html/index.php':
+                path => '/var/www/customers/public_html/index.php',
+                content => '<html><body><h1>Hello World</h1></body></html>',
+                ensure => present,
+                mode => '0777',
+                owner => 'web_admin'
+            }
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
+
+    def test_patch_solver_delete_file(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 0
+        assert model[solver.unchanged[1]] == 0
+        assert model[solver.unchanged[2]] == 0
+        assert model[solver.unchanged[3]] == 0
+        assert model[solver.unchanged[4]] == 0
+        assert model[solver.vars["content-1"]] == UNDEF
+        assert model[solver.vars["state-2"]] == "absent"
+        assert model[solver.vars["mode-3"]] == UNDEF
+        assert model[solver.vars["owner-4"]] == UNDEF
+
+        result = """
+            file { '/var/www/customers/public_html/index.php':
+                path => '/var/www/customers/public_html/index.php',
+                ensure => absent,
+            }
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
+
+
+class TestPatchSolverPuppetScript2(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_2 = """
+            file { '/etc/icinga2/conf.d/test.conf':
+            ensure => file,
+            tag    => 'icinga2::config::file',
+            }
+        """
+        self._setup_patch_solver(puppet_script_2, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_owner(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/etc/icinga2/conf.d/test.conf"] = File(None, "new", None)
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 3
+        assert model[solver.unchanged[0]] == 1
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 0
+        assert model[solver.unchanged[4]] == 1
+        assert model[solver.vars["state-0"]] == "present"
+        assert model[solver.vars["sketched-content-2"]] == UNDEF
+        assert model[solver.vars["sketched-owner-3"]] == "new"
+        assert model[solver.vars["sketched-mode-4"]] == UNDEF
+
+        result = """
+            file { '/etc/icinga2/conf.d/test.conf':
+            ensure => file,
+            tag    => 'icinga2::config::file',
+            owner => 'new',
+            }
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
+
+
+class TestPatchSolverPuppetScript3(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_3 = """
+            file { 'test1':
+                ensure => file,
+            }
+
+            file { 'test2':
+                ensure => file,
+            }
+        """
+        self._setup_patch_solver(puppet_script_3, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_two_files(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["test1"] = File(None, "new", None)
+        filesystem.state["test2"] = File("0666", None, None)
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 6
+
+        result = """
+            file { 'test1':
+                ensure => file,
+                owner => 'new',
+            }
+
+            file { 'test2':
+                ensure => file,
+                mode => '0666',
+            }
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
+
+
+class TestPatchSolverPuppetScript4(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_4 = """
+            if $x == 'absent' {
+                file {'/usr/sbin/policy-rc.d':
+                    ensure  => absent,
+                }
+            } else {
+                file {'/usr/sbin/policy-rc.d':
+                    ensure  => present,
+                }
+            }
+        """
+        self._setup_patch_solver(puppet_script_4, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_if(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/usr/sbin/policy-rc.d"] = File(None, None, None)
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 2
+
+        assert models[0][solver.sum_var] == 8
+        assert models[0][solver.vars["dejavu-condition-1"]]
+        assert not models[0][solver.vars["dejavu-condition-2"]]
+        assert models[0][solver.vars["state-0"]] == "absent"
+        assert models[0][solver.vars["state-1"]] == "present"
+
+        assert models[1][solver.sum_var] == 7
+        assert not models[1][solver.vars["dejavu-condition-1"]]
+        assert models[1][solver.vars["dejavu-condition-2"]]
+        assert models[1][solver.vars["state-0"]] == "present"
+        assert models[1][solver.vars["state-1"]] == "present"
+
+        result = """
+            if $x == 'absent' {
+                file {'/usr/sbin/policy-rc.d':
+                    ensure  => present,
+                }
+            } else {
+                file {'/usr/sbin/policy-rc.d':
+                    ensure  => present,
+                }
+            }
+        """
+        self._patch_solver_apply(
+            solver, models[1], filesystem, Tech.puppet, result, n_filesystems=2
+        )
+
+
+class TestPatchSolverPuppetScript5(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_5 = """
+            file { '/etc/dhcp/dhclient-enter-hooks':
+                content => template('fuel/dhclient-enter-hooks.erb'),
+                owner   => 'root',
+                group   => 'root',
+                mode    => '0755',
+            }
+        """
+        self._setup_patch_solver(puppet_script_5, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_new_attribute_difficult_name(self) -> None:
+        """
+        This test requires the solver to create a new attribute "state".
+        However, the attribute "state" should be called "ensure" in Puppet,
+        so it is required to do the translation back.
+        """
+        filesystem = FileSystemState()
+        filesystem.state["/etc/dhcp/dhclient-enter-hooks"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+            file { '/etc/dhcp/dhclient-enter-hooks':
+                group   => 'root',
+                ensure => absent,
+            }
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
+class TestPatchSolverAnsibleScript1(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_1 = """
 ---
 - ansible.builtin.file:
     path: "/var/www/customers/public_html/index.php"
@@ -69,227 +364,38 @@ ansible_script_1 = """
     owner: "web_admin"
     mode: '0755'
 """
+        self._setup_patch_solver(ansible_script_1, UnitBlockType.tasks, Tech.ansible)
 
-labeled_script = None
-statement = None
+    def test_patch_solver_mode(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = File(
+            mode="0777",
+            owner="web_admin",
+            content=None,
+        )
 
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 3
+        assert model[solver.unchanged[1]] == 1
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 0
+        assert model[solver.unchanged[4]] == 1
+        assert model[solver.vars["state-1"]] == "present"
+        assert model[solver.vars["owner-2"]] == "web_admin"
+        assert model[solver.vars["mode-3"]] == "0777"
+        assert model[solver.vars["sketched-content-4"]] == UNDEF
 
-def setup_patch_solver(
-    script: str,
-    parser: Parser,
-    script_type: UnitBlockType,
-    tech: Tech,
-) -> None:
-    global labeled_script, statement
-    DeltaPCompiler._condition = 0
-    with NamedTemporaryFile() as f:
-        f.write(script.encode())
-        f.flush()
-        parsed_file = parser.parse_file(f.name, script_type)
-        labeled_script = GLITCHLabeler.label(parsed_file, tech)
-        statement = DeltaPCompiler.compile(labeled_script, tech)
-
-
-def patch_solver_apply(
-    solver: PatchSolver,
-    model: ModelRef,
-    filesystem: FileSystemState,
-    tech: Tech,
-    n_filesystems: int = 1,
-) -> None:
-    solver.apply_patch(model, labeled_script)
-    statement = DeltaPCompiler.compile(labeled_script, tech)
-    filesystems = statement.to_filesystems()
-    assert len(filesystems) == n_filesystems
-    assert any(fs.state == filesystem.state for fs in filesystems)
-
-
-# TODO: Refactor tests
-
-
-def test_patch_solver_if() -> None:
-    setup_patch_solver(
-        puppet_script_4, PuppetParser(), UnitBlockType.script, Tech.puppet
-    )
-    filesystem = FileSystemState()
-    filesystem.state["/usr/sbin/policy-rc.d"] = File(None, None, None)
-
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 2
-
-    assert models[0][solver.sum_var] == 8
-    assert models[0][solver.vars["dejavu-condition-1"]]
-    assert not models[0][solver.vars["dejavu-condition-2"]]
-    assert models[0][solver.vars["state-0"]] == "absent"
-    assert models[0][solver.vars["state-1"]] == "present"
-
-    assert models[1][solver.sum_var] == 7
-    assert not models[1][solver.vars["dejavu-condition-1"]]
-    assert models[1][solver.vars["dejavu-condition-2"]]
-    assert models[1][solver.vars["state-0"]] == "present"
-    assert models[1][solver.vars["state-1"]] == "present"
-
-    patch_solver_apply(solver, models[0], filesystem, Tech.puppet, n_filesystems=2)
-
-
-def test_patch_solver_mode() -> None:
-    setup_patch_solver(
-        puppet_script_1, PuppetParser(), UnitBlockType.script, Tech.puppet
-    )
-    filesystem = FileSystemState()
-    filesystem.state["/var/www/customers/public_html/index.php"] = File(
-        mode="0777",
-        owner="web_admin",
-        content="<html><body><h1>Hello World</h1></body></html>",
-    )
-
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 1
-    model = models[0]
-    assert model[solver.sum_var] == 3
-    assert model[solver.unchanged[1]] == 1
-    assert model[solver.unchanged[2]] == 1
-    assert model[solver.unchanged[3]] == 0
-    assert model[solver.unchanged[4]] == 1
-    assert (
-        model[solver.vars["content-1"]]
-        == "<html><body><h1>Hello World</h1></body></html>"
-    )
-    assert model[solver.vars["state-2"]] == "present"
-    assert model[solver.vars["mode-3"]] == "0777"
-    assert model[solver.vars["owner-4"]] == "web_admin"
-    patch_solver_apply(solver, model, filesystem, Tech.puppet)
-
-
-def test_patch_solver_owner() -> None:
-    setup_patch_solver(
-        puppet_script_2, PuppetParser(), UnitBlockType.script, Tech.puppet
-    )
-    filesystem = FileSystemState()
-    filesystem.state["/etc/icinga2/conf.d/test.conf"] = File(None, "new", None)
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 1
-    model = models[0]
-    assert model[solver.sum_var] == 3
-    assert model[solver.unchanged[0]] == 1
-    assert model[solver.unchanged[2]] == 1
-    assert model[solver.unchanged[3]] == 0
-    assert model[solver.unchanged[4]] == 1
-    assert model[solver.vars["state-0"]] == "present"
-    assert model[solver.vars["sketched-content-2"]] == UNDEF
-    assert model[solver.vars["sketched-owner-3"]] == "new"
-    assert model[solver.vars["sketched-mode-4"]] == UNDEF
-
-    patch_solver_apply(solver, model, filesystem, Tech.puppet)
-
-
-def test_patch_solver_two_files() -> None:
-    setup_patch_solver(
-        puppet_script_3, PuppetParser(), UnitBlockType.script, Tech.puppet
-    )
-    filesystem = FileSystemState()
-    filesystem.state["test1"] = File(None, "new", None)
-    filesystem.state["test2"] = File("0666", None, None)
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 1
-    model = models[0]
-    assert model[solver.sum_var] == 6
-
-    patch_solver_apply(solver, model, filesystem, Tech.puppet)
-
-
-def test_patch_solver_delete_file() -> None:
-    setup_patch_solver(
-        puppet_script_1, PuppetParser(), UnitBlockType.script, Tech.puppet
-    )
-    filesystem = FileSystemState()
-    filesystem.state["/var/www/customers/public_html/index.php"] = Nil()
-
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 1
-    model = models[0]
-    assert model[solver.sum_var] == 0
-    assert model[solver.unchanged[1]] == 0
-    assert model[solver.unchanged[2]] == 0
-    assert model[solver.unchanged[3]] == 0
-    assert model[solver.unchanged[4]] == 0
-    assert model[solver.vars["content-1"]] == UNDEF
-    assert model[solver.vars["state-2"]] == "absent"
-    assert model[solver.vars["mode-3"]] == UNDEF
-    assert model[solver.vars["owner-4"]] == UNDEF
-    patch_solver_apply(solver, model, filesystem, Tech.puppet)
-
-
-def test_patch_solver_remove_content() -> None:
-    setup_patch_solver(
-        puppet_script_1, PuppetParser(), UnitBlockType.script, Tech.puppet
-    )
-    filesystem = FileSystemState()
-    filesystem.state["/var/www/customers/public_html/index.php"] = File(
-        mode="0755", owner="web_admin", content=None
-    )
-
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 1
-    model = models[0]
-    assert model[solver.sum_var] == 3
-    assert model[solver.unchanged[1]] == 0
-    assert model[solver.unchanged[2]] == 1
-    assert model[solver.unchanged[3]] == 1
-    assert model[solver.unchanged[4]] == 1
-    assert model[solver.vars["content-1"]] == UNDEF
-    assert model[solver.vars["state-2"]] == "present"
-    assert model[solver.vars["mode-3"]] == "0755"
-    assert model[solver.vars["owner-4"]] == "web_admin"
-    patch_solver_apply(solver, model, filesystem, Tech.puppet)
-
-
-def test_patch_solver_mode_ansible() -> None:
-    setup_patch_solver(
-        ansible_script_1, AnsibleParser(), UnitBlockType.tasks, Tech.ansible
-    )
-    filesystem = FileSystemState()
-    filesystem.state["/var/www/customers/public_html/index.php"] = File(
-        mode="0777",
-        owner="web_admin",
-        content=None,
-    )
-
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 1
-    model = models[0]
-    assert model[solver.sum_var] == 3
-    assert model[solver.unchanged[1]] == 1
-    assert model[solver.unchanged[2]] == 1
-    assert model[solver.unchanged[3]] == 0
-    assert model[solver.unchanged[4]] == 1
-    assert model[solver.vars["state-1"]] == "present"
-    assert model[solver.vars["owner-2"]] == "web_admin"
-    assert model[solver.vars["mode-3"]] == "0777"
-    assert model[solver.vars["sketched-content-4"]] == UNDEF
-    patch_solver_apply(solver, model, filesystem, Tech.ansible)
-
-
-def test_patch_solver_new_attribute_difficult_name() -> None:
-    """
-    This test requires the solver to create a new attribute "state".
-    However, the attribute "state" should be called "ensure" in Puppet,
-    so it is required to do the translation back.
-    """
-    setup_patch_solver(
-        puppet_script_5, PuppetParser(), UnitBlockType.script, Tech.puppet
-    )
-    filesystem = FileSystemState()
-    filesystem.state["/etc/dhcp/dhclient-enter-hooks"] = Nil()
-
-    solver = PatchSolver(statement, filesystem)
-    models = solver.solve()
-    assert len(models) == 1
-    patch_solver_apply(solver, models[0], filesystem, Tech.puppet)
+        result = """
+---
+- ansible.builtin.file:
+    path: "/var/www/customers/public_html/index.php"
+    state: file
+    owner: "web_admin"
+    mode: '0777'
+"""
+        self._patch_solver_apply(solver, model, filesystem, Tech.ansible, result)

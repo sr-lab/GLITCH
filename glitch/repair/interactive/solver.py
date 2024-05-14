@@ -338,12 +338,24 @@ class PatchSolver:
 
     def __modify_attribute(
         self,
-        path: str,
+        labeled_script: LabeledUnitBlock,
         attribute: Attribute,
         atomic_unit: AtomicUnit,
         value: str,
         tech: Tech,
     ) -> None:
+        is_string = attribute.name != "state"
+        name = NamesDatabase.reverse_attr_name(
+            attribute.name, atomic_unit.type, labeled_script.tech
+        )
+        value = NamesDatabase.reverse_attr_value(
+            value, attribute.name, atomic_unit.type, labeled_script.tech
+        )
+        attribute.name = name
+        atomic_unit.attributes.append(attribute)
+
+        path = labeled_script.script.path
+
         old_value = attribute.value
         assert old_value is not None
         attribute.value = value
@@ -351,12 +363,18 @@ class PatchSolver:
         with open(path, "r") as f:
             lines = f.readlines()
 
-        if old_value == PEUndef():
-            last_attribute = atomic_unit.attributes[-1]
+        if self.__is_sketch(attribute):
+            last_attribute = None
+            for attr in atomic_unit.attributes:
+                if not self.__is_sketch(attr):
+                    last_attribute = attr
+            assert last_attribute is not None
             line = last_attribute.line + 1
+            attribute.line = line
             col = len(lines[line - 2]) - len(lines[line - 2].lstrip())
             new_line = TemplateDatabase.get_template(attribute, tech)
-            new_line = col * " " + new_line.format(attribute.name, f"'{value}'")
+            value = value if not is_string else f"'{value}'"
+            new_line = col * " " + new_line.format(attribute.name, value)
             lines.insert(line - 1, new_line)
         else:
             old_line = lines[attribute.line - 1]
@@ -367,7 +385,17 @@ class PatchSolver:
         with open(path, "w") as f:
             f.writelines(lines)
 
-    def __delete_attribute(self, path: str, attribute: Attribute) -> None:
+    def __delete_attribute(
+        self,
+        labeled_script: LabeledUnitBlock,
+        atomic_unit: AtomicUnit,
+        attribute: Attribute,
+    ) -> None:
+        labeled_script.remove_label(attribute)
+        if attribute in atomic_unit.attributes:
+            atomic_unit.attributes.remove(attribute)
+
+        path = labeled_script.script.path
         with open(path, "r") as f:
             lines = f.readlines()
 
@@ -381,6 +409,19 @@ class PatchSolver:
         with open(path, "w") as f:
             f.writelines(lines)
 
+    def __get_atomic_unit(
+        self, labeled_script: LabeledUnitBlock, codeelement: Attribute
+    ) -> AtomicUnit:
+        if self.__is_sketch(codeelement):
+            atomic_unit = labeled_script.get_sketch_location(codeelement)
+            if not isinstance(atomic_unit, AtomicUnit):
+                raise RuntimeError("Atomic unit not found")
+        else:
+            atomic_unit = PatchSolver.__find_atomic_unit(labeled_script, codeelement)
+
+        assert atomic_unit is not None
+        return atomic_unit
+
     def apply_patch(
         self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
     ) -> None:
@@ -391,48 +432,43 @@ class PatchSolver:
                 hole = self.holes[f"loc-{label}"]
                 changed.append((label, model_ref[hole]))
 
+        added_elements: List[Tuple[Attribute, str]] = []
+        deleted_elements: List[Tuple[Attribute, str]] = []
+
         for change in changed:
             label, value = change
             value = value.as_string()
             codeelement = labeled_script.get_codeelement(label)
             if not isinstance(codeelement, Attribute):
                 continue
-
-            if self.__is_sketch(codeelement):
-                atomic_unit = labeled_script.get_sketch_location(codeelement)
-                if not isinstance(atomic_unit, AtomicUnit):
-                    raise RuntimeError("Atomic unit not found")
-
-                atomic_unit_type = NamesDatabase.get_au_type(
-                    atomic_unit.type, labeled_script.tech
-                )
-                name = NamesDatabase.reverse_attr_name(
-                    codeelement.name, atomic_unit_type, labeled_script.tech
-                )
-                codeelement.name = name
-                atomic_unit.attributes.append(codeelement)
-                # Remove sketch label and add regular label
-                labeled_script.remove_label(codeelement)
-                GLITCHLabeler.label_attribute(labeled_script, atomic_unit, codeelement)
+            elif value == UNDEF:
+                deleted_elements.append((codeelement, value))
             else:
-                atomic_unit = PatchSolver.__find_atomic_unit(
-                    labeled_script, codeelement
-                )
+                added_elements.append((codeelement, value))
 
-            # Remove attributes that are not defined
-            if value == UNDEF and isinstance(atomic_unit, AtomicUnit):
-                atomic_unit.attributes.remove(codeelement)
+        # The sort is necessary to avoid problems in the textual changes
+        deleted_elements.sort(key=lambda x: (x[0].line, x[0].column), reverse=True)
+        added_elements.sort(key=lambda x: (x[0].line, x[0].column))
+
+        for codeelement, value in added_elements:
+            is_sketch = self.__is_sketch(codeelement)
+            atomic_unit = self.__get_atomic_unit(labeled_script, codeelement)
+
+            if is_sketch:
                 labeled_script.remove_label(codeelement)
-                self.__delete_attribute(labeled_script.script.path, codeelement)
-            elif isinstance(atomic_unit, AtomicUnit):
-                value = NamesDatabase.reverse_attr_value(
-                    value, codeelement.name, atomic_unit.type, labeled_script.tech
-                )
 
-                self.__modify_attribute(
-                    labeled_script.script.path,
-                    codeelement,
-                    atomic_unit,
-                    value,
-                    labeled_script.tech,
-                )
+            self.__modify_attribute(
+                labeled_script,
+                codeelement,
+                atomic_unit,
+                value,
+                labeled_script.tech,
+            )
+
+            if is_sketch:
+                # Relabel sketched argument after line is defined
+                GLITCHLabeler.label_attribute(labeled_script, atomic_unit, codeelement)
+
+        for codeelement, value in deleted_elements:
+            atomic_unit = self.__get_atomic_unit(labeled_script, codeelement)
+            self.__delete_attribute(labeled_script, atomic_unit, codeelement)

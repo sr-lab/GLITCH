@@ -35,6 +35,7 @@ class NamesDatabase:
         Returns:
             str: The technology-specific name of the attribute.
         """
+        au_type = NamesDatabase.get_au_type(au_type, tech)
         match name, au_type, tech:
             case "path", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "path"
