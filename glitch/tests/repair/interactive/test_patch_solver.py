@@ -473,7 +473,7 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
 
     @unittest.skip("Not implemented yet")
-    def test_patch_solver_chef_directory(self) -> None:
+    def test_patch_solver_chef_modify_to_directory(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["/tmp/something"] = Dir(
             mode="0777",
@@ -500,6 +500,49 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         directory '/tmp/something' do
             mode '0777'
             action :create
+        end
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
+
+
+class TestPatchSolverChefScript2(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_2 = """
+        directory '/tmp/something' do
+            action :delete
+        end
+        """
+        self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_directory(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/tmp/something"] = File(
+            mode="0777",
+            owner=None,
+            content=None,
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 2
+        assert model[solver.unchanged[0]] == 0
+        assert model[solver.unchanged[1]] == 1
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 0
+        assert model[solver.vars["state-0"]] == "present"
+        assert model[solver.vars["sketched-content-1"]] == UNDEF
+        assert model[solver.vars["sketched-owner-2"]] == UNDEF
+        assert model[solver.vars["sketched-mode-3"]] == "0777"
+
+        result = """
+        directory '/tmp/something' do
+            action :create
+            mode '0777'
         end
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)

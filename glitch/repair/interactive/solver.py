@@ -345,11 +345,15 @@ class PatchSolver:
         tech: Tech,
     ) -> None:
         is_string = attribute.name != "state"
+        au_type = NamesDatabase.get_au_type(atomic_unit.type, tech)
         name = NamesDatabase.reverse_attr_name(
-            attribute.name, atomic_unit.type, labeled_script.tech
+            attribute.name, au_type, labeled_script.tech
         )
         value = NamesDatabase.reverse_attr_value(
-            value, attribute.name, atomic_unit.type, labeled_script.tech
+            value,
+            NamesDatabase.get_attr_name(attribute.name, au_type, labeled_script.tech),
+            au_type,
+            labeled_script.tech,
         )
         attribute.name = name
         atomic_unit.attributes.append(attribute)

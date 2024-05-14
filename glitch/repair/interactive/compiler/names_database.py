@@ -17,6 +17,8 @@ class NamesDatabase:
         match type, tech:
             case "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "file"
+            case "directory", Tech.chef:
+                return "file"
             case "ansible.builtin.file", Tech.ansible:
                 return "file"
             case _:
@@ -135,9 +137,9 @@ class NamesDatabase:
             case "touch", "state", "file", Tech.ansible:
                 return "present"
             case ":create", "state", "file", Tech.chef:
-                return "file"
+                return "present"
             case ":touch", "state", "file", Tech.chef:
-                return "file"
+                return "present"
             case ":delete", "state", "file", Tech.chef:
                 return "absent"
             case _:
