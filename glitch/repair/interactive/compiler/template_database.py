@@ -16,6 +16,8 @@ class TemplateDatabase:
         """
         if isinstance(code_element, Attribute) and tech == Tech.puppet:
             return "{} => {},\n"
+        elif isinstance(code_element, Attribute) and tech == Tech.chef:
+            return "{} {}\n"
         elif isinstance(code_element, Attribute) and tech == Tech.ansible:
             return "{}: {}\n"
 

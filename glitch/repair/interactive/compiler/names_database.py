@@ -45,6 +45,8 @@ class NamesDatabase:
                 return "mode"
             case "content", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "content"
+            case "state", "file", Tech.chef:
+                return "action"
             case "state", "file", Tech.ansible:
                 return "state"
             case "state", "file", Tech.puppet:
@@ -69,6 +71,10 @@ class NamesDatabase:
         match value, attr_name, au_type, tech:
             case "present", "state", "file", Tech.ansible:
                 return "file"
+            case "present", "state", "file", Tech.chef:
+                return ":create"
+            case "absent", "state", "file", Tech.chef:
+                return ":delete"
             case _:
                 pass
         return value
@@ -100,6 +106,8 @@ class NamesDatabase:
                 return "state"
             case "state", "file", Tech.ansible:
                 return "state"
+            case "action", "file", Tech.chef:
+                return "state"
             case _:
                 pass
 
@@ -126,6 +134,12 @@ class NamesDatabase:
                 return "present"
             case "touch", "state", "file", Tech.ansible:
                 return "present"
+            case ":create", "state", "file", Tech.chef:
+                return "file"
+            case ":touch", "state", "file", Tech.chef:
+                return "file"
+            case ":delete", "state", "file", Tech.chef:
+                return "absent"
             case _:
                 pass
 

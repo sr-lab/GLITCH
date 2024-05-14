@@ -8,6 +8,7 @@ from glitch.repair.interactive.solver import PatchSolver
 from glitch.repair.interactive.values import UNDEF
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.ansible import AnsibleParser
+from glitch.parsers.chef import ChefParser
 from glitch.parsers.parser import Parser
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
@@ -31,6 +32,8 @@ class TestPatchSolver(unittest.TestCase):
             return PuppetParser()
         elif tech == Tech.ansible:
             return AnsibleParser()
+        elif tech == Tech.chef:
+            return ChefParser()
         else:
             raise ValueError("Invalid tech")
 
@@ -81,7 +84,7 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         """
         self._setup_patch_solver(puppet_script_1, UnitBlockType.script, Tech.puppet)
 
-    def test_patch_solver_remove_content(self) -> None:
+    def test_patch_solver_puppet_remove_content(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = File(
             mode="0755", owner="web_admin", content=None
@@ -113,7 +116,7 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
 
-    def test_patch_solver_mode(self) -> None:
+    def test_patch_solver_puppet_mode(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = File(
             mode="0777",
@@ -151,7 +154,7 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
 
-    def test_patch_solver_delete_file(self) -> None:
+    def test_patch_solver_puppet_delete_file(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = Nil()
 
@@ -191,7 +194,7 @@ class TestPatchSolverPuppetScript2(TestPatchSolver):
         """
         self._setup_patch_solver(puppet_script_2, UnitBlockType.script, Tech.puppet)
 
-    def test_patch_solver_owner(self) -> None:
+    def test_patch_solver_puppet_owner(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["/etc/icinga2/conf.d/test.conf"] = File(None, "new", None)
 
@@ -235,7 +238,7 @@ class TestPatchSolverPuppetScript3(TestPatchSolver):
         """
         self._setup_patch_solver(puppet_script_3, UnitBlockType.script, Tech.puppet)
 
-    def test_patch_solver_two_files(self) -> None:
+    def test_patch_solver_puppet_two_files(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["test1"] = File(None, "new", None)
         filesystem.state["test2"] = File("0666", None, None)
@@ -278,7 +281,7 @@ class TestPatchSolverPuppetScript4(TestPatchSolver):
         """
         self._setup_patch_solver(puppet_script_4, UnitBlockType.script, Tech.puppet)
 
-    def test_patch_solver_if(self) -> None:
+    def test_patch_solver_puppet_if(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["/usr/sbin/policy-rc.d"] = File(None, None, None)
 
@@ -329,7 +332,7 @@ class TestPatchSolverPuppetScript5(TestPatchSolver):
         """
         self._setup_patch_solver(puppet_script_5, UnitBlockType.script, Tech.puppet)
 
-    def test_patch_solver_new_attribute_difficult_name(self) -> None:
+    def test_patch_solver_puppet_new_attribute_difficult_name(self) -> None:
         """
         This test requires the solver to create a new attribute "state".
         However, the attribute "state" should be called "ensure" in Puppet,
@@ -366,7 +369,7 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
 """
         self._setup_patch_solver(ansible_script_1, UnitBlockType.tasks, Tech.ansible)
 
-    def test_patch_solver_mode(self) -> None:
+    def test_patch_solver_ansible_mode(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = File(
             mode="0777",
@@ -399,3 +402,104 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
     mode: '0777'
 """
         self._patch_solver_apply(solver, model, filesystem, Tech.ansible, result)
+
+
+class TestPatchSolverChefScript1(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_1 = """
+        file '/tmp/something' do
+            mode '0755'
+        end
+        """
+        self._setup_patch_solver(chef_script_1, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_mode(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/tmp/something"] = File(
+            mode="0777",
+            owner=None,
+            content=None,
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 3
+        assert model[solver.unchanged[0]] == 0
+        assert model[solver.unchanged[1]] == 1
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 1
+        assert model[solver.vars["mode-0"]] == "0777"
+        assert model[solver.vars["sketched-state-1"]] == "present"
+        assert model[solver.vars["sketched-content-2"]] == UNDEF
+        assert model[solver.vars["sketched-owner-3"]] == UNDEF
+
+        result = """
+        file '/tmp/something' do
+            mode '0777'
+        end
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
+
+    def test_patch_solver_chef_delete(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/tmp/something"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 2
+        assert model[solver.unchanged[0]] == 0
+        assert model[solver.unchanged[1]] == 0
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 1
+        assert model[solver.vars["mode-0"]] == UNDEF
+        assert model[solver.vars["sketched-state-1"]] == "absent"
+        assert model[solver.vars["sketched-content-2"]] == UNDEF
+        assert model[solver.vars["sketched-owner-3"]] == UNDEF
+
+        result = """
+        file '/tmp/something' do
+            action :delete
+        end
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
+
+    @unittest.skip("Not implemented yet")
+    def test_patch_solver_chef_directory(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/tmp/something"] = Dir(
+            mode="0777",
+            owner=None,
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        assert model[solver.sum_var] == 2
+        assert model[solver.unchanged[0]] == 0
+        assert model[solver.unchanged[1]] == 0
+        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[3]] == 1
+        assert model[solver.vars["mode-0"]] == "0777"
+        assert model[solver.vars["sketched-state-1"]] == "directory"
+        assert model[solver.vars["sketched-content-2"]] == UNDEF
+        assert model[solver.vars["sketched-owner-3"]] == UNDEF
+
+        result = """
+        directory '/tmp/something' do
+            mode '0777'
+            action :create
+        end
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
