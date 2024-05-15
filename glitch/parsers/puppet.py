@@ -150,7 +150,7 @@ class PuppetParser(p.Parser):
         elif isinstance(codeelement, puppetmodel.ResourceDeclaration):
             unit_block: UnitBlock = UnitBlock(
                 PuppetParser.__process_codeelement(codeelement.name, path, code),
-                UnitBlockType.block,
+                UnitBlockType.definition,
             )
             unit_block.path = path
 
@@ -260,7 +260,7 @@ class PuppetParser(p.Parser):
             # FIXME there are components of the class that are not considered
             unit_block: UnitBlock = UnitBlock(
                 PuppetParser.__process_codeelement(codeelement.name, path, code),
-                UnitBlockType.block,
+                UnitBlockType.definition,
             )
             unit_block.path = path
 

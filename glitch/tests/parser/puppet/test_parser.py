@@ -49,3 +49,47 @@ class TestPuppetParser(unittest.TestCase):
         assert unit_block.variables[0].end_line == 3
         assert unit_block.variables[0].column == 1
         assert unit_block.variables[0].end_column == 7
+
+    def test_puppet_parser_defined_resource(self) -> None:
+        unit_block = PuppetParser().parse_file(
+            "tests/parser/puppet/files/defined_resource.pp", UnitBlockType.script
+        )
+
+        assert unit_block is not None
+        assert isinstance(unit_block, UnitBlock)
+        assert len(unit_block.unit_blocks) == 1
+
+        assert unit_block.unit_blocks[0].type == UnitBlockType.definition
+        assert len(unit_block.unit_blocks[0].attributes) == 2
+
+        assert unit_block.unit_blocks[0].attributes[0].name == "$port"
+        assert unit_block.unit_blocks[0].attributes[0].value == None
+
+        assert unit_block.unit_blocks[0].attributes[1].name == "$servername"
+        assert unit_block.unit_blocks[0].attributes[1].value == "$title"
+
+        assert len(unit_block.unit_blocks[0].atomic_units) == 1
+        assert (
+            unit_block.unit_blocks[0].atomic_units[0].name
+            == "${vhost_dir}/${servername}.conf"
+        )
+        assert unit_block.unit_blocks[0].atomic_units[0].type == "file"
+
+    def test_puppet_parser_class(self) -> None:
+        unit_block = PuppetParser().parse_file(
+            "tests/parser/puppet/files/class.pp", UnitBlockType.script
+        )
+
+        assert unit_block is not None
+        assert isinstance(unit_block, UnitBlock)
+        assert len(unit_block.unit_blocks) == 1
+
+        assert unit_block.unit_blocks[0].type == UnitBlockType.definition
+        assert len(unit_block.unit_blocks[0].attributes) == 1
+
+        assert unit_block.unit_blocks[0].attributes[0].name == "$version"
+        assert unit_block.unit_blocks[0].attributes[0].value == "latest"
+
+        assert len(unit_block.unit_blocks[0].atomic_units) == 1
+        assert unit_block.unit_blocks[0].atomic_units[0].name == "httpd"
+        assert unit_block.unit_blocks[0].atomic_units[0].type == "package"

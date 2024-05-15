@@ -212,6 +212,7 @@ class UnitBlockType(str, Enum):
     tasks = "tasks"
     vars = "vars"
     block = "block"
+    definition = "definition"
     unknown = "unknown"
 
 
