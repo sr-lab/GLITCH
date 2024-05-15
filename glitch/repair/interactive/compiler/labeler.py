@@ -2,6 +2,7 @@ from typing import Dict
 from glitch.repr.inter import *
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.tech import Tech
+from glitch.repair.interactive.compiler.environment import DefinedAtomicUnitEnv
 
 
 class LabeledUnitBlock:
@@ -17,6 +18,7 @@ class LabeledUnitBlock:
         """
         self.script = script
         self.tech: Tech = tech
+        self.env: DefinedAtomicUnitEnv = DefinedAtomicUnitEnv(script)
         self.__label = 0
         self.__label_to_var: Dict[int, str] = {}
         self.__codeelement_to_label: Dict[CodeElement, int] = {}

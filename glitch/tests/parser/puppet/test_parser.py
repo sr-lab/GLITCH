@@ -60,6 +60,7 @@ class TestPuppetParser(unittest.TestCase):
         assert len(unit_block.unit_blocks) == 1
 
         assert unit_block.unit_blocks[0].type == UnitBlockType.definition
+        assert unit_block.unit_blocks[0].name == "apache::vhost"
         assert len(unit_block.unit_blocks[0].attributes) == 2
 
         assert unit_block.unit_blocks[0].attributes[0].name == "$port"
@@ -85,6 +86,7 @@ class TestPuppetParser(unittest.TestCase):
         assert len(unit_block.unit_blocks) == 1
 
         assert unit_block.unit_blocks[0].type == UnitBlockType.definition
+        assert unit_block.unit_blocks[0].name == "apache"
         assert len(unit_block.unit_blocks[0].attributes) == 1
 
         assert unit_block.unit_blocks[0].attributes[0].name == "$version"

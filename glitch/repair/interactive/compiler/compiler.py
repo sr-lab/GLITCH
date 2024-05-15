@@ -196,6 +196,11 @@ class DeltaPCompiler:
                 statement,
                 DeltaPCompiler.__handle_file(atomic_unit, attributes, labeled_script),
             )
+        # Defined type
+        elif labeled_script.env.has_definition(atomic_unit.type):
+            # TODO
+            pass
+
         return statement
 
     @staticmethod

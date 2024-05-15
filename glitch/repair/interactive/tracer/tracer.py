@@ -42,7 +42,12 @@ class STrace(threading.Thread):
                 or "--- SIG" in line
             ):
                 continue
-            syscall = get_syscall_with_type(parse_tracer_output(line))
+
+            parsed_syscall = parse_tracer_output(line)
+            if parsed_syscall is None:
+                continue
+            syscall = get_syscall_with_type(parsed_syscall)
+
             if "/bin/synth-glitch" in syscall.args:
                 # TODO don't break and just update
                 break
