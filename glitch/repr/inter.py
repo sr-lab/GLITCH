@@ -48,6 +48,92 @@ class CodeElement(ABC):
         }
 
 
+# TODO: as dict for expr and values
+@dataclass
+class Expr(CodeElement, ABC):
+    def __init__(self, info: ElementInfo) -> None:
+        super().__init__(info)
+
+
+@dataclass
+class Value(Expr, ABC):
+    def __init__(self, info: ElementInfo, value: Any) -> None:
+        super().__init__(info)
+        self.value = value
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, Value):
+            return False
+        return (
+            self.value == o.value
+            and self.line == o.line
+            and self.column == o.column
+            and self.end_line == o.end_line
+            and self.end_column == o.end_column
+        )
+
+
+class String(Value):
+    def __init__(self, value: str, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Integer(Value):
+    def __init__(self, value: int, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Float(Value):
+    def __init__(self, value: float, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Boolean(Value):
+    def __init__(self, value: bool, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Null(Value):
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is None:
+            info = ElementInfo(-1, -1, -1, -1, "")
+        super().__init__(info, None)
+
+
+class Hash(Value):
+    def __init__(self, value: Dict[Expr, Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Array(Value):
+    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class VariableReference(Value):
+    def __init__(self, value: str, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class FunctionCall(Expr):
+    def __init__(self, name: str, args: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info)
+        self.name: str = name
+        self.args: List[Expr] = args
+
+
+class BinaryOperation(Expr, ABC):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info)
+        self.left = left
+        self.right = right
+
+
+class Sum(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
 class Block(CodeElement):
     def __init__(self) -> None:
         super().__init__()
@@ -128,13 +214,10 @@ class Comment(CodeElement):
 
 
 class KeyValue(CodeElement):
-    def __init__(
-        self, name: str, value: str | None, has_variable: bool, info: ElementInfo
-    ) -> None:
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
         super().__init__(info)
         self.name: str = name
-        self.value: str | None = value
-        self.has_variable: bool = has_variable
+        self.value: Expr = value
         self.keyvalues: List[KeyValue] = []
 
     def __repr__(self) -> str:
@@ -148,26 +231,19 @@ class KeyValue(CodeElement):
         return {
             **super().as_dict(),
             "name": self.name,
-            # FIXME: In Puppet code, the value can be a ConditionalStatement or a dict.
-            # The types need to be fixed.
-            "value": self.value if not isinstance(self.value, CodeElement) else self.value.as_dict(),  # type: ignore
-            "has_variable": self.has_variable,
+            "value": self.value.as_dict(),
             "keyvalues": [kv.as_dict() for kv in self.keyvalues],
         }
 
 
 class Variable(KeyValue):
-    def __init__(
-        self, name: str, value: str | None, has_variable: bool, info: ElementInfo
-    ) -> None:
-        super().__init__(name, value, has_variable, info)
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(name, value, info)
 
 
 class Attribute(KeyValue):
-    def __init__(
-        self, name: str, value: str | None, has_variable: bool, info: ElementInfo
-    ) -> None:
-        super().__init__(name, value, has_variable, info)
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(name, value, info)
 
 
 class AtomicUnit(Block):

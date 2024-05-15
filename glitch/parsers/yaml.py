@@ -1,9 +1,14 @@
+import jinja2
+import jinja2.nodes
 import glitch.parsers.parser as p
 
-from typing import List, Tuple, TextIO, Union
+from typing import List, Tuple, TextIO, Union, Any
 from ruamel.yaml.nodes import Node, MappingNode, SequenceNode, ScalarNode
 from ruamel.yaml.tokens import Token, CommentToken
+from jinja2 import Environment
 from abc import ABC
+
+from glitch.repr.inter import *
 
 
 RecursiveTokenList = List[Union[Token, "RecursiveTokenList", None]]
@@ -110,3 +115,101 @@ class YamlParser(p.Parser, ABC):
                 comments.append((i + 1, line.strip()))
 
         return set(comments)
+    
+    @staticmethod
+    def __parse_jinja_node(node: jinja2.nodes.Node, info: ElementInfo) -> Expr:
+        if isinstance(node, jinja2.nodes.TemplateData):
+            return String(node.data, info)
+        elif isinstance(node, jinja2.nodes.Name):
+            return VariableReference(node.name, info)
+        elif isinstance(node, jinja2.nodes.Const):
+            if isinstance(node.value, str):
+                return String(node.value, info)
+            elif isinstance(node.value, int):
+                return Integer(node.value, info)
+            elif isinstance(node.value, float):
+                return Float(node.value, info)
+            elif isinstance(node.value, bool):
+                return Boolean(node.value, info)
+            else:
+                raise ValueError("Const not supported")
+        elif isinstance(node, jinja2.nodes.Call):
+            assert isinstance(node.node, jinja2.nodes.Name)
+            return FunctionCall(node.node.name, [
+                YamlParser.__parse_jinja_node(arg, info) for arg in node.args
+            ], info) # type: ignore
+        elif isinstance(node, jinja2.nodes.Filter):
+            assert node.node is not None
+            return YamlParser.__parse_jinja_node(node.node, info)
+        elif isinstance(node, jinja2.nodes.List):
+            return Array([YamlParser.__parse_jinja_node(n, info) for n in node.items], info) # type: ignore
+        elif isinstance(node, jinja2.nodes.Add):
+            return Sum(info, YamlParser.__parse_jinja_node(node.left, info), YamlParser.__parse_jinja_node(node.right, info))
+        else:
+            print(node)
+            raise ValueError("Node not supported")
+        
+
+    @staticmethod
+    def __parse_string(v: str, info: ElementInfo) -> Expr:
+        """
+        Parses a string to the intermediate representation and unrolls
+        the interpolation.
+        """
+        if v in ["null", "~"]:
+            return Null(info)
+
+        jinja_nodes = list(Environment().parse(v).body[0].iter_child_nodes())
+
+        for node in jinja_nodes[::-1]:
+            if isinstance(node, jinja2.nodes.TemplateData) and node.data.strip() == "\"":
+                jinja_nodes.remove(node)
+
+        if len(jinja_nodes) > 1:
+            parts: List[Expr] = []
+            for node in jinja_nodes:
+                parts.append(YamlParser.__parse_jinja_node(node, info))
+
+            expr = Sum(info, parts[0], parts[1])
+            for part in parts[2:]:
+                expr = Sum(info, expr, part)
+                
+            return expr
+        elif len(jinja_nodes) == 1:
+            return YamlParser.__parse_jinja_node(jinja_nodes[0], info)
+        
+        raise ValueError("No Jinja nodes found")
+
+    @staticmethod
+    def get_value(value: Node, code: List[str]) -> Expr:
+        info = ElementInfo(
+            value.start_mark.line + 1,
+            value.start_mark.column + 1,
+            value.end_mark.line + 1,
+            value.end_mark.column + 1,
+            YamlParser._get_code(value, value, code),
+        )
+        v: Any = value.value
+
+        if isinstance(v, bool) and value.tag.endswith("bool"):
+            return Boolean(bool(v), info)
+        elif isinstance(v, str) and value.tag.endswith("int"):
+            return Integer(int(v), info)
+        elif isinstance(v, str) and value.tag.endswith("float"):
+            return Float(float(v), info)
+        elif isinstance(v, str):
+            return YamlParser.__parse_string(v, info)
+        elif v is None:
+            return Null(info)
+        elif isinstance(v, list):
+            return Array([YamlParser.get_value(val, code) for val in v], info) # type: ignore
+        elif isinstance(v, dict):
+            return Hash(
+                {
+                    YamlParser.get_value(key, code): YamlParser.get_value(val, code) # type: ignore
+                    for key, val in v.items() # type: ignore
+                },
+                info,
+            )
+        else:
+            raise ValueError(f"Unknown value type: {type(v)}")

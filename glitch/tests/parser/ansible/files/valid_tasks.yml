@@ -5,4 +5,4 @@
   register: _container_machine_id
   delegate_to: "{{ physical_host }}"
   test:
-    executable: /bin/bash
+    executable: ["/bin/bash", "/bin/shell"]

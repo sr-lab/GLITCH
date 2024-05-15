@@ -2,3 +2,9 @@
 aqua_admin_users:
   - "test1"
   - "test2"
+aqua_admin_passwords: ["test1", "test2"]
+test: ~
+test_2: null
+test_3: 1.0
+test_4: 1
+test_5: true

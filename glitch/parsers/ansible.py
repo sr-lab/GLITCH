@@ -28,20 +28,14 @@ class AnsibleParser(YamlParser):
         def create_variable(
             token: Token | Node,
             name: str,
-            value: str | None,
+            value: Expr,
             val_node: Node,
             child: bool = False,
         ) -> Variable:
-            has_variable = (
-                (("{{" in value) and ("}}" in value)) if value != None else False
-            )
-            if value in ["null", "~"]:
-                value = ""
-
-            if value == None:
+            if isinstance(value, Null):
                 v_code = AnsibleParser._get_code(token, token, code)
             else:
-                v_code = AnsibleParser._get_code(token, value, code)
+                v_code = AnsibleParser._get_code(token, val_node, code)
             v_code = "".join(code[token.start_mark.line : token.end_mark.line + 1])
 
             info = ElementInfo(
@@ -52,7 +46,7 @@ class AnsibleParser(YamlParser):
                 v_code,
             )
 
-            v = Variable(name, value, has_variable, info)
+            v = Variable(name, value, info)
             variables.append(v)
             if not child:
                 unit_block.add_variable(v)
@@ -71,7 +65,7 @@ class AnsibleParser(YamlParser):
                             unit_block, cur_name, key, key.value[0][0], code, child  # type: ignore
                         )
             else:
-                var = create_variable(key_node, cur_name, None, value_node, child)
+                var = create_variable(key_node, cur_name, Null(), value_node, child)
                 for key, v in value_node.value:
                     if hasattr(key, "value") and isinstance(key.value, str):
                         var.keyvalues += AnsibleParser.__parse_vars(
@@ -82,22 +76,34 @@ class AnsibleParser(YamlParser):
                             unit_block, cur_name, key, key.value[0][0], code, True  # type: ignore
                         )
         elif isinstance(value_node, ScalarNode):
-            create_variable(
-                key_node, cur_name, str(value_node.value), value_node, child
-            )
+            v = YamlParser.get_value(value_node, code)
+            create_variable(key_node, cur_name, v, value_node, child)
         elif isinstance(value_node, SequenceNode):
-            value: List[Any] = []
+            value: List[Expr] = []
+
             for i, val in enumerate(value_node.value):
                 if isinstance(val, CollectionNode):
                     variables += AnsibleParser.__parse_vars(
                         unit_block, f"{cur_name}[{i}]", key_node, val, code, child
                     )
                 else:
-                    value.append(val.value)
+                    value.append(YamlParser.get_value(val, code))
 
-            if len(value) > 0 and isinstance(value_node.value[-1], (Node, Token)):
+            if len(value) > 0:
                 create_variable(
-                    key_node, cur_name, str(value), value_node.value[-1], child
+                    key_node,
+                    cur_name,
+                    Array(
+                        value,
+                        ElementInfo(
+                            value_node.start_mark.line + 1,
+                            value_node.start_mark.column + 1,
+                            value_node.end_mark.line + 1,
+                            value_node.end_mark.column + 1,
+                            YamlParser._get_code(value_node, value_node, code),
+                        ),
+                    ),
+                    value_node,
                 )
 
         return variables
@@ -107,15 +113,9 @@ class AnsibleParser(YamlParser):
         cur_name: str, token: Token | Node, val: Any, code: List[str]
     ) -> List[Attribute]:
         def create_attribute(
-            token: Token | Node, name: str, value: Any, val_node: Node
+            token: Token | Node, name: str, value: Expr, val_node: Node
         ) -> Attribute:
-            has_variable = (
-                (("{{" in value) and ("}}" in value)) if value != None else False
-            )
-            if value in ["null", "~"]:
-                value = ""
-
-            if val == None:
+            if isinstance(value, Null):
                 a_code = AnsibleParser._get_code(token, token, code)
             else:
                 a_code = AnsibleParser._get_code(token, val, code)
@@ -128,14 +128,14 @@ class AnsibleParser(YamlParser):
                 a_code,
             )
 
-            a = Attribute(name, value, has_variable, info)
+            a = Attribute(name, value, info)
             attributes.append(a)
 
             return a
 
         attributes: List[Attribute] = []
         if isinstance(val, MappingNode):
-            attribute = create_attribute(token, cur_name, None, val)
+            attribute = create_attribute(token, cur_name, Null(), val)
             aux_attributes: List[KeyValue] = []
             for aux, aux_val in val.value:
                 aux_attributes += AnsibleParser.__parse_attribute(
@@ -143,19 +143,34 @@ class AnsibleParser(YamlParser):
                 )
             attribute.keyvalues = aux_attributes
         elif isinstance(val, ScalarNode):
-            create_attribute(token, cur_name, str(val.value), val)
+            v = YamlParser.get_value(val, code)
+            create_attribute(token, cur_name, v, val)
         elif isinstance(val, SequenceNode):
-            value: List[Any] = []
+            value: List[Expr] = []
             for i, v in enumerate(val.value):
                 if not isinstance(v, ScalarNode):
                     attributes += AnsibleParser.__parse_attribute(
                         f"{cur_name}[{i}]", v, v, code
                     )
                 else:
-                    value.append(v.value)
+                    value.append(YamlParser.get_value(v, code))
 
             if len(value) > 0:
-                create_attribute(token, cur_name, str(value), val)
+                create_attribute(
+                    token,
+                    cur_name,
+                    Array(
+                        value,
+                        ElementInfo(
+                            val.start_mark.line + 1,
+                            val.start_mark.column + 1,
+                            val.end_mark.line + 1,
+                            val.end_mark.column + 1,
+                            YamlParser._get_code(val, val, code),
+                        ),
+                    ),
+                    val,
+                )
 
         return attributes
 

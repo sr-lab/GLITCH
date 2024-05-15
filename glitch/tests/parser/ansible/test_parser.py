@@ -2,10 +2,34 @@ import unittest
 
 from glitch.parsers.ansible import AnsibleParser
 from glitch.repr.inter import *
+from typing import Type
 
 
 class TestAnsibleParser(unittest.TestCase):
+    def __check_value(
+        self,
+        obtained: Expr,
+        type: Type[Expr],
+        value: Any,
+        line: int,
+        column: int,
+        end_line: int,
+        end_column: int,
+    ):
+        assert isinstance(obtained, type)
+        if isinstance(obtained, Value):
+            assert obtained.value == value
+        assert obtained.line == line
+        assert obtained.column == column
+        assert obtained.end_line == end_line
+        assert obtained.end_column == end_column
+
     def test_ansible_parser_valid_tasks(self) -> None:
+        """
+        Value in another line
+        String interpolation (Variable reference)
+        In-line list
+        """
         p = AnsibleParser()
         ir = p.parse_file(
             "tests/parser/ansible/files/valid_tasks.yml", UnitBlockType.tasks
@@ -22,45 +46,109 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.atomic_units[0].attributes) == 4
 
         assert ir.atomic_units[0].attributes[0].name == "shell"
-        assert (
-            ir.atomic_units[0].attributes[0].value
-            == "hostnamectl --machine=\"{{ inventory_hostname }}\" status | awk '/Machine ID/ {print $3}'"
+
+        assert isinstance(ir.atomic_units[0].attributes[0].value, Sum)
+        assert isinstance(ir.atomic_units[0].attributes[0].value.left, BinaryOperation)
+        self.__check_value(
+            ir.atomic_units[0].attributes[0].value.left.left,
+            String,
+            'hostnamectl --machine="',
+            3,
+            10,
+            5,
+            1,
         )
+        assert isinstance(
+            ir.atomic_units[0].attributes[0].value.left.right, VariableReference
+        )
+        self.__check_value(
+            ir.atomic_units[0].attributes[0].value.left.right,
+            VariableReference,
+            "inventory_hostname",
+            3,
+            10,
+            5,
+            1,
+        )
+        assert isinstance(ir.atomic_units[0].attributes[0].value.right, String)
+        self.__check_value(
+            ir.atomic_units[0].attributes[0].value.right,
+            String,
+            "\" status | awk '/Machine ID/ {print $3}'",
+            3,
+            10,
+            5,
+            1,
+        )
+
         assert ir.atomic_units[0].attributes[0].line == 3
         assert ir.atomic_units[0].attributes[0].column == 3
         assert ir.atomic_units[0].attributes[0].end_line == 5
         assert ir.atomic_units[0].attributes[0].end_column == 1
 
         assert ir.atomic_units[0].attributes[1].name == "register"
-        assert ir.atomic_units[0].attributes[1].value == "_container_machine_id"
+        self.__check_value(
+            ir.atomic_units[0].attributes[1].value,
+            String,
+            "_container_machine_id",
+            5,
+            13,
+            5,
+            34,
+        )
         assert ir.atomic_units[0].attributes[1].line == 5
         assert ir.atomic_units[0].attributes[1].column == 3
         assert ir.atomic_units[0].attributes[1].end_line == 5
         assert ir.atomic_units[0].attributes[1].end_column == 34
 
         assert ir.atomic_units[0].attributes[2].name == "delegate_to"
-        assert ir.atomic_units[0].attributes[2].value == "{{ physical_host }}"
+        self.__check_value(
+            ir.atomic_units[0].attributes[2].value,
+            VariableReference,
+            "physical_host",
+            6,
+            16,
+            6,
+            37,
+        )
         assert ir.atomic_units[0].attributes[2].line == 6
         assert ir.atomic_units[0].attributes[2].column == 3
         assert ir.atomic_units[0].attributes[2].end_line == 6
         assert ir.atomic_units[0].attributes[2].end_column == 37
 
         assert ir.atomic_units[0].attributes[3].name == "test"
-        assert ir.atomic_units[0].attributes[3].value == None
+        self.__check_value(
+            ir.atomic_units[0].attributes[3].value, Null, None, -1, -1, -1, -1
+        )
         assert ir.atomic_units[0].attributes[3].line == 7
         assert ir.atomic_units[0].attributes[3].column == 3
         assert ir.atomic_units[0].attributes[3].end_line == 8
-        assert ir.atomic_units[0].attributes[3].end_column == 26
+        assert ir.atomic_units[0].attributes[3].end_column == 44
         assert len(ir.atomic_units[0].attributes[3].keyvalues) == 1
 
         assert ir.atomic_units[0].attributes[3].keyvalues[0].name == "executable"
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].value == "/bin/bash"
+        self.__check_value(
+            ir.atomic_units[0].attributes[3].keyvalues[0].value,
+            Array,
+            [
+                String("/bin/bash", ElementInfo(8, 18, 8, 29, "/bin/bash")),
+                String("/bin/shell", ElementInfo(8, 31, 8, 43, "/bin/shell")),
+            ],
+            8,
+            17,
+            8,
+            44,
+        )
         assert ir.atomic_units[0].attributes[3].keyvalues[0].line == 8
         assert ir.atomic_units[0].attributes[3].keyvalues[0].column == 5
         assert ir.atomic_units[0].attributes[3].keyvalues[0].end_line == 8
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].end_column == 26
+        assert ir.atomic_units[0].attributes[3].keyvalues[0].end_column == 44
 
     def test_ansible_parser_valid_playbook_vars(self) -> None:
+        """
+        String interpolation (Variable reference)
+        String in another line
+        """
         p = AnsibleParser()
         ir = p.parse_file(
             "tests/parser/ansible/files/valid_playbook_vars.yml", UnitBlockType.script
@@ -75,9 +163,26 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables) == 2
 
         assert ir.unit_blocks[0].variables[0].name == "aqua_admin_password"
-        assert (
-            ir.unit_blocks[0].variables[0].value
-            == "{{ lookup('env', 'AQUA_ADMIN_PASSWORD') }}"
+        assert isinstance(ir.unit_blocks[0].variables[0].value, FunctionCall)
+        assert ir.unit_blocks[0].variables[0].value.name == "lookup"
+        assert len(ir.unit_blocks[0].variables[0].value.args) == 2
+        self.__check_value(
+            ir.unit_blocks[0].variables[0].value.args[0],
+            String,
+            "env",
+            6,
+            26,
+            6,
+            70,
+        )
+        self.__check_value(
+            ir.unit_blocks[0].variables[0].value.args[1],
+            String,
+            "AQUA_ADMIN_PASSWORD",
+            6,
+            26,
+            6,
+            70,
         )
         assert ir.unit_blocks[0].variables[0].line == 6
         assert ir.unit_blocks[0].variables[0].column == 5
@@ -85,9 +190,26 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.unit_blocks[0].variables[0].end_column == 70
 
         assert ir.unit_blocks[0].variables[1].name == "aqua_sso_client_secret"
-        assert (
-            ir.unit_blocks[0].variables[1].value
-            == "\"{{ lookup('env', 'AQUA_SSO_CLIENT_SECRET') }}\""
+        assert isinstance(ir.unit_blocks[0].variables[1].value, FunctionCall)
+        assert ir.unit_blocks[0].variables[1].value.name == "lookup"
+        assert len(ir.unit_blocks[0].variables[1].value.args) == 2
+        self.__check_value(
+            ir.unit_blocks[0].variables[1].value.args[0],
+            String,
+            "env",
+            7,
+            29,
+            9,
+            1,
+        )
+        self.__check_value(
+            ir.unit_blocks[0].variables[1].value.args[1],
+            String,
+            "AQUA_SSO_CLIENT_SECRET",
+            7,
+            29,
+            9,
+            1,
         )
         assert ir.unit_blocks[0].variables[1].line == 7
         assert ir.unit_blocks[0].variables[1].column == 5
@@ -95,6 +217,9 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.unit_blocks[0].variables[1].end_column == 1
 
     def test_ansible_parser_valid_playbook_hierarchical_vars(self) -> None:
+        """
+        Hierarchical variables
+        """
         p = AnsibleParser()
         ir = p.parse_file(
             "tests/parser/ansible/files/valid_playbook_hierarchical_vars.yml",
@@ -110,24 +235,34 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables) == 1
 
         assert ir.unit_blocks[0].variables[0].name == "aqua_admin"
-        assert ir.unit_blocks[0].variables[0].value == None
+        self.__check_value(
+            ir.unit_blocks[0].variables[0].value, Null, None, -1, -1, -1, -1
+        )
         assert ir.unit_blocks[0].variables[0].line == 6
         assert ir.unit_blocks[0].variables[0].column == 5
         assert ir.unit_blocks[0].variables[0].end_line == 7
-        assert ir.unit_blocks[0].variables[0].end_column == 53
+        assert ir.unit_blocks[0].variables[0].end_column == 19
         assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
 
         assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "user"
-        assert (
-            ir.unit_blocks[0].variables[0].keyvalues[0].value
-            == "{{ lookup('env', 'AQUA_ADMIN_USER') }}"
+        self.__check_value(
+            ir.unit_blocks[0].variables[0].keyvalues[0].value,
+            String,
+            "test",
+            7,
+            13,
+            7,
+            19,
         )
         assert ir.unit_blocks[0].variables[0].keyvalues[0].line == 7
         assert ir.unit_blocks[0].variables[0].keyvalues[0].column == 7
         assert ir.unit_blocks[0].variables[0].keyvalues[0].end_line == 7
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].end_column == 53
+        assert ir.unit_blocks[0].variables[0].keyvalues[0].end_column == 19
 
     def test_ansible_parser_valid_playbook_vars_list(self) -> None:
+        """
+        Hierarchical variables with list
+        """
         p = AnsibleParser()
         ir = p.parse_file(
             "tests/parser/ansible/files/valid_playbook_vars_list.yml",
@@ -143,26 +278,52 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables) == 2
 
         assert ir.unit_blocks[0].variables[0].name == "aqua_admin_users[0]"
-        assert ir.unit_blocks[0].variables[0].value == None
+        self.__check_value(
+            ir.unit_blocks[0].variables[0].value, Null, None, -1, -1, -1, -1
+        )
         assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
         assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "user"
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].value == "test1"
+        self.__check_value(
+            ir.unit_blocks[0].variables[0].keyvalues[0].value,
+            String,
+            "test1",
+            7,
+            15,
+            7,
+            20,
+        )
         assert ir.unit_blocks[0].variables[0].keyvalues[0].line == 7
         assert ir.unit_blocks[0].variables[0].keyvalues[0].column == 9
         assert ir.unit_blocks[0].variables[0].keyvalues[0].end_line == 7
         assert ir.unit_blocks[0].variables[0].keyvalues[0].end_column == 20
 
         assert ir.unit_blocks[0].variables[1].name == "aqua_admin_users[1]"
-        assert ir.unit_blocks[0].variables[1].value == None
+        self.__check_value(
+            ir.unit_blocks[0].variables[1].value, Null, None, -1, -1, -1, -1
+        )
         assert len(ir.unit_blocks[0].variables[1].keyvalues) == 1
         assert ir.unit_blocks[0].variables[1].keyvalues[0].name == "user"
-        assert ir.unit_blocks[0].variables[1].keyvalues[0].value == "test2"
+        self.__check_value(
+            ir.unit_blocks[0].variables[1].keyvalues[0].value,
+            String,
+            "test2",
+            8,
+            15,
+            8,
+            20,
+        )
         assert ir.unit_blocks[0].variables[1].keyvalues[0].line == 8
         assert ir.unit_blocks[0].variables[1].keyvalues[0].column == 9
         assert ir.unit_blocks[0].variables[1].keyvalues[0].end_line == 8
         assert ir.unit_blocks[0].variables[1].keyvalues[0].end_column == 20
 
     def test_ansible_parser_valid_vars(self) -> None:
+        """
+        In-line lists
+        Regular lists
+        Null
+        Integer, Float and Boolean
+        """
         p = AnsibleParser()
         ir = p.parse_file(
             "tests/parser/ansible/files/valid_vars.yml", UnitBlockType.vars
@@ -171,11 +332,129 @@ class TestAnsibleParser(unittest.TestCase):
 
         assert isinstance(ir, UnitBlock)
         assert ir.type == UnitBlockType.vars
-        assert len(ir.variables) == 1
+        assert len(ir.variables) == 7
 
         assert ir.variables[0].name == "aqua_admin_users"
-        assert ir.variables[0].value == "['test1', 'test2']"
+        self.__check_value(
+            ir.variables[0].value,
+            Array,
+            [
+                String("test1", ElementInfo(3, 5, 3, 12, "test1")),
+                String("test2", ElementInfo(4, 5, 4, 12, "test2")),
+            ],
+            3,
+            3,
+            5,
+            1,
+        )
         assert ir.variables[0].line == 2
         assert ir.variables[0].column == 1
-        assert ir.variables[0].end_line == 4
-        assert ir.variables[0].end_column == 12
+        assert ir.variables[0].end_line == 5
+        assert ir.variables[0].end_column == 1
+
+        assert ir.variables[1].name == "aqua_admin_passwords"
+        self.__check_value(
+            ir.variables[1].value,
+            Array,
+            [
+                String("test1", ElementInfo(5, 24, 5, 31, "test1")),
+                String("test2", ElementInfo(5, 33, 5, 40, "test2")),
+            ],
+            5,
+            23,
+            5,
+            41,
+        )
+        assert ir.variables[1].line == 5
+        assert ir.variables[1].column == 1
+        assert ir.variables[1].end_line == 5
+        assert ir.variables[1].end_column == 41
+
+        assert ir.variables[2].name == "test"
+        self.__check_value(ir.variables[2].value, Null, None, 6, 7, 6, 8)
+
+        assert ir.variables[3].name == "test_2"
+        self.__check_value(ir.variables[3].value, Null, None, 7, 9, 7, 13)
+
+        assert ir.variables[4].name == "test_3"
+        self.__check_value(ir.variables[4].value, Float, 1.0, 8, 9, 8, 12)
+
+    def test_ansible_parser_valid_vars_interpolation(self) -> None:
+        """
+        String interpolation with filter
+        String interpolation with string/list inside
+        String interpolation with sum
+        """
+        p = AnsibleParser()
+        ir = p.parse_file(
+            "tests/parser/ansible/files/valid_vars_interpolation.yml", UnitBlockType.vars
+        )
+        assert ir is not None
+
+        assert len(ir.variables) == 4
+
+        assert ir.variables[0].name == "with_filter"
+        self.__check_value(
+            ir.variables[0].value,
+            VariableReference,
+            "var",
+            2,
+            14,
+            2,
+            33,
+        )
+
+        assert ir.variables[1].name == "with_string"
+        self.__check_value(
+            ir.variables[1].value,
+            String,
+            "string",
+            3,
+            14,
+            3,
+            30,
+        )
+
+        assert ir.variables[2].name == "with_list"
+        assert isinstance(ir.variables[2].value, Array)
+        assert len(ir.variables[2].value.value) == 3
+        self.__check_value(
+            ir.variables[2].value.value[0],
+            Integer,
+            1,
+            4,
+            12,
+            4,
+            29,
+        )
+
+        assert ir.variables[3].name == "with_sum"
+        assert isinstance(ir.variables[3].value, Sum)
+        assert isinstance(ir.variables[3].value.left, Sum)
+        self.__check_value(
+            ir.variables[3].value.left.left,
+            VariableReference,
+            "var",
+            5,
+            11,
+            5,
+            37,
+        )
+        self.__check_value(
+            ir.variables[3].value.left.right,
+            String,
+            "string",
+            5,
+            11,
+            5,
+            37,
+        )
+        self.__check_value(
+            ir.variables[3].value.right,
+            Integer,
+            1,
+            5,
+            11,
+            5,
+            37,
+        )
