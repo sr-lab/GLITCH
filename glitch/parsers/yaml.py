@@ -115,7 +115,7 @@ class YamlParser(p.Parser, ABC):
                 comments.append((i + 1, line.strip()))
 
         return set(comments)
-    
+
     @staticmethod
     def __parse_jinja_node(node: jinja2.nodes.Node, info: ElementInfo) -> Expr:
         if isinstance(node, jinja2.nodes.TemplateData):
@@ -135,20 +135,25 @@ class YamlParser(p.Parser, ABC):
                 raise ValueError("Const not supported")
         elif isinstance(node, jinja2.nodes.Call):
             assert isinstance(node.node, jinja2.nodes.Name)
-            return FunctionCall(node.node.name, [
-                YamlParser.__parse_jinja_node(arg, info) for arg in node.args
-            ], info) # type: ignore
+            return FunctionCall(
+                node.node.name,
+                [YamlParser.__parse_jinja_node(arg, info) for arg in node.args],
+                info,
+            )  # type: ignore
         elif isinstance(node, jinja2.nodes.Filter):
             assert node.node is not None
             return YamlParser.__parse_jinja_node(node.node, info)
         elif isinstance(node, jinja2.nodes.List):
-            return Array([YamlParser.__parse_jinja_node(n, info) for n in node.items], info) # type: ignore
+            return Array([YamlParser.__parse_jinja_node(n, info) for n in node.items], info)  # type: ignore
         elif isinstance(node, jinja2.nodes.Add):
-            return Sum(info, YamlParser.__parse_jinja_node(node.left, info), YamlParser.__parse_jinja_node(node.right, info))
+            return Sum(
+                info,
+                YamlParser.__parse_jinja_node(node.left, info),
+                YamlParser.__parse_jinja_node(node.right, info),
+            )
         else:
             print(node)
             raise ValueError("Node not supported")
-        
 
     @staticmethod
     def __parse_string(v: str, info: ElementInfo) -> Expr:
@@ -162,7 +167,7 @@ class YamlParser(p.Parser, ABC):
         jinja_nodes = list(Environment().parse(v).body[0].iter_child_nodes())
 
         for node in jinja_nodes[::-1]:
-            if isinstance(node, jinja2.nodes.TemplateData) and node.data.strip() == "\"":
+            if isinstance(node, jinja2.nodes.TemplateData) and node.data.strip() == '"':
                 jinja_nodes.remove(node)
 
         if len(jinja_nodes) > 1:
@@ -173,11 +178,11 @@ class YamlParser(p.Parser, ABC):
             expr = Sum(info, parts[0], parts[1])
             for part in parts[2:]:
                 expr = Sum(info, expr, part)
-                
+
             return expr
         elif len(jinja_nodes) == 1:
             return YamlParser.__parse_jinja_node(jinja_nodes[0], info)
-        
+
         raise ValueError("No Jinja nodes found")
 
     @staticmethod
@@ -202,12 +207,12 @@ class YamlParser(p.Parser, ABC):
         elif v is None:
             return Null(info)
         elif isinstance(v, list):
-            return Array([YamlParser.get_value(val, code) for val in v], info) # type: ignore
+            return Array([YamlParser.get_value(val, code) for val in v], info)  # type: ignore
         elif isinstance(v, dict):
             return Hash(
                 {
-                    YamlParser.get_value(key, code): YamlParser.get_value(val, code) # type: ignore
-                    for key, val in v.items() # type: ignore
+                    YamlParser.get_value(key, code): YamlParser.get_value(val, code)  # type: ignore
+                    for key, val in v.items()  # type: ignore
                 },
                 info,
             )

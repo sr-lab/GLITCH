@@ -387,7 +387,8 @@ class TestAnsibleParser(unittest.TestCase):
         """
         p = AnsibleParser()
         ir = p.parse_file(
-            "tests/parser/ansible/files/valid_vars_interpolation.yml", UnitBlockType.vars
+            "tests/parser/ansible/files/valid_vars_interpolation.yml",
+            UnitBlockType.vars,
         )
         assert ir is not None
 

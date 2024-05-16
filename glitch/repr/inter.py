@@ -12,6 +12,16 @@ class ElementInfo:
     end_column: int
     code: str
 
+    @staticmethod
+    def from_code_element(element: "CodeElement") -> "ElementInfo":
+        return ElementInfo(
+            element.line,
+            element.column,
+            element.end_line,
+            element.end_column,
+            element.code,
+        )
+
 
 class CodeElement(ABC):
     def __init__(self, info: ElementInfo | None = None) -> None:
@@ -62,7 +72,7 @@ class Value(Expr, ABC):
         self.value = value
 
     def __eq__(self, o: object) -> bool:
-        if not isinstance(o, Value):
+        if not isinstance(o, Value) or not isinstance(o, self.__class__):
             return False
         return (
             self.value == o.value
@@ -122,6 +132,22 @@ class FunctionCall(Expr):
         self.args: List[Expr] = args
 
 
+class UnaryOperation(Expr, ABC):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info)
+        self.expr = expr
+
+
+class Not(UnaryOperation):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info, expr)
+
+
+class Minus(UnaryOperation):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info, expr)
+
+
 class BinaryOperation(Expr, ABC):
     def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
         super().__init__(info)
@@ -129,7 +155,87 @@ class BinaryOperation(Expr, ABC):
         self.right = right
 
 
+class Or(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class And(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
 class Sum(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Equal(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class NotEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class LessThan(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class LessThanOrEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class GreaterThan(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class GreaterThanOrEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class In(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Subtract(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Multiply(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Divide(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Modulo(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class RightShift(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class LeftShift(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Access(BinaryOperation):
     def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
         super().__init__(info, left, right)
 
@@ -139,7 +245,7 @@ class Block(CodeElement):
         super().__init__()
         self.statements: List[CodeElement] = []
 
-    def add_statement(self, statement: "ConditionalStatement") -> None:
+    def add_statement(self, statement: CodeElement) -> None:
         self.statements.append(statement)
 
     @staticmethod
@@ -173,12 +279,12 @@ class ConditionalStatement(Block):
 
     def __init__(
         self,
-        condition: str,
+        condition: Expr,
         type: "ConditionalStatement.ConditionType",
         is_default: bool = False,
     ) -> None:
         super().__init__()
-        self.condition: str = condition
+        self.condition: Expr = condition
         self.else_statement: ConditionalStatement | None = None
         self.is_default = is_default
         self.type = type
@@ -269,17 +375,17 @@ class AtomicUnit(Block):
 
 
 class Dependency(CodeElement):
-    def __init__(self, name: str) -> None:
+    def __init__(self, names: List[str]) -> None:
         super().__init__()
-        self.name: str = name
+        self.names: List[str] = names
 
     def __repr__(self) -> str:
-        return self.name
+        return ",".join(self.names)
 
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "name": self.name,
+            "names": self.names,
         }
 
 
@@ -288,6 +394,7 @@ class UnitBlockType(str, Enum):
     tasks = "tasks"
     vars = "vars"
     block = "block"
+    function = "function"
     definition = "definition"
     unknown = "unknown"
 
