@@ -1,29 +1,9 @@
-import unittest
-
 from glitch.parsers.ansible import AnsibleParser
 from glitch.repr.inter import *
-from typing import Type
+from glitch.tests.parser.test_parser import TestParser
 
 
-class TestAnsibleParser(unittest.TestCase):
-    def __check_value(
-        self,
-        obtained: Expr,
-        type: Type[Expr],
-        value: Any,
-        line: int,
-        column: int,
-        end_line: int,
-        end_column: int,
-    ):
-        assert isinstance(obtained, type)
-        if isinstance(obtained, Value):
-            assert obtained.value == value
-        assert obtained.line == line
-        assert obtained.column == column
-        assert obtained.end_line == end_line
-        assert obtained.end_column == end_column
-
+class TestAnsibleParser(TestParser):
     def test_ansible_parser_valid_tasks(self) -> None:
         """
         Value in another line
@@ -49,7 +29,7 @@ class TestAnsibleParser(unittest.TestCase):
 
         assert isinstance(ir.atomic_units[0].attributes[0].value, Sum)
         assert isinstance(ir.atomic_units[0].attributes[0].value.left, BinaryOperation)
-        self.__check_value(
+        self._check_value(
             ir.atomic_units[0].attributes[0].value.left.left,
             String,
             'hostnamectl --machine="',
@@ -61,7 +41,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert isinstance(
             ir.atomic_units[0].attributes[0].value.left.right, VariableReference
         )
-        self.__check_value(
+        self._check_value(
             ir.atomic_units[0].attributes[0].value.left.right,
             VariableReference,
             "inventory_hostname",
@@ -71,7 +51,7 @@ class TestAnsibleParser(unittest.TestCase):
             1,
         )
         assert isinstance(ir.atomic_units[0].attributes[0].value.right, String)
-        self.__check_value(
+        self._check_value(
             ir.atomic_units[0].attributes[0].value.right,
             String,
             "\" status | awk '/Machine ID/ {print $3}'",
@@ -87,7 +67,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.atomic_units[0].attributes[0].end_column == 1
 
         assert ir.atomic_units[0].attributes[1].name == "register"
-        self.__check_value(
+        self._check_value(
             ir.atomic_units[0].attributes[1].value,
             String,
             "_container_machine_id",
@@ -102,7 +82,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.atomic_units[0].attributes[1].end_column == 34
 
         assert ir.atomic_units[0].attributes[2].name == "delegate_to"
-        self.__check_value(
+        self._check_value(
             ir.atomic_units[0].attributes[2].value,
             VariableReference,
             "physical_host",
@@ -117,7 +97,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.atomic_units[0].attributes[2].end_column == 37
 
         assert ir.atomic_units[0].attributes[3].name == "test"
-        self.__check_value(
+        self._check_value(
             ir.atomic_units[0].attributes[3].value, Null, None, -1, -1, -1, -1
         )
         assert ir.atomic_units[0].attributes[3].line == 7
@@ -127,7 +107,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.atomic_units[0].attributes[3].keyvalues) == 1
 
         assert ir.atomic_units[0].attributes[3].keyvalues[0].name == "executable"
-        self.__check_value(
+        self._check_value(
             ir.atomic_units[0].attributes[3].keyvalues[0].value,
             Array,
             [
@@ -166,7 +146,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert isinstance(ir.unit_blocks[0].variables[0].value, FunctionCall)
         assert ir.unit_blocks[0].variables[0].value.name == "lookup"
         assert len(ir.unit_blocks[0].variables[0].value.args) == 2
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[0].value.args[0],
             String,
             "env",
@@ -175,7 +155,7 @@ class TestAnsibleParser(unittest.TestCase):
             6,
             70,
         )
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[0].value.args[1],
             String,
             "AQUA_ADMIN_PASSWORD",
@@ -193,7 +173,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert isinstance(ir.unit_blocks[0].variables[1].value, FunctionCall)
         assert ir.unit_blocks[0].variables[1].value.name == "lookup"
         assert len(ir.unit_blocks[0].variables[1].value.args) == 2
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[1].value.args[0],
             String,
             "env",
@@ -202,7 +182,7 @@ class TestAnsibleParser(unittest.TestCase):
             9,
             1,
         )
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[1].value.args[1],
             String,
             "AQUA_SSO_CLIENT_SECRET",
@@ -235,7 +215,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables) == 1
 
         assert ir.unit_blocks[0].variables[0].name == "aqua_admin"
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[0].value, Null, None, -1, -1, -1, -1
         )
         assert ir.unit_blocks[0].variables[0].line == 6
@@ -245,7 +225,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
 
         assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "user"
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[0].keyvalues[0].value,
             String,
             "test",
@@ -278,12 +258,12 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.unit_blocks[0].variables) == 2
 
         assert ir.unit_blocks[0].variables[0].name == "aqua_admin_users[0]"
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[0].value, Null, None, -1, -1, -1, -1
         )
         assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
         assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "user"
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[0].keyvalues[0].value,
             String,
             "test1",
@@ -298,12 +278,12 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.unit_blocks[0].variables[0].keyvalues[0].end_column == 20
 
         assert ir.unit_blocks[0].variables[1].name == "aqua_admin_users[1]"
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[1].value, Null, None, -1, -1, -1, -1
         )
         assert len(ir.unit_blocks[0].variables[1].keyvalues) == 1
         assert ir.unit_blocks[0].variables[1].keyvalues[0].name == "user"
-        self.__check_value(
+        self._check_value(
             ir.unit_blocks[0].variables[1].keyvalues[0].value,
             String,
             "test2",
@@ -335,7 +315,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.variables) == 7
 
         assert ir.variables[0].name == "aqua_admin_users"
-        self.__check_value(
+        self._check_value(
             ir.variables[0].value,
             Array,
             [
@@ -353,7 +333,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.variables[0].end_column == 1
 
         assert ir.variables[1].name == "aqua_admin_passwords"
-        self.__check_value(
+        self._check_value(
             ir.variables[1].value,
             Array,
             [
@@ -371,13 +351,13 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.variables[1].end_column == 41
 
         assert ir.variables[2].name == "test"
-        self.__check_value(ir.variables[2].value, Null, None, 6, 7, 6, 8)
+        self._check_value(ir.variables[2].value, Null, None, 6, 7, 6, 8)
 
         assert ir.variables[3].name == "test_2"
-        self.__check_value(ir.variables[3].value, Null, None, 7, 9, 7, 13)
+        self._check_value(ir.variables[3].value, Null, None, 7, 9, 7, 13)
 
         assert ir.variables[4].name == "test_3"
-        self.__check_value(ir.variables[4].value, Float, 1.0, 8, 9, 8, 12)
+        self._check_value(ir.variables[4].value, Float, 1.0, 8, 9, 8, 12)
 
     def test_ansible_parser_valid_vars_interpolation(self) -> None:
         """
@@ -395,7 +375,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert len(ir.variables) == 4
 
         assert ir.variables[0].name == "with_filter"
-        self.__check_value(
+        self._check_value(
             ir.variables[0].value,
             VariableReference,
             "var",
@@ -406,7 +386,7 @@ class TestAnsibleParser(unittest.TestCase):
         )
 
         assert ir.variables[1].name == "with_string"
-        self.__check_value(
+        self._check_value(
             ir.variables[1].value,
             String,
             "string",
@@ -419,7 +399,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.variables[2].name == "with_list"
         assert isinstance(ir.variables[2].value, Array)
         assert len(ir.variables[2].value.value) == 3
-        self.__check_value(
+        self._check_value(
             ir.variables[2].value.value[0],
             Integer,
             1,
@@ -432,7 +412,7 @@ class TestAnsibleParser(unittest.TestCase):
         assert ir.variables[3].name == "with_sum"
         assert isinstance(ir.variables[3].value, Sum)
         assert isinstance(ir.variables[3].value.left, Sum)
-        self.__check_value(
+        self._check_value(
             ir.variables[3].value.left.left,
             VariableReference,
             "var",
@@ -441,7 +421,7 @@ class TestAnsibleParser(unittest.TestCase):
             5,
             37,
         )
-        self.__check_value(
+        self._check_value(
             ir.variables[3].value.left.right,
             String,
             "string",
@@ -450,7 +430,7 @@ class TestAnsibleParser(unittest.TestCase):
             5,
             37,
         )
-        self.__check_value(
+        self._check_value(
             ir.variables[3].value.right,
             Integer,
             1,

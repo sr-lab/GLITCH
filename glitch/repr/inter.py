@@ -39,7 +39,7 @@ class CodeElement(ABC):
             self.code: str = ""
 
     def __hash__(self) -> int:
-        return hash(self.line) * hash(self.column)
+        return hash(self.line) * hash(self.column) * hash(self.end_line) * hash(self.end_column)
 
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, CodeElement):
@@ -54,6 +54,8 @@ class CodeElement(ABC):
             "ir_type": self.__class__.__name__,
             "line": self.line,
             "column": self.column,
+            "end_line": self.end_line,
+            "end_column": self.end_column,
             "code": self.code,
         }
 
@@ -81,6 +83,15 @@ class Value(Expr, ABC):
             and self.end_line == o.end_line
             and self.end_column == o.end_column
         )
+    
+    def __hash__(self) -> int:
+        return hash(self.line) * hash(self.column) * hash(self.end_line) * hash(self.end_column)
+    
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": self.value,
+        }
 
 
 class String(Value):
@@ -153,6 +164,14 @@ class BinaryOperation(Expr, ABC):
         super().__init__(info)
         self.left = left
         self.right = right
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "left": self.left.as_dict(),
+            "right": self.right.as_dict(),
+            "type": self.__class__.__name__.lower(),
+        }
 
 
 class Or(BinaryOperation):
@@ -242,7 +261,7 @@ class Access(BinaryOperation):
 
 class Block(CodeElement):
     def __init__(self) -> None:
-        super().__init__()
+        CodeElement.__init__(self)
         self.statements: List[CodeElement] = []
 
     def add_statement(self, statement: CodeElement) -> None:
@@ -272,7 +291,7 @@ class Block(CodeElement):
         }
 
 
-class ConditionalStatement(Block):
+class ConditionalStatement(Block, Expr):
     class ConditionType(Enum):
         IF = 1
         SWITCH = 2
@@ -283,7 +302,7 @@ class ConditionalStatement(Block):
         type: "ConditionalStatement.ConditionType",
         is_default: bool = False,
     ) -> None:
-        super().__init__()
+        Block.__init__(self)
         self.condition: Expr = condition
         self.else_statement: ConditionalStatement | None = None
         self.is_default = is_default
