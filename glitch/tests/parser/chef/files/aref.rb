@@ -1,0 +1,1 @@
+collection[0] = collection[1]

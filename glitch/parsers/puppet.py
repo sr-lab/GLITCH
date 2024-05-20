@@ -487,8 +487,7 @@ class PuppetParser(p.Parser):
             return resource
         elif isinstance(codeelement, puppetmodel.ClassAsResource):
             resource: AtomicUnit = AtomicUnit(
-                PuppetParser.__process_string(codeelement.title), 
-                "class"
+                PuppetParser.__process_string(codeelement.title), "class"
             )
             for attr in codeelement.attributes:
                 attr = PuppetParser.__process_codeelement(attr, path, code)
@@ -641,7 +640,7 @@ class PuppetParser(p.Parser):
                         resources.append(r)
                 else:
                     resources.append(rsc)
-                
+
                 for rsc in resources:
                     au = PuppetParser.__process_codeelement(rsc, path, code)
                     assert isinstance(au, AtomicUnit)

@@ -213,9 +213,15 @@ class TestPuppetParser(TestParser):
         assert unit_block.variables[6].name == "$a"
         assert isinstance(unit_block.variables[6].value, Array)
         assert len(unit_block.variables[6].value.value) == 3
-        self._check_value(unit_block.variables[6].value.value[0], Integer, 1, 7, 7, 7, 8)
-        self._check_value(unit_block.variables[6].value.value[1], Integer, 2, 7, 10, 7, 11)
-        self._check_value(unit_block.variables[6].value.value[2], Integer, 3, 7, 13, 7, 14)
+        self._check_value(
+            unit_block.variables[6].value.value[0], Integer, 1, 7, 7, 7, 8
+        )
+        self._check_value(
+            unit_block.variables[6].value.value[1], Integer, 2, 7, 10, 7, 11
+        )
+        self._check_value(
+            unit_block.variables[6].value.value[2], Integer, 3, 7, 13, 7, 14
+        )
 
         assert unit_block.variables[7].name == "$hash"
         assert isinstance(unit_block.variables[7].value, Hash)
@@ -315,17 +321,23 @@ class TestPuppetParser(TestParser):
         assert isinstance(unit_block.variables[0].value, ConditionalStatement)
         assert isinstance(unit_block.variables[0].value.condition, Equal)
 
-        assert isinstance(unit_block.variables[0].value.condition.left, VariableReference)
+        assert isinstance(
+            unit_block.variables[0].value.condition.left, VariableReference
+        )
         assert isinstance(unit_block.variables[0].value.condition.right, String)
 
         assert len(unit_block.variables[0].value.statements) == 1
         assert isinstance(unit_block.variables[0].value.statements[0], String)
 
         assert unit_block.variables[0].value.else_statement is not None
-        assert isinstance(unit_block.variables[0].value.else_statement, ConditionalStatement)
+        assert isinstance(
+            unit_block.variables[0].value.else_statement, ConditionalStatement
+        )
         assert isinstance(unit_block.variables[0].value.else_statement.condition, Null)
         assert len(unit_block.variables[0].value.else_statement.statements) == 1
-        assert isinstance(unit_block.variables[0].value.else_statement.statements[0], String)
+        assert isinstance(
+            unit_block.variables[0].value.else_statement.statements[0], String
+        )
 
     def test_puppet_parser_special_resources(self) -> None:
         """
