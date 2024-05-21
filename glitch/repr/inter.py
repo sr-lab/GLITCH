@@ -114,6 +114,11 @@ class Integer(Value):
         super().__init__(info, value)
 
 
+class Complex(Value):
+    def __init__(self, value: complex, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
 class Float(Value):
     def __init__(self, value: float, info: ElementInfo) -> None:
         super().__init__(info, value)
@@ -161,6 +166,14 @@ class MethodCall(Expr):
         self.receiver: Expr = receiver
         self.method: str = method
         self.args: List[Expr] = args
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "receiver": self.receiver.as_dict(),
+            "method": self.method,
+            "args": [a.as_dict() for a in self.args],
+        }
 
 
 class UnaryOperation(Expr, ABC):
@@ -264,6 +277,11 @@ class Modulo(BinaryOperation):
         super().__init__(info, left, right)
 
 
+class Power(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
 class RightShift(BinaryOperation):
     def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
         super().__init__(info, left, right)
@@ -275,6 +293,21 @@ class LeftShift(BinaryOperation):
 
 
 class Access(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class BitwiseAnd(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class BitwiseOr(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class BitwiseXor(BinaryOperation):
     def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
         super().__init__(info, left, right)
 
@@ -337,9 +370,9 @@ class ConditionalStatement(Block, Expr):
             "condition": self.condition,
             "type": self.type.name,
             "is_default": self.is_default,
-            "else_statement": self.else_statement.as_dict()
-            if self.else_statement
-            else None,
+            "else_statement": (
+                self.else_statement.as_dict() if self.else_statement else None
+            ),
         }
 
 

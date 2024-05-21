@@ -1,1 +1,0 @@
-alias test test2

@@ -431,10 +431,12 @@ class PuppetParser(p.Parser):
 
     @staticmethod
     def __process_unitblock(
-        codeelement: puppetmodel.PuppetClass
-        | puppetmodel.Node
-        | puppetmodel.Function
-        | puppetmodel.ResourceDeclaration,
+        codeelement: (
+            puppetmodel.PuppetClass
+            | puppetmodel.Node
+            | puppetmodel.Function
+            | puppetmodel.ResourceDeclaration
+        ),
         path: str,
         code: List[str],
         type: UnitBlockType,
