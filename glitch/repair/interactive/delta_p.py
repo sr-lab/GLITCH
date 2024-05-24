@@ -16,7 +16,7 @@ class PStr(PConst):
 
 @dataclass
 class PNum(PConst):
-    value: int
+    value: int | float
 
 
 @dataclass
@@ -58,7 +58,7 @@ class PEBinOP(PExpr):
 
 @dataclass
 class PUnOp(ABC):
-    value: PExpr
+    pass
 
 
 @dataclass
@@ -116,7 +116,32 @@ class PGt(PBinOp):
 
 
 @dataclass
-class PConcat(PBinOp):
+class PAdd(PBinOp):
+    pass
+
+
+@dataclass
+class PSub(PBinOp):
+    pass
+
+
+@dataclass
+class PMultiply(PBinOp):
+    pass
+
+
+@dataclass
+class PDivide(PBinOp):
+    pass
+
+
+@dataclass
+class PMod(PBinOp):
+    pass
+
+
+@dataclass
+class PPower(PBinOp):
     pass
 
 
@@ -126,6 +151,8 @@ class PStatement(ABC):
             return expr.const.value
         elif isinstance(expr, PEVar):
             return self.__get_str(vars[expr.id], vars)
+        elif isinstance(expr, PRLet):
+            return self.__get_str(expr.expr, vars)
         elif isinstance(expr, PEUndef):
             return None  # type: ignore
 
@@ -136,6 +163,8 @@ class PStatement(ABC):
             return expr
         if isinstance(expr, PEVar):
             return self.__eval(vars[expr.id], vars)
+        elif isinstance(expr, PRLet):
+            return self.__eval(expr.expr, vars)
         elif isinstance(expr, PEUndef) or isinstance(expr, PEConst):
             # NOTE: it is an arbitrary string to represent an undefined value
             return expr
@@ -198,7 +227,6 @@ class PStatement(ABC):
                     return PLet(
                         statement.id,
                         statement.expr,
-                        statement.label,
                         body,
                     )
             elif isinstance(statement, PIf):
@@ -350,11 +378,17 @@ class PSeq(PStatement):
 
 
 @dataclass
-class PLet(PStatement):
+class PLet(PExpr, PStatement):
     id: str
     expr: PExpr
-    label: Optional[int]
     body: PStatement
+
+
+@dataclass
+class PRLet(PExpr):
+    id: str
+    expr: PExpr
+    label: int
 
 
 @dataclass

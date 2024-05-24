@@ -71,6 +71,19 @@ class Expr(CodeElement, ABC):
     def __init__(self, info: ElementInfo) -> None:
         super().__init__(info)
 
+    def __hash__(self) -> int:
+        return (
+            hash(self.line)
+            * hash(self.column)
+            * hash(self.end_line)
+            * hash(self.end_column)
+        )
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, CodeElement):
+            return False
+        return self.line == o.line and self.column == o.column
+
 
 @dataclass
 class Value(Expr, ABC):

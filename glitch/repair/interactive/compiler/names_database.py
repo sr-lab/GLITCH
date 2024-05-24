@@ -1,5 +1,5 @@
 from glitch.tech import Tech
-from typing import Optional
+from glitch.repr.inter import *
 
 
 class NamesDatabase:
@@ -116,9 +116,7 @@ class NamesDatabase:
         return name
 
     @staticmethod
-    def get_attr_value(
-        value: str, name: str, au_type: str, tech: Tech
-    ) -> Optional[str]:
+    def get_attr_value(value: Expr, name: str, au_type: str, tech: Tech) -> Expr:
         """Returns the generic value of the attribute with the given value, name,
         atomic unit type and tech.
 
@@ -131,18 +129,27 @@ class NamesDatabase:
         Returns:
             str: The generic value of the attribute.
         """
-        match value, name, au_type, tech:
-            case "file", "state", "file", Tech.puppet | Tech.ansible:
-                return "present"
-            case "touch", "state", "file", Tech.ansible:
-                return "present"
-            case ":create", "state", "file", Tech.chef:
-                return "present"
-            case ":touch", "state", "file", Tech.chef:
-                return "present"
-            case ":delete", "state", "file", Tech.chef:
-                return "absent"
-            case _:
-                pass
+        v = None
+        if isinstance(value, (VariableReference, String)):
+            v = value.value
+
+        if v is not None:
+            match v, name, au_type, tech:
+                case "present" | "absent", "state", "file", Tech.puppet:
+                    pass
+                case "file", "state", "file", Tech.puppet | Tech.ansible:
+                    v = "present"
+                case "touch", "state", "file", Tech.ansible:
+                    v = "present"
+                case ":create", "state", "file", Tech.chef:
+                    v = "present"
+                case ":touch", "state", "file", Tech.chef:
+                    v = "present"
+                case ":delete", "state", "file", Tech.chef:
+                    v = "absent"
+                case _:
+                    return value
+
+            return String(v, ElementInfo.from_code_element(value))
 
         return value

@@ -70,6 +70,17 @@ class LabeledUnitBlock:
         """
         return self.__codeelement_to_label[codeelement]
 
+    def has_label(self, codeelement: CodeElement) -> bool:
+        """Returns whether the code element has a label.
+
+        Args:
+            codeelement (CodeElement): The code element.
+
+        Returns:
+            bool: Whether the code element has a label.
+        """
+        return codeelement in self.__codeelement_to_label
+
     def get_codeelement(self, label: int) -> CodeElement:
         """Returns the code element with the given label.
 

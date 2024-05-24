@@ -6,46 +6,61 @@ delta_p_puppet = PSeq(
         lhs=PSeq(
             lhs=PSeq(
                 lhs=PLet(
-                    id="state-2",
-                    expr=PEConst(const=PStr(value="present")),
-                    label=2,
+                    id="state_9750",
+                    expr=PRLet(
+                        id="literal-7",
+                        expr=PEConst(const=PStr(value="present")),
+                        label=7,
+                    ),
                     body=PIf(
                         pred=PEBinOP(
                             op=PEq(),
-                            lhs=PEVar(id="state-2"),
+                            lhs=PEVar(id="state_9750"),
                             rhs=PEConst(const=PStr(value="present")),
                         ),
                         cons=PCreate(
-                            path=PEConst(
-                                const=PStr(
-                                    value="/var/www/customers/public_html/index.php"
-                                )
+                            path=PRLet(
+                                id="literal-5",
+                                expr=PEConst(
+                                    const=PStr(
+                                        value="/var/www/customers/public_html/index.php"
+                                    )
+                                ),
+                                label=5,
                             )
                         ),
                         alt=PIf(
                             pred=PEBinOP(
                                 op=PEq(),
-                                lhs=PEVar(id="state-2"),
+                                lhs=PEVar(id="state_9750"),
                                 rhs=PEConst(const=PStr(value="absent")),
                             ),
                             cons=PRm(
-                                path=PEConst(
-                                    const=PStr(
-                                        value="/var/www/customers/public_html/index.php"
-                                    )
+                                path=PRLet(
+                                    id="literal-5",
+                                    expr=PEConst(
+                                        const=PStr(
+                                            value="/var/www/customers/public_html/index.php"
+                                        )
+                                    ),
+                                    label=5,
                                 )
                             ),
                             alt=PIf(
                                 pred=PEBinOP(
                                     op=PEq(),
-                                    lhs=PEVar(id="state-2"),
+                                    lhs=PEVar(id="state_9750"),
                                     rhs=PEConst(const=PStr(value="directory")),
                                 ),
                                 cons=PMkdir(
-                                    path=PEConst(
-                                        const=PStr(
-                                            value="/var/www/customers/public_html/index.php"
-                                        )
+                                    path=PRLet(
+                                        id="literal-5",
+                                        expr=PEConst(
+                                            const=PStr(
+                                                value="/var/www/customers/public_html/index.php"
+                                            )
+                                        ),
+                                        label=5,
                                     )
                                 ),
                                 alt=PSkip(),
@@ -54,42 +69,59 @@ delta_p_puppet = PSeq(
                     ),
                 ),
                 rhs=PLet(
-                    id="content-1",
-                    expr=PEConst(
-                        const=PStr(
-                            value="<html><body><h1>Hello World</h1></body></html>"
-                        )
-                    ),
-                    label=1,
-                    body=PWrite(
-                        path=PEConst(
-                            const=PStr(value="/var/www/customers/public_html/index.php")
+                    id="content_14976",
+                    expr=PRLet(
+                        id="literal-6",
+                        expr=PEConst(
+                            const=PStr(
+                                value="<html><body><h1>Hello World</h1></body></html>"
+                            )
                         ),
-                        content=PEVar(id="content-1"),
+                        label=6,
+                    ),
+                    body=PWrite(
+                        path=PRLet(
+                            id="literal-5",
+                            expr=PEConst(
+                                const=PStr(
+                                    value="/var/www/customers/public_html/index.php"
+                                )
+                            ),
+                            label=5,
+                        ),
+                        content=PEVar(id="content_14976"),
                     ),
                 ),
             ),
             rhs=PLet(
-                id="owner-4",
-                expr=PEConst(const=PStr(value="web_admin")),
-                label=4,
+                id="owner_21021",
+                expr=PRLet(
+                    id="literal-9", expr=PEConst(const=PStr(value="web_admin")), label=9
+                ),
                 body=PChown(
-                    path=PEConst(
-                        const=PStr(value="/var/www/customers/public_html/index.php")
+                    path=PRLet(
+                        id="literal-5",
+                        expr=PEConst(
+                            const=PStr(value="/var/www/customers/public_html/index.php")
+                        ),
+                        label=5,
                     ),
-                    owner=PEVar(id="owner-4"),
+                    owner=PEVar(id="owner_21021"),
                 ),
             ),
         ),
         rhs=PLet(
-            id="mode-3",
-            expr=PEConst(const=PStr(value="0755")),
-            label=3,
+            id="mode_12636",
+            expr=PRLet(id="literal-8", expr=PEConst(const=PStr(value="0755")), label=8),
             body=PChmod(
-                path=PEConst(
-                    const=PStr(value="/var/www/customers/public_html/index.php")
+                path=PRLet(
+                    id="literal-5",
+                    expr=PEConst(
+                        const=PStr(value="/var/www/customers/public_html/index.php")
+                    ),
+                    label=5,
                 ),
-                mode=PEVar(id="mode-3"),
+                mode=PEVar(id="mode_12636"),
             ),
         ),
     ),
@@ -102,13 +134,16 @@ delta_p_puppet_2 = PSeq(
         lhs=PSeq(
             lhs=PSeq(
                 lhs=PLet(
-                    id="state-0",
-                    expr=PEConst(const=PStr(value="absent")),
-                    label=0,
+                    id="state_3510",
+                    expr=PRLet(
+                        id="literal-1",
+                        expr=PEConst(const=PStr(value="absent")),
+                        label=1,
+                    ),
                     body=PIf(
                         pred=PEBinOP(
                             op=PEq(),
-                            lhs=PEVar(id="state-0"),
+                            lhs=PEVar(id="state_3510"),
                             rhs=PEConst(const=PStr(value="present")),
                         ),
                         cons=PCreate(
@@ -117,7 +152,7 @@ delta_p_puppet_2 = PSeq(
                         alt=PIf(
                             pred=PEBinOP(
                                 op=PEq(),
-                                lhs=PEVar(id="state-0"),
+                                lhs=PEVar(id="state_3510"),
                                 rhs=PEConst(const=PStr(value="absent")),
                             ),
                             cons=PRm(
@@ -126,7 +161,7 @@ delta_p_puppet_2 = PSeq(
                             alt=PIf(
                                 pred=PEBinOP(
                                     op=PEq(),
-                                    lhs=PEVar(id="state-0"),
+                                    lhs=PEVar(id="state_3510"),
                                     rhs=PEConst(const=PStr(value="directory")),
                                 ),
                                 cons=PMkdir(
@@ -140,32 +175,29 @@ delta_p_puppet_2 = PSeq(
                     ),
                 ),
                 rhs=PLet(
-                    id="sketched-content-1",
-                    expr=PEUndef(),
-                    label=1,
+                    id="content_16",
+                    expr=PRLet(id="literal-2", expr=PEUndef(), label=2),
                     body=PWrite(
                         path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                        content=PEVar(id="sketched-content-1"),
+                        content=PEVar(id="content_16"),
                     ),
                 ),
             ),
             rhs=PLet(
-                id="sketched-owner-2",
-                expr=PEUndef(),
-                label=2,
+                id="owner_256",
+                expr=PRLet(id="literal-3", expr=PEUndef(), label=3),
                 body=PChown(
                     path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                    owner=PEVar(id="sketched-owner-2"),
+                    owner=PEVar(id="owner_256"),
                 ),
             ),
         ),
         rhs=PLet(
-            id="sketched-mode-3",
-            expr=PEUndef(),
-            label=3,
+            id="mode_1296",
+            expr=PRLet(id="literal-4", expr=PEUndef(), label=4),
             body=PChmod(
                 path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                mode=PEVar(id="sketched-mode-3"),
+                mode=PEVar(id="mode_1296"),
             ),
         ),
     ),
@@ -182,13 +214,16 @@ delta_p_puppet_if = PSeq(
                 lhs=PSeq(
                     lhs=PSeq(
                         lhs=PLet(
-                            id="state-0",
-                            expr=PEConst(const=PStr(value="absent")),
-                            label=0,
+                            id="state_6240",
+                            expr=PRLet(
+                                id="literal-2",
+                                expr=PEConst(const=PStr(value="absent")),
+                                label=2,
+                            ),
                             body=PIf(
                                 pred=PEBinOP(
                                     op=PEq(),
-                                    lhs=PEVar(id="state-0"),
+                                    lhs=PEVar(id="state_6240"),
                                     rhs=PEConst(const=PStr(value="present")),
                                 ),
                                 cons=PCreate(
@@ -199,7 +234,7 @@ delta_p_puppet_if = PSeq(
                                 alt=PIf(
                                     pred=PEBinOP(
                                         op=PEq(),
-                                        lhs=PEVar(id="state-0"),
+                                        lhs=PEVar(id="state_6240"),
                                         rhs=PEConst(const=PStr(value="absent")),
                                     ),
                                     cons=PRm(
@@ -210,7 +245,7 @@ delta_p_puppet_if = PSeq(
                                     alt=PIf(
                                         pred=PEBinOP(
                                             op=PEq(),
-                                            lhs=PEVar(id="state-0"),
+                                            lhs=PEVar(id="state_6240"),
                                             rhs=PEConst(const=PStr(value="directory")),
                                         ),
                                         cons=PMkdir(
@@ -226,32 +261,29 @@ delta_p_puppet_if = PSeq(
                             ),
                         ),
                         rhs=PLet(
-                            id="sketched-content-2",
-                            expr=PEUndef(),
-                            label=2,
+                            id="content_16",
+                            expr=PRLet(id="literal-3", expr=PEUndef(), label=3),
                             body=PWrite(
                                 path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                                content=PEVar(id="sketched-content-2"),
+                                content=PEVar(id="content_16"),
                             ),
                         ),
                     ),
                     rhs=PLet(
-                        id="sketched-owner-3",
-                        expr=PEUndef(),
-                        label=3,
+                        id="owner_256",
+                        expr=PRLet(id="literal-4", expr=PEUndef(), label=4),
                         body=PChown(
                             path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                            owner=PEVar(id="sketched-owner-3"),
+                            owner=PEVar(id="owner_256"),
                         ),
                     ),
                 ),
                 rhs=PLet(
-                    id="sketched-mode-4",
-                    expr=PEUndef(),
-                    label=4,
+                    id="mode_1296",
+                    expr=PRLet(id="literal-5", expr=PEUndef(), label=5),
                     body=PChmod(
                         path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                        mode=PEVar(id="sketched-mode-4"),
+                        mode=PEVar(id="mode_1296"),
                     ),
                 ),
             ),
@@ -264,13 +296,16 @@ delta_p_puppet_if = PSeq(
                     lhs=PSeq(
                         lhs=PSeq(
                             lhs=PLet(
-                                id="state-1",
-                                expr=PEConst(const=PStr(value="present")),
-                                label=1,
+                                id="state_25792",
+                                expr=PRLet(
+                                    id="literal-6",
+                                    expr=PEConst(const=PStr(value="present")),
+                                    label=6,
+                                ),
                                 body=PIf(
                                     pred=PEBinOP(
                                         op=PEq(),
-                                        lhs=PEVar(id="state-1"),
+                                        lhs=PEVar(id="state_25792"),
                                         rhs=PEConst(const=PStr(value="present")),
                                     ),
                                     cons=PCreate(
@@ -281,7 +316,7 @@ delta_p_puppet_if = PSeq(
                                     alt=PIf(
                                         pred=PEBinOP(
                                             op=PEq(),
-                                            lhs=PEVar(id="state-1"),
+                                            lhs=PEVar(id="state_25792"),
                                             rhs=PEConst(const=PStr(value="absent")),
                                         ),
                                         cons=PRm(
@@ -294,7 +329,7 @@ delta_p_puppet_if = PSeq(
                                         alt=PIf(
                                             pred=PEBinOP(
                                                 op=PEq(),
-                                                lhs=PEVar(id="state-1"),
+                                                lhs=PEVar(id="state_25792"),
                                                 rhs=PEConst(
                                                     const=PStr(value="directory")
                                                 ),
@@ -312,34 +347,31 @@ delta_p_puppet_if = PSeq(
                                 ),
                             ),
                             rhs=PLet(
-                                id="sketched-content-5",
-                                expr=PEUndef(),
-                                label=5,
+                                id="content_4096",
+                                expr=PRLet(id="literal-7", expr=PEUndef(), label=7),
                                 body=PWrite(
                                     path=PEConst(
                                         const=PStr(value="/usr/sbin/policy-rc.d")
                                     ),
-                                    content=PEVar(id="sketched-content-5"),
+                                    content=PEVar(id="content_4096"),
                                 ),
                             ),
                         ),
                         rhs=PLet(
-                            id="sketched-owner-6",
-                            expr=PEUndef(),
-                            label=6,
+                            id="owner_10000",
+                            expr=PRLet(id="literal-8", expr=PEUndef(), label=8),
                             body=PChown(
                                 path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                                owner=PEVar(id="sketched-owner-6"),
+                                owner=PEVar(id="owner_10000"),
                             ),
                         ),
                     ),
                     rhs=PLet(
-                        id="sketched-mode-7",
-                        expr=PEUndef(),
-                        label=7,
+                        id="mode_20736",
+                        expr=PRLet(id="literal-9", expr=PEUndef(), label=9),
                         body=PChmod(
                             path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
-                            mode=PEVar(id="sketched-mode-7"),
+                            mode=PEVar(id="mode_20736"),
                         ),
                     ),
                 ),
@@ -356,13 +388,16 @@ delta_p_puppet_default_state = PSeq(
         lhs=PSeq(
             lhs=PSeq(
                 lhs=PLet(
-                    id="sketched-state-4",
-                    expr=PEConst(const=PStr(value="present")),
-                    label=4,
+                    id="state_16",
+                    expr=PRLet(
+                        id="literal-7",
+                        expr=PEConst(const=PStr(value="present")),
+                        label=7,
+                    ),
                     body=PIf(
                         pred=PEBinOP(
                             op=PEq(),
-                            lhs=PEVar(id="sketched-state-4"),
+                            lhs=PEVar(id="state_16"),
                             rhs=PEConst(const=PStr(value="present")),
                         ),
                         cons=PCreate(
@@ -371,7 +406,7 @@ delta_p_puppet_default_state = PSeq(
                         alt=PIf(
                             pred=PEBinOP(
                                 op=PEq(),
-                                lhs=PEVar(id="sketched-state-4"),
+                                lhs=PEVar(id="state_16"),
                                 rhs=PEConst(const=PStr(value="absent")),
                             ),
                             cons=PRm(
@@ -380,7 +415,7 @@ delta_p_puppet_default_state = PSeq(
                             alt=PIf(
                                 pred=PEBinOP(
                                     op=PEq(),
-                                    lhs=PEVar(id="sketched-state-4"),
+                                    lhs=PEVar(id="state_16"),
                                     rhs=PEConst(const=PStr(value="directory")),
                                 ),
                                 cons=PMkdir(
@@ -392,34 +427,31 @@ delta_p_puppet_default_state = PSeq(
                     ),
                 ),
                 rhs=PLet(
-                    id="content-0",
-                    expr=PEConst(
-                        const=PStr(value="template('fuel/root_ssh_config.erb')")
-                    ),
-                    label=0,
+                    id="content_432",
+                    expr=PEUndef(),
                     body=PWrite(
                         path=PEConst(const=PStr(value="/root/.ssh/config")),
-                        content=PEVar(id="content-0"),
+                        content=PEVar(id="content_432"),
                     ),
                 ),
             ),
             rhs=PLet(
-                id="owner-1",
-                expr=PEConst(const=PStr(value="root")),
-                label=1,
+                id="owner_288",
+                expr=PRLet(
+                    id="literal-4", expr=PEConst(const=PStr(value="root")), label=4
+                ),
                 body=PChown(
                     path=PEConst(const=PStr(value="/root/.ssh/config")),
-                    owner=PEVar(id="owner-1"),
+                    owner=PEVar(id="owner_288"),
                 ),
             ),
         ),
         rhs=PLet(
-            id="mode-3",
-            expr=PEConst(const=PStr(value="0600")),
-            label=3,
+            id="mode_648",
+            expr=PRLet(id="literal-6", expr=PEConst(const=PStr(value="0600")), label=6),
             body=PChmod(
                 path=PEConst(const=PStr(value="/root/.ssh/config")),
-                mode=PEVar(id="mode-3"),
+                mode=PEVar(id="mode_648"),
             ),
         ),
     ),

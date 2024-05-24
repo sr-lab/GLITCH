@@ -20,6 +20,8 @@ class TestPatchSolver(unittest.TestCase):
     def setUp(self):
         self.f = NamedTemporaryFile(mode="w+")
         DeltaPCompiler._condition = 0  # type: ignore
+        DeltaPCompiler._literal = 0  # type: ignore
+        DeltaPCompiler._sketched = -1  # type: ignore
         self.labeled_script = None
         self.statement = None
 
@@ -96,15 +98,15 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         assert models is not None
         assert len(models) == 1
         model = models[0]
-        assert model[solver.sum_var] == 3
-        assert model[solver.unchanged[1]] == 0
-        assert model[solver.unchanged[2]] == 1
-        assert model[solver.unchanged[3]] == 1
-        assert model[solver.unchanged[4]] == 1
-        assert model[solver.vars["content-1"]] == UNDEF
-        assert model[solver.vars["state-2"]] == "present"
-        assert model[solver.vars["mode-3"]] == "0755"
-        assert model[solver.vars["owner-4"]] == "web_admin"
+        assert model[solver.sum_var] == 4
+        assert model[solver.unchanged[5]] == 1
+        assert model[solver.unchanged[6]] == 0
+        assert model[solver.unchanged[7]] == 1
+        assert model[solver.unchanged[8]] == 1
+        assert model[solver.vars["content_20672"]] == UNDEF
+        assert model[solver.vars["state_14450"]] == "present"
+        assert model[solver.vars["mode_18972"]] == "0755"
+        assert model[solver.vars["owner_30821"]] == "web_admin"
 
         result = """
             file { '/var/www/customers/public_html/index.php':
@@ -130,18 +132,18 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         assert models is not None
         assert len(models) == 1
         model = models[0]
-        assert model[solver.sum_var] == 3
-        assert model[solver.unchanged[1]] == 1
-        assert model[solver.unchanged[2]] == 1
-        assert model[solver.unchanged[3]] == 0
-        assert model[solver.unchanged[4]] == 1
+        assert model[solver.sum_var] == 4
+        assert model[solver.unchanged[5]] == 1
+        assert model[solver.unchanged[6]] == 1
+        assert model[solver.unchanged[7]] == 1
+        assert model[solver.unchanged[8]] == 0
         assert (
-            model[solver.vars["content-1"]]
+            model[solver.vars["content_20672"]]
             == "<html><body><h1>Hello World</h1></body></html>"
         )
-        assert model[solver.vars["state-2"]] == "present"
-        assert model[solver.vars["mode-3"]] == "0777"
-        assert model[solver.vars["owner-4"]] == "web_admin"
+        assert model[solver.vars["state_14450"]] == "present"
+        assert model[solver.vars["mode_18972"]] == "0777"
+        assert model[solver.vars["owner_30821"]] == "web_admin"
 
         result = """
             file { '/var/www/customers/public_html/index.php':
@@ -164,15 +166,16 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         assert models is not None
         assert len(models) == 1
         model = models[0]
-        assert model[solver.sum_var] == 0
-        assert model[solver.unchanged[1]] == 0
-        assert model[solver.unchanged[2]] == 0
-        assert model[solver.unchanged[3]] == 0
-        assert model[solver.unchanged[4]] == 0
-        assert model[solver.vars["content-1"]] == UNDEF
-        assert model[solver.vars["state-2"]] == "absent"
-        assert model[solver.vars["mode-3"]] == UNDEF
-        assert model[solver.vars["owner-4"]] == UNDEF
+        assert model[solver.sum_var] == 1
+        assert model[solver.unchanged[5]] == 1
+        assert model[solver.unchanged[6]] == 0
+        assert model[solver.unchanged[7]] == 0
+        assert model[solver.unchanged[8]] == 0
+        assert model[solver.unchanged[9]] == 0
+        assert model[solver.vars["content_20672"]] == UNDEF
+        assert model[solver.vars["state_14450"]] == "absent"
+        assert model[solver.vars["mode_18972"]] == UNDEF
+        assert model[solver.vars["owner_30821"]] == UNDEF
 
         result = """
             file { '/var/www/customers/public_html/index.php':
@@ -205,14 +208,14 @@ class TestPatchSolverPuppetScript2(TestPatchSolver):
         assert len(models) == 1
         model = models[0]
         assert model[solver.sum_var] == 3
-        assert model[solver.unchanged[0]] == 1
         assert model[solver.unchanged[2]] == 1
-        assert model[solver.unchanged[3]] == 0
         assert model[solver.unchanged[4]] == 1
-        assert model[solver.vars["state-0"]] == "present"
-        assert model[solver.vars["sketched-content-2"]] == UNDEF
-        assert model[solver.vars["sketched-owner-3"]] == "new"
-        assert model[solver.vars["sketched-mode-4"]] == UNDEF
+        assert model[solver.unchanged[5]] == 0
+        assert model[solver.unchanged[6]] == 1
+        assert model[solver.vars["state_3159"]] == "present"
+        assert model[solver.vars["content_16"]] == UNDEF
+        assert model[solver.vars["owner_256"]] == "new"
+        assert model[solver.vars["mode_1296"]] == UNDEF
 
         result = """
             file { '/etc/icinga2/conf.d/test.conf':
@@ -294,14 +297,14 @@ class TestPatchSolverPuppetScript4(TestPatchSolver):
         assert models[0][solver.sum_var] == 8
         assert models[0][solver.vars["dejavu-condition-1"]]
         assert not models[0][solver.vars["dejavu-condition-2"]]
-        assert models[0][solver.vars["state-0"]] == "absent"
-        assert models[0][solver.vars["state-1"]] == "present"
+        assert models[0][solver.vars["state_12768"]] == ""  # Value fixed by the solver
+        assert models[0][solver.vars["state_52416"]] == "present"
 
         assert models[1][solver.sum_var] == 7
         assert not models[1][solver.vars["dejavu-condition-1"]]
         assert models[1][solver.vars["dejavu-condition-2"]]
-        assert models[1][solver.vars["state-0"]] == "present"
-        assert models[1][solver.vars["state-1"]] == "present"
+        assert models[1][solver.vars["state_12768"]] == "present"
+        assert models[1][solver.vars["state_52416"]] == ""
 
         result = """
             if $x == 'absent' {
@@ -324,7 +327,7 @@ class TestPatchSolverPuppetScript5(TestPatchSolver):
         super().setUp()
         puppet_script_5 = """
             file { '/etc/dhcp/dhclient-enter-hooks':
-                content => template('fuel/dhclient-enter-hooks.erb'),
+                content => 'test',
                 owner   => 'root',
                 group   => 'root',
                 mode    => '0755',
@@ -383,7 +386,7 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
         """
         self._setup_patch_solver(puppet_script_6, UnitBlockType.script, Tech.puppet)
 
-    def test_patch_solver_defined_resource_delete(self) -> None:
+    def test_patch_solver_puppet_defined_resource_delete(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["test.conf"] = Nil()
         filesystem.state["test2.conf"] = File("0644", "new_owner", "test")
@@ -394,7 +397,7 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
         assert models is not None
         assert len(models) == 1
 
-    def test_patch_solver_defined_resource_change_mode(self) -> None:
+    def test_patch_solver_puppet_defined_resource_change_mode(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["test.conf"] = File("0777", "owner-test", "test")
         filesystem.state["test2.conf"] = File("0644", "new_owner", "test")
@@ -433,15 +436,16 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
         assert models is not None
         assert len(models) == 1
         model = models[0]
-        assert model[solver.sum_var] == 3
-        assert model[solver.unchanged[1]] == 1
-        assert model[solver.unchanged[2]] == 1
-        assert model[solver.unchanged[3]] == 0
+        assert model[solver.sum_var] == 4
         assert model[solver.unchanged[4]] == 1
-        assert model[solver.vars["state-1"]] == "present"
-        assert model[solver.vars["owner-2"]] == "web_admin"
-        assert model[solver.vars["mode-3"]] == "0777"
-        assert model[solver.vars["sketched-content-4"]] == UNDEF
+        assert model[solver.unchanged[5]] == 1
+        assert model[solver.unchanged[6]] == 1
+        assert model[solver.unchanged[7]] == 0
+        assert model[solver.unchanged[8]] == 1
+        assert model[solver.vars["state_2000"]] == "present"
+        assert model[solver.vars["owner_4140"]] == "web_admin"
+        assert model[solver.vars["mode_4165"]] == "0777"
+        assert model[solver.vars["content_16"]] == UNDEF
 
         result = """
 ---
@@ -479,14 +483,14 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         assert len(models) == 1
         model = models[0]
         assert model[solver.sum_var] == 3
-        assert model[solver.unchanged[0]] == 0
-        assert model[solver.unchanged[1]] == 1
+        assert model[solver.unchanged[1]] == 0
         assert model[solver.unchanged[2]] == 1
         assert model[solver.unchanged[3]] == 1
-        assert model[solver.vars["mode-0"]] == "0777"
-        assert model[solver.vars["sketched-state-1"]] == "present"
-        assert model[solver.vars["sketched-content-2"]] == UNDEF
-        assert model[solver.vars["sketched-owner-3"]] == UNDEF
+        assert model[solver.unchanged[4]] == 1
+        assert model[solver.vars["mode_2808"]] == "0777"
+        assert model[solver.vars["state_16"]] == "present"
+        assert model[solver.vars["content_256"]] == UNDEF
+        assert model[solver.vars["owner_1296"]] == UNDEF
 
         result = """
         file '/tmp/something' do
@@ -506,14 +510,14 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         assert len(models) == 1
         model = models[0]
         assert model[solver.sum_var] == 2
-        assert model[solver.unchanged[0]] == 0
         assert model[solver.unchanged[1]] == 0
-        assert model[solver.unchanged[2]] == 1
+        assert model[solver.unchanged[2]] == 0
         assert model[solver.unchanged[3]] == 1
-        assert model[solver.vars["mode-0"]] == UNDEF
-        assert model[solver.vars["sketched-state-1"]] == "absent"
-        assert model[solver.vars["sketched-content-2"]] == UNDEF
-        assert model[solver.vars["sketched-owner-3"]] == UNDEF
+        assert model[solver.unchanged[4]] == 1
+        assert model[solver.vars["mode_2808"]] == UNDEF
+        assert model[solver.vars["state_16"]] == "absent"
+        assert model[solver.vars["content_256"]] == UNDEF
+        assert model[solver.vars["owner_1296"]] == UNDEF
 
         result = """
         file '/tmp/something' do
@@ -580,14 +584,14 @@ class TestPatchSolverChefScript2(TestPatchSolver):
         assert len(models) == 1
         model = models[0]
         assert model[solver.sum_var] == 2
-        assert model[solver.unchanged[0]] == 0
-        assert model[solver.unchanged[1]] == 1
+        assert model[solver.unchanged[1]] == 0
         assert model[solver.unchanged[2]] == 1
-        assert model[solver.unchanged[3]] == 0
-        assert model[solver.vars["state-0"]] == "present"
-        assert model[solver.vars["sketched-content-1"]] == UNDEF
-        assert model[solver.vars["sketched-owner-2"]] == UNDEF
-        assert model[solver.vars["sketched-mode-3"]] == "0777"
+        assert model[solver.unchanged[3]] == 1
+        assert model[solver.unchanged[4]] == 0
+        assert model[solver.vars["state_3159"]] == "present"
+        assert model[solver.vars["content_16"]] == UNDEF
+        assert model[solver.vars["owner_256"]] == UNDEF
+        assert model[solver.vars["mode_1296"]] == "0777"
 
         result = """
         directory '/tmp/something' do
