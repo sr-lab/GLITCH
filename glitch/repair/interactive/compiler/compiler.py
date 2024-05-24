@@ -109,8 +109,8 @@ class DeltaPCompiler:
                 DeltaPCompiler._sketched -= 2
                 self.add_attribute(attr, labeled_script)
 
-            labeled_script.add_sketch_location(atomic_unit, attr)
-            labeled_script.add_sketch_location(attr, attr.value)
+            labeled_script.add_location(atomic_unit, attr)
+            labeled_script.add_location(attr, attr.value)
             return name + "_" + str(hash(attr))
 
     @staticmethod
@@ -285,11 +285,11 @@ class DeltaPCompiler:
 
     @staticmethod
     def __handle_atomic_unit(
-        statement: PStatement,
         atomic_unit: AtomicUnit,
-        tech: Tech,
         labeled_script: LabeledUnitBlock,
     ) -> PStatement:
+        statement = PSkip()
+        tech = labeled_script.tech
         attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
             atomic_unit.type, tech
         )
@@ -309,24 +309,19 @@ class DeltaPCompiler:
 
     @staticmethod
     def __handle_conditional(
-        conditional: ConditionalStatement, tech: Tech, labeled_script: LabeledUnitBlock
+        conditional: ConditionalStatement, labeled_script: LabeledUnitBlock
     ) -> PStatement:
         body = PSkip()
         for stat in conditional.statements:
-            if isinstance(stat, AtomicUnit):
-                body = DeltaPCompiler.__handle_atomic_unit(
-                    body, stat, tech, labeled_script
-                )
-            elif isinstance(stat, ConditionalStatement):
-                body = PSeq(
-                    body,
-                    DeltaPCompiler.__handle_conditional(stat, tech, labeled_script),
-                )
-
+            body = PSeq(
+                body, 
+                DeltaPCompiler.__handle_code_element(stat, labeled_script)
+            )
+        
         else_statement = PSkip()
         if conditional.else_statement is not None:
             else_statement = DeltaPCompiler.__handle_conditional(
-                conditional.else_statement, tech, labeled_script
+                conditional.else_statement, labeled_script
             )
 
         DeltaPCompiler._condition += 1
@@ -338,26 +333,46 @@ class DeltaPCompiler:
             body,
             else_statement,
         )
-
+    
     @staticmethod
-    def compile(labeled_script: LabeledUnitBlock, tech: Tech) -> PStatement:
+    def __handle_variable(variable: Variable, labeled_script: LabeledUnitBlock) -> PStatement:
+        statement = PLet(
+            variable.name,
+            DeltaPCompiler._compile_expr(variable.value, labeled_script),
+            PSkip()
+        )
+        labeled_script.add_location(variable, variable.value)
+        return statement
+    
+    @staticmethod
+    def __handle_code_element(code_element: CodeElement, labeled_script: LabeledUnitBlock) -> PStatement:
+        if isinstance(code_element, AtomicUnit):
+            return DeltaPCompiler.__handle_atomic_unit(
+                code_element, labeled_script
+            )
+        elif isinstance(code_element, ConditionalStatement):
+            return DeltaPCompiler.__handle_conditional(code_element, labeled_script)
+        elif isinstance(code_element, Variable):
+            return DeltaPCompiler.__handle_variable(code_element, labeled_script)
+        
+        raise RuntimeError(f"Unsupported code element, got {code_element}")
+        
+    @staticmethod
+    def compile(labeled_script: LabeledUnitBlock) -> PStatement:
         statement = PSkip()
         script = labeled_script.script
 
-        # TODO: Handle variables
         # TODO: Handle scopes
-        # TODO: The statements will not be in the correct order
 
-        for stat in script.statements:
-            if isinstance(stat, ConditionalStatement):
-                statement = PSeq(
-                    statement,
-                    DeltaPCompiler.__handle_conditional(stat, tech, labeled_script),
+        statements: List[CodeElement] = script.statements + script.atomic_units + script.variables
+        statements.sort(key=lambda x: (x.line, x.column))
+
+        for stat in statements:
+            statement = PSeq(
+                statement,
+                DeltaPCompiler.__handle_code_element(
+                    stat, labeled_script
                 )
-
-        for atomic_unit in script.atomic_units:
-            statement = DeltaPCompiler.__handle_atomic_unit(
-                statement, atomic_unit, tech, labeled_script
             )
 
         return statement

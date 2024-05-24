@@ -22,7 +22,7 @@ def run_dejavu(path: str, pid: str, parser: Parser, type: UnitBlockType, tech: T
     inter: UnitBlock | None = parser.parse_file(path, type)
     assert inter is not None
     labeled_script = GLITCHLabeler.label(inter, tech)
-    statement = DeltaPCompiler().compile(labeled_script, tech)
+    statement = DeltaPCompiler().compile(labeled_script)
 
     syscalls = STrace(pid).run()
     workdir = subprocess.check_output([f"pwdx {pid}"], shell=True)

@@ -523,7 +523,7 @@ class TestChefParser(TestParser):
             FunctionCall(
                 "super",
                 [Integer(2, ElementInfo(4, 12, 4, 13, "2"))],
-                ElementInfo(4, 6, 5, 13, "super 2"),
+                ElementInfo(4, 12, 4, 13, "super 2"),
             ),
             4,
             1,
@@ -541,7 +541,7 @@ class TestChefParser(TestParser):
             FunctionCall(
                 "super",
                 [Integer(2, ElementInfo(5, 12, 5, 13, "2"))],
-                ElementInfo(5, 6, 5, 14, "super(2)"),
+                ElementInfo(5, 11, 5, 14, "super(2)"),
             ),
             5,
             1,

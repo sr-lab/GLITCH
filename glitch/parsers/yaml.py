@@ -152,7 +152,6 @@ class YamlParser(p.Parser, ABC):
                 YamlParser.__parse_jinja_node(node.right, info),
             )
         else:
-            print(node)
             raise ValueError("Node not supported")
 
     @staticmethod

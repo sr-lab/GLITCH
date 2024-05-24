@@ -40,7 +40,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
                     assert labeled_script.get_label(attribute) == i
                     i += 1
 
-            statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
+            statement = DeltaPCompiler.compile(labeled_script)
 
         assert statement == delta_p_puppet
 
@@ -64,7 +64,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
                     assert labeled_script.get_label(attribute) == i
                     i += 1
 
-            statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
+            statement = DeltaPCompiler.compile(labeled_script)
 
         assert statement == delta_p_puppet_2
 
@@ -86,7 +86,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
-            statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
+            statement = DeltaPCompiler.compile(labeled_script)
 
         assert statement == delta_p_puppet_if
 
@@ -105,9 +105,8 @@ mode    => '0600',
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
-            statement = DeltaPCompiler.compile(labeled_script, Tech.puppet)
+            statement = DeltaPCompiler.compile(labeled_script)
 
-        print(statement)
         assert statement == delta_p_puppet_default_state
 
 
@@ -143,6 +142,6 @@ def test_delta_p_to_filesystems_default_state() -> None:
     assert len(fss) == 1
     assert fss[0].state == {
         "/root/.ssh/config": File(
-            "0600", "root", "template('fuel/root_ssh_config.erb')"
+            "0600", "root", None
         )
     }

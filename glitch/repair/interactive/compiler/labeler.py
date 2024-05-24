@@ -23,7 +23,7 @@ class LabeledUnitBlock:
         self.__label_to_var: Dict[int, str] = {}
         self.__codeelement_to_label: Dict[CodeElement, int] = {}
         self.__label_to_codeelement: Dict[int, CodeElement] = {}
-        self.__sketch_location: Dict[CodeElement, CodeElement] = {}
+        self.__location: Dict[CodeElement, CodeElement] = {}
 
     def add_label(
         self, name: str, codeelement: CodeElement, sketched: bool = False
@@ -48,16 +48,16 @@ class LabeledUnitBlock:
         self.__label += 1
         return self.__label - 1
 
-    def add_sketch_location(
+    def add_location(
         self, sketch_location: CodeElement, codeelement: CodeElement
     ) -> None:
-        """Defines where a sketched code element is defined in the script.
+        """Defines where a code element is defined in the script.
 
         Args:
-            sketch_location (CodeElement): The code element where the sketched code element is defined.
-            codeelement (CodeElement): The sketched code element.
+            sketch_location (CodeElement): The code element where the code element is defined.
+            codeelement (CodeElement): The code element.
         """
-        self.__sketch_location[codeelement] = sketch_location
+        self.__location[codeelement] = sketch_location
 
     def get_label(self, codeelement: CodeElement) -> int:
         """Returns the label of the code element.
@@ -111,7 +111,7 @@ class LabeledUnitBlock:
         """
         return self.__label_to_var[label]
 
-    def get_sketch_location(self, codeelement: CodeElement) -> CodeElement:
+    def get_location(self, codeelement: CodeElement) -> CodeElement:
         """Returns the location where the sketched code element is defined.
 
         Args:
@@ -120,7 +120,7 @@ class LabeledUnitBlock:
         Returns:
             CodeElement: The location where the sketched code element is defined.
         """
-        return self.__sketch_location[codeelement]
+        return self.__location[codeelement]
 
 
 class GLITCHLabeler:

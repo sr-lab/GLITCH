@@ -51,7 +51,7 @@ class TestPatchSolver(unittest.TestCase):
         parsed_file = parser.parse_file(self.f.name, script_type)
         assert parsed_file is not None
         self.labeled_script = GLITCHLabeler.label(parsed_file, tech)
-        self.statement = DeltaPCompiler.compile(self.labeled_script, tech)
+        self.statement = DeltaPCompiler.compile(self.labeled_script)
 
     def _patch_solver_apply(
         self,
@@ -64,7 +64,7 @@ class TestPatchSolver(unittest.TestCase):
     ) -> None:
         assert self.labeled_script is not None
         solver.apply_patch(model, self.labeled_script)
-        statement = DeltaPCompiler.compile(self.labeled_script, tech)
+        statement = DeltaPCompiler.compile(self.labeled_script)
         filesystems = statement.to_filesystems()
         assert len(filesystems) == n_filesystems
         assert any(fs.state == filesystem.state for fs in filesystems)
@@ -597,6 +597,57 @@ class TestPatchSolverChefScript2(TestPatchSolver):
         directory '/tmp/something' do
             action :create
             mode '0777'
+        end
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
+
+
+class TestPatchSolverChefScript3(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_1 = """
+        y = '0755'
+        x = y
+
+        file '/tmp/something' do
+            mode x
+        end
+        """
+        self._setup_patch_solver(chef_script_1, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_variable_mode(self):
+        filesystem = FileSystemState()
+        filesystem.state["/tmp/something"] = File(
+            mode="0777",
+            owner=None,
+            content=None,
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+        print(model)
+        assert model[solver.sum_var] == 3
+        assert model[solver.unchanged[3]] == 0
+        assert model[solver.unchanged[4]] == 1
+        assert model[solver.unchanged[5]] == 1
+        assert model[solver.unchanged[6]] == 1
+        assert model[solver.vars["x"]] == "0777"
+        assert model[solver.vars["y"]] == "0777"
+        assert model[solver.vars["mode_8892"]] == "0777"
+        assert model[solver.vars["state_16"]] == "present"
+        assert model[solver.vars["content_256"]] == UNDEF
+        assert model[solver.vars["owner_1296"]] == UNDEF
+
+        result = """
+        y = '0777'
+        x = y
+
+        file '/tmp/something' do
+            mode x
         end
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)

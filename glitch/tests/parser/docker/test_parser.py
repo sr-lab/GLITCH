@@ -28,7 +28,6 @@ class TestDockerParser(unittest.TestCase):
             "tests/parser/docker/files/2.Dockerfile", UnitBlockType.script
         )
         assert ir is not None
-        print(ir.as_dict())
 
         assert isinstance(ir, UnitBlock)
         assert ir.type == UnitBlockType.script

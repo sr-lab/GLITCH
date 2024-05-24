@@ -26,7 +26,7 @@ from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.values import DefaultValue, UNDEF
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repr.inter import Attribute, AtomicUnit, CodeElement, ElementInfo
+from glitch.repr.inter import Attribute, AtomicUnit, CodeElement, ElementInfo, Variable
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.repair.interactive.compiler.template_database import TemplateDatabase
 from glitch.tech import Tech
@@ -126,6 +126,8 @@ class PatchSolver:
             return StringVal(expr.const.value)
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id)
+            return self.vars[expr.id]
+        elif isinstance(expr, PEVar) and expr.id in self.vars:
             return self.vars[expr.id]
         elif isinstance(expr, PEVar):
             self.vars[expr.id] = String(expr.id)
@@ -494,35 +496,40 @@ class PatchSolver:
         added_elements.sort(key=lambda x: (x[0].line, x[0].column))
 
         for added_element, value in added_elements:
-            attr = labeled_script.get_sketch_location(added_element)
-            assert isinstance(attr, Attribute)
-            atomic_unit = labeled_script.get_sketch_location(attr)
-            assert isinstance(atomic_unit, AtomicUnit)
+            ce = labeled_script.get_location(added_element)
 
-            if self.__is_sketch(added_element):
-                self.__add_sketch_attribute(
-                    labeled_script, attr, atomic_unit, value, labeled_script.tech
-                )
-            else:
-                au_type = NamesDatabase.get_au_type(
-                    atomic_unit.type, labeled_script.tech
-                )
-                attr_name = NamesDatabase.get_attr_name(
-                    attr.name, au_type, labeled_script.tech
-                )
-                added_element.value = NamesDatabase.reverse_attr_value(
-                    value,
-                    attr_name,
-                    au_type,
-                    labeled_script.tech,
-                )
-                self.__modify_codeelement(
-                    labeled_script, added_element, added_element.value
-                )
+            if isinstance(ce, Attribute):
+                attr = ce
+                atomic_unit = labeled_script.get_location(attr)
+                assert isinstance(atomic_unit, AtomicUnit)
+
+                if self.__is_sketch(added_element):
+                    self.__add_sketch_attribute(
+                        labeled_script, attr, atomic_unit, value, labeled_script.tech
+                    )
+                else:
+                    au_type = NamesDatabase.get_au_type(
+                        atomic_unit.type, labeled_script.tech
+                    )
+                    attr_name = NamesDatabase.get_attr_name(
+                        attr.name, au_type, labeled_script.tech
+                    )
+                    added_element.value = NamesDatabase.reverse_attr_value(
+                        value,
+                        attr_name,
+                        au_type,
+                        labeled_script.tech,
+                    )
+                    self.__modify_codeelement(
+                        labeled_script, added_element, added_element.value
+                    )
+            elif isinstance(ce, Variable):
+                added_element.value = value
+                self.__modify_codeelement(labeled_script, added_element, value)
 
         for deleted_element, value in deleted_elements:
-            attr = labeled_script.get_sketch_location(deleted_element)
+            attr = labeled_script.get_location(deleted_element)
             assert isinstance(attr, Attribute)
-            atomic_unit = labeled_script.get_sketch_location(attr)
+            atomic_unit = labeled_script.get_location(attr)
             assert isinstance(atomic_unit, AtomicUnit)
             self.__delete_attribute(labeled_script, atomic_unit, attr)
