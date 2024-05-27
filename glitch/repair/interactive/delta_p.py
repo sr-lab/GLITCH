@@ -155,6 +155,8 @@ class PStatement(ABC):
             return self.__get_str(expr.expr, vars)
         elif isinstance(expr, PEUndef):
             return None  # type: ignore
+        elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
+            return self.__get_str(expr.lhs, vars) + self.__get_str(expr.rhs, vars)
 
         raise RuntimeError(f"Unsupported expression, got {expr}")
 

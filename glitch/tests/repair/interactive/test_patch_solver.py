@@ -458,6 +458,77 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.ansible, result)
 
 
+class TestPatchSolverAnsibleScript2(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        self.ansible_script_2 = """
+---
+- host: localhost
+  vars:
+    name: index.php
+    owner: admin
+  tasks:
+    - ansible.builtin.file:
+        path: "/var/www/customers/public_html/{{ name }}"
+        state: file
+        owner: "web_{{ owner }}"
+        mode: '0755'
+"""
+        self._setup_patch_solver(self.ansible_script_2, UnitBlockType.script, Tech.ansible)
+
+    def test_patch_solver_ansible_owner(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = File(
+            mode="0755",
+            owner="web_user",
+            content=None,
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 6
+        model = models[0]
+        assert model[solver.sum_var] == 5
+        assert model[solver.unchanged[6]] == 1
+        assert model[solver.unchanged[7]] == 1
+        assert model[solver.unchanged[8]] == 0
+        assert model[solver.unchanged[9]] == 1
+        assert model[solver.unchanged[10]] == 1
+        assert model[solver.unchanged[11]] == 0
+        assert model[solver.unchanged[12]] == 1
+        assert model[solver.vars["state_18000"]] == "present"
+        assert model[solver.vars["owner_35937"]] == "web_user"
+        assert model[solver.vars["mode_27216"]] == "0755"
+        assert model[solver.vars["content_16"]] == UNDEF
+
+        result = """
+---
+- host: localhost
+  vars:
+    name: index.php
+    owner: 
+  tasks:
+    - ansible.builtin.file:
+        path: "/var/www/customers/public_html/{{ name }}"
+        state: file
+        owner: "web_user"
+        mode: '0755'
+"""
+        check = False
+        for model in models:
+            try:
+                self._patch_solver_apply(solver, model, filesystem, Tech.ansible, result)
+                check = True
+                break
+            except AssertionError:
+                check = False
+                with open(self.f.name, "w") as f:
+                    f.write(self.ansible_script_2)
+        assert check
+
+
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -629,12 +700,11 @@ class TestPatchSolverChefScript3(TestPatchSolver):
         assert models is not None
         assert len(models) == 1
         model = models[0]
-        print(model)
         assert model[solver.sum_var] == 3
-        assert model[solver.unchanged[3]] == 0
+        assert model[solver.unchanged[3]] == 1
         assert model[solver.unchanged[4]] == 1
         assert model[solver.unchanged[5]] == 1
-        assert model[solver.unchanged[6]] == 1
+        assert model[solver.unchanged[6]] == 0
         assert model[solver.vars["x"]] == "0777"
         assert model[solver.vars["y"]] == "0777"
         assert model[solver.vars["mode_8892"]] == "0777"

@@ -49,7 +49,7 @@ class LabeledUnitBlock:
         return self.__label - 1
 
     def add_location(
-        self, sketch_location: CodeElement, codeelement: CodeElement
+        self, location: CodeElement, codeelement: CodeElement
     ) -> None:
         """Defines where a code element is defined in the script.
 
@@ -57,7 +57,10 @@ class LabeledUnitBlock:
             sketch_location (CodeElement): The code element where the code element is defined.
             codeelement (CodeElement): The code element.
         """
-        self.__location[codeelement] = sketch_location
+        if isinstance(codeelement, BinaryOperation):
+            self.add_location(location, codeelement.left)
+            self.add_location(location, codeelement.right)
+        self.__location[codeelement] = location
 
     def get_label(self, codeelement: CodeElement) -> int:
         """Returns the label of the code element.
@@ -171,15 +174,43 @@ class GLITCHLabeler:
             conditional (ConditionalStatement): The conditional statement.
         """
         for statement in conditional.statements:
-            if isinstance(statement, AtomicUnit):
-                GLITCHLabeler.label_atomic_unit(labeled, statement)
-            elif isinstance(statement, ConditionalStatement):
-                GLITCHLabeler.label_conditional(labeled, statement)
-            elif isinstance(statement, Variable):
-                GLITCHLabeler.label_variable(labeled, statement)
-
+            GLITCHLabeler.label_statement(labeled, statement)
         if conditional.else_statement is not None:
             GLITCHLabeler.label_conditional(labeled, conditional.else_statement)
+
+    @staticmethod
+    def label_unit_block(labeled: LabeledUnitBlock, unit_block: UnitBlock) -> None:
+        """Labels a unit block.
+
+        Args:
+            labeled (LabeledUnitBlock): The labeled script.
+            unit_block (UnitBlock): The unit block.
+        """
+        for statement in unit_block.statements:
+            GLITCHLabeler.label_statement(labeled, statement)
+        for atomic_unit in unit_block.atomic_units:
+            GLITCHLabeler.label_atomic_unit(labeled, atomic_unit)
+        for variable in unit_block.variables:
+            GLITCHLabeler.label_variable(labeled, variable)
+        for unit_block in unit_block.unit_blocks:
+            GLITCHLabeler.label_unit_block(labeled, unit_block)
+
+    @staticmethod
+    def label_statement(labeled: LabeledUnitBlock, statement: CodeElement) -> None:
+        """Labels a statement.
+
+        Args:
+            labeled (LabeledUnitBlock): The labeled script.
+            statement (CodeElement): The statement.
+        """
+        if isinstance(statement, AtomicUnit):
+            GLITCHLabeler.label_atomic_unit(labeled, statement)
+        elif isinstance(statement, ConditionalStatement):
+            GLITCHLabeler.label_conditional(labeled, statement)
+        elif isinstance(statement, Variable):
+            GLITCHLabeler.label_variable(labeled, statement)
+        elif isinstance(statement, UnitBlock):
+            GLITCHLabeler.label_unit_block(labeled, statement)
 
     @staticmethod
     def label(script: UnitBlock, tech: Tech) -> LabeledUnitBlock:
@@ -193,15 +224,5 @@ class GLITCHLabeler:
             LabeledUnitBlock: The labeled script.
         """
         labeled = LabeledUnitBlock(script, tech)
-
-        for statement in script.statements:
-            if isinstance(statement, ConditionalStatement):
-                GLITCHLabeler.label_conditional(labeled, statement)
-
-        for atomic_unit in script.atomic_units:
-            GLITCHLabeler.label_atomic_unit(labeled, atomic_unit)
-
-        for variable in script.variables:
-            GLITCHLabeler.label_variable(labeled, variable)
-
+        GLITCHLabeler.label_unit_block(labeled, script)
         return labeled

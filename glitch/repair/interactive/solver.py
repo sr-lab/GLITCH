@@ -1,4 +1,5 @@
 import time
+import z3
 import glitch.repr.inter as inter
 
 from copy import deepcopy
@@ -7,15 +8,15 @@ from z3 import (
     Solver,
     sat,
     If,
-    StringVal,
     IntVal,
-    String,
     Bool,
     And,
     Not,
     Int,
     Or,
     Sum,
+    Concat,
+    StringVal,
     ModelRef,
     Context,
     ExprRef,
@@ -57,12 +58,16 @@ class PatchSolver:
         self.vars: Dict[str, ExprRef] = {}
         self.holes: Dict[str, ExprRef] = {}
 
+        self.possible_strings = self.__get_all_strings(statement)
+        self.possible_strings += self.__get_all_strings(filesystem)
+        self.possible_strings += [UNDEF, "", "nil", "file", "dir"]
+
         # FIXME: check the defaults
         self.__funs = PatchSolver.__Funs(
             lambda p: StringVal(UNDEF),
-            lambda p: self.__compile_expr(DefaultValue.DEFAULT_CONTENT),
-            lambda p: self.__compile_expr(DefaultValue.DEFAULT_MODE),
-            lambda p: self.__compile_expr(DefaultValue.DEFAULT_OWNER),
+            lambda p: self.__compile_expr(DefaultValue.DEFAULT_CONTENT)[0],
+            lambda p: self.__compile_expr(DefaultValue.DEFAULT_MODE)[0],
+            lambda p: self.__compile_expr(DefaultValue.DEFAULT_OWNER)[0],
         )
 
         labels = list(set(self.__collect_labels(statement)))
@@ -79,13 +84,50 @@ class PatchSolver:
 
         self.solver.add(Sum(list(self.unchanged.values())) == self.sum_var)
 
+    def __const_string(self, name: str) -> ExprRef:
+        var = z3.String(name)
+        self.solver.add(Or(*[var == s for s in set(self.possible_strings)]))
+        return var
+
+    def __get_all_strings(self, object: Any) -> List[str]:
+        result: List[str] = []
+        if getattr(object, "__dict__", None) is None:
+            if isinstance(object, (list, set)): 
+                for val in object: # type: ignore
+                    if isinstance(val, str):
+                        result.append(val)
+                    result += self.__get_all_strings(val)
+            elif isinstance(object, dict):
+                for key, val in object.items(): # type: ignore
+                    if isinstance(val, str):
+                        result.append(val)
+                    if isinstance(key, str):
+                        result.append(key)
+                    result += self.__get_all_strings(key)
+                    result += self.__get_all_strings(val)
+            return result
+        
+        for _, val in object.__dict__.items():
+            if isinstance(val, str):
+                result.append(val)
+            else:
+                result += self.__get_all_strings(val)
+        return result
+
     def __collect_labels(self, statement: PStatement | PExpr) -> List[int]:
         if isinstance(statement, PSeq):
             return self.__collect_labels(statement.lhs) + self.__collect_labels(
                 statement.rhs
             )
         elif isinstance(statement, (PCreate, PWrite, PChmod, PChown)):
-            return self.__collect_labels(statement.path)
+            labels = []
+            if isinstance(statement, PWrite):
+                labels = self.__collect_labels(statement.content)
+            elif isinstance(statement, PChmod):
+                labels =  self.__collect_labels(statement.mode)
+            elif isinstance(statement, PChown):
+                labels =  self.__collect_labels(statement.owner)
+            return labels + self.__collect_labels(statement.path)
         elif isinstance(statement, PIf):
             return (
                 self.__collect_labels(statement.pred)
@@ -97,6 +139,10 @@ class PatchSolver:
         elif isinstance(statement, PLet):
             return self.__collect_labels(statement.body) + self.__collect_labels(
                 statement.expr
+            )
+        elif isinstance(statement, PEBinOP):
+            return self.__collect_labels(statement.lhs) + self.__collect_labels(
+                statement.rhs
             )
         return []
 
@@ -121,28 +167,35 @@ class PatchSolver:
             )
         return []
 
-    def __compile_expr(self, expr: PExpr) -> ExprRef:
+    def __compile_expr(self, expr: PExpr) -> Tuple[ExprRef, List[ExprRef]]:
+        constraints: List[ExprRef] = []
+
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
-            return StringVal(expr.const.value)
+            return StringVal(expr.const.value), constraints
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id)
-            return self.vars[expr.id]
+            return self.vars[expr.id], constraints
         elif isinstance(expr, PEVar) and expr.id in self.vars:
-            return self.vars[expr.id]
+            return self.vars[expr.id], constraints
         elif isinstance(expr, PEVar):
-            self.vars[expr.id] = String(expr.id)
-            return self.vars[expr.id]
+            self.vars[expr.id] = self.__const_string(expr.id)
+            return self.vars[expr.id], constraints
         elif isinstance(expr, PEUndef):
             # NOTE: it is an arbitrary string to represent an undefined value
-            return StringVal(UNDEF)
+            return StringVal(UNDEF), constraints
         elif isinstance(expr, PRLet):
             if expr.id in self.vars:
-                return self.vars[expr.id]
-            var = String(expr.id)
-            self.vars[expr.id] = var
-            return var
+                return self.vars[expr.id], constraints
+            constraints, _ = self.__generate_soft_constraints(expr, self.__funs)
+            return self.vars[expr.id], constraints
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PEq):
-            return self.__compile_expr(expr.lhs) == self.__compile_expr(expr.rhs)
+            lhs, lhs_constraints = self.__compile_expr(expr.lhs)
+            rhs, rhs_constraints = self.__compile_expr(expr.rhs)
+            return lhs == rhs, lhs_constraints + rhs_constraints
+        elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
+            lhs, lhs_constraints = self.__compile_expr(expr.lhs)
+            rhs, rhs_constraints = self.__compile_expr(expr.rhs)
+            return Concat(lhs, rhs), lhs_constraints + rhs_constraints
 
         raise ValueError(f"Not supported {expr}")
 
@@ -179,42 +232,35 @@ class PatchSolver:
         constraints: List[ExprRef] = []
 
         if isinstance(statement, PMkdir):
-            path = self.__compile_expr(statement.path)
+            path, constraints = self.__compile_expr(statement.path)
             funs.state_fun = lambda p: If(
                 p == path, StringVal("dir"), previous_state_fun(p)
             )
         elif isinstance(statement, PCreate):
-            path_constraints, _ = self.__generate_soft_constraints(statement.path, funs)
-            constraints += path_constraints
-            path = self.__compile_expr(statement.path)
+            path, constraints = self.__compile_expr(statement.path)
             funs.state_fun = lambda p: If(
                 p == path, StringVal("file"), previous_state_fun(p)
             )
         elif isinstance(statement, PWrite):
-            path_constraints, _ = self.__generate_soft_constraints(statement.path, funs)
-            constraints += path_constraints
-            path = self.__compile_expr(statement.path)
+            path, constraints = self.__compile_expr(statement.path)
+            content, content_constraints = self.__compile_expr(statement.content)
+            constraints += content_constraints
             funs.contents_fun = lambda p: If(
                 p == path,
-                self.__compile_expr(statement.content),
+                content,
                 previous_contents_fun(p),
             )
         elif isinstance(statement, PRm):
-            path_constraints, _ = self.__generate_soft_constraints(statement.path, funs)
-            constraints += path_constraints
-            path = self.__compile_expr(statement.path)
+            path, constraints = self.__compile_expr(statement.path)
             funs.state_fun = lambda p: If(
                 p == path, StringVal("nil"), previous_state_fun(p)
             )
         elif isinstance(statement, PCp):
-            src_constraints, _ = self.__generate_soft_constraints(statement.src, funs)
+            src, src_constraints = self.__compile_expr(statement.src)
             constraints += src_constraints
-            dest_constraints, _ = self.__generate_soft_constraints(statement.dst, funs)
+            dst, dest_constraints = self.__compile_expr(statement.dst)
             constraints += dest_constraints
 
-            dst, src = self.__compile_expr(statement.dst), self.__compile_expr(
-                statement.src
-            )
             funs.state_fun = lambda p: If(
                 p == dst, previous_state_fun(src), previous_state_fun(p)
             )
@@ -230,21 +276,21 @@ class PatchSolver:
                 p == dst, previous_owner_fun(src), previous_owner_fun(p)
             )
         elif isinstance(statement, PChmod):
-            path_constraints, _ = self.__generate_soft_constraints(statement.path, funs)
-            constraints += path_constraints
-            path = self.__compile_expr(statement.path)
+            path, constraints = self.__compile_expr(statement.path)
+            mode, mode_constraints = self.__compile_expr(statement.mode)
+            constraints += mode_constraints
             funs.mode_fun = lambda p: If(
                 p == path,
-                self.__compile_expr(statement.mode),
+                mode,
                 previous_mode_fun(p),
             )
         elif isinstance(statement, PChown):
-            path_constraints, _ = self.__generate_soft_constraints(statement.path, funs)
-            constraints += path_constraints
-            path = self.__compile_expr(statement.path)
+            path, constraints = self.__compile_expr(statement.path)
+            owner, owner_constraints = self.__compile_expr(statement.owner)
+            constraints += owner_constraints
             funs.owner_fun = lambda p: If(
                 p == path,
-                self.__compile_expr(statement.owner),
+                owner,
                 previous_owner_fun(p),
             )
         elif isinstance(statement, PSeq):
@@ -258,20 +304,25 @@ class PatchSolver:
             )
             constraints += rhs_constraints
         elif isinstance(statement, PRLet):
-            hole, var = String(f"loc-{statement.label}"), String(statement.id)
+            hole, var = self.__const_string(f"loc-{statement.label}"), self.__const_string(statement.id)
             self.holes[f"loc-{statement.label}"] = hole
             self.vars[statement.id] = var
             unchanged = self.unchanged[statement.label]
+            value, constraints = self.__compile_expr(statement.expr)
             self.solver.add(
                 Or(
-                    And(unchanged == 1, var == self.__compile_expr(statement.expr)),
+                    And(unchanged == 1, var == value),
                     And(unchanged == 0, var == hole),
                 )
             )
         elif isinstance(statement, PLet):
-            var = String(statement.id)
-            self.vars[statement.id] = var
-            constraints.append(var == self.__compile_expr(statement.expr))
+            if statement.id in self.vars:
+                var = self.vars[statement.id]
+            else:
+                var = self.__const_string(statement.id)
+                self.vars[statement.id] = var
+            value, constraints = self.__compile_expr(statement.expr)
+            constraints.append(var == value)
             expr_constraints, funs = self.__generate_soft_constraints(
                 statement.expr, funs
             )
@@ -281,7 +332,7 @@ class PatchSolver:
             )
             constraints += body_constraints
         elif isinstance(statement, PIf):
-            condition = self.__compile_expr(statement.pred)
+            condition, constraints = self.__compile_expr(statement.pred)
 
             cons_constraints, cons_funs = self.__generate_soft_constraints(
                 statement.cons, funs
@@ -461,6 +512,8 @@ class PatchSolver:
                 value = f'"{value}"'
             elif old_line[start:end].startswith("'"):
                 value = f"'{value}'"
+            if old_line[end - 1] == "\n":
+                value = f"{value}\n"
             new_line = old_line[:start] + value + old_line[end:]
             lines[codeelement.line - 1] = new_line
 
@@ -477,59 +530,63 @@ class PatchSolver:
                 hole = self.holes[f"loc-{label}"]
                 changed.append((label, model_ref[hole]))
 
-        added_elements: List[Tuple[inter.String | inter.Null, str]] = []
-        deleted_elements: List[Tuple[inter.String | inter.Null, str]] = []
+        changed_elements: List[Tuple[inter.String | inter.Null, str, ElementInfo]] = []
 
         for change in changed:
             label, value = change
             value = value.as_string()
             codeelement = labeled_script.get_codeelement(label)
-
             assert isinstance(codeelement, (inter.String, inter.Null))
-            if value == UNDEF:
-                deleted_elements.append((codeelement, value))
-            else:
-                added_elements.append((codeelement, value))
+
+            kv = labeled_script.get_location(codeelement)
+            if not self.__is_sketch(codeelement) or isinstance(kv, Variable):
+                changed_elements.append((codeelement, value, ElementInfo.from_code_element(codeelement)))
+            elif isinstance(kv, Attribute):
+                au = labeled_script.get_location(kv)
+                assert isinstance(au, AtomicUnit)
+                info = ElementInfo.from_code_element(au.attributes[-1])
+                info.line, info.column = info.line + 1, 0
+                changed_elements.append((codeelement, value, info))
 
         # The sort is necessary to avoid problems in the textual changes
-        deleted_elements.sort(key=lambda x: (x[0].line, x[0].column), reverse=True)
-        added_elements.sort(key=lambda x: (x[0].line, x[0].column))
+        changed_elements.sort(key=lambda x: (x[2].line, x[2].column), reverse=True)
 
-        for added_element, value in added_elements:
-            ce = labeled_script.get_location(added_element)
-
-            if isinstance(ce, Attribute):
-                attr = ce
+        for changed_element, value, _ in changed_elements:
+            if value == UNDEF: # Deleted Elements
+                attr = labeled_script.get_location(changed_element)
+                assert isinstance(attr, Attribute)
                 atomic_unit = labeled_script.get_location(attr)
                 assert isinstance(atomic_unit, AtomicUnit)
+                self.__delete_attribute(labeled_script, atomic_unit, attr)
+            else: # Added elements
+                ce = labeled_script.get_location(changed_element)
 
-                if self.__is_sketch(added_element):
-                    self.__add_sketch_attribute(
-                        labeled_script, attr, atomic_unit, value, labeled_script.tech
-                    )
-                else:
-                    au_type = NamesDatabase.get_au_type(
-                        atomic_unit.type, labeled_script.tech
-                    )
-                    attr_name = NamesDatabase.get_attr_name(
-                        attr.name, au_type, labeled_script.tech
-                    )
-                    added_element.value = NamesDatabase.reverse_attr_value(
-                        value,
-                        attr_name,
-                        au_type,
-                        labeled_script.tech,
-                    )
-                    self.__modify_codeelement(
-                        labeled_script, added_element, added_element.value
-                    )
-            elif isinstance(ce, Variable):
-                added_element.value = value
-                self.__modify_codeelement(labeled_script, added_element, value)
+                if isinstance(ce, Attribute):
+                    attr = ce
+                    atomic_unit = labeled_script.get_location(attr)
+                    assert isinstance(atomic_unit, AtomicUnit)
 
-        for deleted_element, value in deleted_elements:
-            attr = labeled_script.get_location(deleted_element)
-            assert isinstance(attr, Attribute)
-            atomic_unit = labeled_script.get_location(attr)
-            assert isinstance(atomic_unit, AtomicUnit)
-            self.__delete_attribute(labeled_script, atomic_unit, attr)
+                    if self.__is_sketch(changed_element):
+                        self.__add_sketch_attribute(
+                            labeled_script, attr, atomic_unit, value, labeled_script.tech
+                        )
+                    else:
+                        au_type = NamesDatabase.get_au_type(
+                            atomic_unit.type, labeled_script.tech
+                        )
+                        attr_name = NamesDatabase.get_attr_name(
+                            attr.name, au_type, labeled_script.tech
+                        )
+                        changed_element.value = NamesDatabase.reverse_attr_value(
+                            value,
+                            attr_name,
+                            au_type,
+                            labeled_script.tech,
+                        )
+                        self.__modify_codeelement(
+                            labeled_script, changed_element, changed_element.value
+                        )
+                elif isinstance(ce, Variable):
+                    changed_element.value = value
+                    self.__modify_codeelement(labeled_script, changed_element, value)
+

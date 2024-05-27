@@ -228,6 +228,10 @@ class DeltaPCompiler:
         labeled_script: LabeledUnitBlock,
     ) -> PStatement:
         path = attributes["path"]
+        path_attr = attributes.get_attribute("path")
+        if path_attr is not None:
+            labeled_script.add_location(atomic_unit, path_attr)
+            labeled_script.add_location(path_attr, path_attr.value)
         # The path may be defined as the name of the atomic unit
         if path == PEUndef():
             path = PEConst(PStr(atomic_unit.name))  # type: ignore
@@ -354,7 +358,31 @@ class DeltaPCompiler:
             return DeltaPCompiler.__handle_conditional(code_element, labeled_script)
         elif isinstance(code_element, Variable):
             return DeltaPCompiler.__handle_variable(code_element, labeled_script)
-        
+        elif isinstance(code_element, UnitBlock):
+            compiled = PSkip()
+            statements: List[CodeElement] = (
+                code_element.statements + 
+                code_element.atomic_units + 
+                code_element.variables + 
+                code_element.unit_blocks
+            )
+            statements.sort(key=lambda x: (x.line, x.column), reverse=True)
+
+            for statement in statements:
+                new_compiled = DeltaPCompiler.__handle_code_element(
+                    statement, labeled_script
+                )
+                if isinstance(new_compiled, PLet):
+                    new_compiled.body = compiled
+                    compiled = PSeq(new_compiled, PSkip())
+                else:
+                    compiled = PSeq(
+                        new_compiled,
+                        compiled
+                    )
+
+            return compiled
+            
         raise RuntimeError(f"Unsupported code element, got {code_element}")
         
     @staticmethod
@@ -363,16 +391,26 @@ class DeltaPCompiler:
         script = labeled_script.script
 
         # TODO: Handle scopes
-
-        statements: List[CodeElement] = script.statements + script.atomic_units + script.variables
-        statements.sort(key=lambda x: (x.line, x.column))
+        statements: List[CodeElement] = (
+            script.statements + 
+            script.atomic_units + 
+            script.variables + 
+            script.unit_blocks
+        )
+        statements.sort(key=lambda x: (x.line, x.column), reverse=True)
 
         for stat in statements:
-            statement = PSeq(
-                statement,
-                DeltaPCompiler.__handle_code_element(
-                    stat, labeled_script
-                )
+            new_statement = DeltaPCompiler.__handle_code_element(
+                stat, labeled_script
             )
+
+            if isinstance(new_statement, PLet):
+                new_statement.body = statement
+                statement = PSeq(new_statement, PSkip())
+            else:
+                statement = PSeq(
+                    new_statement,
+                    statement
+                )
 
         return statement
