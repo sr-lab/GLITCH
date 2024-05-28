@@ -51,7 +51,7 @@ class TestPatchSolver(unittest.TestCase):
         parsed_file = parser.parse_file(self.f.name, script_type)
         assert parsed_file is not None
         self.labeled_script = GLITCHLabeler.label(parsed_file, tech)
-        self.statement = DeltaPCompiler.compile(self.labeled_script)
+        self.statement = DeltaPCompiler(self.labeled_script).compile()
 
     def _patch_solver_apply(
         self,
@@ -64,7 +64,7 @@ class TestPatchSolver(unittest.TestCase):
     ) -> None:
         assert self.labeled_script is not None
         solver.apply_patch(model, self.labeled_script)
-        statement = DeltaPCompiler.compile(self.labeled_script)
+        statement = DeltaPCompiler(self.labeled_script).compile()
         filesystems = statement.to_filesystems()
         assert len(filesystems) == n_filesystems
         assert any(fs.state == filesystem.state for fs in filesystems)
