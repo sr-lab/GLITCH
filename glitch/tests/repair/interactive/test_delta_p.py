@@ -40,7 +40,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
                     assert labeled_script.get_label(attribute) == i
                     i += 1
 
-            statement = DeltaPCompiler.compile(labeled_script)
+            statement = DeltaPCompiler(labeled_script).compile()
 
         assert statement == delta_p_puppet
 
@@ -64,7 +64,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
                     assert labeled_script.get_label(attribute) == i
                     i += 1
 
-            statement = DeltaPCompiler.compile(labeled_script)
+            statement = DeltaPCompiler(labeled_script).compile()
 
         assert statement == delta_p_puppet_2
 
@@ -86,7 +86,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
-            statement = DeltaPCompiler.compile(labeled_script)
+            statement = DeltaPCompiler(labeled_script).compile()
 
         assert statement == delta_p_puppet_if
 
@@ -105,7 +105,7 @@ mode    => '0600',
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
-            statement = DeltaPCompiler.compile(labeled_script)
+            statement = DeltaPCompiler(labeled_script).compile()
 
         assert statement == delta_p_puppet_default_state
 

@@ -532,7 +532,7 @@ class PuppetParser(p.Parser):
 
             return attribute
         elif isinstance(codeelement, puppetmodel.Assignment):
-            name = PuppetParser.__process_string(codeelement.name)
+            name = PuppetParser.__get_code(codeelement.name, code)
             if name.startswith("$"):
                 name = name[1:]
             value = PuppetParser.__process_codeelement(codeelement.value, path, code)

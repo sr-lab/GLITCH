@@ -5,6 +5,7 @@ def test_delta_p_minimize_let() -> None:
     statement = PLet(
         "x",
         PEConst(const=PStr(value="test1")),
+        1,
         PCreate(PEConst(const=PStr(value="test23456"))),
     )
 
