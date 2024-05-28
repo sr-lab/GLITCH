@@ -48,9 +48,7 @@ class LabeledUnitBlock:
         self.__label += 1
         return self.__label - 1
 
-    def add_location(
-        self, location: CodeElement, codeelement: CodeElement
-    ) -> None:
+    def add_location(self, location: CodeElement, codeelement: CodeElement) -> None:
         """Defines where a code element is defined in the script.
 
         Args:

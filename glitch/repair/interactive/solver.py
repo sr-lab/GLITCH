@@ -1,5 +1,7 @@
-import time
 import z3
+import sys
+import uuid
+import time
 import glitch.repr.inter as inter
 
 from copy import deepcopy
@@ -49,8 +51,13 @@ class PatchSolver:
         filesystem: FileSystemState,
         timeout: int = 180,
         ctx: Optional[Context] = None,
+        debug: bool = False,
     ) -> None:
         self.solver = Solver(ctx=ctx)
+        self.debug = debug
+        if self.debug:
+            self.solver.add = lambda c: self.solver.assert_and_track(c, str(c) + f" ({str(uuid.uuid4())})") # type: ignore
+
         self.timeout = timeout
         self.statement = statement
         self.sum_var = Int("sum")
@@ -408,6 +415,8 @@ class PatchSolver:
 
             elapsed = time.time() - start
             if model is None:
+                if self.debug:
+                    print(self.solver.unsat_core(), file=sys.stderr)
                 break
 
             models.append(model)

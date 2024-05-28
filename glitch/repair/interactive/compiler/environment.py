@@ -14,5 +14,8 @@ class DefinedAtomicUnitEnv:
                 self.__atomic_units[ub.name] = ub
                 self.__collect_definitions(ub)
 
+    def get_definition(self, name: str) -> UnitBlock:
+        return self.__atomic_units[name]
+
     def has_definition(self, name: str) -> bool:
         return name in self.__atomic_units

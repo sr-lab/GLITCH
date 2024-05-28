@@ -1,3 +1,5 @@
+import copy
+import random
 from typing import Optional, Dict, Tuple, Type
 
 from glitch.tech import Tech
@@ -20,7 +22,7 @@ class DeltaPCompiler:
             self.__attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
 
         def add_attribute(
-            self, attribute: Attribute, labeled_script: LabeledUnitBlock
+            self, attribute: Attribute, labeled_script: LabeledUnitBlock, tvars: Dict[str, str]
         ) -> None:
             attr_name = NamesDatabase.get_attr_name(
                 attribute.name, self.au_type, self.__tech
@@ -29,7 +31,7 @@ class DeltaPCompiler:
             attribute.value = NamesDatabase.get_attr_value(
                 attribute.value, attr_name, self.au_type, self.__tech
             )
-            expr = DeltaPCompiler._compile_expr(attribute.value, labeled_script)
+            expr = DeltaPCompiler._compile_expr(attribute.value, labeled_script, tvars)
             self.__attributes[attr_name] = (expr, attribute)
 
         def get_attribute(self, attr_name: str) -> Optional[Attribute]:
@@ -56,9 +58,9 @@ class DeltaPCompiler:
             attr_name: str,
             atomic_unit: AtomicUnit,
             labeled_script: LabeledUnitBlock,
+            tvars: Dict[str, str],
         ) -> str:
             attr = self.get_attribute(attr_name)
-            name = NamesDatabase.get_attr_name(attr_name, self.au_type, self.__tech)
 
             if attr is None:
                 # Creates sketched attribute
@@ -107,19 +109,34 @@ class DeltaPCompiler:
                     )
 
                 DeltaPCompiler._sketched -= 2
-                self.add_attribute(attr, labeled_script)
+                self.add_attribute(attr, labeled_script, tvars)
 
             labeled_script.add_location(atomic_unit, attr)
             labeled_script.add_location(attr, attr.value)
-            return name + "_" + str(hash(attr))
+            return DeltaPCompiler._get_attribute_name(
+                attr.name,
+                attr, 
+                self.au_type, 
+                self.__tech
+            )
 
     @staticmethod
-    def _compile_expr(expr: Expr, labeled_script: LabeledUnitBlock) -> PExpr:
+    def _get_attribute_name(
+        attr_name: str,
+        attribute: Attribute,
+        au_type: str,
+        tech: Tech,
+    ) -> str:
+        name = NamesDatabase.get_attr_name(attr_name, au_type, tech)
+        return name + "_" + str(hash(attribute)) + str(random.randint(0, 28021904))
+    
+    @staticmethod
+    def _compile_expr(expr: Expr, labeled_script: LabeledUnitBlock, tvars: Dict[str, str]) -> PExpr:
         def binary_op(op: Type[PBinOp], left: Expr, right: Expr) -> PExpr:
             return PEBinOP(
                 op(),
-                DeltaPCompiler._compile_expr(left, labeled_script),
-                DeltaPCompiler._compile_expr(right, labeled_script),
+                DeltaPCompiler._compile_expr(left, labeled_script, tvars),
+                DeltaPCompiler._compile_expr(right, labeled_script, tvars),
             )
 
         if isinstance(expr, String):
@@ -156,11 +173,11 @@ class DeltaPCompiler:
             )
         elif isinstance(expr, Not):
             return PEUnOP(
-                PNot(), DeltaPCompiler._compile_expr(expr.expr, labeled_script)
+                PNot(), DeltaPCompiler._compile_expr(expr.expr, labeled_script, tvars)
             )
         elif isinstance(expr, Minus):
             return PEUnOP(
-                PNeg(), DeltaPCompiler._compile_expr(expr.expr, labeled_script)
+                PNeg(), DeltaPCompiler._compile_expr(expr.expr, labeled_script, tvars)
             )
         elif isinstance(expr, Or):
             return binary_op(POr, expr.left, expr.right)
@@ -199,6 +216,8 @@ class DeltaPCompiler:
         elif isinstance(expr, Power):
             return binary_op(PPower, expr.left, expr.right)
         elif isinstance(expr, VariableReference):
+            if expr.value in tvars:
+                return PEVar(tvars[expr.value])
             return PEVar(expr.value)
         elif isinstance(
             expr,
@@ -226,6 +245,7 @@ class DeltaPCompiler:
         atomic_unit: AtomicUnit,
         attributes: __Attributes,
         labeled_script: LabeledUnitBlock,
+        tvars: Dict[str, str],
     ) -> PStatement:
         path = attributes["path"]
         path_attr = attributes.get_attribute("path")
@@ -236,7 +256,7 @@ class DeltaPCompiler:
         if path == PEUndef():
             path = PEConst(PStr(atomic_unit.name))  # type: ignore
 
-        state_var = attributes.get_var("state", atomic_unit, labeled_script)
+        state_var = attributes.get_var("state", atomic_unit, labeled_script, tvars)
         statement = PLet(
             state_var,
             attributes["state"],
@@ -255,7 +275,7 @@ class DeltaPCompiler:
             ),
         )
 
-        content_var = attributes.get_var("content", atomic_unit, labeled_script)
+        content_var = attributes.get_var("content", atomic_unit, labeled_script, tvars)
         statement = PSeq(
             statement,
             PLet(
@@ -265,7 +285,7 @@ class DeltaPCompiler:
             ),
         )
 
-        owner_var = attributes.get_var("owner", atomic_unit, labeled_script)
+        owner_var = attributes.get_var("owner", atomic_unit, labeled_script, tvars)
         statement = PSeq(
             statement,
             PLet(
@@ -275,7 +295,7 @@ class DeltaPCompiler:
             ),
         )
 
-        mode_var = attributes.get_var("mode", atomic_unit, labeled_script)
+        mode_var = attributes.get_var("mode", atomic_unit, labeled_script, tvars)
         statement = PSeq(
             statement,
             PLet(
@@ -291,6 +311,7 @@ class DeltaPCompiler:
     def __handle_atomic_unit(
         atomic_unit: AtomicUnit,
         labeled_script: LabeledUnitBlock,
+        tvars: Dict[str, str],
     ) -> PStatement:
         statement = PSkip()
         tech = labeled_script.tech
@@ -299,33 +320,75 @@ class DeltaPCompiler:
         )
         if attributes.au_type == "file":
             for attribute in atomic_unit.attributes:
-                attributes.add_attribute(attribute, labeled_script)
+                attributes.add_attribute(attribute, labeled_script, tvars)
             statement = PSeq(
                 statement,
-                DeltaPCompiler.__handle_file(atomic_unit, attributes, labeled_script),
+                DeltaPCompiler.__handle_file(atomic_unit, attributes, labeled_script, tvars),
             )
         # Defined type
         elif labeled_script.env.has_definition(atomic_unit.type):
-            # TODO
-            pass
+            definition = labeled_script.env.get_definition(atomic_unit.type)
+            new_tvars = copy.deepcopy(tvars)
+
+            defined_attributes: Dict[str, Attribute] = {}
+            for attr in atomic_unit.attributes:
+                if labeled_script.tech == Tech.puppet:
+                    name = f"${attr.name}"
+                else:
+                    name = attr.name
+                defined_attributes[name] = attr
+                
+            for attr in definition.attributes:
+                if attr.name not in defined_attributes:
+                    defined_attributes[attr.name] = attr
+
+            for name, attr in list(defined_attributes.items()):
+                new_name = DeltaPCompiler._get_attribute_name(
+                    name, attr, definition.type, tech
+                )
+                defined_attributes[new_name] = attr
+                defined_attributes.pop(name)
+
+                if labeled_script.tech == Tech.puppet:
+                    new_tvars[name[1:]] = new_name
+                new_tvars[name] = new_name
+
+            statement = DeltaPCompiler.__handle_unit_block(
+                definition, 
+                labeled_script,
+                new_tvars
+            )
+
+            for name, attr in defined_attributes.items():
+                value = DeltaPCompiler._compile_expr(attr.value, labeled_script, new_tvars)
+                labeled_script.add_location(attr, attr.value)
+                labeled_script.add_location(atomic_unit, attr)
+                statement = PLet(
+                    name,
+                    value,
+                    statement,
+                )
+            
+            statement = PSeq(statement, PSkip())
 
         return statement
 
     @staticmethod
     def __handle_conditional(
-        conditional: ConditionalStatement, labeled_script: LabeledUnitBlock
+        conditional: ConditionalStatement, 
+        labeled_script: LabeledUnitBlock,
+        tvars: Dict[str, str],
     ) -> PStatement:
         body = PSkip()
         for stat in conditional.statements:
             body = PSeq(
-                body, 
-                DeltaPCompiler.__handle_code_element(stat, labeled_script)
+                body, DeltaPCompiler.__handle_code_element(stat, labeled_script, tvars)
             )
-        
+
         else_statement = PSkip()
         if conditional.else_statement is not None:
             else_statement = DeltaPCompiler.__handle_conditional(
-                conditional.else_statement, labeled_script
+                conditional.else_statement, labeled_script, tvars
             )
 
         DeltaPCompiler._condition += 1
@@ -337,80 +400,74 @@ class DeltaPCompiler:
             body,
             else_statement,
         )
-    
+
     @staticmethod
-    def __handle_variable(variable: Variable, labeled_script: LabeledUnitBlock) -> PStatement:
+    def __handle_variable(
+        variable: Variable, 
+        labeled_script: LabeledUnitBlock,
+        tvars: Dict[str, str],
+    ) -> PStatement:
+        if variable.name in tvars:
+            name = tvars[variable.name]
+        else:
+            name = variable.name
         statement = PLet(
-            variable.name,
-            DeltaPCompiler._compile_expr(variable.value, labeled_script),
-            PSkip()
+            name,
+            DeltaPCompiler._compile_expr(variable.value, labeled_script, tvars),
+            PSkip(),
         )
         labeled_script.add_location(variable, variable.value)
         return statement
-    
+
     @staticmethod
-    def __handle_code_element(code_element: CodeElement, labeled_script: LabeledUnitBlock) -> PStatement:
-        if isinstance(code_element, AtomicUnit):
-            return DeltaPCompiler.__handle_atomic_unit(
-                code_element, labeled_script
-            )
-        elif isinstance(code_element, ConditionalStatement):
-            return DeltaPCompiler.__handle_conditional(code_element, labeled_script)
-        elif isinstance(code_element, Variable):
-            return DeltaPCompiler.__handle_variable(code_element, labeled_script)
-        elif isinstance(code_element, UnitBlock):
-            compiled = PSkip()
-            statements: List[CodeElement] = (
-                code_element.statements + 
-                code_element.atomic_units + 
-                code_element.variables + 
-                code_element.unit_blocks
-            )
-            statements.sort(key=lambda x: (x.line, x.column), reverse=True)
-
-            for statement in statements:
-                new_compiled = DeltaPCompiler.__handle_code_element(
-                    statement, labeled_script
-                )
-                if isinstance(new_compiled, PLet):
-                    new_compiled.body = compiled
-                    compiled = PSeq(new_compiled, PSkip())
-                else:
-                    compiled = PSeq(
-                        new_compiled,
-                        compiled
-                    )
-
-            return compiled
-            
-        raise RuntimeError(f"Unsupported code element, got {code_element}")
-        
-    @staticmethod
-    def compile(labeled_script: LabeledUnitBlock) -> PStatement:
-        statement = PSkip()
-        script = labeled_script.script
-
-        # TODO: Handle scopes
+    def __handle_unit_block(
+        unit_block: UnitBlock, 
+        labeled_script: LabeledUnitBlock,
+        tvars: Dict[str, str],
+    ) -> PStatement:
+        compiled = PSkip()
         statements: List[CodeElement] = (
-            script.statements + 
-            script.atomic_units + 
-            script.variables + 
-            script.unit_blocks
+            unit_block.statements
+            + unit_block.atomic_units
+            + unit_block.variables
+            + unit_block.unit_blocks
         )
         statements.sort(key=lambda x: (x.line, x.column), reverse=True)
 
-        for stat in statements:
-            new_statement = DeltaPCompiler.__handle_code_element(
-                stat, labeled_script
+        for statement in statements:
+            new_compiled = DeltaPCompiler.__handle_code_element(
+                statement, labeled_script, tvars
             )
-
-            if isinstance(new_statement, PLet):
-                new_statement.body = statement
-                statement = PSeq(new_statement, PSkip())
+            if isinstance(new_compiled, PLet):
+                new_compiled.body = compiled
+                compiled = PSeq(new_compiled, PSkip())
             else:
-                statement = PSeq(
-                    new_statement,
-                    statement
-                )
+                compiled = PSeq(new_compiled, compiled)
 
-        return statement
+        return compiled
+
+    @staticmethod
+    def __handle_code_element(
+        code_element: CodeElement, labeled_script: LabeledUnitBlock, tvars: Dict[str, str]
+    ) -> PStatement:
+        if isinstance(code_element, AtomicUnit):
+            return DeltaPCompiler.__handle_atomic_unit(code_element, labeled_script, tvars)
+        elif isinstance(code_element, ConditionalStatement):
+            return DeltaPCompiler.__handle_conditional(code_element, labeled_script, tvars)
+        elif isinstance(code_element, Variable):
+            return DeltaPCompiler.__handle_variable(code_element, labeled_script, tvars)
+        elif (
+            isinstance(code_element, UnitBlock)
+            and code_element.type == UnitBlockType.definition
+        ):
+            return PSkip()
+        elif isinstance(code_element, UnitBlock):
+            return DeltaPCompiler.__handle_unit_block(code_element, labeled_script, tvars)
+
+        raise RuntimeError(f"Unsupported code element, got {code_element}")
+
+    @staticmethod
+    def compile(labeled_script: LabeledUnitBlock) -> PStatement:
+        script = labeled_script.script
+        # TODO: Handle scopes
+        return DeltaPCompiler.__handle_unit_block(script, labeled_script, {})

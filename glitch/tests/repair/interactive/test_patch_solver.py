@@ -368,6 +368,7 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
                 String[1] $owner = "owner-test",
             ) {
                 file { "${servername}.conf":
+                    path    => "${servername}.conf",
                     ensure  => file,
                     owner   => $owner,
                     group   => 'www',
@@ -392,21 +393,46 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
         filesystem.state["test2.conf"] = File("0644", "new_owner", "test")
 
         assert self.statement is not None
-        solver = PatchSolver(self.statement, filesystem)
+        solver = PatchSolver(self.statement, filesystem, debug=True)
         models = solver.solve()
         assert models is not None
         assert len(models) == 1
 
-    def test_patch_solver_puppet_defined_resource_change_mode(self) -> None:
+    def test_patch_solver_puppet_defined_resource_change_owner(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["test.conf"] = File("0777", "owner-test", "test")
-        filesystem.state["test2.conf"] = File("0644", "new_owner", "test")
+        filesystem.state["test.conf"] = File("0644", "owner-test", "test")
+        filesystem.state["test2.conf"] = File("0644", "owner-test2", "test")
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
         models = solver.solve()
         assert models is not None
-        assert len(models) == 1
+        assert len(models) == 4
+
+        result = """
+            define apache::vhost (
+                String[1] $servername = "test",
+                String[1] $owner = "owner-test",
+            ) {
+                file { "${servername}.conf":
+                    path    => "${servername}.conf",
+                    ensure  => file,
+                    owner   => $owner,
+                    group   => 'www',
+                    mode    => '0644',
+                    content => 'test',
+                }
+            }
+
+            apache::vhost { 'test_vhost':
+            }
+
+            apache::vhost { 'test_vhost_2':
+                servername => "test2",
+                owner => 'owner-test2',
+            }
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
