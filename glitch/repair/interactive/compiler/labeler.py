@@ -192,6 +192,8 @@ class GLITCHLabeler:
             GLITCHLabeler.label_variable(labeled, variable)
         for unit_block in unit_block.unit_blocks:
             GLITCHLabeler.label_unit_block(labeled, unit_block)
+        for attribute in unit_block.attributes:
+            labeled.add_label(attribute.name, attribute)
 
     @staticmethod
     def label_statement(labeled: LabeledUnitBlock, statement: CodeElement) -> None:

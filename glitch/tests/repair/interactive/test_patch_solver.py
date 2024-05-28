@@ -19,9 +19,6 @@ from glitch.tech import Tech
 class TestPatchSolver(unittest.TestCase):
     def setUp(self):
         self.f = NamedTemporaryFile(mode="w+")
-        DeltaPCompiler._condition = 0  # type: ignore
-        DeltaPCompiler._literal = 0  # type: ignore
-        DeltaPCompiler._sketched = -1  # type: ignore
         self.labeled_script = None
         self.statement = None
 
@@ -390,13 +387,33 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
     def test_patch_solver_puppet_defined_resource_delete(self) -> None:
         filesystem = FileSystemState()
         filesystem.state["test.conf"] = Nil()
-        filesystem.state["test2.conf"] = File("0644", "new_owner", "test")
+        filesystem.state["test2.conf"] = Nil()
 
         assert self.statement is not None
-        solver = PatchSolver(self.statement, filesystem, debug=True)
+        solver = PatchSolver(self.statement, filesystem)
         models = solver.solve()
         assert models is not None
-        assert len(models) == 1
+        assert len(models) == 2
+
+        result = """
+            define apache::vhost (
+                String[1] $servername = "test",
+            ) {
+                file { "${servername}.conf":
+                    path    => "${servername}.conf",
+                    ensure  => absent,
+                    group   => 'www',
+                }
+            }
+
+            apache::vhost { 'test_vhost':
+            }
+
+            apache::vhost { 'test_vhost_2':
+                servername => "test2",
+            }
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
     def test_patch_solver_puppet_defined_resource_change_owner(self) -> None:
         filesystem = FileSystemState()
@@ -517,13 +534,13 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
         assert len(models) == 6
         model = models[0]
         assert model[solver.sum_var] == 5
-        assert model[solver.unchanged[6]] == 1
-        assert model[solver.unchanged[7]] == 1
-        assert model[solver.unchanged[8]] == 0
+        assert model[solver.unchanged[8]] == 1
         assert model[solver.unchanged[9]] == 1
-        assert model[solver.unchanged[10]] == 1
-        assert model[solver.unchanged[11]] == 0
+        assert model[solver.unchanged[10]] == 0
+        assert model[solver.unchanged[11]] == 1
         assert model[solver.unchanged[12]] == 1
+        assert model[solver.unchanged[13]] == 0
+        assert model[solver.unchanged[14]] == 1
         assert model[solver.vars["state_18000"]] == "present"
         assert model[solver.vars["owner_35937"]] == "web_user"
         assert model[solver.vars["mode_27216"]] == "0755"

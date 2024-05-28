@@ -229,6 +229,7 @@ class PStatement(ABC):
                     return PLet(
                         statement.id,
                         statement.expr,
+                        statement.label,
                         body,
                     )
             elif isinstance(statement, PIf):
@@ -383,6 +384,7 @@ class PSeq(PStatement):
 class PLet(PExpr, PStatement):
     id: str
     expr: PExpr
+    label: int
     body: PStatement
 
 
