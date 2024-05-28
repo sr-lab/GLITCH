@@ -331,11 +331,7 @@ class DeltaPCompiler:
 
             defined_attributes: Dict[str, Attribute] = {}
             for attr in atomic_unit.attributes:
-                if self._labeled_script.tech == Tech.puppet:
-                    name = f"${attr.name}"
-                else:
-                    name = attr.name
-                defined_attributes[name] = attr
+                defined_attributes[attr.name] = attr
                 
             for attr in definition.attributes:
                 if attr.name not in defined_attributes:
@@ -347,9 +343,6 @@ class DeltaPCompiler:
                 )
                 defined_attributes[new_name] = attr
                 defined_attributes.pop(name)
-
-                if self._labeled_script.tech == Tech.puppet:
-                    new_tvars[name[1:]] = new_name
                 new_tvars[name] = new_name
 
             statement = self.__handle_unit_block(

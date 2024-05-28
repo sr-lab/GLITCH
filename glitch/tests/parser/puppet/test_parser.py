@@ -16,7 +16,7 @@ class TestPuppetParser(TestParser):
         self._check_binary_operation(
             unit_block.statements[0].condition,
             Equal,
-            VariableReference("$x", ElementInfo(5, 4, 5, 6, "$x")),
+            VariableReference("x", ElementInfo(5, 4, 5, 6, "$x")),
             String("absent", ElementInfo(5, 10, 5, 18, "absent")),
             5,
             4,
@@ -62,7 +62,7 @@ class TestPuppetParser(TestParser):
         assert atomic_unit.attributes[0].end_column == 27
 
         assert len(unit_block.variables) == 1
-        assert unit_block.variables[0].name == "$test"
+        assert unit_block.variables[0].name == "test"
         self._check_value(
             unit_block.variables[0].value, String, "\n    test 123\n", 1, 9, 3, 7
         )
@@ -86,14 +86,14 @@ class TestPuppetParser(TestParser):
         assert unit_block.unit_blocks[0].name == "apache::vhost"
         assert len(unit_block.unit_blocks[0].attributes) == 2
 
-        assert unit_block.unit_blocks[0].attributes[0].name == "$port"
+        assert unit_block.unit_blocks[0].attributes[0].name == "port"
         assert unit_block.unit_blocks[0].attributes[0].value == Null()
 
-        assert unit_block.unit_blocks[0].attributes[1].name == "$servername"
+        assert unit_block.unit_blocks[0].attributes[1].name == "servername"
         self._check_value(
             unit_block.unit_blocks[0].attributes[1].value,
             VariableReference,
-            "$title",
+            "title",
             3,
             27,
             3,
@@ -143,7 +143,7 @@ class TestPuppetParser(TestParser):
         assert len(unit_block.unit_blocks[0].attributes) == 1
 
         assert isinstance(unit_block.unit_blocks[0].attributes[0], Attribute)
-        assert unit_block.unit_blocks[0].attributes[0].name == "$version"
+        assert unit_block.unit_blocks[0].attributes[0].name == "version"
         self._check_value(
             unit_block.unit_blocks[0].attributes[0].value,
             String,
@@ -169,19 +169,19 @@ class TestPuppetParser(TestParser):
         assert isinstance(unit_block, UnitBlock)
         assert len(unit_block.variables) == 8
 
-        assert unit_block.variables[0].name == "$x"
+        assert unit_block.variables[0].name == "x"
 
-        assert unit_block.variables[1].name == "$y"
+        assert unit_block.variables[1].name == "y"
         self._check_value(unit_block.variables[1].value, Integer, 2, 2, 6, 2, 7)
 
-        assert unit_block.variables[2].name == "$string_interpolation"
+        assert unit_block.variables[2].name == "string_interpolation"
         self._check_binary_operation(
             unit_block.variables[2].value,
             Sum,
             Sum(
                 ElementInfo(3, 28, 4, 35, ""),
-                VariableReference("$x", ElementInfo(3, 28, 3, 30, "$x")),
-                VariableReference("$y", ElementInfo(3, 33, 3, 35, "$y")),
+                VariableReference("x", ElementInfo(3, 28, 3, 30, "x")),
+                VariableReference("y", ElementInfo(3, 33, 3, 35, "y")),
             ),
             String(" World", ElementInfo(3, 25, 3, 43, " World")),
             3,
@@ -193,24 +193,24 @@ class TestPuppetParser(TestParser):
         self._check_binary_operation(
             unit_block.variables[2].value.left,
             Sum,
-            VariableReference("$x", ElementInfo(3, 28, 3, 30, "$x")),
-            VariableReference("$y", ElementInfo(3, 33, 3, 35, "$y")),
+            VariableReference("x", ElementInfo(3, 28, 3, 30, "$x")),
+            VariableReference("y", ElementInfo(3, 33, 3, 35, "$y")),
             3,
             28,
             3,
             35,
         )
 
-        assert unit_block.variables[3].name == "$z"
+        assert unit_block.variables[3].name == "z"
         self._check_value(unit_block.variables[3].value, Float, 2.0, 4, 6, 4, 9)
 
-        assert unit_block.variables[4].name == "$w"
+        assert unit_block.variables[4].name == "w"
         self._check_value(unit_block.variables[4].value, Boolean, True, 5, 6, 5, 10)
 
-        assert unit_block.variables[5].name == "$h"
+        assert unit_block.variables[5].name == "h"
         self._check_value(unit_block.variables[5].value, Null, None, 6, 6, 6, 11)
 
-        assert unit_block.variables[6].name == "$a"
+        assert unit_block.variables[6].name == "a"
         assert isinstance(unit_block.variables[6].value, Array)
         assert len(unit_block.variables[6].value.value) == 3
         self._check_value(
@@ -223,7 +223,7 @@ class TestPuppetParser(TestParser):
             unit_block.variables[6].value.value[2], Integer, 3, 7, 13, 7, 14
         )
 
-        assert unit_block.variables[7].name == "$hash"
+        assert unit_block.variables[7].name == "hash"
         assert isinstance(unit_block.variables[7].value, Hash)
         assert len(unit_block.variables[7].value.value) == 2
 
@@ -263,7 +263,7 @@ class TestPuppetParser(TestParser):
         self._check_binary_operation(
             unit_block.statements[0].condition.expr,
             GreaterThan,
-            VariableReference("$x", ElementInfo(1, 8, 1, 10, "$x")),
+            VariableReference("x", ElementInfo(1, 8, 1, 10, "$x")),
             Integer(1073741824, ElementInfo(1, 13, 1, 23, "1073741824")),
             1,
             8,
@@ -433,7 +433,7 @@ class TestPuppetParser(TestParser):
         assert unit_block is not None
         assert len(unit_block.variables) == 18
         for i in range(18):
-            assert unit_block.variables[i].name == f"$x"
+            assert unit_block.variables[i].name == f"x"
         assert isinstance(unit_block.variables[0].value, Equal)
         assert isinstance(unit_block.variables[1].value, NotEqual)
         assert isinstance(unit_block.variables[2].value, And)

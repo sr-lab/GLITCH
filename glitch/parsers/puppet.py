@@ -164,6 +164,10 @@ class PuppetParser(p.Parser):
 
             return Array(res_list, PuppetParser.__get_info(codeelement, code))
         elif isinstance(codeelement, puppetmodel.Id):
+            if codeelement.value.startswith("$"):
+                return VariableReference(
+                    codeelement.value[1:], PuppetParser.__get_info(codeelement, code)
+                )
             return VariableReference(
                 codeelement.value, PuppetParser.__get_info(codeelement, code)
             )
@@ -468,6 +472,8 @@ class PuppetParser(p.Parser):
             return PuppetParser.__process_value(codeelement, path, code)  # type: ignore
         elif isinstance(codeelement, puppetmodel.Attribute):
             name = PuppetParser.__process_string(codeelement.key)
+            if name.startswith("$"):
+                name = name[1:]
             value = PuppetParser.__process_codeelement(codeelement.value, path, code)
             assert isinstance(value, Expr)
 
@@ -519,13 +525,16 @@ class PuppetParser(p.Parser):
             else:
                 value = Null()
 
+            name = codeelement.name[1:] if codeelement.name.startswith("$") else codeelement.name
             attribute = Attribute(
-                codeelement.name, value, PuppetParser.__get_info(codeelement, code)
+                name, value, PuppetParser.__get_info(codeelement, code)
             )
 
             return attribute
         elif isinstance(codeelement, puppetmodel.Assignment):
             name = PuppetParser.__process_string(codeelement.name)
+            if name.startswith("$"):
+                name = name[1:]
             value = PuppetParser.__process_codeelement(codeelement.value, path, code)
             assert isinstance(value, Expr)
 
