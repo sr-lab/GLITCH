@@ -16,20 +16,19 @@ from glitch.repair.interactive.tracer.transform import (
     get_file_system_state,
 )
 from glitch.repair.interactive.solver import PatchSolver
+from glitch.repair.interactive.delta_p import PStatement
 
 
 def run_dejavu(path: str, pid: str, parser: Parser, type: UnitBlockType, tech: Tech):
     inter: UnitBlock | None = parser.parse_file(path, type)
     assert inter is not None
     labeled_script = GLITCHLabeler.label(inter, tech)
-    statement = DeltaPCompiler().compile(labeled_script)
+    statement = DeltaPCompiler(labeled_script).compile()
 
     syscalls = STrace(pid).run()
     workdir = subprocess.check_output([f"pwdx {pid}"], shell=True)
     workdir = workdir.decode("utf-8").strip().split(": ")[1]
     sys_affected_paths = list(get_affected_paths(workdir, syscalls))
-
-    # TODO: Minimize statement
 
     for i, path in enumerate(sys_affected_paths):
         print(f"{i}: {path}")
@@ -38,6 +37,7 @@ def run_dejavu(path: str, pid: str, parser: Parser, type: UnitBlockType, tech: T
     )
     path_indexes = list(map(int, indexes.split(",")))
     affected_paths: List[str] = [sys_affected_paths[i] for i in path_indexes]
+    statement = PStatement.minimize(statement, list(set(affected_paths)))
 
     filesystem_state = get_file_system_state(set(affected_paths))
 
