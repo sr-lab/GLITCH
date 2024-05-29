@@ -21,6 +21,8 @@ class NamesDatabase:
                 return "file"
             case "ansible.builtin.file", Tech.ansible:
                 return "file"
+            case "ansible.builtin.user", Tech.ansible:
+                return "user"
             case _:
                 pass
         return type
@@ -51,7 +53,7 @@ class NamesDatabase:
                 return "action"
             case "state", "file", Tech.ansible:
                 return "state"
-            case "state", "file", Tech.puppet:
+            case "state", "file" | "user", Tech.puppet:
                 return "ensure"
             case _:
                 pass
@@ -73,9 +75,11 @@ class NamesDatabase:
         match value, attr_name, au_type, tech:
             case "present", "state", "file", Tech.ansible:
                 return "file"
-            case "present", "state", "file", Tech.chef:
+            case "present", "state", "user", Tech.puppet:
+                return "present"
+            case "present", "state", "file" | "user", Tech.chef:
                 return ":create"
-            case "absent", "state", "file", Tech.chef:
+            case "absent", "state", "file" | "user", Tech.chef:
                 return ":delete"
             case _:
                 pass
@@ -104,11 +108,11 @@ class NamesDatabase:
                 return "mode"
             case "content", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "content"
-            case "ensure", "file", Tech.puppet:
+            case "ensure", "file" | "user", Tech.puppet:
                 return "state"
-            case "state", "file", Tech.ansible:
+            case "state", "file" | "user", Tech.ansible:
                 return "state"
-            case "action", "file", Tech.chef:
+            case "action", "file" | "user", Tech.chef:
                 return "state"
             case _:
                 pass
@@ -141,11 +145,11 @@ class NamesDatabase:
                     v = "present"
                 case "touch", "state", "file", Tech.ansible:
                     v = "present"
-                case ":create", "state", "file", Tech.chef:
+                case ":create", "state", "file" | "user", Tech.chef:
                     v = "present"
                 case ":touch", "state", "file", Tech.chef:
                     v = "present"
-                case ":delete", "state", "file", Tech.chef:
+                case ":delete", "state", "file" | "user", Tech.chef:
                     v = "absent"
                 case _:
                     return value

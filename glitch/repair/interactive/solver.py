@@ -98,25 +98,29 @@ class PatchSolver:
 
     def __get_all_strings(self, object: Any) -> List[str]:
         result: List[str] = []
+        def handle_string(str: str):
+            result.append(str)
+            result.extend(str.split(":"))
+
         if getattr(object, "__dict__", None) is None:
             if isinstance(object, (list, set)): 
                 for val in object: # type: ignore
                     if isinstance(val, str):
-                        result.append(val)
+                        handle_string(val)
                     result += self.__get_all_strings(val)
             elif isinstance(object, dict):
                 for key, val in object.items(): # type: ignore
                     if isinstance(val, str):
-                        result.append(val)
+                        handle_string(val)
                     if isinstance(key, str):
-                        result.append(key)
+                        handle_string(key)
                     result += self.__get_all_strings(key)
                     result += self.__get_all_strings(val)
             return result
         
         for _, val in object.__dict__.items():
             if isinstance(val, str):
-                result.append(val)
+                handle_string(val)
             else:
                 result += self.__get_all_strings(val)
         return result

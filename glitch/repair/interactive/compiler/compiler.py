@@ -6,7 +6,7 @@ from glitch.repr.inter import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repair.interactive.values import DefaultValue
+from glitch.repair.interactive.values import DefaultValue, UNDEF
 
 
 class DeltaPCompiler:
@@ -245,6 +245,40 @@ class DeltaPCompiler:
 
         raise RuntimeError(f"Unsupported expression, got {expr}")
 
+    def __handle_user(
+        self,
+        atomic_unit: AtomicUnit,
+        attributes: __Attributes,
+    ):
+        # execve("/usr/sbin/useradd", ["useradd", "test2"], ...)
+        # execve("/usr/bin/sudo", ["sudo", "userdel", "test2"], ...)
+        path = PEBinOP(PAdd(), PEConst(PStr("user:")), attributes["name"])
+        name_attr = attributes.get_attribute("path")
+        if name_attr is not None:
+            self._labeled_script.add_location(atomic_unit, name_attr)
+            self._labeled_script.add_location(name_attr, name_attr.value)
+        
+        state_var, label = attributes.get_var("state", atomic_unit)
+        statement = PLet(
+            state_var,
+            attributes["state"],
+            label,
+            PIf(
+                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
+                PCreate(path),
+                PIf(
+                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
+                    PRm(path),
+                    PSkip(),
+                ),
+            ),
+        )
+        statement = PSeq(statement, PChmod(path, PEConst(PStr(UNDEF))))
+        statement = PSeq(statement, PChown(path, PEConst(PStr(UNDEF))))
+        statement = PSeq(statement, PWrite(path, PEConst(PStr(UNDEF))))
+
+        return PSeq(statement, PSkip())
+
     def __handle_file(
         self,
         atomic_unit: AtomicUnit,
@@ -313,6 +347,49 @@ class DeltaPCompiler:
         )
 
         return statement
+    
+    def __handle_defined_type(
+        self,
+        atomic_unit: AtomicUnit,
+    ):
+        au_type = NamesDatabase.get_au_type(atomic_unit.type, self._labeled_script.tech)
+        definition = self._labeled_script.env.get_definition(au_type)
+        self.scope += [f"defined_resource{str(random.randint(0, 28021904))}"]
+
+        defined_attributes: Dict[str, Tuple[Attribute, bool]] = {}
+        for attr in atomic_unit.attributes:
+            defined_attributes[attr.name] = (attr, False)
+            
+        for attr in definition.attributes:
+            if attr.name not in defined_attributes:
+                defined_attributes[attr.name] = (attr, True)
+
+        for name, attr in list(defined_attributes.items()):
+            new_name = self._get_scope_name(name)
+            defined_attributes[new_name] = attr
+            defined_attributes.pop(name)
+
+        statement = self.__handle_unit_block(
+            definition
+        )
+
+        for name, t in defined_attributes.items():
+            attr, in_ub = t
+            value = self._compile_expr(attr.value) 
+            self._labeled_script.add_location(attr, attr.value)
+            if in_ub:
+                self._labeled_script.add_location(definition, attr)
+            else:
+                self._labeled_script.add_location(atomic_unit, attr)
+            statement = PLet(
+                name,
+                value,
+                self._labeled_script.get_label(attr),
+                statement,
+            )
+        
+        self.scope.pop()
+        return statement
 
     def __handle_atomic_unit(
         self,
@@ -323,6 +400,8 @@ class DeltaPCompiler:
         attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
             self, atomic_unit.type, tech
         )
+        au_type = NamesDatabase.get_au_type(atomic_unit.type, tech)
+
         if attributes.au_type == "file":
             for attribute in atomic_unit.attributes:
                 attributes.add_attribute(attribute)
@@ -330,45 +409,23 @@ class DeltaPCompiler:
                 statement,
                 self.__handle_file(atomic_unit, attributes),
             )
-        # Defined type
-        elif self._labeled_script.env.has_definition(atomic_unit.type):
-            definition = self._labeled_script.env.get_definition(atomic_unit.type)
-            self.scope += [f"defined_resource{str(random.randint(0, 28021904))}"]
-
-            defined_attributes: Dict[str, Tuple[Attribute, bool]] = {}
-            for attr in atomic_unit.attributes:
-                defined_attributes[attr.name] = (attr, False)
-                
-            for attr in definition.attributes:
-                if attr.name not in defined_attributes:
-                    defined_attributes[attr.name] = (attr, True)
-
-            for name, attr in list(defined_attributes.items()):
-                new_name = self._get_scope_name(name)
-                defined_attributes[new_name] = attr
-                defined_attributes.pop(name)
-
-            statement = self.__handle_unit_block(
-                definition
+        elif attributes.au_type == "user":
+            for attribute in atomic_unit.attributes:
+                # HACK
+                self._compile_expr(attribute.value)
+                self._labeled_script.add_location(attribute, attribute.value)
+                self._labeled_script.add_location(atomic_unit, attribute)
+                attributes.add_attribute(attribute)
+            statement = PSeq(
+                statement,
+                self.__handle_user(atomic_unit, attributes),
             )
-
-            for name, t in defined_attributes.items():
-                attr, in_ub = t
-                value = self._compile_expr(attr.value) 
-                self._labeled_script.add_location(attr, attr.value)
-                if in_ub:
-                    self._labeled_script.add_location(definition, attr)
-                else:
-                    self._labeled_script.add_location(atomic_unit, attr)
-                statement = PLet(
-                    name,
-                    value,
-                    self._labeled_script.get_label(attr),
-                    statement,
-                )
-            
-            statement = PSeq(statement, PSkip())
-            self.scope.pop()
+        # Defined type
+        elif self._labeled_script.env.has_definition(au_type):
+            statement = PSeq(
+                self.__handle_defined_type(atomic_unit),
+                PSkip()
+            )
         
         return statement
 

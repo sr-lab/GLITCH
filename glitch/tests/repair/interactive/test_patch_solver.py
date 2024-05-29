@@ -716,7 +716,7 @@ class TestPatchSolverChefScript2(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
 
 
-class TestPatchSolverChefScript3(TestPatchSolver):
+class TestPatchSolverChefScript4(TestPatchSolver):
     def setUp(self):
         super().setUp()
         chef_script_1 = """
@@ -764,3 +764,52 @@ class TestPatchSolverChefScript3(TestPatchSolver):
         end
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
+
+
+class TestPatchSolverChefScript3(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_2 = """
+        user 'test' do
+            name   'test'
+            action :create
+        end
+        """
+        self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_user_delete(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["user:test"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+        user 'test' do
+            name   'test'
+            action :delete
+        end
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+    def test_patch_solver_chef_user_change(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["user:test2"] = File(UNDEF, UNDEF, UNDEF)
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+        user 'test' do
+            name   'test2'
+            action :create
+        end
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+        
