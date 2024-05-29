@@ -517,7 +517,9 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
         owner: "web_{{ owner }}"
         mode: '0755'
 """
-        self._setup_patch_solver(self.ansible_script_2, UnitBlockType.script, Tech.ansible)
+        self._setup_patch_solver(
+            self.ansible_script_2, UnitBlockType.script, Tech.ansible
+        )
 
     def test_patch_solver_ansible_owner(self) -> None:
         filesystem = FileSystemState()
@@ -562,7 +564,9 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
         check = False
         for model in models:
             try:
-                self._patch_solver_apply(solver, model, filesystem, Tech.ansible, result)
+                self._patch_solver_apply(
+                    solver, model, filesystem, Tech.ansible, result
+                )
                 check = True
                 break
             except AssertionError:
@@ -812,4 +816,3 @@ class TestPatchSolverChefScript3(TestPatchSolver):
         end
         """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
-        

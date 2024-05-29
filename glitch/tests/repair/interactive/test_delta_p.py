@@ -140,8 +140,4 @@ def test_delta_p_to_filesystems_default_state() -> None:
     statement = delta_p_puppet_default_state
     fss = statement.to_filesystems()
     assert len(fss) == 1
-    assert fss[0].state == {
-        "/root/.ssh/config": File(
-            "0600", "root", None
-        )
-    }
+    assert fss[0].state == {"/root/.ssh/config": File("0600", "root", None)}

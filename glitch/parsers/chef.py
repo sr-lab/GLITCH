@@ -352,9 +352,9 @@ class ChefParser(p.Parser):
                 return LeftShift(info, left, right)
             case ">>":
                 return RightShift(info, left, right)
-            case "and" | "\"&&\"":
+            case "and" | '"&&"':
                 return And(info, left, right)
-            case "or" | "\"||\"":
+            case "or" | '"||"':
                 return Or(info, left, right)
             case "=~":
                 # TODO: Unsupported operation
@@ -611,7 +611,17 @@ class ChefParser(p.Parser):
 
             return method
         elif ChefParser._check_id(
-            ast, ["args_forward", "until_mod", "while_mod", "hshptn", "do_block", "brace_block", "method_add_block", "begin"]
+            ast,
+            [
+                "args_forward",
+                "until_mod",
+                "while_mod",
+                "hshptn",
+                "do_block",
+                "brace_block",
+                "method_add_block",
+                "begin",
+            ],
         ):
             # FIXME: Not supported
             return Null(info)
@@ -845,14 +855,18 @@ class ChefParser(p.Parser):
                         value = ChefParser._get_value(ast.args[0], self.source)
                         assert isinstance(value, Expr)
                         cond = NotEqual(
-                            ElementInfo.from_code_element(self.variables[-1]), 
-                            value, 
-                            Null()
+                            ElementInfo.from_code_element(self.variables[-1]),
+                            value,
+                            Null(),
                         )
-                        true = ConditionalStatement(cond, ConditionalStatement.ConditionType.IF)
+                        true = ConditionalStatement(
+                            cond, ConditionalStatement.ConditionType.IF
+                        )
                         true.add_statement(value)
                         false = ConditionalStatement(
-                            Null(), ConditionalStatement.ConditionType.IF, is_default=True
+                            Null(),
+                            ConditionalStatement.ConditionType.IF,
+                            is_default=True,
                         )
                         false.add_statement(name)
                         true.else_statement = false

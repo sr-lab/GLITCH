@@ -29,7 +29,14 @@ from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.values import DefaultValue, UNDEF
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repr.inter import Attribute, AtomicUnit, CodeElement, ElementInfo, Variable, UnitBlock
+from glitch.repr.inter import (
+    Attribute,
+    AtomicUnit,
+    CodeElement,
+    ElementInfo,
+    Variable,
+    UnitBlock,
+)
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.repair.interactive.compiler.template_database import TemplateDatabase
 from glitch.tech import Tech
@@ -56,7 +63,7 @@ class PatchSolver:
         self.solver = Solver(ctx=ctx)
         self.debug = debug
         if self.debug:
-            self.solver.add = lambda c: self.solver.assert_and_track(c, str(c) + f" ({str(uuid.uuid4())})") # type: ignore
+            self.solver.add = lambda c: self.solver.assert_and_track(c, str(c) + f" ({str(uuid.uuid4())})")  # type: ignore
 
         self.timeout = timeout
         self.statement = statement
@@ -98,18 +105,19 @@ class PatchSolver:
 
     def __get_all_strings(self, object: Any) -> List[str]:
         result: List[str] = []
+
         def handle_string(str: str):
             result.append(str)
             result.extend(str.split(":"))
 
         if getattr(object, "__dict__", None) is None:
-            if isinstance(object, (list, set)): 
-                for val in object: # type: ignore
+            if isinstance(object, (list, set)):
+                for val in object:  # type: ignore
                     if isinstance(val, str):
                         handle_string(val)
                     result += self.__get_all_strings(val)
             elif isinstance(object, dict):
-                for key, val in object.items(): # type: ignore
+                for key, val in object.items():  # type: ignore
                     if isinstance(val, str):
                         handle_string(val)
                     if isinstance(key, str):
@@ -117,7 +125,7 @@ class PatchSolver:
                     result += self.__get_all_strings(key)
                     result += self.__get_all_strings(val)
             return result
-        
+
         for _, val in object.__dict__.items():
             if isinstance(val, str):
                 handle_string(val)
@@ -135,9 +143,9 @@ class PatchSolver:
             if isinstance(statement, PWrite):
                 labels = self.__collect_labels(statement.content)
             elif isinstance(statement, PChmod):
-                labels =  self.__collect_labels(statement.mode)
+                labels = self.__collect_labels(statement.mode)
             elif isinstance(statement, PChown):
-                labels =  self.__collect_labels(statement.owner)
+                labels = self.__collect_labels(statement.owner)
             return labels + self.__collect_labels(statement.path)
         elif isinstance(statement, PIf):
             return (
@@ -315,7 +323,9 @@ class PatchSolver:
             )
             constraints += rhs_constraints
         elif isinstance(statement, PRLet):
-            hole, var = self.__const_string(f"loc-{statement.label}"), self.__const_string(statement.id)
+            hole, var = self.__const_string(
+                f"loc-{statement.label}"
+            ), self.__const_string(statement.id)
             self.holes[f"loc-{statement.label}"] = hole
             self.vars[statement.id] = var
             unchanged = self.unchanged[statement.label]
@@ -552,14 +562,16 @@ class PatchSolver:
         # Track attributes that became undefined
         for hole in self.holes:
             var = self.holes[hole]
-            if model_ref[var].as_string() == UNDEF: # type: ignore
-                if hole.rsplit("-", 1)[0].endswith("-"): # Avoid sketches
+            if model_ref[var].as_string() == UNDEF:  # type: ignore
+                if hole.rsplit("-", 1)[0].endswith("-"):  # Avoid sketches
                     continue
                 label = int(hole.rsplit("-", 1)[-1])
-                if label not in self.unchanged: # Make sure it is not a literal
+                if label not in self.unchanged:  # Make sure it is not a literal
                     changed.append((label, model_ref[var]))
 
-        changed_elements: List[Tuple[inter.String | inter.Null | inter.Attribute, str, ElementInfo]] = []
+        changed_elements: List[
+            Tuple[inter.String | inter.Null | inter.Attribute, str, ElementInfo]
+        ] = []
 
         for change in changed:
             label, value = change
@@ -568,12 +580,16 @@ class PatchSolver:
             assert isinstance(codeelement, (inter.String, inter.Null, inter.Attribute))
 
             if isinstance(codeelement, inter.Attribute):
-                changed_elements.append((codeelement, value, ElementInfo.from_code_element(codeelement)))
+                changed_elements.append(
+                    (codeelement, value, ElementInfo.from_code_element(codeelement))
+                )
                 continue
 
             kv = labeled_script.get_location(codeelement)
             if not self.__is_sketch(codeelement) or isinstance(kv, Variable):
-                changed_elements.append((codeelement, value, ElementInfo.from_code_element(codeelement)))
+                changed_elements.append(
+                    (codeelement, value, ElementInfo.from_code_element(codeelement))
+                )
             elif isinstance(kv, Attribute):
                 au = labeled_script.get_location(kv)
                 assert isinstance(au, AtomicUnit)
@@ -587,7 +603,7 @@ class PatchSolver:
         deleted_attributes: List[Attribute] = []
         for changed_element, value, _ in changed_elements:
             # Deleted Elements
-            if value == UNDEF and not self.__is_sketch(changed_element): 
+            if value == UNDEF and not self.__is_sketch(changed_element):
                 if isinstance(changed_element, Attribute):
                     attr = changed_element
                 else:
@@ -600,7 +616,7 @@ class PatchSolver:
                     self.__delete_attribute(labeled_script, ce, attr)
                     deleted_attributes.append(attr)
             # Modified elements
-            elif value != UNDEF and not isinstance(changed_element, Attribute): 
+            elif value != UNDEF and not isinstance(changed_element, Attribute):
                 ce = labeled_script.get_location(changed_element)
                 if isinstance(ce, Attribute):
                     attr = ce
@@ -633,4 +649,3 @@ class PatchSolver:
                 elif isinstance(ce, Variable):
                     changed_element.value = value
                     self.__modify_codeelement(labeled_script, changed_element, value)
-

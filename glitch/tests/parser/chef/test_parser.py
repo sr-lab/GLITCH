@@ -94,7 +94,7 @@ class TestChefParser(TestParser):
 
     def test_chef_parser_mix(self) -> None:
         """
-    alias | next | module | oct integer
+        alias | next | module | oct integer
         """
         # TODO: support alias
         ir = self.__parse("tests/parser/chef/files/mix.rb")
@@ -120,13 +120,7 @@ class TestChefParser(TestParser):
         assert ir.unit_blocks[0].name == "Namespace"
         assert len(ir.unit_blocks[0].variables) == 1
         self._check_value(
-            ir.unit_blocks[0].variables[0].value, 
-            Integer,
-            0o640,
-            7, 
-            5, 
-            7, 
-            10
+            ir.unit_blocks[0].variables[0].value, Integer, 0o640, 7, 5, 7, 10
         )
 
     def test_chef_parser_aref(self) -> None:
@@ -829,6 +823,7 @@ class TestChefParser(TestParser):
         """
         # TODO: For now just checks if it does not crash
         self.__parse("tests/parser/chef/files/begin.rb")
+
 
 # TODO:
 # block_var

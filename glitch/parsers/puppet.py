@@ -525,7 +525,11 @@ class PuppetParser(p.Parser):
             else:
                 value = Null()
 
-            name = codeelement.name[1:] if codeelement.name.startswith("$") else codeelement.name
+            name = (
+                codeelement.name[1:]
+                if codeelement.name.startswith("$")
+                else codeelement.name
+            )
             attribute = Attribute(
                 name, value, PuppetParser.__get_info(codeelement, code)
             )
