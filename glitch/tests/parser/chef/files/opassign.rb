@@ -4,3 +4,4 @@ Constant *= ::Test
 x /= super 2
 x %= super(2)
 x **= 2r
+x = x =~ /cow/ 

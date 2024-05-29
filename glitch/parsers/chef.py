@@ -120,7 +120,7 @@ class ChefParser(p.Parser):
         }
 
         if ChefParser._check_node(ast, ["@tstring_content"], 2):
-            lines = ast.args[0].replace("\\n", "\n")
+            lines = bytes(ast.args[0], "utf-8").decode("unicode_escape")
             lines = lines.split("\n")
             lines = [l + "\n" for l in lines[:-1]] + [lines[-1]]
             if lines[-1] == "":
@@ -352,10 +352,13 @@ class ChefParser(p.Parser):
                 return LeftShift(info, left, right)
             case ">>":
                 return RightShift(info, left, right)
-            case "and" | "&&":
+            case "and" | "\"&&\"":
                 return And(info, left, right)
-            case "or" | "||":
+            case "or" | "\"||\"":
                 return Or(info, left, right)
+            case "=~":
+                # TODO: Unsupported operation
+                return Null()
             case _:
                 raise ValueError(f"Unknown binary operator {op}")
 
@@ -429,6 +432,8 @@ class ChefParser(p.Parser):
             value.end_line, value.end_column = info.end_line, info.end_column
             return value
         elif ChefParser._check_id(ast, ["@int"]):
+            if "o" in content:
+                return Integer(int(content, 8), info)
             return Integer(int(content), info)
         elif ChefParser._check_id(ast, ["@imaginary"]):
             return Complex(complex(content.replace("i", "j")), info)
@@ -446,6 +451,20 @@ class ChefParser(p.Parser):
             return Sum(info, left, right)
         elif ChefParser._check_id(ast, ["unary"]):
             return ChefParser.__parse_unary(ast, source, info)
+        elif ChefParser._check_node(ast, ["rescue_mod"], 2):
+            value = ChefParser._get_value(ast.args[0], source)
+            default = ChefParser._get_value(ast.args[1], source)
+            assert isinstance(value, Expr)
+            assert isinstance(default, Expr)
+            cond = NotEqual(info, value, Null())
+            true = ConditionalStatement(cond, ConditionalStatement.ConditionType.IF)
+            true.add_statement(value)
+            false = ConditionalStatement(
+                Null(), ConditionalStatement.ConditionType.IF, is_default=True
+            )
+            false.add_statement(default)
+            true.else_statement = false
+            return true
         elif ChefParser._check_id(ast, ["dot2", "dot3"]):
             left = ChefParser._get_value(ast.args[0], source)
             right = ChefParser._get_value(ast.args[1], source)
@@ -508,6 +527,10 @@ class ChefParser(p.Parser):
                     content,
                 )
             return VariableReference(content, info)
+        elif ChefParser._check_id(ast, ["case"]):
+            c = ChefParser.CaseChecker(source, ast)
+            c.check_all()
+            return c.condition
         elif ChefParser._check_id(ast, ["defined", "next", "super", "zsuper"]):
             if len(ast.args) != 0:
                 value = ChefParser._get_value(ast.args[0], source)
@@ -516,7 +539,7 @@ class ChefParser(p.Parser):
             else:
                 value = []
             return FunctionCall(ast.id, value, info)
-        elif ChefParser._check_id(ast, ["aref"]) and len(ast.args) == 2:
+        elif ChefParser._check_id(ast, ["aref", "aref_field"]) and len(ast.args) == 2:
             ref = ChefParser._get_value(ast.args[0], source)
             assert ref is not None
             index = ChefParser._get_value(ast.args[1], source)
@@ -588,7 +611,7 @@ class ChefParser(p.Parser):
 
             return method
         elif ChefParser._check_id(
-            ast, ["args_forward", "until_mod", "while_mod", "hshptn"]
+            ast, ["args_forward", "until_mod", "while_mod", "hshptn", "do_block", "brace_block", "method_add_block", "begin"]
         ):
             # FIXME: Not supported
             return Null(info)
@@ -818,6 +841,22 @@ class ChefParser(p.Parser):
                     )
 
                 match op:
+                    case "||=":
+                        value = ChefParser._get_value(ast.args[0], self.source)
+                        assert isinstance(value, Expr)
+                        cond = NotEqual(
+                            ElementInfo.from_code_element(self.variables[-1]), 
+                            value, 
+                            Null()
+                        )
+                        true = ConditionalStatement(cond, ConditionalStatement.ConditionType.IF)
+                        true.add_statement(value)
+                        false = ConditionalStatement(
+                            Null(), ConditionalStatement.ConditionType.IF, is_default=True
+                        )
+                        false.add_statement(name)
+                        true.else_statement = false
+                        self.variables[-1].value = true
                     case "+=":
                         self.variables[-1].value = binary(Sum)
                     case "-=":
@@ -866,7 +905,7 @@ class ChefParser(p.Parser):
 
         def is_include_name(self, ast: "ChefParser.Node") -> bool:
             if (
-                ChefParser._check_id(ast.args[0][0], ["string_literal"])
+                ChefParser._check_id(ast.args[0].args[0], ["string_literal"])
                 and ast.args[1] is False
             ):
                 d = Dependency([ChefParser._get_content(ast.args[0][0], self.source)])
@@ -1154,8 +1193,6 @@ class ChefParser(p.Parser):
                         st.add_variable(variable)
                     else:
                         st.add_statement(variable)
-                # variables might have resources associated to it
-                ChefParser._transverse_ast(ast.args[1], st, source)
                 return
 
             include_checker = ChefParser.IncludeChecker(source, ast)

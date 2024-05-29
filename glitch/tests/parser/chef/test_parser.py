@@ -94,7 +94,7 @@ class TestChefParser(TestParser):
 
     def test_chef_parser_mix(self) -> None:
         """
-        alias | next | module
+    alias | next | module | oct integer
         """
         # TODO: support alias
         ir = self.__parse("tests/parser/chef/files/mix.rb")
@@ -119,13 +119,22 @@ class TestChefParser(TestParser):
         assert ir.unit_blocks[0].type == UnitBlockType.block
         assert ir.unit_blocks[0].name == "Namespace"
         assert len(ir.unit_blocks[0].variables) == 1
+        self._check_value(
+            ir.unit_blocks[0].variables[0].value, 
+            Integer,
+            0o640,
+            7, 
+            5, 
+            7, 
+            10
+        )
 
     def test_chef_parser_aref(self) -> None:
         """
-        aref | aref_field | @int
+        aref | aref_field | @int | ||=
         """
         ir = self.__parse("tests/parser/chef/files/aref.rb")
-        assert len(ir.variables) == 1
+        assert len(ir.variables) == 2
         assert isinstance(ir.variables[0], Variable)
         self.__check_code_element(ir.variables[0], 1, 1, 1, 30)
         assert ir.variables[0].name == "collection[0]"
@@ -139,6 +148,9 @@ class TestChefParser(TestParser):
             1,
             30,
         )
+
+        assert isinstance(ir.variables[1], Variable)
+        assert isinstance(ir.variables[1].value, ConditionalStatement)
 
     def test_chef_parser_args_add(self) -> None:
         """
@@ -295,8 +307,8 @@ class TestChefParser(TestParser):
         binary | dot2 | dot3 | paren | stmts_add
         """
         ir = self.__parse("tests/parser/chef/files/binary.rb")
-        assert len(ir.variables) == 23
-        for i in range(23):
+        assert len(ir.variables) == 25
+        for i in range(25):
             assert isinstance(ir.variables[i], Variable)
             assert ir.variables[i].name == chr(ord("a") + i)
 
@@ -361,7 +373,7 @@ class TestChefParser(TestParser):
         case | when | else | in | hshptn
         """
         ir = self.__parse("tests/parser/chef/files/case.rb")
-        assert len(ir.statements) == 3
+        assert len(ir.statements) == 2
         assert isinstance(ir.statements[0], ConditionalStatement)
         assert isinstance(ir.statements[1], ConditionalStatement)
         assert ir.statements[0].type == ConditionalStatement.ConditionType.SWITCH
@@ -396,6 +408,9 @@ class TestChefParser(TestParser):
         )
         assert isinstance(ir.statements[1].else_statement, ConditionalStatement)
         assert ir.statements[1].else_statement.else_statement is None
+
+        assert len(ir.variables) == 1
+        assert isinstance(ir.variables[0].value, ConditionalStatement)
 
     def test_chef_parser_if(self) -> None:
         """
@@ -473,7 +488,7 @@ class TestChefParser(TestParser):
         opassign | rational | super | top_const_ref | top_const_field
         """
         ir = self.__parse("tests/parser/chef/files/opassign.rb")
-        assert len(ir.variables) == 6
+        assert len(ir.variables) == 7
 
         assert isinstance(ir.variables[0], Variable)
         assert ir.variables[0].name == "x"
@@ -562,6 +577,11 @@ class TestChefParser(TestParser):
             6,
             9,
         )
+
+        assert isinstance(ir.variables[6], Variable)
+        assert ir.variables[6].name == "x"
+        # TODO
+        assert isinstance(ir.variables[6].value, Null)
 
     def test_chef_parser_unary(self) -> None:
         """
@@ -760,21 +780,67 @@ class TestChefParser(TestParser):
             ir.variables[5].value.right, VariableReference, "test", 10, 13, 10, 17
         )
 
+    def test_chef_parser_string_index_out_of_range(self) -> None:
+        """
+        This file used to file with string index out of range.
+        """
+        self.__parse("tests/parser/chef/files/string_index_out_of_range.rb")
+
+    def test_chef_parser_node_object_not_subscriptable(self) -> None:
+        """
+        This file used to file with node object not subscriptable.
+        """
+        self.__parse("tests/parser/chef/files/node_object_not_subscriptable.rb")
+
+    def test_chef_parser_do_block(self) -> None:
+        """
+        do_block
+        """
+        # TODO: For now just checks if it does not crash
+        self.__parse("tests/parser/chef/files/do_block.rb")
+
+    def test_chef_parser_brace_block(self) -> None:
+        """
+        brace_block
+        """
+        # TODO: For now just checks if it does not crash
+        self.__parse("tests/parser/chef/files/brace_block.rb")
+
+    def test_chef_parser_rescue_mod(self) -> None:
+        """
+        rescue_mod
+        """
+        ir = self.__parse("tests/parser/chef/files/rescue_mod.rb")
+        assert len(ir.variables) == 1
+        assert isinstance(ir.variables[0], Variable)
+        assert ir.variables[0].name == "cassandra_config"
+        assert isinstance(ir.variables[0].value, ConditionalStatement)
+
+    def test_chef_parser_method_add_block(self) -> None:
+        """
+        method_add_block
+        """
+        # TODO: For now just checks if it does not crash
+        self.__parse("tests/parser/chef/files/method_add_block.rb")
+
+    def test_chef_parser_begin(self) -> None:
+        """
+        begin
+        """
+        # TODO: For now just checks if it does not crash
+        self.__parse("tests/parser/chef/files/begin.rb")
 
 # TODO:
 # block_var
 # blockarg
 # bodystmt
-# brace_block
 # break
 # aryptn
 # class
 # const_ref
 # const_path_field
-# do_block
 # fndptn
 # for
-# method_add_block
 # mlhs_add_post
 # mlhs_add_star
 # mlhs_paren
@@ -782,7 +848,6 @@ class TestChefParser(TestParser):
 # operator_ambiguous
 # redo
 # rescue
-# rescue_mod
 # retry
 # return
 # return 0

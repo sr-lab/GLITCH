@@ -4,5 +4,5 @@ x = (z until y)
 x = (z while y)
 
 module Namespace
-x = 1
+x = 0o640
 end

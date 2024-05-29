@@ -12,6 +12,6 @@ else
   "number"
 end
 
-case value
+x = case value
 in { key: }
 end
