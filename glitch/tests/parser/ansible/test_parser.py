@@ -439,3 +439,14 @@ class TestAnsibleParser(TestParser):
             5,
             37,
         )
+
+    def test_ansible_parser_node_not_supported(self) -> None:
+        """
+        This file used to throw node not supported
+        """
+        p = AnsibleParser()
+        ir = p.parse_file(
+            "tests/parser/ansible/files/node_not_supported.yml",
+            UnitBlockType.vars,
+        )
+        assert ir is not None

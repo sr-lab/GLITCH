@@ -1,0 +1,15 @@
+---
+- name: Deploy certificates, if any
+  copy:
+    src: "{{ item.source }}"
+    dest: "{{ item.dest }}"
+    remote_src: "{{ item.remote }}"
+    owner: "{{ nginx_user }}"
+    group: "{{ groups['mongodb'][0] }}"
+    mode: 0640
+    test: "{{ install.get('registry', {}).namespace|default('') }}"
+  with_items: "{{ nginx_certificate_files }}"
+  notify:
+    - restart nginx
+  tags:
+    - nginx

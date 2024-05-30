@@ -134,12 +134,15 @@ class YamlParser(p.Parser, ABC):
             else:
                 raise ValueError("Const not supported")
         elif isinstance(node, jinja2.nodes.Call):
-            assert isinstance(node.node, jinja2.nodes.Name)
-            return FunctionCall(
-                node.node.name,
-                [YamlParser.__parse_jinja_node(arg, info) for arg in node.args],
-                info,
-            )  # type: ignore
+            if isinstance(node.node, jinja2.nodes.Name):
+                return FunctionCall(
+                    node.node.name,
+                    [YamlParser.__parse_jinja_node(arg, info) for arg in node.args],
+                    info,
+                )  # type: ignore
+            else: 
+                # TODO: When the node is for instance a Getattr
+                return Null()
         elif isinstance(node, jinja2.nodes.Filter):
             assert node.node is not None
             return YamlParser.__parse_jinja_node(node.node, info)
@@ -151,8 +154,20 @@ class YamlParser(p.Parser, ABC):
                 YamlParser.__parse_jinja_node(node.left, info),
                 YamlParser.__parse_jinja_node(node.right, info),
             )
+        elif isinstance(node, jinja2.nodes.Getattr):
+            return Access(
+                info,
+                YamlParser.__parse_jinja_node(node.node, info),
+                String(node.attr, info),
+            )
+        elif isinstance(node, jinja2.nodes.Getitem):
+            return Access(
+                info,
+                YamlParser.__parse_jinja_node(node.node, info),
+                YamlParser.__parse_jinja_node(node.arg, info),
+            )
         else:
-            raise ValueError("Node not supported")
+            raise ValueError(f"Node not supported {node}")
 
     @staticmethod
     def __parse_string(v: str, info: ElementInfo) -> Expr:
