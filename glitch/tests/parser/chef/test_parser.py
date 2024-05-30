@@ -130,7 +130,7 @@ class TestChefParser(TestParser):
 
         assert isinstance(ir.variables[7], Variable)
         assert isinstance(ir.variables[7].value, Integer)
-        assert ir.variables[7].value.value == 0x0d000004
+        assert ir.variables[7].value.value == 0x0D000004
 
         assert isinstance(ir.variables[8], Variable)
         assert isinstance(ir.variables[8].value, Null)  # FIXME

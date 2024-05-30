@@ -527,7 +527,7 @@ class ChefParser(p.Parser):
                 "top_const_field",
                 "@backref",
                 "@const",
-                "field"
+                "field",
             ],
         ):
             if content.startswith("#{") and content.endswith("}"):
@@ -556,7 +556,10 @@ class ChefParser(p.Parser):
             else:
                 value = []
             return FunctionCall(ast.id, value, info)
-        elif ChefParser._check_id(ast, ["aref", "aref_field"]) and len(ast.args) in [1, 2]:
+        elif ChefParser._check_id(ast, ["aref", "aref_field"]) and len(ast.args) in [
+            1,
+            2,
+        ]:
             ref = ChefParser._get_value(ast.args[0], source)
             assert ref is not None
             if len(ast.args) == 1:
@@ -652,7 +655,7 @@ class ChefParser(p.Parser):
                 "yield",
                 "lambda",
                 "yield0",
-                "sclass"
+                "sclass",
             ],
         ):
             # FIXME: Not supported

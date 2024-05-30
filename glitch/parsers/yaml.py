@@ -140,7 +140,7 @@ class YamlParser(p.Parser, ABC):
                     [YamlParser.__parse_jinja_node(arg, info) for arg in node.args],
                     info,
                 )  # type: ignore
-            else: 
+            else:
                 # TODO: When the node is for instance a Getattr
                 return Null()
         elif isinstance(node, jinja2.nodes.Filter):
@@ -166,6 +166,95 @@ class YamlParser(p.Parser, ABC):
                 YamlParser.__parse_jinja_node(node.node, info),
                 YamlParser.__parse_jinja_node(node.arg, info),
             )
+        elif isinstance(node, jinja2.nodes.Div):
+            return Divide(
+                info,
+                YamlParser.__parse_jinja_node(node.left, info),
+                YamlParser.__parse_jinja_node(node.right, info),
+            )
+        elif isinstance(node, jinja2.nodes.Or):
+            return Or(
+                info,
+                YamlParser.__parse_jinja_node(node.left, info),
+                YamlParser.__parse_jinja_node(node.right, info),
+            )
+        elif isinstance(node, jinja2.nodes.Mul):
+            return Multiply(
+                info,
+                YamlParser.__parse_jinja_node(node.left, info),
+                YamlParser.__parse_jinja_node(node.right, info),
+            )
+
+        elif isinstance(node, jinja2.nodes.Tuple):
+            return Array(
+                [YamlParser.__parse_jinja_node(n, info) for n in node.items], info
+            )
+        elif isinstance(node, jinja2.nodes.Dict):
+            value: Dict[Expr, Expr] = {}
+            for item in node.items:
+                value[
+                    YamlParser.__parse_jinja_node(item.key, info)
+                ] = YamlParser.__parse_jinja_node(item.value, info)
+            return Hash(value, info)
+        elif isinstance(node, jinja2.nodes.Not):
+            return Not(info, YamlParser.__parse_jinja_node(node.node, info))
+        elif isinstance(node, jinja2.nodes.Sub):
+            return Subtract(
+                info,
+                YamlParser.__parse_jinja_node(node.left, info),
+                YamlParser.__parse_jinja_node(node.right, info),
+            )
+        elif isinstance(node, jinja2.nodes.Mod):
+            return Modulo(
+                info,
+                YamlParser.__parse_jinja_node(node.left, info),
+                YamlParser.__parse_jinja_node(node.right, info),
+            )
+        elif isinstance(node, jinja2.nodes.CondExpr):
+            c = ConditionalStatement(
+                YamlParser.__parse_jinja_node(node.test, info),
+                ConditionalStatement.ConditionType.IF,
+            )
+            c.add_statement(YamlParser.__parse_jinja_node(node.expr1, info))
+            if node.expr2 is not None:
+                c.else_statement = ConditionalStatement(
+                    Null(), ConditionalStatement.ConditionType.IF, is_default=True
+                )
+                c.else_statement.add_statement(YamlParser.__parse_jinja_node(node.expr2, info))
+            return c
+        elif isinstance(node, jinja2.nodes.Assign):
+            return Assign(
+                info,
+                YamlParser.__parse_jinja_node(node.target, info),
+                YamlParser.__parse_jinja_node(node.node, info),
+            )
+        elif isinstance(node, jinja2.nodes.And):
+            return And(
+                info,
+                YamlParser.__parse_jinja_node(node.left, info),
+                YamlParser.__parse_jinja_node(node.right, info),
+            )
+        elif isinstance(node, jinja2.nodes.Concat):
+            c = Null()
+            for n in node.nodes:
+                c = Sum(info, c, YamlParser.__parse_jinja_node(n, info))
+            return c
+        elif isinstance(node, jinja2.nodes.Not):
+            return Not(info, YamlParser.__parse_jinja_node(node.node, info))
+        elif isinstance(
+            node,
+            (
+                jinja2.nodes.Compare,
+                jinja2.nodes.Test,
+                jinja2.nodes.Slice,
+                jinja2.nodes.Output,
+                jinja2.nodes.FloorDiv,
+                jinja2.nodes.For,
+                jinja2.nodes.If
+            ),
+        ):
+            # TODO Support these nodes
+            return Null()
         else:
             raise ValueError(f"Node not supported {node}")
 
@@ -231,4 +320,4 @@ class YamlParser(p.Parser, ABC):
                 info,
             )
         else:
-            raise ValueError(f"Unknown value type: {type(v)}")
+            raise ValueError(f"Unknown value type: {type(v)}")  #

@@ -364,7 +364,10 @@ class TestPuppetParser(TestParser):
             22,
         )
 
-        assert unit_block.atomic_units[1].type == "Exec <| title == 'modprobe nf_conntrack_proto_sctp' |>"
+        assert (
+            unit_block.atomic_units[1].type
+            == "Exec <| title == 'modprobe nf_conntrack_proto_sctp' |>"
+        )
         assert unit_block.atomic_units[2].type == "Exec"
 
         assert unit_block.unit_blocks[0].type == UnitBlockType.block

@@ -187,7 +187,9 @@ class PuppetParser(p.Parser):
             return Null(info=PuppetParser.__get_info(codeelement, code))
 
     @staticmethod
-    def __process_string(codeelement: puppetmodel.CodeElement | None, code: List[str]) -> str:
+    def __process_string(
+        codeelement: puppetmodel.CodeElement | None, code: List[str]
+    ) -> str:
         if codeelement is None:
             return ""
         elif isinstance(codeelement, puppetmodel.Value) and isinstance(codeelement.value, str):  # type: ignore
@@ -195,7 +197,7 @@ class PuppetParser(p.Parser):
         elif isinstance(codeelement, puppetmodel.ResourceCollector):
             return PuppetParser.__get_code(codeelement, code)
 
-        raise ValueError(f"Unsupported code element: {codeelement} ({type(codeelement)})") # type: ignore
+        raise ValueError(f"Unsupported code element: {codeelement} ({type(codeelement)})")  # type: ignore
 
     @staticmethod
     def __process_expr(
@@ -516,8 +518,8 @@ class PuppetParser(p.Parser):
                     re_aux.add_atomic_unit(resource)
                 else:
                     return resource
-            
-            return re_aux # type: ignore
+
+            return re_aux  # type: ignore
         elif isinstance(codeelement, puppetmodel.ClassAsResource):
             resource: AtomicUnit = AtomicUnit(
                 PuppetParser.__process_string(codeelement.title, code), "class"
