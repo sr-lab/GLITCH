@@ -347,8 +347,8 @@ class TestPuppetParser(TestParser):
             "tests/parser/puppet/files/special_resource.pp", UnitBlockType.script
         )
         assert unit_block is not None
-        assert len(unit_block.atomic_units) == 1
-        assert len(unit_block.unit_blocks) == 2
+        assert len(unit_block.atomic_units) == 3
+        assert len(unit_block.unit_blocks) == 3
 
         assert unit_block.atomic_units[0].name == "apache"
         assert unit_block.atomic_units[0].type == "class"
@@ -363,6 +363,9 @@ class TestPuppetParser(TestParser):
             2,
             22,
         )
+
+        assert unit_block.atomic_units[1].type == "Exec <| title == 'modprobe nf_conntrack_proto_sctp' |>"
+        assert unit_block.atomic_units[2].type == "Exec"
 
         assert unit_block.unit_blocks[0].type == UnitBlockType.block
         assert unit_block.unit_blocks[0].name == "resource_expression"
@@ -423,6 +426,14 @@ class TestPuppetParser(TestParser):
         )
         assert unit_block.unit_blocks[1].atomic_units[1].attributes[1].name == "group"
 
+        assert isinstance(unit_block.unit_blocks[2], UnitBlock)
+        assert unit_block.unit_blocks[2].type == UnitBlockType.block
+        assert unit_block.unit_blocks[2].name == "resource_expression"
+        assert len(unit_block.unit_blocks[2].atomic_units) == 2
+
+        assert unit_block.unit_blocks[2].atomic_units[0].name == "armitage"
+        assert unit_block.unit_blocks[2].atomic_units[1].name == "metasploit"
+
     def test_puppet_parser_operations(self) -> None:
         """
         All operations
@@ -431,7 +442,7 @@ class TestPuppetParser(TestParser):
             "tests/parser/puppet/files/operations.pp", UnitBlockType.script
         )
         assert unit_block is not None
-        assert len(unit_block.variables) == 18
+        assert len(unit_block.variables) == 19
         for i in range(18):
             assert unit_block.variables[i].name == f"x"
         assert isinstance(unit_block.variables[0].value, Equal)

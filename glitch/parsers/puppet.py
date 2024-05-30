@@ -187,13 +187,15 @@ class PuppetParser(p.Parser):
             return Null(info=PuppetParser.__get_info(codeelement, code))
 
     @staticmethod
-    def __process_string(codeelement: puppetmodel.CodeElement | None) -> str:
+    def __process_string(codeelement: puppetmodel.CodeElement | None, code: List[str]) -> str:
         if codeelement is None:
             return ""
         elif isinstance(codeelement, puppetmodel.Value) and isinstance(codeelement.value, str):  # type: ignore
             return codeelement.value
+        elif isinstance(codeelement, puppetmodel.ResourceCollector):
+            return PuppetParser.__get_code(codeelement, code)
 
-        raise ValueError(f"Unsupported code element: {codeelement}")
+        raise ValueError(f"Unsupported code element: {codeelement} ({type(codeelement)})") # type: ignore
 
     @staticmethod
     def __process_expr(
@@ -247,7 +249,7 @@ class PuppetParser(p.Parser):
 
         dependencies: List[str] = []
         for dep in deps:
-            d = PuppetParser.__process_string(dep)
+            d = PuppetParser.__process_string(dep, code)
             dependencies.append(d)
 
         d = Dependency(dependencies)
@@ -428,6 +430,9 @@ class PuppetParser(p.Parser):
             return binary_operation(RightShift)
         elif codeelement.operator == "<<":
             return binary_operation(LeftShift)
+        elif codeelement.operator in ["=~", "!~"]:
+            # TODO
+            return Null()
         elif codeelement.operator == "[]" and len(codeelement.arguments) == 2:
             return binary_operation(Access)
 
@@ -471,7 +476,7 @@ class PuppetParser(p.Parser):
         if isinstance(codeelement, puppetmodel.Value):
             return PuppetParser.__process_value(codeelement, path, code)  # type: ignore
         elif isinstance(codeelement, puppetmodel.Attribute):
-            name = PuppetParser.__process_string(codeelement.key)
+            name = PuppetParser.__process_string(codeelement.key, code)
             if name.startswith("$"):
                 name = name[1:]
             value = PuppetParser.__process_codeelement(codeelement.value, path, code)
@@ -482,20 +487,40 @@ class PuppetParser(p.Parser):
             )
             return attribute
         elif isinstance(codeelement, puppetmodel.Resource):
-            resource: AtomicUnit = AtomicUnit(
-                PuppetParser.__process_string(codeelement.title),
-                PuppetParser.__process_string(codeelement.type),
-            )
-            for attr in codeelement.attributes:
-                attr = PuppetParser.__process_codeelement(attr, path, code)
-                assert isinstance(attr, Attribute)
-                resource.add_attribute(attr)
-            resource.line, resource.column = codeelement.line, codeelement.col
-            resource.code = PuppetParser.__get_code(codeelement, code)
-            return resource
+            if isinstance(codeelement.title, puppetmodel.Array):
+                titles = codeelement.title.value
+                re_aux = UnitBlock("resource_expression", UnitBlockType.block)
+                re_aux.line, re_aux.column = codeelement.line, codeelement.col
+                re_aux.code = PuppetParser.__get_code(codeelement, code)
+                re_aux.end_line, re_aux.end_column = (
+                    codeelement.end_line,
+                    codeelement.end_col,
+                )
+            else:
+                titles = [codeelement.title]
+                re_aux = None
+
+            for title in titles:
+                resource: AtomicUnit = AtomicUnit(
+                    PuppetParser.__process_string(title, code),
+                    PuppetParser.__process_string(codeelement.type, code),
+                )
+                for attr in codeelement.attributes:
+                    attr = PuppetParser.__process_codeelement(attr, path, code)
+                    assert isinstance(attr, Attribute)
+                    resource.add_attribute(attr)
+                resource.line, resource.column = codeelement.line, codeelement.col
+                resource.code = PuppetParser.__get_code(codeelement, code)
+
+                if re_aux is not None:
+                    re_aux.add_atomic_unit(resource)
+                else:
+                    return resource
+            
+            return re_aux # type: ignore
         elif isinstance(codeelement, puppetmodel.ClassAsResource):
             resource: AtomicUnit = AtomicUnit(
-                PuppetParser.__process_string(codeelement.title), "class"
+                PuppetParser.__process_string(codeelement.title, code), "class"
             )
             for attr in codeelement.attributes:
                 attr = PuppetParser.__process_codeelement(attr, path, code)
@@ -571,7 +596,7 @@ class PuppetParser(p.Parser):
             # FIXME Lambdas are not yet supported
             return Null()
         elif isinstance(codeelement, puppetmodel.FunctionCall):
-            name = PuppetParser.__process_string(codeelement.name)
+            name = PuppetParser.__process_string(codeelement.name, code)
 
             args: List[Expr] = []
             for arg in codeelement.arguments:

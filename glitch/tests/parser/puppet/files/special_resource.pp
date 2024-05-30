@@ -25,3 +25,14 @@ file {
   ;
 }
 
+package { ['armitage', 'metasploit']:
+  ensure => 'installed',
+}
+
+Exec <| title == 'modprobe nf_conntrack_proto_sctp' |> { returns => [0,1] }
+
+Exec {
+  provider => 'shell',
+  path => '/usr/bin:/bin:/sbin:/usr/sbin',
+  logoutput => true,
+}
