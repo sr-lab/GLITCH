@@ -94,11 +94,12 @@ class TestChefParser(TestParser):
 
     def test_chef_parser_mix(self) -> None:
         """
-        alias | next | module | oct integer
+        alias | next | module | oct integer | yield | assign | backref | @const
+        binary | sclass
         """
         # TODO: support alias
         ir = self.__parse("tests/parser/chef/files/mix.rb")
-        assert len(ir.variables) == 3
+        assert len(ir.variables) == 10
         assert len(ir.unit_blocks) == 1
 
         assert isinstance(ir.variables[0], Variable)
@@ -114,6 +115,25 @@ class TestChefParser(TestParser):
 
         assert isinstance(ir.variables[2], Variable)
         assert isinstance(ir.variables[2].value, Null)  # FIXME
+
+        assert isinstance(ir.variables[3], Variable)
+        assert isinstance(ir.variables[3].value, Null)  # FIXME
+
+        assert isinstance(ir.variables[4], Variable)
+        assert isinstance(ir.variables[4].value, Assign)
+
+        assert isinstance(ir.variables[5], Variable)
+        assert isinstance(ir.variables[5].value, ConditionalStatement)
+
+        assert isinstance(ir.variables[6], Variable)
+        assert isinstance(ir.variables[6].value, MethodCall)
+
+        assert isinstance(ir.variables[7], Variable)
+        assert isinstance(ir.variables[7].value, Integer)
+        assert ir.variables[7].value.value == 0x0d000004
+
+        assert isinstance(ir.variables[8], Variable)
+        assert isinstance(ir.variables[8].value, Null)  # FIXME
 
         assert isinstance(ir.unit_blocks[0], UnitBlock)
         assert ir.unit_blocks[0].type == UnitBlockType.block
@@ -477,6 +497,9 @@ class TestChefParser(TestParser):
         assert isinstance(else_statement.statements[2].value, AddArgs)  # FIXME
         assert len(else_statement.statements[2].value.value) == 2
 
+        assert len(ir.variables) == 1
+        assert isinstance(ir.variables[0].value, ConditionalStatement)
+
     def test_chef_parser_opassign(self) -> None:
         """
         opassign | rational | super | top_const_ref | top_const_field
@@ -706,8 +729,8 @@ class TestChefParser(TestParser):
             "/.ssh/id_dsa.pub\n",
             5,
             22,
-            5,
-            39,
+            6,
+            1,
         )
 
         assert isinstance(ir.variables[2].value.receiver.left.left, Sum)
@@ -780,6 +803,12 @@ class TestChefParser(TestParser):
         """
         self.__parse("tests/parser/chef/files/string_index_out_of_range.rb")
 
+    def test_chef_parser_list_index_out_of_range(self) -> None:
+        """
+        This file used to file with list index out of range.
+        """
+        self.__parse("tests/parser/chef/files/list_index_out_of_range.rb")
+
     def test_chef_parser_node_object_not_subscriptable(self) -> None:
         """
         This file used to file with node object not subscriptable.
@@ -824,6 +853,23 @@ class TestChefParser(TestParser):
         # TODO: For now just checks if it does not crash
         self.__parse("tests/parser/chef/files/begin.rb")
 
+    def test_chef_parser_arg_paren(self) -> None:
+        """
+        arg_paren
+        """
+        ir = self.__parse("tests/parser/chef/files/arg_paren.rb")
+        assert len(ir.variables) == 1
+        assert isinstance(ir.variables[0], Variable)
+        assert isinstance(ir.variables[0].value, FunctionCall)
+
+    def test_chef_parser_field(self) -> None:
+        """
+        field
+        """
+        ir = self.__parse("tests/parser/chef/files/field.rb")
+        assert len(ir.variables) == 1
+        assert isinstance(ir.variables[0], Variable)
+
 
 # TODO:
 # block_var
@@ -850,7 +896,5 @@ class TestChefParser(TestParser):
 # until
 # var_alias
 # while
-# yield
-# yield0
 # lambda
 # tlambda

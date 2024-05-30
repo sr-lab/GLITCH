@@ -106,30 +106,37 @@ class ChefParser(p.Parser):
 
         start_line, start_column = sys.maxsize, sys.maxsize
         end_line, end_column = 0, 0
-        bounded_structures: Dict[str, Tuple[str, str]] = {
-            "brace_block": ("{", "}"),
-            "arg_paren": ("(", ")"),
-            "paren": ("(", ")"),
-            "string_embexpr": ("{", "}"),
-            "aref": ("", "]"),
-            "aref_field": ("", "]"),
-            "array": ("[", "]"),
-            "hash": ("{", "}"),
-            "xstring_literal": ("`", "`"),
-            "defined": ("", ")"),
+        bounded_structures: Dict[str, Tuple[List[str], List[str]]] = {
+            "brace_block": (["{"], ["}"]),
+            "arg_paren": (["("], [")"]),
+            "paren": (["("], [")"]),
+            "string_embexpr": (["{"], ["}"]),
+            "aref": ([""], ["]"]),
+            "aref_field": ([""], ["]"]),
+            # In words, qwords, qsymbols and symbols, an array can be bounded
+            # by ) or }
+            "array": (["[", "{", "("], ["]", "}", ")"]),
+            "hash": (["{"], ["}"]),
+            "xstring_literal": (["`"], ["`"]),
+            "defined": ([""], [")"]),
         }
 
         if ChefParser._check_node(ast, ["@tstring_content"], 2):
             lines = bytes(ast.args[0], "utf-8").decode("unicode_escape")
             lines = lines.split("\n")
             lines = [l + "\n" for l in lines[:-1]] + [lines[-1]]
-            if lines[-1] == "":
-                lines.pop()
-
             start_line, start_column = ast.args[1][0], ast.args[1][1]
-            end_line = start_line + len(lines) - 1
 
-            if len(lines) == 1:
+            on_new_line = lines[-1] == ""
+            if on_new_line:
+                lines.pop()
+                end_line = start_line + len(lines)
+            else:
+                end_line = start_line + len(lines) - 1
+
+            if on_new_line:
+                end_column = -1
+            elif len(lines) == 1:
                 end_column = start_column + len(lines[-1]) - 1
             else:
                 end_column = len(lines[-1]) - 1
@@ -166,6 +173,7 @@ class ChefParser(p.Parser):
                     end_column = bound[3]
                 if bound[2] == end_line and bound[3] > end_column:
                     end_column = bound[3]
+
             # We have to consider extra characters which correspond
             # to enclosing characters of these structures
             if start_line != sys.maxsize and ChefParser._check_id(
@@ -179,7 +187,7 @@ class ChefParser(p.Parser):
                 next_lines = "".join(next_lines)
                 # Add spaces/brackets in front of last token
                 for c in next_lines:
-                    if c == r_bracket:
+                    if c in r_bracket:
                         end_column += 1
                         break
                     elif c == "\n":
@@ -193,9 +201,9 @@ class ChefParser(p.Parser):
                 previous_lines = "".join(previous_lines)[::-1]
                 # Add spaces/brackets behind first token
                 for c in previous_lines:
-                    if l_bracket == "":
+                    if l_bracket == [""]:
                         break
-                    elif c == l_bracket:
+                    elif c in l_bracket:
                         start_column -= 1
                         break
                     elif c == "\n":
@@ -356,7 +364,7 @@ class ChefParser(p.Parser):
                 return And(info, left, right)
             case "or" | '"||"':
                 return Or(info, left, right)
-            case "=~":
+            case "=~" | "!~":
                 # TODO: Unsupported operation
                 return Null()
             case _:
@@ -432,6 +440,8 @@ class ChefParser(p.Parser):
             value.end_line, value.end_column = info.end_line, info.end_column
             return value
         elif ChefParser._check_id(ast, ["@int"]):
+            if "x" in content:
+                return Integer(int(content, 16), info)
             if "o" in content:
                 return Integer(int(content, 8), info)
             return Integer(int(content), info)
@@ -515,6 +525,9 @@ class ChefParser(p.Parser):
                 "const_path_ref",
                 "top_const_ref",
                 "top_const_field",
+                "@backref",
+                "@const",
+                "field"
             ],
         ):
             if content.startswith("#{") and content.endswith("}"):
@@ -531,6 +544,10 @@ class ChefParser(p.Parser):
             c = ChefParser.CaseChecker(source, ast)
             c.check_all()
             return c.condition
+        elif ChefParser._check_id(ast, ["if"]):
+            c = ChefParser.IfChecker(source, ast)
+            c.check_all()
+            return c.condition
         elif ChefParser._check_id(ast, ["defined", "next", "super", "zsuper"]):
             if len(ast.args) != 0:
                 value = ChefParser._get_value(ast.args[0], source)
@@ -539,11 +556,14 @@ class ChefParser(p.Parser):
             else:
                 value = []
             return FunctionCall(ast.id, value, info)
-        elif ChefParser._check_id(ast, ["aref", "aref_field"]) and len(ast.args) == 2:
+        elif ChefParser._check_id(ast, ["aref", "aref_field"]) and len(ast.args) in [1, 2]:
             ref = ChefParser._get_value(ast.args[0], source)
             assert ref is not None
-            index = ChefParser._get_value(ast.args[1], source)
-            assert index is not None
+            if len(ast.args) == 1:
+                index = Null(info)
+            else:
+                index = ChefParser._get_value(ast.args[1], source)
+                assert index is not None
             return Access(info, ref, index)
         elif ChefParser._check_node(ast, ["call"], 3):
             receiver = ChefParser._get_value(ast.args[0], source)
@@ -584,6 +604,8 @@ class ChefParser(p.Parser):
             if len(args) == 1:
                 return args[0]
             return AddArgs(args, info)
+        elif ChefParser._check_node(ast, ["arg_paren"], 0):
+            return Null(info)
         elif ChefParser._check_node(ast, ["arg_paren", "arg_ambiguous"], 1):
             return ChefParser._get_value(ast.args[0], source)
         elif ChefParser._check_node(ast, ["paren"], 1):
@@ -610,6 +632,12 @@ class ChefParser(p.Parser):
             method.args = args
 
             return method
+        elif ChefParser._check_node(ast, ["assign"], 2):
+            left = ChefParser._get_value(ast.args[0], source)
+            right = ChefParser._get_value(ast.args[1], source)
+            assert left is not None
+            assert right is not None
+            return Assign(info, left, right)
         elif ChefParser._check_id(
             ast,
             [
@@ -621,6 +649,10 @@ class ChefParser(p.Parser):
                 "brace_block",
                 "method_add_block",
                 "begin",
+                "yield",
+                "lambda",
+                "yield0",
+                "sclass"
             ],
         ):
             # FIXME: Not supported
@@ -883,6 +915,14 @@ class ChefParser(p.Parser):
                         self.variables[-1].value = binary(Modulo)
                     case "**=":
                         self.variables[-1].value = binary(Power)
+                    case "|=":
+                        self.variables[-1].value = binary(Sum)
+                    case "&=":
+                        self.variables[-1].value = binary(BitwiseAnd)
+                    case "&&=":
+                        self.variables[-1].value = binary(And)
+                    case "<<=":
+                        self.variables[-1].value = binary(LeftShift)
                     case _:
                         raise ValueError(f"Unknown operator {op}")
 

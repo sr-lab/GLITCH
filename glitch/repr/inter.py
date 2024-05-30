@@ -325,6 +325,11 @@ class BitwiseXor(BinaryOperation):
         super().__init__(info, left, right)
 
 
+class Assign(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
 class Block(CodeElement):
     def __init__(self) -> None:
         CodeElement.__init__(self)

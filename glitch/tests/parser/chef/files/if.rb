@@ -9,3 +9,9 @@ else
     first, second = value
     value = first, *second
 end
+
+url = if endpoint['url']
+    endpoint['url']
+else
+    node['datadog']['url']
+end

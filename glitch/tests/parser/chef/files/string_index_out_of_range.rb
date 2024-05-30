@@ -8,3 +8,10 @@ def sevenzip_path_from_registry
     end
     "#{basepath}7z.exe"
 end
+
+https_map = "
+    map $scheme $https {
+        default off;
+        https on;
+    }
+"
