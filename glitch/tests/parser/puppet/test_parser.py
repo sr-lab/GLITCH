@@ -526,3 +526,13 @@ class TestPuppetParser(TestParser):
         assert isinstance(unit_block.variables[15].value, RightShift)
         assert isinstance(unit_block.variables[16].value, LeftShift)
         assert isinstance(unit_block.variables[17].value, Access)
+
+    def test_puppet_parser_edge_case(self) -> None:
+        """
+        The name _user_owner used to crash the parser
+        """
+        unit_block = PuppetParser().parse_file(
+            "tests/parser/puppet/files/edge_case.pp", UnitBlockType.script
+        )
+        assert unit_block is not None
+        assert len(unit_block.unit_blocks) == 1
