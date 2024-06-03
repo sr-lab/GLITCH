@@ -493,6 +493,8 @@ class DeltaPCompiler:
             return PSkip()
         elif isinstance(code_element, UnitBlock):
             return self.__handle_unit_block(code_element)
+        elif isinstance(code_element, Null):
+            return PSkip()
 
         raise RuntimeError(f"Unsupported code element, got {code_element}")
 
