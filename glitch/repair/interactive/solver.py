@@ -2,6 +2,7 @@ import z3
 import sys
 import uuid
 import time
+import logging
 import glitch.repr.inter as inter
 
 from copy import deepcopy
@@ -217,8 +218,9 @@ class PatchSolver:
             lhs, lhs_constraints = self.__compile_expr(expr.lhs)
             rhs, rhs_constraints = self.__compile_expr(expr.rhs)
             return Concat(lhs, rhs), lhs_constraints + rhs_constraints
-
-        raise ValueError(f"Not supported {expr}")
+        
+        logging.warning(f"Unsupported expression: {expr}")
+        return StringVal(UNDEF), constraints
 
     def __generate_hard_constraints(self, filesystem: FileSystemState) -> None:
         for path, state in filesystem.state.items():
