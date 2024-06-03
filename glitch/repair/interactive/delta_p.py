@@ -149,8 +149,12 @@ class PStatement(ABC):
     def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> str:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
-        elif isinstance(expr, PEVar):
+        elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
+            return str(expr.const.value)
+        elif isinstance(expr, PEVar) and expr.id in vars:
             return self.__get_str(vars[expr.id], vars)
+        elif isinstance(expr, PEVar) and expr.id not in vars:
+            return expr.id
         elif isinstance(expr, PRLet):
             return self.__get_str(expr.expr, vars)
         elif isinstance(expr, PEUndef):
