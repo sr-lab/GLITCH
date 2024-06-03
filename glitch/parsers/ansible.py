@@ -212,10 +212,9 @@ class AnsibleParser(YamlParser):
 
                     if isinstance(val, MappingNode) and key.value == type:
                         for atr, atr_val in val.value:
-                            if atr.value != "name":
-                                attributes += AnsibleParser.__parse_attribute(
-                                    atr.value, atr, atr_val, code
-                                )
+                            attributes += AnsibleParser.__parse_attribute(
+                                atr.value, atr, atr_val, code
+                            )
                     else:
                         attributes += AnsibleParser.__parse_attribute(
                             key.value, key, val, code

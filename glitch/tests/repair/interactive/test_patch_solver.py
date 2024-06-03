@@ -575,6 +575,35 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
                     f.write(self.ansible_script_2)
         assert check
 
+class TestPatchSolverAnsibleScript3(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_3 = """---
+- name: Add the user 'johnd'
+  ansible.builtin.user:
+    name: johnd
+"""
+        self._setup_patch_solver(ansible_script_3, UnitBlockType.unknown, Tech.ansible)
+
+    def test_patch_solver_ansible_user_delete(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["user:johnd"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        self.statement.to_filesystems()
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Add the user 'johnd'
+  ansible.builtin.user:
+    name: johnd
+    state: absent
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
 
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
@@ -720,6 +749,54 @@ class TestPatchSolverChefScript2(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
 
 
+class TestPatchSolverChefScript3(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_2 = """
+        user 'test' do
+            name   'test'
+            action :create
+        end
+        """
+        self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_user_delete(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["user:test"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+        user 'test' do
+            name   'test'
+            action :delete
+        end
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+    def test_patch_solver_chef_user_change(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["user:test2"] = File(UNDEF, UNDEF, UNDEF)
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+        user 'test' do
+            name   'test2'
+            action :create
+        end
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+
 class TestPatchSolverChefScript4(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -770,49 +847,61 @@ class TestPatchSolverChefScript4(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
 
 
-class TestPatchSolverChefScript3(TestPatchSolver):
+class TestPatchSolverChefScript5(TestPatchSolver):
     def setUp(self):
         super().setUp()
         chef_script_2 = """
-        user 'test' do
-            name   'test'
-            action :create
-        end
+file '/var/www/customers/public_html/index.php' do
+    content '<html>This is a placeholder for the home page.</html>'
+    mode '0755'
+    owner 'web_admin'
+    group 'web_admin'
+end
+
+file '/var/www/customers/public_html/index2.php' do
+    content '<html>This is a placeholder for the home page.</html>'
+    mode '0755'
+    owner 'web_admin'
+    group 'web_admin'
+end
         """
         self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
 
-    def test_patch_solver_chef_user_delete(self) -> None:
+    def test_patch_solver_chef_minimize(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["user:test"] = Nil()
+        filesystem.state["/var/www/customers/public_html/index.php"] = File(
+            "0755", "test", "<html>This is a placeholder for the home page.</html>"
+        )
+        filesystem.state["/var/www/customers/public_html/index2.php"] = File(
+            "0755", "web_admin", "<html>This is a placeholder for the home page.</html>"
+        )
 
         assert self.statement is not None
-        solver = PatchSolver(self.statement, filesystem)
+        self.statement: PStatement = PStatement.minimize(
+            self.statement, ["/var/www/customers/public_html/index.php"]
+        )
+        minimized_filesystem = FileSystemState()
+        minimized_filesystem.state["/var/www/customers/public_html/index.php"] = File(
+            "0755", "test", "<html>This is a placeholder for the home page.</html>"
+        )
+        solver = PatchSolver(self.statement, minimized_filesystem)
         models = solver.solve()
         assert models is not None
         assert len(models) == 1
 
         result = """
-        user 'test' do
-            name   'test'
-            action :delete
-        end
-        """
-        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+file '/var/www/customers/public_html/index.php' do
+    content '<html>This is a placeholder for the home page.</html>'
+    mode '0755'
+    owner 'test'
+    group 'web_admin'
+end
 
-    def test_patch_solver_chef_user_change(self) -> None:
-        filesystem = FileSystemState()
-        filesystem.state["user:test2"] = File(UNDEF, UNDEF, UNDEF)
-
-        assert self.statement is not None
-        solver = PatchSolver(self.statement, filesystem)
-        models = solver.solve()
-        assert models is not None
-        assert len(models) == 1
-
-        result = """
-        user 'test' do
-            name   'test2'
-            action :create
-        end
+file '/var/www/customers/public_html/index2.php' do
+    content '<html>This is a placeholder for the home page.</html>'
+    mode '0755'
+    owner 'web_admin'
+    group 'web_admin'
+end
         """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)

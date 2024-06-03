@@ -220,7 +220,9 @@ class YamlParser(p.Parser, ABC):
                 c.else_statement = ConditionalStatement(
                     Null(), ConditionalStatement.ConditionType.IF, is_default=True
                 )
-                c.else_statement.add_statement(YamlParser.__parse_jinja_node(node.expr2, info))
+                c.else_statement.add_statement(
+                    YamlParser.__parse_jinja_node(node.expr2, info)
+                )
             return c
         elif isinstance(node, jinja2.nodes.Assign):
             return Assign(
@@ -250,7 +252,7 @@ class YamlParser(p.Parser, ABC):
                 jinja2.nodes.Output,
                 jinja2.nodes.FloorDiv,
                 jinja2.nodes.For,
-                jinja2.nodes.If
+                jinja2.nodes.If,
             ),
         ):
             # TODO Support these nodes
