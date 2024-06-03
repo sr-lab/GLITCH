@@ -34,6 +34,11 @@ class PEUndef(PExpr):
 
 
 @dataclass
+class PEUnsupported(PExpr):
+    pass
+
+
+@dataclass
 class PEConst(PExpr):
     const: PConst
 

@@ -28,7 +28,7 @@ from z3 import (
 from glitch.repair.interactive.filesystem import FileSystemState
 from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
-from glitch.repair.interactive.values import DefaultValue, UNDEF
+from glitch.repair.interactive.values import DefaultValue, UNDEF, UNSUPPORTED
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 from glitch.repr.inter import (
     Attribute,
@@ -75,7 +75,7 @@ class PatchSolver:
 
         self.possible_strings = self.__get_all_strings(statement)
         self.possible_strings += self.__get_all_strings(filesystem)
-        self.possible_strings += [UNDEF, "", "nil", "file", "dir"]
+        self.possible_strings += [UNDEF, UNSUPPORTED, "", "nil", "file", "dir"]
 
         # FIXME: check the defaults
         self.__funs = PatchSolver.__Funs(
@@ -220,7 +220,7 @@ class PatchSolver:
             return Concat(lhs, rhs), lhs_constraints + rhs_constraints
 
         logging.warning(f"Unsupported expression: {expr}")
-        return StringVal(UNDEF), constraints
+        return StringVal(UNSUPPORTED), constraints
 
     def __generate_hard_constraints(self, filesystem: FileSystemState) -> None:
         for path, state in filesystem.state.items():
@@ -541,9 +541,11 @@ class PatchSolver:
             old_line = lines[codeelement.line - 1]
             start = codeelement.column - 1
             end = codeelement.end_column - 1
-            if old_line[start:end].startswith('"'):
+            if old_line[start:end].startswith('"') or codeelement.code.startswith('"'):
                 value = f'"{value}"'
-            elif old_line[start:end].startswith("'"):
+            elif old_line[start:end].startswith("'") or codeelement.code.startswith(
+                "'"
+            ):
                 value = f"'{value}'"
             if old_line[end - 1] == "\n":
                 value = f"{value}\n"
@@ -581,9 +583,16 @@ class PatchSolver:
             label, value = change
             value = value.as_string()
             codeelement = labeled_script.get_codeelement(label)
-            assert isinstance(codeelement, (inter.String, inter.Null, inter.Attribute))
 
-            if isinstance(codeelement, inter.Attribute):
+            assert isinstance(codeelement, (inter.Expr, inter.Attribute))
+            if not isinstance(codeelement, (inter.String, inter.Null, inter.Attribute)):
+                # HACK: This allows to fix unsupported expressions
+                codeelement = inter.String(
+                    value, ElementInfo.from_code_element(codeelement)
+                )
+                codeelement.code = "''"
+
+            if isinstance(codeelement, inter.Attribute) and value == UNDEF:
                 changed_elements.append(
                     (codeelement, value, ElementInfo.from_code_element(codeelement))
                 )

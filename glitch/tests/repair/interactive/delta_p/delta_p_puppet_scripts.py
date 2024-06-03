@@ -575,7 +575,7 @@ delta_p_puppet_default_state = PSeq(
                     ),
                     rhs=PLet(
                         id="content_432",
-                        expr=PEUndef(),
+                        expr=PRLet(id="literal-9", expr=PEUndef(), label=9),
                         label=0,
                         body=PWrite(
                             path=PRLet(

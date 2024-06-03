@@ -445,6 +445,60 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript7(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_7 = """
+$old_config = loadyamlv2('/etc/fuel/cluster/astute.yaml.old','notfound')
+
+# If it's a redeploy and the file exists we can proceed
+if($old_config != 'notfound')
+{
+  $old_gw_type = $old_config['midonet']['gateway_type']
+  if ($old_gw_type == 'bgp') {
+
+    file { 'delete router interfaces script':
+      ensure  => present,
+      path    => '/tmp/delete_router_interfaces_bgp.sh',
+      content => template('/etc/fuel/plugins/midonet-9.2/puppet/templates/delete_router_interfaces_bgp.sh.erb'),
+    }
+  }
+}
+"""
+        self._setup_patch_solver(puppet_script_7, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_inner_if(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/tmp/delete_router_interfaces_bgp.sh"] = File(
+            None, None, "test"
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+$old_config = loadyamlv2('/etc/fuel/cluster/astute.yaml.old','notfound')
+
+# If it's a redeploy and the file exists we can proceed
+if($old_config != 'notfound')
+{
+  $old_gw_type = $old_config['midonet']['gateway_type']
+  if ($old_gw_type == 'bgp') {
+
+    file { 'delete router interfaces script':
+      ensure  => present,
+      path    => '/tmp/delete_router_interfaces_bgp.sh',
+      content => 'test',
+    }
+  }
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()

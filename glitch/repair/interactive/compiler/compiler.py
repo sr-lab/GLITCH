@@ -114,6 +114,25 @@ class DeltaPCompiler:
                 self.__compiler._sketched -= 2
                 self.add_attribute(attr)
             else:
+                # HACK
+                attr_value = self.get_attribute_value(attr_name)
+                if attr_value == PEUnsupported():
+                    if self.__compiler._labeled_script.has_label(attr.value):
+                        label = self.__compiler._labeled_script.get_label(attr.value)
+                    else:
+                        label = self.__compiler._labeled_script.add_label(
+                            f"literal-{self.__compiler._literal}", attr.value
+                        )
+                    self.__attributes[attr_name] = (
+                        PRLet(
+                            f"literal-{label}",
+                            PEUndef(),
+                            label,
+                        ),
+                        attr,
+                    )
+                    self.__compiler._literal += 1
+
                 label = self.__compiler._labeled_script.get_label(attr)
 
             self.__compiler._labeled_script.add_location(atomic_unit, attr)
@@ -224,7 +243,7 @@ class DeltaPCompiler:
         else:
             # TODO: Unsupported
             logging.warning(f"Unsupported expression, got {expr}")
-            return PEUndef()
+            return PEUnsupported()
 
     def __handle_user(
         self,
