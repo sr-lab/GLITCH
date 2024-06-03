@@ -52,3 +52,19 @@ def test_delta_p_minimize_if() -> None:
 
     minimized = PStatement.minimize(statement, ["test1"])
     assert isinstance(minimized, PSkip)
+
+
+def test_delta_p_minimize_with_add() -> None:
+    statement = PCreate(
+        PEBinOP(
+            PAdd(),
+            PEConst(const=PStr(value="ola")),
+            PEConst(const=PStr(value="2"))
+        )
+    )
+
+    minimized = PStatement.minimize(statement, ["ola2"])
+    assert minimized == statement
+
+    minimized = PStatement.minimize(statement, ["ola3"])
+    assert isinstance(minimized, PSkip)

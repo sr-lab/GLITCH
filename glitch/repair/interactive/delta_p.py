@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from abc import ABC
-from typing import Optional, List, Union, Callable, Sequence
+from typing import Optional, List, Union, Callable
 
 from glitch.repair.interactive.filesystem import *
 
@@ -195,28 +195,28 @@ class PStatement(ABC):
         """
 
         def minimize_aux(
-            statement: "PStatement", considered_paths: Sequence[PExpr]
+            statement: "PStatement", 
+            considered_paths: List[str],
+            vars: Dict[str, PExpr]
         ) -> "PStatement":
-            # FIXME compile statement.path
-            if isinstance(statement, PMkdir) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PCreate) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PWrite) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PRm) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PCp) and (
-                statement.src in considered_paths or statement.dst in considered_paths
-            ):
-                return statement
-            elif isinstance(statement, PChmod) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PChown) and statement.path in considered_paths:
-                return statement
+            if isinstance(statement, (PMkdir, PCreate, PRm, PWrite, PChmod, PChown)):
+                path = statement.__get_str(
+                    statement.path, vars
+                )
+                if path not in considered_paths:
+                    return PSkip()
+                else:
+                    return statement
+            elif isinstance(statement, PCp):
+                src = statement.__get_str(statement.src, vars)
+                dst = statement.__get_str(statement.dst, vars)
+                if src not in considered_paths and dst not in considered_paths:
+                    return PSkip()
+                else:
+                    return statement
             elif isinstance(statement, PSeq):
-                lhs = minimize_aux(statement.lhs, considered_paths)
-                rhs = minimize_aux(statement.rhs, considered_paths)
+                lhs = minimize_aux(statement.lhs, considered_paths, vars)
+                rhs = minimize_aux(statement.rhs, considered_paths, vars)
                 if not isinstance(lhs, PSkip) and not isinstance(rhs, PSkip):
                     return PSeq(lhs, rhs)
                 elif isinstance(lhs, PSkip):
@@ -224,7 +224,8 @@ class PStatement(ABC):
                 elif isinstance(rhs, PSkip):
                     return lhs
             elif isinstance(statement, PLet):
-                body = minimize_aux(statement.body, considered_paths)
+                vars[statement.id] = statement.expr
+                body = minimize_aux(statement.body, considered_paths, vars)
                 if not isinstance(body, PSkip):
                     return PLet(
                         statement.id,
@@ -233,8 +234,8 @@ class PStatement(ABC):
                         body,
                     )
             elif isinstance(statement, PIf):
-                cons = minimize_aux(statement.cons, considered_paths)
-                alt = minimize_aux(statement.alt, considered_paths)
+                cons = minimize_aux(statement.cons, considered_paths, vars)
+                alt = minimize_aux(statement.alt, considered_paths, vars)
                 if not isinstance(cons, PSkip) or not isinstance(alt, PSkip):
                     return PIf(
                         statement.pred,
@@ -244,10 +245,7 @@ class PStatement(ABC):
 
             return PSkip()
 
-        considered_paths_exprs: List[PEConst] = list(
-            map(lambda path: PEConst(const=PStr(value=path)), considered_paths)
-        )
-        return minimize_aux(statement, considered_paths_exprs)
+        return minimize_aux(statement, considered_paths, {})
 
     def to_filesystems(
         self,
