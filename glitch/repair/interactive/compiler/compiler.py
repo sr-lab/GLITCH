@@ -1,4 +1,5 @@
 import random
+import logging
 from typing import Optional, Dict, Tuple, Type
 
 from glitch.tech import Tech
@@ -220,26 +221,10 @@ class DeltaPCompiler:
             return binary_op(PPower, expr.left, expr.right)
         elif isinstance(expr, VariableReference):
             return PEVar(self._get_scope_name(expr.value))
-        elif isinstance(
-            expr,
-            (
-                Hash,
-                Array,
-                FunctionCall,
-                MethodCall,
-                In,
-                RightShift,
-                LeftShift,
-                Access,
-                BitwiseAnd,
-                BitwiseOr,
-                BitwiseXor,
-            ),
-        ):
+        else:
             # TODO: Unsupported
+            logging.warning(f"Unsupported expression, got {expr}")
             return PEUndef()
-
-        raise RuntimeError(f"Unsupported expression, got {expr}")
 
     def __handle_user(
         self,
@@ -493,10 +478,9 @@ class DeltaPCompiler:
             return PSkip()
         elif isinstance(code_element, UnitBlock):
             return self.__handle_unit_block(code_element)
-        elif isinstance(code_element, Null):
+        else:
+            logging.warning(f"Unsupported code element, got {code_element}")
             return PSkip()
-
-        raise RuntimeError(f"Unsupported code element, got {code_element}")
 
     def compile(self) -> PStatement:
         script = self._labeled_script.script
