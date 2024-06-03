@@ -191,6 +191,8 @@ class PatchSolver:
 
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return StringVal(expr.const.value), constraints
+        elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
+            return StringVal(str(expr.const.value)), constraints
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id)
             return self.vars[expr.id], constraints
