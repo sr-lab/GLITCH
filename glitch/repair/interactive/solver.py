@@ -218,7 +218,7 @@ class PatchSolver:
             lhs, lhs_constraints = self.__compile_expr(expr.lhs)
             rhs, rhs_constraints = self.__compile_expr(expr.rhs)
             return Concat(lhs, rhs), lhs_constraints + rhs_constraints
-        
+
         logging.warning(f"Unsupported expression: {expr}")
         return StringVal(UNDEF), constraints
 

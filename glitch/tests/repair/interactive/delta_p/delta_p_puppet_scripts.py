@@ -161,7 +161,13 @@ delta_p_puppet_2 = PSeq(
                                 rhs=PEConst(const=PStr(value="present")),
                             ),
                             cons=PCreate(
-                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d"))
+                                path=PRLet(
+                                    id="literal-2",
+                                    expr=PEConst(
+                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    ),
+                                    label=2,
+                                )
                             ),
                             alt=PIf(
                                 pred=PEBinOP(
@@ -170,8 +176,12 @@ delta_p_puppet_2 = PSeq(
                                     rhs=PEConst(const=PStr(value="absent")),
                                 ),
                                 cons=PRm(
-                                    path=PEConst(
-                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    path=PRLet(
+                                        id="literal-2",
+                                        expr=PEConst(
+                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        ),
+                                        label=2,
                                     )
                                 ),
                                 alt=PIf(
@@ -181,8 +191,14 @@ delta_p_puppet_2 = PSeq(
                                         rhs=PEConst(const=PStr(value="directory")),
                                     ),
                                     cons=PMkdir(
-                                        path=PEConst(
-                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        path=PRLet(
+                                            id="literal-2",
+                                            expr=PEConst(
+                                                const=PStr(
+                                                    value="/usr/sbin/policy-rc.d"
+                                                )
+                                            ),
+                                            label=2,
                                         )
                                     ),
                                     alt=PSkip(),
@@ -192,30 +208,42 @@ delta_p_puppet_2 = PSeq(
                     ),
                     rhs=PLet(
                         id="content_16",
-                        expr=PRLet(id="literal-2", expr=PEUndef(), label=2),
+                        expr=PRLet(id="literal-3", expr=PEUndef(), label=3),
                         label=-1,
                         body=PWrite(
-                            path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                            path=PRLet(
+                                id="literal-2",
+                                expr=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                                label=2,
+                            ),
                             content=PEVar(id="content_16"),
                         ),
                     ),
                 ),
                 rhs=PLet(
                     id="owner_256",
-                    expr=PRLet(id="literal-3", expr=PEUndef(), label=3),
+                    expr=PRLet(id="literal-4", expr=PEUndef(), label=4),
                     label=-3,
                     body=PChown(
-                        path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                        path=PRLet(
+                            id="literal-2",
+                            expr=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                            label=2,
+                        ),
                         owner=PEVar(id="owner_256"),
                     ),
                 ),
             ),
             rhs=PLet(
                 id="mode_1296",
-                expr=PRLet(id="literal-4", expr=PEUndef(), label=4),
+                expr=PRLet(id="literal-5", expr=PEUndef(), label=5),
                 label=-5,
                 body=PChmod(
-                    path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                    path=PRLet(
+                        id="literal-2",
+                        expr=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                        label=2,
+                    ),
                     mode=PEVar(id="mode_1296"),
                 ),
             ),
@@ -250,8 +278,14 @@ delta_p_puppet_if = PSeq(
                                         rhs=PEConst(const=PStr(value="present")),
                                     ),
                                     cons=PCreate(
-                                        path=PEConst(
-                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        path=PRLet(
+                                            id="literal-3",
+                                            expr=PEConst(
+                                                const=PStr(
+                                                    value="/usr/sbin/policy-rc.d"
+                                                )
+                                            ),
+                                            label=3,
                                         )
                                     ),
                                     alt=PIf(
@@ -261,10 +295,14 @@ delta_p_puppet_if = PSeq(
                                             rhs=PEConst(const=PStr(value="absent")),
                                         ),
                                         cons=PRm(
-                                            path=PEConst(
-                                                const=PStr(
-                                                    value="/usr/sbin/policy-rc.d"
-                                                )
+                                            path=PRLet(
+                                                id="literal-3",
+                                                expr=PEConst(
+                                                    const=PStr(
+                                                        value="/usr/sbin/policy-rc.d"
+                                                    )
+                                                ),
+                                                label=3,
                                             )
                                         ),
                                         alt=PIf(
@@ -276,10 +314,14 @@ delta_p_puppet_if = PSeq(
                                                 ),
                                             ),
                                             cons=PMkdir(
-                                                path=PEConst(
-                                                    const=PStr(
-                                                        value="/usr/sbin/policy-rc.d"
-                                                    )
+                                                path=PRLet(
+                                                    id="literal-3",
+                                                    expr=PEConst(
+                                                        const=PStr(
+                                                            value="/usr/sbin/policy-rc.d"
+                                                        )
+                                                    ),
+                                                    label=3,
                                                 )
                                             ),
                                             alt=PSkip(),
@@ -289,11 +331,15 @@ delta_p_puppet_if = PSeq(
                             ),
                             rhs=PLet(
                                 id="content_16",
-                                expr=PRLet(id="literal-3", expr=PEUndef(), label=3),
+                                expr=PRLet(id="literal-4", expr=PEUndef(), label=4),
                                 label=-1,
                                 body=PWrite(
-                                    path=PEConst(
-                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    path=PRLet(
+                                        id="literal-3",
+                                        expr=PEConst(
+                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        ),
+                                        label=3,
                                     ),
                                     content=PEVar(id="content_16"),
                                 ),
@@ -301,20 +347,30 @@ delta_p_puppet_if = PSeq(
                         ),
                         rhs=PLet(
                             id="owner_256",
-                            expr=PRLet(id="literal-4", expr=PEUndef(), label=4),
+                            expr=PRLet(id="literal-5", expr=PEUndef(), label=5),
                             label=-3,
                             body=PChown(
-                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                                path=PRLet(
+                                    id="literal-3",
+                                    expr=PEConst(
+                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    ),
+                                    label=3,
+                                ),
                                 owner=PEVar(id="owner_256"),
                             ),
                         ),
                     ),
                     rhs=PLet(
                         id="mode_1296",
-                        expr=PRLet(id="literal-5", expr=PEUndef(), label=5),
+                        expr=PRLet(id="literal-6", expr=PEUndef(), label=6),
                         label=-5,
                         body=PChmod(
-                            path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                            path=PRLet(
+                                id="literal-3",
+                                expr=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                                label=3,
+                            ),
                             mode=PEVar(id="mode_1296"),
                         ),
                     ),
@@ -333,9 +389,9 @@ delta_p_puppet_if = PSeq(
                                 lhs=PLet(
                                     id="state_25792",
                                     expr=PRLet(
-                                        id="literal-6",
+                                        id="literal-7",
                                         expr=PEConst(const=PStr(value="present")),
-                                        label=6,
+                                        label=7,
                                     ),
                                     label=1,
                                     body=PIf(
@@ -345,10 +401,14 @@ delta_p_puppet_if = PSeq(
                                             rhs=PEConst(const=PStr(value="present")),
                                         ),
                                         cons=PCreate(
-                                            path=PEConst(
-                                                const=PStr(
-                                                    value="/usr/sbin/policy-rc.d"
-                                                )
+                                            path=PRLet(
+                                                id="literal-8",
+                                                expr=PEConst(
+                                                    const=PStr(
+                                                        value="/usr/sbin/policy-rc.d"
+                                                    )
+                                                ),
+                                                label=8,
                                             )
                                         ),
                                         alt=PIf(
@@ -358,10 +418,14 @@ delta_p_puppet_if = PSeq(
                                                 rhs=PEConst(const=PStr(value="absent")),
                                             ),
                                             cons=PRm(
-                                                path=PEConst(
-                                                    const=PStr(
-                                                        value="/usr/sbin/policy-rc.d"
-                                                    )
+                                                path=PRLet(
+                                                    id="literal-8",
+                                                    expr=PEConst(
+                                                        const=PStr(
+                                                            value="/usr/sbin/policy-rc.d"
+                                                        )
+                                                    ),
+                                                    label=8,
                                                 )
                                             ),
                                             alt=PIf(
@@ -373,10 +437,14 @@ delta_p_puppet_if = PSeq(
                                                     ),
                                                 ),
                                                 cons=PMkdir(
-                                                    path=PEConst(
-                                                        const=PStr(
-                                                            value="/usr/sbin/policy-rc.d"
-                                                        )
+                                                    path=PRLet(
+                                                        id="literal-8",
+                                                        expr=PEConst(
+                                                            const=PStr(
+                                                                value="/usr/sbin/policy-rc.d"
+                                                            )
+                                                        ),
+                                                        label=8,
                                                     )
                                                 ),
                                                 alt=PSkip(),
@@ -386,11 +454,17 @@ delta_p_puppet_if = PSeq(
                                 ),
                                 rhs=PLet(
                                     id="content_4096",
-                                    expr=PRLet(id="literal-7", expr=PEUndef(), label=7),
+                                    expr=PRLet(id="literal-9", expr=PEUndef(), label=9),
                                     label=-7,
                                     body=PWrite(
-                                        path=PEConst(
-                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        path=PRLet(
+                                            id="literal-8",
+                                            expr=PEConst(
+                                                const=PStr(
+                                                    value="/usr/sbin/policy-rc.d"
+                                                )
+                                            ),
+                                            label=8,
                                         ),
                                         content=PEVar(id="content_4096"),
                                     ),
@@ -398,11 +472,15 @@ delta_p_puppet_if = PSeq(
                             ),
                             rhs=PLet(
                                 id="owner_10000",
-                                expr=PRLet(id="literal-8", expr=PEUndef(), label=8),
+                                expr=PRLet(id="literal-10", expr=PEUndef(), label=10),
                                 label=-9,
                                 body=PChown(
-                                    path=PEConst(
-                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    path=PRLet(
+                                        id="literal-8",
+                                        expr=PEConst(
+                                            const=PStr(value="/usr/sbin/policy-rc.d")
+                                        ),
+                                        label=8,
                                     ),
                                     owner=PEVar(id="owner_10000"),
                                 ),
@@ -410,10 +488,16 @@ delta_p_puppet_if = PSeq(
                         ),
                         rhs=PLet(
                             id="mode_20736",
-                            expr=PRLet(id="literal-9", expr=PEUndef(), label=9),
+                            expr=PRLet(id="literal-11", expr=PEUndef(), label=11),
                             label=-11,
                             body=PChmod(
-                                path=PEConst(const=PStr(value="/usr/sbin/policy-rc.d")),
+                                path=PRLet(
+                                    id="literal-8",
+                                    expr=PEConst(
+                                        const=PStr(value="/usr/sbin/policy-rc.d")
+                                    ),
+                                    label=8,
+                                ),
                                 mode=PEVar(id="mode_20736"),
                             ),
                         ),
@@ -436,9 +520,9 @@ delta_p_puppet_default_state = PSeq(
                     lhs=PLet(
                         id="state_16",
                         expr=PRLet(
-                            id="literal-7",
+                            id="literal-8",
                             expr=PEConst(const=PStr(value="present")),
-                            label=7,
+                            label=8,
                         ),
                         label=-1,
                         body=PIf(
@@ -448,7 +532,11 @@ delta_p_puppet_default_state = PSeq(
                                 rhs=PEConst(const=PStr(value="present")),
                             ),
                             cons=PCreate(
-                                path=PEConst(const=PStr(value="/root/.ssh/config"))
+                                path=PRLet(
+                                    id="literal-7",
+                                    expr=PEConst(const=PStr(value="/root/.ssh/config")),
+                                    label=7,
+                                )
                             ),
                             alt=PIf(
                                 pred=PEBinOP(
@@ -457,7 +545,13 @@ delta_p_puppet_default_state = PSeq(
                                     rhs=PEConst(const=PStr(value="absent")),
                                 ),
                                 cons=PRm(
-                                    path=PEConst(const=PStr(value="/root/.ssh/config"))
+                                    path=PRLet(
+                                        id="literal-7",
+                                        expr=PEConst(
+                                            const=PStr(value="/root/.ssh/config")
+                                        ),
+                                        label=7,
+                                    )
                                 ),
                                 alt=PIf(
                                     pred=PEBinOP(
@@ -466,8 +560,12 @@ delta_p_puppet_default_state = PSeq(
                                         rhs=PEConst(const=PStr(value="directory")),
                                     ),
                                     cons=PMkdir(
-                                        path=PEConst(
-                                            const=PStr(value="/root/.ssh/config")
+                                        path=PRLet(
+                                            id="literal-7",
+                                            expr=PEConst(
+                                                const=PStr(value="/root/.ssh/config")
+                                            ),
+                                            label=7,
                                         )
                                     ),
                                     alt=PSkip(),
@@ -480,7 +578,11 @@ delta_p_puppet_default_state = PSeq(
                         expr=PEUndef(),
                         label=0,
                         body=PWrite(
-                            path=PEConst(const=PStr(value="/root/.ssh/config")),
+                            path=PRLet(
+                                id="literal-7",
+                                expr=PEConst(const=PStr(value="/root/.ssh/config")),
+                                label=7,
+                            ),
                             content=PEVar(id="content_432"),
                         ),
                     ),
@@ -492,7 +594,11 @@ delta_p_puppet_default_state = PSeq(
                     ),
                     label=1,
                     body=PChown(
-                        path=PEConst(const=PStr(value="/root/.ssh/config")),
+                        path=PRLet(
+                            id="literal-7",
+                            expr=PEConst(const=PStr(value="/root/.ssh/config")),
+                            label=7,
+                        ),
                         owner=PEVar(id="owner_288"),
                     ),
                 ),
@@ -504,7 +610,11 @@ delta_p_puppet_default_state = PSeq(
                 ),
                 label=3,
                 body=PChmod(
-                    path=PEConst(const=PStr(value="/root/.ssh/config")),
+                    path=PRLet(
+                        id="literal-7",
+                        expr=PEConst(const=PStr(value="/root/.ssh/config")),
+                        label=7,
+                    ),
                     mode=PEVar(id="mode_648"),
                 ),
             ),

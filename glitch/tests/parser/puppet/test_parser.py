@@ -101,10 +101,8 @@ class TestPuppetParser(TestParser):
         )
 
         assert len(unit_block.unit_blocks[0].atomic_units) == 1
-        assert (
-            unit_block.unit_blocks[0].atomic_units[0].name
-            == "${vhost_dir}/${servername}.conf"
-        )
+        assert isinstance(unit_block.unit_blocks[0].atomic_units[0].name, Sum)
+
         assert unit_block.unit_blocks[0].atomic_units[0].type == "file"
 
         attribute = unit_block.unit_blocks[0].atomic_units[0].attributes[4]
@@ -155,8 +153,20 @@ class TestPuppetParser(TestParser):
         )
 
         assert len(unit_block.unit_blocks[0].atomic_units) == 1
-        assert unit_block.unit_blocks[0].atomic_units[0].name == "httpd"
+        self._check_value(
+            unit_block.unit_blocks[0].atomic_units[0].name,
+            VariableReference,
+            "httpd",
+            2,
+            13,
+            2,
+            19,
+        )
         assert unit_block.unit_blocks[0].atomic_units[0].type == "package"
+        assert isinstance(
+            unit_block.unit_blocks[0].atomic_units[0].attributes[0].value,
+            VariableReference,
+        )
 
     def test_puppet_parser_values(self) -> None:
         """
@@ -350,7 +360,9 @@ class TestPuppetParser(TestParser):
         assert len(unit_block.atomic_units) == 3
         assert len(unit_block.unit_blocks) == 3
 
-        assert unit_block.atomic_units[0].name == "apache"
+        self._check_value(
+            unit_block.atomic_units[0].name, String, "apache", 1, 8, 1, 16
+        )
         assert unit_block.atomic_units[0].type == "class"
         assert len(unit_block.atomic_units[0].attributes) == 1
         assert unit_block.atomic_units[0].attributes[0].name == "version"
@@ -373,16 +385,40 @@ class TestPuppetParser(TestParser):
         assert unit_block.unit_blocks[0].type == UnitBlockType.block
         assert unit_block.unit_blocks[0].name == "resource_expression"
         assert len(unit_block.unit_blocks[0].atomic_units) == 2
-        assert unit_block.unit_blocks[0].atomic_units[0].name == "apache-2"
+        self._check_value(
+            unit_block.unit_blocks[0].atomic_units[0].name,
+            String,
+            "apache-2",
+            6,
+            3,
+            6,
+            13,
+        )
         assert unit_block.unit_blocks[0].atomic_units[0].type == "class"
-        assert unit_block.unit_blocks[0].atomic_units[1].name == "apache-3"
+        self._check_value(
+            unit_block.unit_blocks[0].atomic_units[1].name,
+            String,
+            "apache-3",
+            9,
+            3,
+            9,
+            13,
+        )
         assert unit_block.unit_blocks[0].atomic_units[1].type == "class"
 
         assert unit_block.unit_blocks[1].type == UnitBlockType.block
         assert unit_block.unit_blocks[1].name == "resource_expression"
         assert len(unit_block.unit_blocks[1].atomic_units) == 2
 
-        assert unit_block.unit_blocks[1].atomic_units[0].name == "ssh_host_dsa_key"
+        self._check_value(
+            unit_block.unit_blocks[1].atomic_units[0].name,
+            String,
+            "ssh_host_dsa_key",
+            19,
+            4,
+            19,
+            22,
+        )
         assert len(unit_block.unit_blocks[1].atomic_units[0].attributes) == 3
         assert unit_block.unit_blocks[1].atomic_units[0].attributes[0].name == "ensure"
         self._check_value(
@@ -415,7 +451,15 @@ class TestPuppetParser(TestParser):
             21,
         )
 
-        assert unit_block.unit_blocks[1].atomic_units[1].name == "ssh_config"
+        self._check_value(
+            unit_block.unit_blocks[1].atomic_units[1].name,
+            String,
+            "ssh_config",
+            22,
+            4,
+            22,
+            16,
+        )
         assert len(unit_block.unit_blocks[1].atomic_units[1].attributes) == 4
         assert unit_block.unit_blocks[1].atomic_units[1].attributes[0].name == "mode"
         self._check_value(
@@ -434,8 +478,24 @@ class TestPuppetParser(TestParser):
         assert unit_block.unit_blocks[2].name == "resource_expression"
         assert len(unit_block.unit_blocks[2].atomic_units) == 2
 
-        assert unit_block.unit_blocks[2].atomic_units[0].name == "armitage"
-        assert unit_block.unit_blocks[2].atomic_units[1].name == "metasploit"
+        self._check_value(
+            unit_block.unit_blocks[2].atomic_units[0].name,
+            String,
+            "armitage",
+            28,
+            12,
+            28,
+            22,
+        )
+        self._check_value(
+            unit_block.unit_blocks[2].atomic_units[1].name,
+            String,
+            "metasploit",
+            28,
+            24,
+            28,
+            36,
+        )
 
     def test_puppet_parser_operations(self) -> None:
         """

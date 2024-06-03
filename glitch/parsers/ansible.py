@@ -179,7 +179,7 @@ class AnsibleParser(YamlParser):
         for task in tasks.value:
             atomic_units: List[AtomicUnit] = []
             attributes: List[Attribute] = []
-            type, name, line = "", "", 0
+            type, name, line = "", Null(), 0
             is_block = False
 
             for key, val in task.value:
@@ -198,16 +198,16 @@ class AnsibleParser(YamlParser):
                     created = len(unit_block.atomic_units) - size
                     atomic_units = unit_block.atomic_units[-created:]
                 elif key.value == "name":
-                    name = val.value
+                    name = YamlParser.get_value(val, code)
                 elif key.value != "name":
                     if type == "":
                         type = key.value
                         line = task.start_mark.line + 1
 
-                        names: List[str] = [n.strip() for n in name.split(",")]
-                        for name in names:
-                            if name == "":
-                                continue
+                        if isinstance(name, Array):
+                            for n in name.value:
+                                atomic_units.append(AtomicUnit(n, type))
+                        else:
                             atomic_units.append(AtomicUnit(name, type))
 
                     if isinstance(val, MappingNode) and key.value == type:
@@ -238,7 +238,7 @@ class AnsibleParser(YamlParser):
 
             # Tasks without name
             if len(atomic_units) == 0 and type != "":
-                au = AtomicUnit("", type)
+                au = AtomicUnit(Null(), type)
                 au.attributes = attributes
                 au.line = line
                 if len(au.attributes) > 0:

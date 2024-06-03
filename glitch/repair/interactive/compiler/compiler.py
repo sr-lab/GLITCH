@@ -287,7 +287,7 @@ class DeltaPCompiler:
             self._labeled_script.add_location(path_attr, path_attr.value)
         # The path may be defined as the name of the atomic unit
         if path == PEUndef():
-            path = PEConst(PStr(atomic_unit.name))  # type: ignore
+            path = self._compile_expr(atomic_unit.name)
 
         state_var, label = attributes.get_var("state", atomic_unit)
         statement = PLet(

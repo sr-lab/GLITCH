@@ -57,9 +57,7 @@ def test_delta_p_minimize_if() -> None:
 def test_delta_p_minimize_with_add() -> None:
     statement = PCreate(
         PEBinOP(
-            PAdd(),
-            PEConst(const=PStr(value="ola")),
-            PEConst(const=PStr(value="2"))
+            PAdd(), PEConst(const=PStr(value="ola")), PEConst(const=PStr(value="2"))
         )
     )
 

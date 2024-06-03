@@ -443,9 +443,9 @@ class Attribute(KeyValue):
 
 
 class AtomicUnit(Block):
-    def __init__(self, name: str | None, type: str) -> None:
+    def __init__(self, name: Expr, type: str) -> None:
         super().__init__()
-        self.name: str | None = name
+        self.name: Expr = name
         self.type: str = type
         self.attributes: list[Attribute] = []
 

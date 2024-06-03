@@ -195,14 +195,10 @@ class PStatement(ABC):
         """
 
         def minimize_aux(
-            statement: "PStatement", 
-            considered_paths: List[str],
-            vars: Dict[str, PExpr]
+            statement: "PStatement", considered_paths: List[str], vars: Dict[str, PExpr]
         ) -> "PStatement":
             if isinstance(statement, (PMkdir, PCreate, PRm, PWrite, PChmod, PChown)):
-                path = statement.__get_str(
-                    statement.path, vars
-                )
+                path = statement.__get_str(statement.path, vars)
                 if path not in considered_paths:
                     return PSkip()
                 else:

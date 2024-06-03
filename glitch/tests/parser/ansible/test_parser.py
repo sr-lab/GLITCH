@@ -21,7 +21,9 @@ class TestAnsibleParser(TestParser):
         assert len(ir.atomic_units) == 1
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        assert ir.atomic_units[0].name == "Get machine-id"
+        self._check_value(
+            ir.atomic_units[0].name, String, "Get machine-id", 2, 9, 2, 23
+        )
         assert ir.atomic_units[0].type == "shell"
         assert len(ir.atomic_units[0].attributes) == 4
 

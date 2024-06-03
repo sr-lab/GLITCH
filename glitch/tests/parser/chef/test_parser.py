@@ -44,9 +44,11 @@ class TestChefParser(TestParser):
         assert ir.variables[0].end_column == 23
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        assert (
-            ir.atomic_units[0].name == "create ssh keypair for #{new_resource.username}"
-        )
+        assert isinstance(ir.atomic_units[0].name, Sum)
+        assert isinstance(ir.atomic_units[0].name.left, String)
+        assert ir.atomic_units[0].name.left.value == "create ssh keypair for "
+        assert isinstance(ir.atomic_units[0].name.right, VariableReference)
+        assert ir.atomic_units[0].name.right.value == "new_resource.username"
         assert ir.atomic_units[0].type == "execute"
         assert len(ir.atomic_units[0].attributes) == 3
 

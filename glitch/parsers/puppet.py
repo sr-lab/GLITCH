@@ -503,8 +503,13 @@ class PuppetParser(p.Parser):
                 re_aux = None
 
             for title in titles:
+                if title is None:
+                    title = Null()
+                else:
+                    title = PuppetParser.__process_codeelement(title, path, code)
+                assert isinstance(title, Expr)
                 resource: AtomicUnit = AtomicUnit(
-                    PuppetParser.__process_string(title, code),
+                    title,
                     PuppetParser.__process_string(codeelement.type, code),
                 )
                 for attr in codeelement.attributes:
@@ -521,9 +526,10 @@ class PuppetParser(p.Parser):
 
             return re_aux  # type: ignore
         elif isinstance(codeelement, puppetmodel.ClassAsResource):
-            resource: AtomicUnit = AtomicUnit(
-                PuppetParser.__process_string(codeelement.title, code), "class"
-            )
+            assert codeelement.title is not None
+            title = PuppetParser.__process_codeelement(codeelement.title, path, code)
+            assert isinstance(title, Expr)
+            resource: AtomicUnit = AtomicUnit(title, "class")
             for attr in codeelement.attributes:
                 attr = PuppetParser.__process_codeelement(attr, path, code)
                 assert isinstance(attr, Attribute)

@@ -764,9 +764,9 @@ class ChefParser(p.Parser):
         def is_resource_name(self, ast: "ChefParser.Node") -> bool:
             if ChefParser._check_id(ast, ["args_add_block"]) and ast.args[1] is False:
                 resource_id = ast.args[0]
-                self.atomic_unit.name = ChefParser._get_content(
-                    resource_id, self.source
-                )
+                name = ChefParser._get_value(resource_id, self.source)
+                assert name is not None
+                self.atomic_unit.name = name
                 return True
             return False
 
@@ -776,9 +776,9 @@ class ChefParser(p.Parser):
                 and ast.args[1] is False
             ):
                 resource_id = ast.args[0].args[0].args[0]
-                self.atomic_unit.name = ChefParser._get_content(
-                    resource_id, self.source
-                )
+                name = ChefParser._get_value(resource_id, self.source)
+                assert name is not None
+                self.atomic_unit.name = name
                 self.push([self.is_attribute], ast.args[0].args[0].args[1])
                 return True
             return False
@@ -794,9 +794,9 @@ class ChefParser(p.Parser):
                 ChefParser._check_id(ast.args[0].args[0], ["string_literal"])
                 and ast.args[1] is False
             ):
-                self.atomic_unit.name = ChefParser._get_content(
-                    ast.args[0].args[0], self.source
-                )
+                name = ChefParser._get_value(ast.args[0].args[0], self.source)
+                assert name is not None
+                self.atomic_unit.name = name
                 return True
             return False
 
@@ -1234,7 +1234,7 @@ class ChefParser(p.Parser):
                     ChefParser._transverse_ast(arg, st, source)
         else:
             resource_checker = ChefParser.ResourceChecker(
-                AtomicUnit("", ""), source, ast
+                AtomicUnit(Null(), ""), source, ast
             )
             if resource_checker.check_all():
                 if isinstance(st, UnitBlock):
