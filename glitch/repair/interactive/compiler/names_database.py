@@ -139,7 +139,7 @@ class NamesDatabase:
 
         if v is not None:
             match v, name, au_type, tech:
-                case "present" | "directory" | "absent", "state", "file", Tech.puppet:
+                case "present" | "directory" | "absent", "state", "file" | "user", Tech.puppet:
                     pass
                 case "file", "state", "file", Tech.puppet | Tech.ansible:
                     v = "present"

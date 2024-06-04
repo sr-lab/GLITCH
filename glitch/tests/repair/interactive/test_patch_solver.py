@@ -535,6 +535,33 @@ file { '/var/lib/puppet/gitrevision.txt' :
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript9(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_9 = """
+user { 'mysql':
+    ensure => present,
+}
+"""
+        self._setup_patch_solver(puppet_script_9, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_user_delete(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["user:mysql"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+user { 'mysql':
+    ensure => absent,
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
 
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):

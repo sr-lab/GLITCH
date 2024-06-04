@@ -252,7 +252,10 @@ class DeltaPCompiler:
     ):
         # execve("/usr/sbin/useradd", ["useradd", "test2"], ...)
         # execve("/usr/bin/sudo", ["sudo", "userdel", "test2"], ...)
-        path = PEBinOP(PAdd(), PEConst(PStr("user:")), attributes["name"])
+        name = attributes["name"]
+        if name == PEUndef():
+            name = self._compile_expr(atomic_unit.name)
+        path = PEBinOP(PAdd(), PEConst(PStr("user:")), name)
         name_attr = attributes.get_attribute("path")
         if name_attr is not None:
             self._labeled_script.add_location(atomic_unit, name_attr)
