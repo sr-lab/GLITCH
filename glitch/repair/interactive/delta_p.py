@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from abc import ABC
 from typing import Optional, List, Union, Callable
@@ -151,7 +152,7 @@ class PPower(PBinOp):
 
 
 class PStatement(ABC):
-    def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> str:
+    def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
         elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
@@ -162,12 +163,16 @@ class PStatement(ABC):
             return expr.id
         elif isinstance(expr, PRLet):
             return self.__get_str(expr.expr, vars)
-        elif isinstance(expr, PEUndef):
-            return None  # type: ignore
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
-            return self.__get_str(expr.lhs, vars) + self.__get_str(expr.rhs, vars)
+            lhs = self.__get_str(expr.lhs, vars)
+            rhs = self.__get_str(expr.rhs, vars)
+            if lhs is None or rhs is None:
+                return None
+            return lhs + rhs
+        elif isinstance(expr, PEUndef):
+            return None
 
-        raise RuntimeError(f"Unsupported expression, got {expr}")
+        raise ValueError(f"Unsupported expression, got {expr}")
 
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr | None:
         if isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition"):
@@ -267,30 +272,48 @@ class PStatement(ABC):
 
         res_fss: List[FileSystemState] = []
         for fs in fss:
-            get_str: Callable[[PExpr], str] = lambda expr: self.__get_str(expr, vars)
+            get_str: Callable[[PExpr], Optional[str]] = lambda expr: self.__get_str(expr, vars)
+
+            if isinstance(self, (PMkdir, PCreate, PRm, PWrite, PChmod, PChown)):
+                try:
+                    path = get_str(self.path)
+                    if path is None:
+                        continue
+                except ValueError:
+                    logging.warning(f"Invalid path: {self.path}")
+                    continue
+            else:
+                path = ""
 
             if isinstance(self, PSkip):
                 pass
             elif isinstance(self, PMkdir):
-                fs.state[get_str(self.path)] = Dir(None, None)
+                fs.state[path] = Dir(None, None)
             elif isinstance(self, PCreate):
-                fs.state[get_str(self.path)] = File(None, None, None)
+                fs.state[path] = File(None, None, None)
             elif isinstance(self, PWrite):
-                path, content = get_str(self.path), get_str(self.content)
+                content = get_str(self.content)
                 file = fs.state.get(path)
                 if isinstance(file, File):
                     file.content = content
             elif isinstance(self, PRm):
-                fs.state[get_str(self.path)] = Nil()
+                fs.state[path] = Nil()
             elif isinstance(self, PCp):
-                fs.state[get_str(self.dst)] = fs.state[get_str(self.src)]
+                try:
+                    dst, src = get_str(self.dst), get_str(self.src)
+                    if dst is None or src is None:
+                        continue
+                    fs.state[dst] = fs.state[src]
+                except ValueError:
+                    logging.warning(f"Invalid path: {self.src} {self.dst}")
+                    continue
             elif isinstance(self, PChmod):
-                path, mode = get_str(self.path), get_str(self.mode)
+                mode = get_str(self.mode)
                 file = fs.state.get(path)
                 if isinstance(file, (File, Dir)):
                     file.mode = mode
             elif isinstance(self, PChown):
-                path, owner = get_str(self.path), get_str(self.owner)
+                owner = get_str(self.owner)
                 file = fs.state.get(path)
                 if isinstance(file, (File, Dir)):
                     file.owner = owner

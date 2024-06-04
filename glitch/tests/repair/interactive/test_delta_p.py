@@ -107,7 +107,6 @@ mode    => '0600',
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
             statement = DeltaPCompiler(labeled_script).compile()
 
-        print(statement)
         assert statement == delta_p_puppet_default_state
 
 
