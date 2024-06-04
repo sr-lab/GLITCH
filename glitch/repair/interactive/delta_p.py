@@ -159,8 +159,6 @@ class PStatement(ABC):
             return str(expr.const.value)
         elif isinstance(expr, PEVar) and expr.id in vars:
             return self.__get_str(vars[expr.id], vars)
-        elif isinstance(expr, PEVar) and expr.id not in vars:
-            return expr.id
         elif isinstance(expr, PRLet):
             return self.__get_str(expr.expr, vars)
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
