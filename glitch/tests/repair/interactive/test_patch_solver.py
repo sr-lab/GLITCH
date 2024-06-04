@@ -499,6 +499,43 @@ if($old_config != 'notfound')
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript8(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_8 = """$gitrevision = '$Id$'
+
+file { '/var/lib/puppet/gitrevision.txt' :
+  ensure  => 'present',
+  owner   => 'root',
+  group   => 'root',
+  mode    => '0444',
+  content => $gitrevision,
+  require => File['/var/lib/puppet'],
+}
+        """
+        self._setup_patch_solver(puppet_script_8, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_delete_variable(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/var/lib/puppet/gitrevision.txt"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+file { '/var/lib/puppet/gitrevision.txt' :
+  ensure  => 'absent',
+  group   => 'root',
+  require => File['/var/lib/puppet'],
+}
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()

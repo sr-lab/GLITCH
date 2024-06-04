@@ -474,6 +474,7 @@ class DeltaPCompiler:
         statements.sort(key=lambda x: (x.line, x.column), reverse=True)
 
         for statement in statements:
+            self._labeled_script.add_location(unit_block, statement)
             new_compiled = self.__handle_code_element(statement)
             if isinstance(new_compiled, PLet):
                 new_compiled.body = compiled

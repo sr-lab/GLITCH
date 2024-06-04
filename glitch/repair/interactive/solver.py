@@ -506,6 +506,23 @@ class PatchSolver:
 
         labeled_script.add_label(attribute.name, attribute)
 
+    def __delete_code_element(
+        self, labeled_script: LabeledUnitBlock, ce: CodeElement
+    ):
+        path = labeled_script.script.path
+        with open(path, "r") as f:
+            lines = f.readlines()
+
+        line = ce.line - 1
+        lines[line] = (
+            lines[line][: ce.column - 1] + lines[line][ce.end_column :]
+        )
+        if lines[line].strip() == "":
+            lines.pop(line)
+
+        with open(path, "w") as f:
+            f.writelines(lines)
+
     def __delete_attribute(
         self,
         labeled_script: LabeledUnitBlock,
@@ -515,21 +532,19 @@ class PatchSolver:
         labeled_script.remove_label(attribute)
         if attribute in ce.attributes:
             ce.attributes.remove(attribute)
+        self.__delete_code_element(labeled_script, attribute)
 
-        path = labeled_script.script.path
-        with open(path, "r") as f:
-            lines = f.readlines()
-
-        line = attribute.line - 1
-        lines[line] = (
-            lines[line][: attribute.column - 1] + lines[line][attribute.end_column :]
-        )
-        if lines[line].strip() == "":
-            lines.pop(line)
-
-        with open(path, "w") as f:
-            f.writelines(lines)
-
+    def __delete_variable(
+        self,
+        labeled_script: LabeledUnitBlock,
+        ce: UnitBlock,
+        variable: Variable,
+    ):
+        labeled_script.remove_label(variable)
+        if variable in ce.variables:
+            ce.variables.remove(variable)
+        self.__delete_code_element(labeled_script, variable)
+    
     def __modify_codeelement(
         self,
         labeled_script: LabeledUnitBlock,
@@ -576,7 +591,7 @@ class PatchSolver:
                     changed.append((label, model_ref[var]))
 
         changed_elements: List[
-            Tuple[inter.String | inter.Null | inter.Attribute, str, ElementInfo]
+            Tuple[inter.String | inter.Null | inter.KeyValue, str, ElementInfo]
         ] = []
 
         for change in changed:
@@ -584,15 +599,15 @@ class PatchSolver:
             value = value.as_string()
             codeelement = labeled_script.get_codeelement(label)
 
-            assert isinstance(codeelement, (inter.Expr, inter.Attribute))
-            if not isinstance(codeelement, (inter.String, inter.Null, inter.Attribute)):
+            assert isinstance(codeelement, (inter.Expr, inter.KeyValue))
+            if not isinstance(codeelement, (inter.String, inter.Null, inter.KeyValue)):
                 # HACK: This allows to fix unsupported expressions
                 codeelement = inter.String(
                     value, ElementInfo.from_code_element(codeelement)
                 )
                 codeelement.code = "''"
 
-            if isinstance(codeelement, inter.Attribute) and value == UNDEF:
+            if isinstance(codeelement, inter.KeyValue) and value == UNDEF:
                 changed_elements.append(
                     (codeelement, value, ElementInfo.from_code_element(codeelement))
                 )
@@ -613,23 +628,28 @@ class PatchSolver:
         # The sort is necessary to avoid problems in the textual changes
         changed_elements.sort(key=lambda x: (x[2].line, x[2].column), reverse=True)
 
-        deleted_attributes: List[Attribute] = []
+        deleted_kvs: List[inter.KeyValue] = []
         for changed_element, value, _ in changed_elements:
             # Deleted Elements
             if value == UNDEF and not self.__is_sketch(changed_element):
-                if isinstance(changed_element, Attribute):
-                    attr = changed_element
+                if isinstance(changed_element, inter.KeyValue):
+                    kv = changed_element
                 else:
-                    attr = labeled_script.get_location(changed_element)
-                    assert isinstance(attr, Attribute)
-                ce = labeled_script.get_location(attr)
+                    kv = labeled_script.get_location(changed_element)
+                    assert isinstance(kv, inter.KeyValue)
+                
+                ce = labeled_script.get_location(kv)
                 assert isinstance(ce, (AtomicUnit, UnitBlock))
 
-                if attr not in deleted_attributes:
-                    self.__delete_attribute(labeled_script, ce, attr)
-                    deleted_attributes.append(attr)
+                if kv not in deleted_kvs:
+                    if isinstance(kv, Attribute):
+                        self.__delete_attribute(labeled_script, ce, kv)
+                    elif isinstance(kv, Variable):
+                        assert isinstance(ce, UnitBlock)
+                        self.__delete_variable(labeled_script, ce, kv)
+                    deleted_kvs.append(kv)
             # Modified elements
-            elif value != UNDEF and not isinstance(changed_element, Attribute):
+            elif value != UNDEF and not isinstance(changed_element, inter.KeyValue):
                 ce = labeled_script.get_location(changed_element)
                 if isinstance(ce, Attribute):
                     attr = ce
