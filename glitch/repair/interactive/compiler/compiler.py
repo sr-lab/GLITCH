@@ -255,6 +255,7 @@ class DeltaPCompiler:
         name = attributes["name"]
         if name == PEUndef():
             name = self._compile_expr(atomic_unit.name)
+            self._labeled_script.add_location(atomic_unit, atomic_unit.name)
         path = PEBinOP(PAdd(), PEConst(PStr("user:")), name)
         name_attr = attributes.get_attribute("path")
         if name_attr is not None:
@@ -295,6 +296,7 @@ class DeltaPCompiler:
         # The path may be defined as the name of the atomic unit
         if path == PEUndef():
             path = self._compile_expr(atomic_unit.name)
+            self._labeled_script.add_location(atomic_unit, atomic_unit.name)
 
         state_var, label = attributes.get_var("state", atomic_unit)
         statement = PLet(

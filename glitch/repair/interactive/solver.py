@@ -528,7 +528,6 @@ class PatchSolver:
         ce: AtomicUnit | UnitBlock,
         attribute: Attribute,
     ) -> None:
-        labeled_script.remove_label(attribute)
         if attribute in ce.attributes:
             ce.attributes.remove(attribute)
         self.__delete_code_element(labeled_script, attribute)
@@ -539,7 +538,6 @@ class PatchSolver:
         ce: UnitBlock,
         variable: Variable,
     ):
-        labeled_script.remove_label(variable)
         if variable in ce.variables:
             ce.variables.remove(variable)
         self.__delete_code_element(labeled_script, variable)
