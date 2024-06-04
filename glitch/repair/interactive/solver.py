@@ -21,6 +21,7 @@ from z3 import (
     Concat,
     StringVal,
     ModelRef,
+    SeqRef,
     Context,
     ExprRef,
 )
@@ -192,8 +193,6 @@ class PatchSolver:
 
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return StringVal(expr.const.value), constraints
-        elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
-            return StringVal(str(expr.const.value)), constraints
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id)
             return self.vars[expr.id], constraints
@@ -217,6 +216,10 @@ class PatchSolver:
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
             lhs, lhs_constraints = self.__compile_expr(expr.lhs)
             rhs, rhs_constraints = self.__compile_expr(expr.rhs)
+            if (isinstance(lhs, SeqRef) and lhs.as_string() == UNSUPPORTED) or (
+                isinstance(rhs, SeqRef) and rhs.as_string() == UNSUPPORTED
+            ):
+                return StringVal(UNSUPPORTED), lhs_constraints + rhs_constraints
             return Concat(lhs, rhs), lhs_constraints + rhs_constraints
 
         logging.warning(f"Unsupported expression: {expr}")
@@ -505,17 +508,13 @@ class PatchSolver:
 
         labeled_script.add_label(attribute.name, attribute)
 
-    def __delete_code_element(
-        self, labeled_script: LabeledUnitBlock, ce: CodeElement
-    ):
+    def __delete_code_element(self, labeled_script: LabeledUnitBlock, ce: CodeElement):
         path = labeled_script.script.path
         with open(path, "r") as f:
             lines = f.readlines()
 
         line = ce.line - 1
-        lines[line] = (
-            lines[line][: ce.column - 1] + lines[line][ce.end_column :]
-        )
+        lines[line] = lines[line][: ce.column - 1] + lines[line][ce.end_column :]
         if lines[line].strip() == "":
             lines.pop(line)
 
@@ -541,7 +540,7 @@ class PatchSolver:
         if variable in ce.variables:
             ce.variables.remove(variable)
         self.__delete_code_element(labeled_script, variable)
-    
+
     def __modify_codeelement(
         self,
         labeled_script: LabeledUnitBlock,
@@ -634,7 +633,7 @@ class PatchSolver:
                 else:
                     kv = labeled_script.get_location(changed_element)
                     assert isinstance(kv, inter.KeyValue)
-                
+
                 ce = labeled_script.get_location(kv)
                 assert isinstance(ce, (AtomicUnit, UnitBlock))
 
