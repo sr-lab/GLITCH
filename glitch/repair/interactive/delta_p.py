@@ -171,8 +171,9 @@ class PStatement(ABC):
             return lhs + rhs
         elif isinstance(expr, PEUndef):
             return None
-
-        raise ValueError(f"Unsupported expression, got {expr}")
+        else:
+            logging.warning(f"Unsupported expression, got {expr}")
+            return None
 
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr | None:
         if isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition"):
@@ -275,12 +276,8 @@ class PStatement(ABC):
             get_str: Callable[[PExpr], Optional[str]] = lambda expr: self.__get_str(expr, vars)
 
             if isinstance(self, (PMkdir, PCreate, PRm, PWrite, PChmod, PChown)):
-                try:
-                    path = get_str(self.path)
-                    if path is None:
-                        continue
-                except ValueError:
-                    logging.warning(f"Invalid path: {self.path}")
+                path = get_str(self.path)
+                if path is None:
                     continue
             else:
                 path = ""
