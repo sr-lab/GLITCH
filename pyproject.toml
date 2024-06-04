@@ -24,7 +24,7 @@ nltk = "^3.8.1"
 jsonschema = "^4.21.1"
 setuptools = "^69.5.1"
 tqdm = "^4.66.2"
-puppetparser = "0.2.12"
+puppetparser = "0.2.13"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"

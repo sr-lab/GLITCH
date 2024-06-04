@@ -563,6 +563,36 @@ user { 'mysql':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript10(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_10 = """
+file { '/etc/plumgrid':
+  ensure  =>  directory,
+  mode    =>  0755,
+}
+"""
+        self._setup_patch_solver(puppet_script_10, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_integer_mode(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/etc/plumgrid"] = File("0756", None, None)
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+file { '/etc/plumgrid':
+  ensure  =>  present,
+  mode    =>  0756,
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()

@@ -137,6 +137,12 @@ class NamesDatabase:
         if isinstance(value, (VariableReference, String)):
             v = value.value
 
+        if isinstance(value, Integer) and name == "mode":
+            return String(
+                oct(value.value).replace('o', ''), 
+                ElementInfo.from_code_element(value)
+            )
+
         if v is not None:
             match v, name, au_type, tech:
                 case "present" | "directory" | "absent", "state", "file" | "user", Tech.puppet:

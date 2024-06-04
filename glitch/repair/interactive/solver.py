@@ -317,7 +317,6 @@ class PatchSolver:
                 previous_owner_fun(p),
             )
         elif isinstance(statement, PSeq):
-            self.__generate_soft_constraints(statement.lhs, funs)
             lhs_constraints, funs = self.__generate_soft_constraints(
                 statement.lhs, funs
             )
