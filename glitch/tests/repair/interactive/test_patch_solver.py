@@ -854,6 +854,7 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         chef_script_1 = """
         file '/tmp/something' do
             mode '0755'
+            action :create_if_missing
         end
         """
         self._setup_patch_solver(chef_script_1, UnitBlockType.script, Tech.chef)
@@ -874,13 +875,14 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         model = models[0]
         assert model[solver.sum_var] == 4
         assert model[solver.vars["mode_2808"]] == "0777"
-        assert model[solver.vars["state_16"]] == "present"
-        assert model[solver.vars["content_256"]] == UNDEF
-        assert model[solver.vars["owner_1296"]] == UNDEF
+        assert model[solver.vars["state_7904"]] == "present"
+        assert model[solver.vars["content_16"]] == UNDEF
+        assert model[solver.vars["owner_256"]] == UNDEF
 
         result = """
         file '/tmp/something' do
             mode '0777'
+            action :create_if_missing
         end
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
@@ -897,9 +899,9 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         model = models[0]
         assert model[solver.sum_var] == 3
         assert model[solver.vars["mode_2808"]] == UNDEF
-        assert model[solver.vars["state_16"]] == "absent"
-        assert model[solver.vars["content_256"]] == UNDEF
-        assert model[solver.vars["owner_1296"]] == UNDEF
+        assert model[solver.vars["state_7904"]] == "absent"
+        assert model[solver.vars["content_16"]] == UNDEF
+        assert model[solver.vars["owner_256"]] == UNDEF
 
         result = """
         file '/tmp/something' do
@@ -1037,6 +1039,7 @@ class TestPatchSolverChefScript4(TestPatchSolver):
 
         file '/tmp/something' do
             mode x
+            action :nothing
         end
         """
         self._setup_patch_solver(chef_script_1, UnitBlockType.script, Tech.chef)
@@ -1059,9 +1062,9 @@ class TestPatchSolverChefScript4(TestPatchSolver):
         assert model[solver.vars["x"]] == "0777"
         assert model[solver.vars["y"]] == "0777"
         assert model[solver.vars["mode_8892"]] == "0777"
-        assert model[solver.vars["state_16"]] == "present"
-        assert model[solver.vars["content_256"]] == UNDEF
-        assert model[solver.vars["owner_1296"]] == UNDEF
+        assert model[solver.vars["state_17836"]] == "present"
+        assert model[solver.vars["content_16"]] == UNDEF
+        assert model[solver.vars["owner_256"]] == UNDEF
 
         result = """
         y = '0777'
@@ -1069,6 +1072,7 @@ class TestPatchSolverChefScript4(TestPatchSolver):
 
         file '/tmp/something' do
             mode x
+            action :nothing
         end
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)

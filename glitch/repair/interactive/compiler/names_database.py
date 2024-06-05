@@ -151,9 +151,9 @@ class NamesDatabase:
                     v = "present"
                 case "touch", "state", "file", Tech.ansible:
                     v = "present"
-                case ":create", "state", "file" | "user", Tech.chef:
+                case ":create" | ":nothing", "state", "file" | "user", Tech.chef:
                     v = "present"
-                case ":touch", "state", "file", Tech.chef:
+                case ":touch" | ":nothing" | ":create_if_missing", "state", "file", Tech.chef:
                     v = "present"
                 case ":delete", "state", "file" | "user", Tech.chef:
                     v = "absent"
