@@ -32,10 +32,10 @@ class CodeElement(ABC):
             self.end_column: int = info.end_column
             self.code: str = info.code
         else:
-            self.line: int = -1
-            self.column: int = -1
-            self.end_line: int = -1
-            self.end_column: int = -1
+            self.line: int = -33550336
+            self.column: int = -33550336
+            self.end_line: int = -33550336
+            self.end_column: int = -33550336
             self.code: str = ""
 
     def __hash__(self) -> int:
@@ -157,6 +157,12 @@ class Hash(Value):
 class Array(Value):
     def __init__(self, value: List[Expr], info: ElementInfo) -> None:
         super().__init__(info, value)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [v.as_dict() for v in self.value],
+        }
 
 
 class VariableReference(Value):
@@ -458,7 +464,7 @@ class AtomicUnit(Block):
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "name": self.name,
+            "name": self.name.as_dict(),
             "type": self.type,
             "attributes": [a.as_dict() for a in self.attributes],
         }

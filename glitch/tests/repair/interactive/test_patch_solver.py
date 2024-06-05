@@ -747,6 +747,107 @@ class TestPatchSolverAnsibleScript3(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
+class TestPatchSolverAnsibleScript4(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_4 = """---
+- name: Version
+  hosts: debian
+  vars:
+    tests_dir: /molecule/symfony_cli/version
+  tasks:
+    - name: Clean tests dir  # noqa risky-file-permissions
+      file:
+        path: "{{ tests_dir }}"
+        state: "{{ item }}"
+      loop: [absent, directory]
+"""
+        self._setup_patch_solver(ansible_script_4, UnitBlockType.script, Tech.ansible)
+
+    @unittest.skip("Not supported yet")
+    def test_patch_solver_ansible_item(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/molecule/symfony_cli/version"] = Dir(
+            mode="0755", owner=None
+        )
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Version
+  hosts: debian
+  vars:
+    tests_dir: /molecule/symfony_cli/version
+  tasks:
+    - name: Clean tests dir  # noqa risky-file-permissions
+      file:
+        path: "{{ tests_dir }}"
+        state: "directory"
+        mode: "0755"
+      loop: [absent, directory]
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
+class TestPatchSolverAnsibleScript5(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_5 = """---
+- name: "INITIAL SETUP"
+  hosts: games.infra.netsoc.co
+  become: yes
+  tasks:
+    - name: "Make /netsoc only readable by root"
+      file:
+        path: "/netsoc"
+        owner: root
+        group: root
+        mode: '1770'
+
+- name: Ensure Minecraft Servers
+  hosts: games.infra.netsoc.co
+  roles:
+    - role: minecraft
+      vars:
+        mount: "/netsoc/minecraft"
+"""
+        self._setup_patch_solver(ansible_script_5, UnitBlockType.script, Tech.ansible)
+
+    def test_patch_solver_ansible_unit_block(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/netsoc"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: "INITIAL SETUP"
+  hosts: games.infra.netsoc.co
+  become: yes
+  tasks:
+    - name: "Make /netsoc only readable by root"
+      file:
+        path: "/netsoc"
+        group: root
+        state: absent
+
+- name: Ensure Minecraft Servers
+  hosts: games.infra.netsoc.co
+  roles:
+    - role: minecraft
+      vars:
+        mount: "/netsoc/minecraft"
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()

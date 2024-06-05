@@ -176,7 +176,7 @@ class PStatement(ABC):
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr | None:
         if isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition"):
             return expr
-        if isinstance(expr, PEVar):
+        if isinstance(expr, PEVar) and expr.id in vars:
             return self.__eval(vars[expr.id], vars)
         elif isinstance(expr, PRLet):
             return self.__eval(expr.expr, vars)

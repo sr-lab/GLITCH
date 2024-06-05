@@ -448,8 +448,11 @@ class PatchSolver:
             dvars = filter(lambda v: model[v] is not None, self.vars.values())  # type: ignore
             self.solver.add(Not(And([v == model[v] for v in dvars])))
 
-        if elapsed >= self.timeout:
+        if elapsed >= self.timeout and len(models) > 0:
+            return models
+        elif elapsed >= self.timeout:
             return None
+        
         return models
 
     # TODO: improve way to identify sketch
