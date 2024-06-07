@@ -257,7 +257,7 @@ class DeltaPCompiler:
             name = self._compile_expr(atomic_unit.name)
             self._labeled_script.add_location(atomic_unit, atomic_unit.name)
         path = PEBinOP(PAdd(), PEConst(PStr("user:")), name)
-        name_attr = attributes.get_attribute("path")
+        name_attr = attributes.get_attribute("name")
         if name_attr is not None:
             self._labeled_script.add_location(atomic_unit, name_attr)
             self._labeled_script.add_location(name_attr, name_attr.value)

@@ -593,6 +593,77 @@ file { '/etc/plumgrid':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript11(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_11 = """
+file { '/usr/local/bin':
+  ensure    => 'directory',
+  owner     => $boxen_user,
+  group     => 'staff',
+  mode      => '0755'
+}   
+"""
+        self._setup_patch_solver(puppet_script_11, UnitBlockType.script, Tech.puppet)
+
+    @unittest.skip("Not implemented yet")
+    def test_patch_solver_puppet_variable_undefined(self) -> None:
+        # The problem is that there is no literal to repair and so
+        # the solver isn't able to get a solution
+        filesystem = FileSystemState()
+        filesystem.state["/usr/local/bin"] = Dir("0755", "test")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+file { '/usr/local/bin':
+  ensure    => 'directory',
+  owner     => 'test',
+  group     => 'staff',
+  mode      => '0755'
+}   
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+    
+class TestPatchSolverPuppetScript12(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_12 = """
+$data_dir = '/etc/hiera'
+file { 'hiera_data_dir' :
+  ensure => 'directory',
+  path   => $data_dir,
+  mode   => '0751',
+}
+"""
+        self._setup_patch_solver(puppet_script_12, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_path_variable(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/etc/hiera"] = Dir("0751", None)
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+$data_dir = '/etc/hiera'
+file { 'hiera_data_dir' :
+  ensure => 'directory',
+  path   => $data_dir,
+  mode   => '0751',
+}
+"""     
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
