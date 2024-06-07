@@ -346,9 +346,9 @@ class PatchSolver:
             if statement.id in self.vars:
                 var = self.vars[statement.id]
             else:
-                var = self.__const_string(statement.id)
+                var = z3.String(statement.id)
                 self.vars[statement.id] = var
-            hole = self.__const_string(f"loc-{statement.id}-{statement.label}")
+            hole = z3.String(f"loc-{statement.id}-{statement.label}")
             self.holes[f"loc-{statement.label}"] = hole
 
             value, constraints = self.__compile_expr(statement.expr)

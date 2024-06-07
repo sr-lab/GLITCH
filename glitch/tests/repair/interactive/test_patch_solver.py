@@ -1207,3 +1207,42 @@ file '/var/www/customers/public_html/index2.php' do
 end
         """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+
+class TestPatchSolverChefScript6(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_6 = """
+test_user = 'leia'
+test_user_home = "/home/#{test_user}"
+
+directory "#{test_user_home}/.ssh" do
+  mode '0700'
+  owner test_user
+  group test_user
+end
+"""
+        self._setup_patch_solver(chef_script_6, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_vars(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["/home/leia/.ssh"] = File("0766", "leia", "leia")
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+test_user = 'leia'
+test_user_home = "/home/#{test_user}"
+
+directory "#{test_user_home}/.ssh" do
+  mode '0766'
+  owner test_user
+  group test_user
+  content 'leia'
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
