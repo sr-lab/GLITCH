@@ -217,6 +217,26 @@ class BinaryOperation(Expr, ABC):
         self.left = left
         self.right = right
 
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, Expr) or not isinstance(o, self.__class__):
+            return False
+        return (
+            self.left == o.left
+            and self.right == o.right
+            and self.line == o.line
+            and self.column == o.column
+            and self.end_line == o.end_line
+            and self.end_column == o.end_column
+        )
+
+    def __hash__(self) -> int:
+        return (
+            hash(self.line)
+            * hash(self.column)
+            * hash(self.end_line)
+            * hash(self.end_column)
+        )
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),

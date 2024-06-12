@@ -770,7 +770,7 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
     - ansible.builtin.file:
         path: "/var/www/customers/public_html/{{ name }}"
         state: file
-        owner: "web_user"
+        owner: "web_user{{ owner }}"
         mode: '0755'
 """
         check = False
@@ -1246,3 +1246,52 @@ directory "#{test_user_home}/.ssh" do
 end
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+# class TestPatchSolverChefScript6(TestPatchSolver):
+#     def setUp(self):
+#         super().setUp()
+#         chef_script_6 = """
+# return unless node['sys']['snmp']
+
+# snmpd_package = 'snmpd'
+# snmpd_defaults = '/etc/default/snmpd'
+# snmpd_user = 'snmp'
+# snmpd_group = 'snmp'
+
+# log_levels = %w[emerg alert crit err warn notice info debug]
+# log_level_num = log_levels.rindex(node['sys']['snmp']['log_level']) || 4
+
+# if node['platform_family'] == 'debian' && node['platform_version'].to_i >= 9
+
+#   directory '/etc/systemd/system/snmpd.service.d/'
+
+#   file '/etc/systemd/system/snmpd.service.d/override.conf' do
+#     content <<EOF
+# # DO NOT CHANGE THIS FILE MANUALLY!
+# #
+# # This file is managed by chef.
+# # Created by sys::snmp
+
+# [Service]
+# ExecStart=
+# ExecStart=/usr/sbin/snmpd -LS#{log_level_num}d -Lf /dev/null \\
+#     -u #{snmpd_user} -g #{snmpd_user} -I -smux,mteTrigger,mteTriggerConf \\
+#     -f -p /run/snmpd.pid
+# EOF
+#     notifies :run, 'execute[sys-systemd-reload]'
+#   end
+# end
+# """
+#         self._setup_patch_solver(chef_script_6, UnitBlockType.script, Tech.chef)
+
+#     def test_patch_solver_chef_multiline_content(self) -> None:
+#         assert self.statement is not None
+#         fs = self.statement.to_filesystems()[0]
+#         assert isinstance(fs.state['/etc/systemd/system/snmpd.service.d/override.conf'], File)
+#         fs.state['/etc/systemd/system/snmpd.service.d/override.conf'].mode = "0777"
+#         print(fs.state)
+
+#         solver = PatchSolver(self.statement, fs, debug=True)
+#         models = solver.solve()
+#         assert models is not None
+#         assert len(models) == 1

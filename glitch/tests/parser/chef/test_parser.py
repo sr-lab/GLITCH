@@ -413,9 +413,9 @@ class TestChefParser(TestParser):
             Equal,
             VariableReference("value", ElementInfo(8, 6, 8, 11, "value")),
             BitwiseOr(
-                ElementInfo(9, 4, 9, 9, "1"),
-                Integer(1, ElementInfo(2, 6, 2, 7, "1")),
-                Integer(2, ElementInfo(2, 10, 2, 11, "2")),
+                ElementInfo(9, 4, 9, 9, "2 | 3"),
+                Integer(2, ElementInfo(9, 4, 9, 5, "2")),
+                Integer(3, ElementInfo(9, 8, 9, 9, "3")),
             ),
             9,  # FIXME
             4,  # FIXME

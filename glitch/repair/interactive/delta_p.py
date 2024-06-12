@@ -152,13 +152,26 @@ class PPower(PBinOp):
 
 
 class PStatement(ABC):
+    def __get_var(self, id: str, vars: Dict[str, PExpr]) -> Optional[PExpr]:
+        scopes = id.split("::")
+        while True:
+            if "::".join(scopes) in vars:
+                return vars["::".join(scopes)]
+            if len(scopes) == 1:
+                break
+            scopes.pop(-2)
+
+        return None
+
     def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
         elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
             return str(expr.const.value)
-        elif isinstance(expr, PEVar) and expr.id in vars:
-            return self.__get_str(vars[expr.id], vars)
+        elif isinstance(expr, PEVar) and self.__get_var(expr.id, vars) is not None:
+            res = self.__get_var(expr.id, vars)
+            assert res is not None
+            return self.__get_str(res, vars)
         elif isinstance(expr, PRLet):
             return self.__get_str(expr.expr, vars)
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
@@ -176,8 +189,10 @@ class PStatement(ABC):
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr | None:
         if isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition"):
             return expr
-        if isinstance(expr, PEVar) and expr.id in vars:
-            return self.__eval(vars[expr.id], vars)
+        if isinstance(expr, PEVar) and self.__get_var(expr.id, vars) is not None:
+            res = self.__get_var(expr.id, vars)
+            assert res is not None
+            return self.__eval(res, vars)
         elif isinstance(expr, PRLet):
             return self.__eval(expr.expr, vars)
         elif isinstance(expr, PEUndef) or isinstance(expr, PEConst):

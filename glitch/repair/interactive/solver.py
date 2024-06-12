@@ -187,12 +187,24 @@ class PatchSolver:
                 + self.__collect_vars(statement.expr)
             )
         return []
+    
+    def __get_var(self, id: str) -> Optional[ExprRef]:
+        scopes = id.split("::")
+        while True:
+            if "::".join(scopes) in self.vars:
+                return self.vars["::".join(scopes)]
+            if len(scopes) == 1:
+                break
+            scopes.pop(-2)
+
+        return None
 
     def __compile_expr(self, expr: PExpr) -> Tuple[ExprRef, List[ExprRef]]:
         constraints: List[ExprRef] = []
 
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return StringVal(expr.const.value), constraints
+        # TODO: add scope handling. 
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id)
             return self.vars[expr.id], constraints
@@ -555,10 +567,14 @@ class PatchSolver:
             old_line = lines[codeelement.line - 1]
             start = codeelement.column - 1
             end = codeelement.end_column - 1
-            if old_line[start:end].startswith('"') or codeelement.code.startswith('"'):
+            if (
+                (old_line[start:end].startswith('"') or codeelement.code.startswith('"'))
+                and (old_line[start:end].endswith('"') or codeelement.code.endswith('"'))
+            ):
                 value = f'"{value}"'
-            elif old_line[start:end].startswith("'") or codeelement.code.startswith(
-                "'"
+            elif (
+                (old_line[start:end].startswith("'") or codeelement.code.startswith("'"))
+                and (old_line[start:end].endswith("'") or codeelement.code.endswith("'"))
             ):
                 value = f"'{value}'"
             if old_line[end - 1] == "\n":

@@ -35,10 +35,10 @@ class TestAnsibleParser(TestParser):
             ir.atomic_units[0].attributes[0].value.left.left,
             String,
             'hostnamectl --machine="',
-            3,
-            10,
+            4,
             5,
-            1,
+            4,
+            28,
         )
         assert isinstance(
             ir.atomic_units[0].attributes[0].value.left.right, VariableReference
@@ -47,20 +47,20 @@ class TestAnsibleParser(TestParser):
             ir.atomic_units[0].attributes[0].value.left.right,
             VariableReference,
             "inventory_hostname",
-            3,
-            10,
-            5,
-            1,
+            4,
+            31,
+            4,
+            49,
         )
         assert isinstance(ir.atomic_units[0].attributes[0].value.right, String)
         self._check_value(
             ir.atomic_units[0].attributes[0].value.right,
             String,
             "\" status | awk '/Machine ID/ {print $3}'",
-            3,
-            10,
-            5,
-            1,
+            4,
+            52,
+            4,
+            92,
         )
 
         assert ir.atomic_units[0].attributes[0].line == 3
@@ -89,9 +89,9 @@ class TestAnsibleParser(TestParser):
             VariableReference,
             "physical_host",
             6,
-            16,
+            20,
             6,
-            37,
+            33,
         )
         assert ir.atomic_units[0].attributes[2].line == 6
         assert ir.atomic_units[0].attributes[2].column == 3
@@ -153,18 +153,18 @@ class TestAnsibleParser(TestParser):
             String,
             "env",
             6,
-            26,
+            37,
             6,
-            70,
+            42,
         )
         self._check_value(
             ir.unit_blocks[0].variables[0].value.args[1],
             String,
             "AQUA_ADMIN_PASSWORD",
             6,
-            26,
+            44,
             6,
-            70,
+            65,
         )
         assert ir.unit_blocks[0].variables[0].line == 6
         assert ir.unit_blocks[0].variables[0].column == 5
@@ -179,19 +179,19 @@ class TestAnsibleParser(TestParser):
             ir.unit_blocks[0].variables[1].value.args[0],
             String,
             "env",
-            7,
-            29,
-            9,
-            1,
+            8,
+            18,
+            8,
+            23,
         )
         self._check_value(
             ir.unit_blocks[0].variables[1].value.args[1],
             String,
             "AQUA_SSO_CLIENT_SECRET",
-            7,
-            29,
-            9,
-            1,
+            8,
+            25,
+            8,
+            49,
         )
         assert ir.unit_blocks[0].variables[1].line == 7
         assert ir.unit_blocks[0].variables[1].column == 5
@@ -382,9 +382,9 @@ class TestAnsibleParser(TestParser):
             VariableReference,
             "var",
             2,
-            14,
+            18,
             2,
-            33,
+            21,
         )
 
         assert ir.variables[1].name == "with_string"
@@ -393,9 +393,9 @@ class TestAnsibleParser(TestParser):
             String,
             "string",
             3,
-            14,
+            18,
             3,
-            30,
+            26,
         )
 
         assert ir.variables[2].name == "with_list"
@@ -406,9 +406,9 @@ class TestAnsibleParser(TestParser):
             Integer,
             1,
             4,
-            12,
+            17,
             4,
-            29,
+            18,
         )
 
         assert ir.variables[3].name == "with_sum"
@@ -419,27 +419,27 @@ class TestAnsibleParser(TestParser):
             VariableReference,
             "var",
             5,
-            11,
+            15,
             5,
-            37,
+            18,
         )
         self._check_value(
             ir.variables[3].value.left.right,
             String,
             "string",
             5,
-            11,
+            21,
             5,
-            37,
+            29,
         )
         self._check_value(
             ir.variables[3].value.right,
             Integer,
             1,
             5,
-            11,
+            32,
             5,
-            37,
+            33,
         )
 
     def test_ansible_parser_node_not_supported(self) -> None:
