@@ -7,55 +7,39 @@ from glitch.repr.inter import *
 from ruamel.yaml.main import YAML
 from ruamel.yaml.nodes import (
     Node,
-    ScalarNode,
     MappingNode,
-    SequenceNode,
-    CollectionNode,
 )
 from pkg_resources import resource_filename
 from glitch.exceptions import EXCEPTIONS, throw_exception
 
 
 class GithubActionsParser(YamlParser):
-    @staticmethod
-    def __get_value(node: Node) -> Any:
-        if isinstance(node, ScalarNode):
-            return node.value
-        elif isinstance(node, MappingNode):
-            return {
-                GithubActionsParser.__get_value(key): GithubActionsParser.__get_value(
-                    value
-                )
-                for key, value in node.value
-            }
-        elif isinstance(node, SequenceNode):
-            return [GithubActionsParser.__get_value(value) for value in node.value]
-        elif isinstance(node, CollectionNode):
-            return node.value
-        else:
-            return None
+    def __init__(self):
+        super().__init__({"variable_start_string": "${{"})
 
-    @staticmethod
-    def __parse_variable(key: Node, value: Node, lines: List[str]) -> Variable:
+    def __parse_dict(self, node: Node) -> Dict[str, Node]:
+        result: Dict[str, Node] = {}
+        if isinstance(node, MappingNode):
+            for key, value in node.value:
+                result[key.value] = value
+        return result
+
+    def __parse_variable(self, key: Node, value: Node, lines: List[str]) -> Variable:
         vars: List[KeyValue] = []
 
         if isinstance(value, MappingNode):
-            var_value = None
+            var_value = Null()
             for k, v in value.value:
-                vars.append(GithubActionsParser.__parse_variable(k, v, lines))
+                vars.append(self.__parse_variable(k, v, lines))
         else:
-            var_value = GithubActionsParser.__get_value(value)
+            var_value = self.get_value(value, lines)
 
-        name = GithubActionsParser.__get_value(key)
-        has_variable = False
-        if isinstance(var_value, str):
-            has_variable = "${{" in var_value
-        code = GithubActionsParser._get_code(key, value, lines)
+        name = self._get_code(key, key, lines)
+        code = self._get_code(key, value, lines)
 
         var = Variable(
             name,
             var_value,
-            has_variable,
             ElementInfo(
                 key.start_mark.line + 1,
                 key.start_mark.column + 1,
@@ -70,27 +54,22 @@ class GithubActionsParser(YamlParser):
 
         return var
 
-    @staticmethod
-    def __parse_attribute(key: Node, value: Node, lines: List[str]) -> Attribute:
+    def __parse_attribute(self, key: Node, value: Node, lines: List[str]) -> Attribute:
         attrs: List[KeyValue] = []
 
         if isinstance(value, MappingNode):
-            attr_value = None
+            attr_value = Null()
             for k, v in value.value:
-                attrs.append(GithubActionsParser.__parse_attribute(k, v, lines))
+                attrs.append(self.__parse_attribute(k, v, lines))
         else:
-            attr_value = GithubActionsParser.__get_value(value)
+            attr_value = self.get_value(value, lines)
 
-        name = GithubActionsParser.__get_value(key)
-        has_variable = False
-        if isinstance(attr_value, str):
-            has_variable = "${{" in attr_value
-        code = GithubActionsParser._get_code(key, value, lines)
+        name = self._get_code(key, key, lines)
+        code = self._get_code(key, value, lines)
 
         attr = Attribute(
             name,
             attr_value,
-            has_variable,
             ElementInfo(
                 key.start_mark.line + 1,
                 key.start_mark.column + 1,
@@ -107,24 +86,24 @@ class GithubActionsParser(YamlParser):
     def __parse_job(self, key: Node, value: Node, lines: List[str]) -> UnitBlock:
         job = UnitBlock(key.value, UnitBlockType.block)
         job.line, job.column = key.start_mark.line + 1, key.start_mark.column + 1
-        job.code = GithubActionsParser._get_code(key, value, lines)
+        job.code = self._get_code(key, value, lines)
 
         for attr_key, attr_value in value.value:
             if attr_key.value == "steps":
                 for step in attr_value.value:
-                    step_dict = self.__get_value(step)
-                    name = "" if "name" not in step_dict else step_dict["name"]
+                    step_dict: Dict[str, Node] = self.__parse_dict(step)
+                    name = Null() if "name" not in step_dict else self.get_value(step_dict["name"], lines)
                     if "run" in step_dict:
                         au_type = "shell"
                     else:  # uses
-                        au_type = step_dict["uses"]
+                        au_type = self._get_code(step_dict["uses"], step_dict["uses"], lines)
 
                     au = AtomicUnit(name, au_type)
                     au.line, au.column = (
                         step.start_mark.line + 1,
                         step.start_mark.column + 1,
                     )
-                    au.code = GithubActionsParser._get_code(step, step, lines)
+                    au.code = self._get_code(step, step, lines)
 
                     for key, value in step.value:
                         if key.value in ["with", "env"]:
@@ -171,11 +150,18 @@ class GithubActionsParser(YamlParser):
                     throw_exception(EXCEPTIONS["GHA_COULD_NOT_PARSE"], path)
                     return None
 
-        parsed_file_value = self.__get_value(parsed_file)
+        parsed_file_value = self.__parse_dict(parsed_file)
         if "name" not in parsed_file_value:
             unit_block = UnitBlock("", type)
         else:
-            unit_block = UnitBlock(parsed_file_value["name"], type)
+            unit_block = UnitBlock(
+                self._get_code(
+                    parsed_file_value["name"], 
+                    parsed_file_value["name"],
+                    lines
+                ),
+                type
+            )
         unit_block.path = path
 
         for key, value in parsed_file.value:
@@ -192,7 +178,7 @@ class GithubActionsParser(YamlParser):
                 unit_block.add_attribute(self.__parse_attribute(key, value, lines))
 
         with open(path) as f:
-            comments = list(GithubActionsParser._get_comments(parsed_file, f))
+            comments = list(self._get_comments(parsed_file, f))
             for comment in sorted(comments, key=lambda x: x[0]):
                 c = Comment(comment[1])
                 c.line = comment[0]
