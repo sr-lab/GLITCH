@@ -22,61 +22,71 @@ class TestGithubActionsParser(TestParser):
 
         assert len(ir.attributes) == 1
         assert ir.attributes[0].name == "on"
-        assert ir.attributes[0].value == Null()
+        assert isinstance(ir.attributes[0].value, Hash)
         assert ir.attributes[0].line == 2
         assert ir.attributes[0].end_line == 10
         assert ir.attributes[0].column == 1
         assert ir.attributes[0].end_column == 1
-        assert len(ir.attributes[0].keyvalues) == 2
+        assert len(ir.attributes[0].value.value) == 2
 
-        assert ir.attributes[0].keyvalues[0].name == "push"
-        assert ir.attributes[0].keyvalues[0].value == Null()
-        assert ir.attributes[0].keyvalues[0].line == 3
-        assert ir.attributes[0].keyvalues[0].end_line == 6
-        assert ir.attributes[0].keyvalues[0].column == 3
-        assert ir.attributes[0].keyvalues[0].end_column == 3
-        assert len(ir.attributes[0].keyvalues[0].keyvalues) == 1
-
-        assert ir.attributes[0].keyvalues[0].keyvalues[0].name == "branches"
-        assert isinstance(
-            ir.attributes[0].keyvalues[0].keyvalues[0].value,
-            Array
-        )
-        assert len(ir.attributes[0].keyvalues[0].keyvalues[0].value.value) == 1
-        self._check_value(
-            ir.attributes[0].keyvalues[0].keyvalues[0].value.value[0],
-            String,
-            "main",
-            5,
-            9,
-            5,
-            13
-        )
-        assert ir.attributes[0].keyvalues[0].keyvalues[0].line == 4
-        assert ir.attributes[0].keyvalues[0].keyvalues[0].end_line == 6
-        assert ir.attributes[0].keyvalues[0].keyvalues[0].column == 5
-        assert ir.attributes[0].keyvalues[0].keyvalues[0].end_column == 3
         assert (
-            ir.attributes[0].keyvalues[0].keyvalues[0].code
-            == "    branches:\n      - main\n  "
+            String("push", ElementInfo(3, 3, 3, 7, "push"))
+            in ir.attributes[0].value.value
         )
+        push = ir.attributes[0].value.value[
+            String("push", ElementInfo(3, 3, 3, 7, "push"))
+        ]
+        assert isinstance(push, Hash)
+        assert push.line == 4
+        assert push.column == 5
+        assert push.end_line == 6
+        assert push.end_column == 3
+        assert len(push.value) == 1
 
-        assert ir.attributes[0].keyvalues[1].name == "pull_request"
-        assert ir.attributes[0].keyvalues[1].value == Null()
-        assert ir.attributes[0].keyvalues[1].line == 6
-        assert ir.attributes[0].keyvalues[1].end_line == 10
-        assert ir.attributes[0].keyvalues[1].column == 3
-        assert ir.attributes[0].keyvalues[1].end_column == 1
-
-        assert len(ir.attributes[0].keyvalues[1].keyvalues) == 1
-        assert ir.attributes[0].keyvalues[1].keyvalues[0].name == "branches"
-        assert isinstance(
-            ir.attributes[0].keyvalues[1].keyvalues[0].value,
-            Array
+        assert (
+            String("branches", ElementInfo(4, 5, 4, 13, "branches"))
+            in push.value
         )
-        assert len(ir.attributes[0].keyvalues[1].keyvalues[0].value.value) == 1
+        branches = push.value[
+            String("branches", ElementInfo(4, 5, 4, 13, "branches"))
+        ]
+        assert isinstance(branches, Array)
+        assert len(branches.value) == 1
         self._check_value(
-            ir.attributes[0].keyvalues[1].keyvalues[0].value.value[0],
+            branches.value[0],
+            String,
+            "main",
+            5,
+            9,
+            5,
+            13
+        )
+
+        assert (
+            String("pull_request", ElementInfo(6, 3, 6, 15, "pull_request"))
+            in ir.attributes[0].value.value
+        )
+        pull = ir.attributes[0].value.value[
+            String("pull_request", ElementInfo(6, 3, 6, 15, "pull_request"))
+        ]
+        assert isinstance(pull, Hash)
+        assert pull.line == 7
+        assert pull.column == 5
+        assert pull.end_line == 10
+        assert pull.end_column == 1
+        assert len(pull.value) == 1
+
+        assert (
+            String("branches", ElementInfo(7, 5, 7, 13, "branches"))
+            in pull.value
+        )
+        branches = pull.value[
+            String("branches", ElementInfo(7, 5, 7, 13, "branches"))
+        ]
+        assert isinstance(branches, Array)
+        assert len(branches.value) == 1
+        self._check_value(
+            branches.value[0],
             String,
             "main",
             8,
@@ -84,10 +94,6 @@ class TestGithubActionsParser(TestParser):
             8,
             13
         )
-        assert ir.attributes[0].keyvalues[1].keyvalues[0].line == 7
-        assert ir.attributes[0].keyvalues[1].keyvalues[0].end_line == 10
-        assert ir.attributes[0].keyvalues[1].keyvalues[0].column == 5
-        assert ir.attributes[0].keyvalues[1].keyvalues[0].end_column == 1
 
         assert len(ir.unit_blocks) == 1
         assert ir.unit_blocks[0].type == UnitBlockType.block
@@ -248,12 +254,16 @@ class TestGithubActionsParser(TestParser):
         assert len(ir.unit_blocks[0].variables) == 1
         assert isinstance(ir.unit_blocks[0].variables[0], Variable)
         assert ir.unit_blocks[0].variables[0].name == "run"
-        assert ir.unit_blocks[0].variables[0].value == Null()
-        assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "shell"
-        
+        assert isinstance(ir.unit_blocks[0].variables[0].value, Hash)
+        assert len(ir.unit_blocks[0].variables[0].value.value) == 1
+        assert (
+            String("shell", ElementInfo(38, 9, 38, 14, "shell"))
+            in ir.unit_blocks[0].variables[0].value.value
+        )
         self._check_value(
-            ir.unit_blocks[0].variables[0].keyvalues[0].value,
+            ir.unit_blocks[0].variables[0].value.value[
+                String("shell", ElementInfo(38, 9, 38, 14, "shell"))
+            ],
             String,
             "powershell",
             38,

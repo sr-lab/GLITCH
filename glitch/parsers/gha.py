@@ -25,14 +25,7 @@ class GithubActionsParser(YamlParser):
         return result
 
     def __parse_variable(self, key: Node, value: Node, lines: List[str]) -> Variable:
-        vars: List[KeyValue] = []
-
-        if isinstance(value, MappingNode):
-            var_value = Null()
-            for k, v in value.value:
-                vars.append(self.__parse_variable(k, v, lines))
-        else:
-            var_value = self.get_value(value, lines)
+        var_value = self.get_value(value, lines)
 
         name = self._get_code(key, key, lines)
         code = self._get_code(key, value, lines)
@@ -49,21 +42,10 @@ class GithubActionsParser(YamlParser):
             ),
         )
 
-        for child in vars:
-            var.keyvalues.append(child)
-
         return var
 
     def __parse_attribute(self, key: Node, value: Node, lines: List[str]) -> Attribute:
-        attrs: List[KeyValue] = []
-
-        if isinstance(value, MappingNode):
-            attr_value = Null()
-            for k, v in value.value:
-                attrs.append(self.__parse_attribute(k, v, lines))
-        else:
-            attr_value = self.get_value(value, lines)
-
+        attr_value = self.get_value(value, lines)
         name = self._get_code(key, key, lines)
         code = self._get_code(key, value, lines)
 
@@ -78,9 +60,7 @@ class GithubActionsParser(YamlParser):
                 code,
             ),
         )
-        for child in attrs:
-            attr.keyvalues.append(child)
-
+        
         return attr
 
     def __parse_job(self, key: Node, value: Node, lines: List[str]) -> UnitBlock:

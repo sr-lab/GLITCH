@@ -153,6 +153,12 @@ class Hash(Value):
     def __init__(self, value: Dict[Expr, Expr], info: ElementInfo) -> None:
         super().__init__(info, value)
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [{"key": k.as_dict(), "value": v.as_dict()} for k, v in self.value.items()],
+        }
+
 
 class Array(Value):
     def __init__(self, value: List[Expr], info: ElementInfo) -> None:
@@ -440,12 +446,11 @@ class KeyValue(CodeElement):
         super().__init__(info)
         self.name: str = name
         self.value: Expr = value
-        self.keyvalues: List[KeyValue] = []
 
     def __repr__(self) -> str:
         value = repr(self.value).split("\n")[0]
         if value == "None":
-            return f"{self.name}:{value}:{self.keyvalues}"
+            return f"{self.name}:{value}"
         else:
             return f"{self.name}:{value}"
 
@@ -454,7 +459,6 @@ class KeyValue(CodeElement):
             **super().as_dict(),
             "name": self.name,
             "value": self.value.as_dict(),
-            "keyvalues": [kv.as_dict() for kv in self.keyvalues],
         }
 
 

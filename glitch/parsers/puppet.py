@@ -16,27 +16,10 @@ class PuppetParser(p.Parser):
     def __process_unitblock_component(
         ce: CodeElement | List[CodeElement], unit_block: UnitBlock
     ) -> None:
-        def get_var(parent_name: str, vars: List[KeyValue]):
-            for var in vars:
-                if var.name == parent_name:
-                    return var
-            return None
-
-        def add_variable_to_unit_block(
-            variable: KeyValue, unit_block_vars: List[KeyValue]
-        ) -> None:
-            var_name = variable.name
-            var = get_var(var_name, unit_block_vars)
-            if var and isinstance(var.value, Null) and isinstance(variable.value, Null):
-                for v in variable.keyvalues:
-                    add_variable_to_unit_block(v, var.keyvalues)
-            else:
-                unit_block_vars.append(variable)
-
         if isinstance(ce, Dependency):
             unit_block.add_dependency(ce)
         elif isinstance(ce, Variable):
-            add_variable_to_unit_block(ce, unit_block.variables)  # type: ignore
+            unit_block.add_variable(ce)
         elif isinstance(ce, AtomicUnit):
             unit_block.add_atomic_unit(ce)
         elif isinstance(ce, UnitBlock):

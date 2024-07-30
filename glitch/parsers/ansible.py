@@ -5,10 +5,8 @@ from typing import List, TextIO, Any, Optional, Callable
 from ruamel.yaml.main import YAML
 from ruamel.yaml.nodes import (
     Node,
-    ScalarNode,
     MappingNode,
     SequenceNode,
-    CollectionNode,
 )
 from ruamel.yaml.tokens import Token
 from glitch.exceptions import EXCEPTIONS, throw_exception
@@ -18,163 +16,71 @@ from glitch.repr.inter import *
 class AnsibleParser(YamlParser):
     def __init__(self) -> None:
         super().__init__()
-
-    def __parse_vars(
+    
+    def __create_variable(
         self,
-        unit_block: UnitBlock,
-        cur_name: str,
-        key_node: Node,
-        value_node: Node,
+        token: Token | Node,
+        val_node: Node,
+        value: Expr,
+        name: str,
         code: List[str],
-        child: bool = False,
+    ) -> Variable:
+        if isinstance(value, Null):
+            v_code = self._get_code(token, token, code)
+        else:
+            v_code = self._get_code(token, val_node, code)
+        v_code = "".join(code[token.start_mark.line : token.end_mark.line + 1])
+        info = ElementInfo(
+            token.start_mark.line + 1,
+            token.start_mark.column + 1,
+            val_node.end_mark.line + 1,
+            val_node.end_mark.column + 1,
+            v_code,
+        )
+        return Variable(name, value, info)
+    
+    def __parse_vars(
+        self, node: MappingNode, code: List[str]
     ) -> List[Variable]:
-        def create_variable(
-            token: Token | Node,
-            name: str,
-            value: Expr,
-            val_node: Node,
-            child: bool = False,
-        ) -> Variable:
-            if isinstance(value, Null):
-                v_code = self._get_code(token, token, code)
-            else:
-                v_code = self._get_code(token, val_node, code)
-            v_code = "".join(code[token.start_mark.line : token.end_mark.line + 1])
-
-            info = ElementInfo(
-                token.start_mark.line + 1,
-                token.start_mark.column + 1,
-                val_node.end_mark.line + 1,
-                val_node.end_mark.column + 1,
-                v_code,
-            )
-
-            v = Variable(name, value, info)
-            variables.append(v)
-            if not child:
-                unit_block.add_variable(v)
-            return v
-
         variables: List[Variable] = []
-        if isinstance(value_node, MappingNode):
-            if cur_name == "":
-                for key, v in value_node.value:
-                    if hasattr(key, "value") and isinstance(key.value, str):
-                        self.__parse_vars(
-                            unit_block, key.value, key, v, code, child
-                        )
-                    elif isinstance(key.value, MappingNode):
-                        self.__parse_vars(
-                            unit_block, cur_name, key, key.value[0][0], code, child  # type: ignore
-                        )
-            else:
-                var = create_variable(key_node, cur_name, Null(), value_node, child)
-                for key, v in value_node.value:
-                    if hasattr(key, "value") and isinstance(key.value, str):
-                        var.keyvalues += self.__parse_vars(
-                            unit_block, key.value, key, v, code, True
-                        )
-                    elif isinstance(key.value, MappingNode):
-                        var.keyvalues += self.__parse_vars(
-                            unit_block, cur_name, key, key.value[0][0], code, True  # type: ignore
-                        )
-        elif isinstance(value_node, ScalarNode):
-            v = self.get_value(value_node, code)
-            create_variable(key_node, cur_name, v, value_node, child)
-        elif isinstance(value_node, SequenceNode):
-            value: List[Expr] = []
 
-            for i, val in enumerate(value_node.value):
-                if isinstance(val, CollectionNode):
-                    variables += self.__parse_vars(
-                        unit_block, f"{cur_name}[{i}]", key_node, val, code, child
-                    )
-                else:
-                    value.append(self.get_value(val, code))
-
-            if len(value) > 0:
-                create_variable(
-                    key_node,
-                    cur_name,
-                    Array(
-                        value,
-                        ElementInfo(
-                            value_node.start_mark.line + 1,
-                            value_node.start_mark.column + 1,
-                            value_node.end_mark.line + 1,
-                            value_node.end_mark.column + 1,
-                            self._get_code(value_node, value_node, code),
-                        ),
-                    ),
-                    value_node,
-                )
+        for key, val in node.value:
+            name = key.value
+            value = self.get_value(val, code)
+            v = self.__create_variable(key, val, value, name, code)
+            variables.append(v)
 
         return variables
 
+    def __create_attribute(
+        self, 
+        token: Token | Node, 
+        name: str, 
+        value: Expr, 
+        val_node: Node,
+        code: List[str],
+    ) -> Attribute:
+        if isinstance(value, Null):
+            a_code = self._get_code(token, token, code)
+        else:
+            a_code = self._get_code(token, val_node, code)
+
+        info = ElementInfo(
+            token.start_mark.line + 1,
+            token.start_mark.column + 1,
+            val_node.end_mark.line + 1,
+            val_node.end_mark.column + 1,
+            a_code,
+        )
+
+        return Attribute(name, value, info)
+
+
     def __parse_attribute(
-        self, cur_name: str, token: Token | Node, val: Any, code: List[str]
-    ) -> List[Attribute]:
-        def create_attribute(
-            token: Token | Node, name: str, value: Expr, val_node: Node
-        ) -> Attribute:
-            if isinstance(value, Null):
-                a_code = self._get_code(token, token, code)
-            else:
-                a_code = self._get_code(token, val, code)
-
-            info = ElementInfo(
-                token.start_mark.line + 1,
-                token.start_mark.column + 1,
-                val_node.end_mark.line + 1,
-                val_node.end_mark.column + 1,
-                a_code,
-            )
-
-            a = Attribute(name, value, info)
-            attributes.append(a)
-
-            return a
-
-        attributes: List[Attribute] = []
-        if isinstance(val, MappingNode):
-            attribute = create_attribute(token, cur_name, Null(), val)
-            aux_attributes: List[KeyValue] = []
-            for aux, aux_val in val.value:
-                aux_attributes += self.__parse_attribute(
-                    f"{aux.value}", aux, aux_val, code
-                )
-            attribute.keyvalues = aux_attributes
-        elif isinstance(val, ScalarNode):
-            v = self.get_value(val, code)
-            create_attribute(token, cur_name, v, val)
-        elif isinstance(val, SequenceNode):
-            value: List[Expr] = []
-            for i, v in enumerate(val.value):
-                if not isinstance(v, ScalarNode):
-                    attributes += self.__parse_attribute(
-                        f"{cur_name}[{i}]", v, v, code
-                    )
-                else:
-                    value.append(self.get_value(v, code))
-
-            if len(value) > 0:
-                create_attribute(
-                    token,
-                    cur_name,
-                    Array(
-                        value,
-                        ElementInfo(
-                            val.start_mark.line + 1,
-                            val.start_mark.column + 1,
-                            val.end_mark.line + 1,
-                            val.end_mark.column + 1,
-                            self._get_code(val, val, code),
-                        ),
-                    ),
-                    val,
-                )
-
-        return attributes
+        self, name: str, token: Token | Node, val: Any, code: List[str]
+    ) -> Attribute:
+        v = self.get_value(val, code)
+        return self.__create_attribute(token, name, v, val, code)
 
     def __parse_tasks(self, unit_block: UnitBlock, tasks: Node, code: List[str]) -> None:
         for task in tasks.value:
@@ -213,13 +119,13 @@ class AnsibleParser(YamlParser):
 
                     if isinstance(val, MappingNode) and key.value == type:
                         for atr, atr_val in val.value:
-                            attributes += self.__parse_attribute(
+                            attributes.append(self.__parse_attribute(
                                 atr.value, atr, atr_val, code
-                            )
+                            ))
                     else:
-                        attributes += self.__parse_attribute(
+                        attributes.append(self.__parse_attribute(
                             key.value, key, val, code
-                        )
+                        ))
 
             if is_block:
                 for au in atomic_units:
@@ -272,13 +178,15 @@ class AnsibleParser(YamlParser):
                     if key.value == "name" and play.name == "":
                         play.name = value.value
                     elif key.value == "vars":
-                        self.__parse_vars(play, "", value, value, code)
+                        vars = self.__parse_vars(value, code)
+                        for v in vars:
+                            play.add_variable(v)
                     elif key.value in ["tasks", "pre_tasks", "post_tasks", "handlers"]:
                         self.__parse_tasks(play, value, code)
                     else:
-                        play.attributes += self.__parse_attribute(
+                        play.attributes.append(self.__parse_attribute(
                             key.value, key, value, code
-                        )
+                        ))
 
                 unit_block.add_unit_block(play)
 
@@ -335,7 +243,10 @@ class AnsibleParser(YamlParser):
             if parsed_file is None:
                 return unit_block
 
-            self.__parse_vars(unit_block, "", parsed_file, parsed_file, code)
+            assert isinstance(parsed_file, MappingNode)
+            vars = self.__parse_vars(parsed_file, code)
+            for v in vars:
+                unit_block.add_variable(v)
             for comment in self._get_comments(parsed_file, file):
                 c = Comment(comment[1])
                 c.line = comment[0]

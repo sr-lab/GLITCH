@@ -380,23 +380,6 @@ class YamlParser(p.Parser, ABC):
         raise ValueError("No Jinja nodes found")
 
     def get_value(self, value: Node, code: List[str]) -> Expr:
-        # Special case where a mapping node is defined as a tuple
-        if isinstance(value, tuple) and len(value) == 2: # type: ignore
-            key, val = value # type: ignore
-            assert isinstance(key, Node) and isinstance(val, Node)
-            return Hash(
-                {
-                    self.get_value(key, code): self.get_value(val, code)
-                },
-                ElementInfo(
-                    key.start_mark.line + 1,
-                    key.start_mark.column + 1,
-                    val.end_mark.line + 1,
-                    val.end_mark.column + 1,
-                    self._get_code(key, val, code),
-                ),
-            )
-        
         info = ElementInfo(
             value.start_mark.line + 1,
             value.start_mark.column + 1,
@@ -417,6 +400,14 @@ class YamlParser(p.Parser, ABC):
             return self.__parse_string("".join(content), info)
         elif v is None:
             return Null(info)
+        elif isinstance(value, MappingNode) and isinstance(v, list):
+            return Hash(
+                {
+                    self.get_value(key, code): self.get_value(val, code) # type: ignore
+                    for key, val in v # type: ignore
+                },
+                info,
+            )
         elif isinstance(v, list):
             return Array([self.get_value(val, code) for val in v], info) # type: ignore
         elif isinstance(v, dict):
@@ -428,4 +419,4 @@ class YamlParser(p.Parser, ABC):
                 info,
             )
         else:
-            raise ValueError(f"Unknown value type: {type(v)}")  #
+            raise ValueError(f"Unknown value type: {type(v)}")

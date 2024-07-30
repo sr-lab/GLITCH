@@ -99,32 +99,26 @@ class TestAnsibleParser(TestParser):
         assert ir.atomic_units[0].attributes[2].end_column == 37
 
         assert ir.atomic_units[0].attributes[3].name == "test"
-        self._check_value(
-            ir.atomic_units[0].attributes[3].value, Null, None, -1, -1, -1, -1
+        assert isinstance(ir.atomic_units[0].attributes[3].value, Hash)
+        assert len(ir.atomic_units[0].attributes[3].value.value) == 1
+        assert (
+            String("executable", ElementInfo(8, 5, 8, 15, "executable")) in
+            ir.atomic_units[0].attributes[3].value.value
         )
-        assert ir.atomic_units[0].attributes[3].line == 7
-        assert ir.atomic_units[0].attributes[3].column == 3
-        assert ir.atomic_units[0].attributes[3].end_line == 8
-        assert ir.atomic_units[0].attributes[3].end_column == 44
-        assert len(ir.atomic_units[0].attributes[3].keyvalues) == 1
 
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].name == "executable"
+        executable_value = ir.atomic_units[0].attributes[3].value.value[
+            String("executable", ElementInfo(8, 5, 8, 15, "executable"))
+        ]
+        assert isinstance(executable_value, Array)
+        assert len(executable_value.value) == 2
+
         self._check_value(
-            ir.atomic_units[0].attributes[3].keyvalues[0].value,
-            Array,
-            [
-                String("/bin/bash", ElementInfo(8, 18, 8, 29, "/bin/bash")),
-                String("/bin/shell", ElementInfo(8, 31, 8, 43, "/bin/shell")),
-            ],
-            8,
-            17,
-            8,
-            44,
+            executable_value.value[0], String, "/bin/bash", 8, 18, 8, 29
         )
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].line == 8
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].column == 5
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].end_line == 8
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].end_column == 44
+        self._check_value(
+            executable_value.value[1], String, "/bin/shell", 8, 31, 8, 43
+        )
+
 
     def test_ansible_parser_valid_playbook_vars(self) -> None:
         """
@@ -217,29 +211,27 @@ class TestAnsibleParser(TestParser):
         assert len(ir.unit_blocks[0].variables) == 1
 
         assert ir.unit_blocks[0].variables[0].name == "aqua_admin"
-        self._check_value(
-            ir.unit_blocks[0].variables[0].value, Null, None, -1, -1, -1, -1
-        )
+        assert isinstance(ir.unit_blocks[0].variables[0].value, Hash)
         assert ir.unit_blocks[0].variables[0].line == 6
         assert ir.unit_blocks[0].variables[0].column == 5
         assert ir.unit_blocks[0].variables[0].end_line == 7
         assert ir.unit_blocks[0].variables[0].end_column == 19
-        assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
 
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "user"
+        assert (
+            String("user", ElementInfo(7, 7, 7, 11, "user"))
+            in ir.unit_blocks[0].variables[0].value.value
+        )
         self._check_value(
-            ir.unit_blocks[0].variables[0].keyvalues[0].value,
+            ir.unit_blocks[0].variables[0].value.value[
+                String("user", ElementInfo(7, 7, 7, 11, "user"))
+            ],
             String,
             "test",
             7,
             13,
             7,
-            19,
+            19
         )
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].line == 7
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].column == 7
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].end_line == 7
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].end_column == 19
 
     def test_ansible_parser_valid_playbook_vars_list(self) -> None:
         """
@@ -257,47 +249,46 @@ class TestAnsibleParser(TestParser):
         assert len(ir.unit_blocks) == 1
         assert isinstance(ir.unit_blocks[0], UnitBlock)
         assert ir.unit_blocks[0].type == UnitBlockType.block
-        assert len(ir.unit_blocks[0].variables) == 2
+        assert len(ir.unit_blocks[0].variables) == 1
 
-        assert ir.unit_blocks[0].variables[0].name == "aqua_admin_users[0]"
-        self._check_value(
-            ir.unit_blocks[0].variables[0].value, Null, None, -1, -1, -1, -1
+        assert isinstance(ir.unit_blocks[0].variables[0].value, Array)
+        assert len(ir.unit_blocks[0].variables[0].value.value) == 2
+
+        assert isinstance(ir.unit_blocks[0].variables[0].value.value[0], Hash)
+        assert len(ir.unit_blocks[0].variables[0].value.value[0].value) == 1
+        assert (
+            String("user", ElementInfo(7, 9, 7, 13, "user"))
+            in ir.unit_blocks[0].variables[0].value.value[0].value
         )
-        assert len(ir.unit_blocks[0].variables[0].keyvalues) == 1
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].name == "user"
         self._check_value(
-            ir.unit_blocks[0].variables[0].keyvalues[0].value,
+            ir.unit_blocks[0].variables[0].value.value[0].value[
+                String("user", ElementInfo(7, 9, 7, 13, "user"))
+            ],
             String,
             "test1",
             7,
             15,
             7,
-            20,
+            20
         )
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].line == 7
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].column == 9
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].end_line == 7
-        assert ir.unit_blocks[0].variables[0].keyvalues[0].end_column == 20
 
-        assert ir.unit_blocks[0].variables[1].name == "aqua_admin_users[1]"
-        self._check_value(
-            ir.unit_blocks[0].variables[1].value, Null, None, -1, -1, -1, -1
+        assert isinstance(ir.unit_blocks[0].variables[0].value.value[1], Hash)
+        assert len(ir.unit_blocks[0].variables[0].value.value[1].value) == 1
+        assert (
+            String("user", ElementInfo(8, 9, 8, 13, "user"))
+            in ir.unit_blocks[0].variables[0].value.value[1].value
         )
-        assert len(ir.unit_blocks[0].variables[1].keyvalues) == 1
-        assert ir.unit_blocks[0].variables[1].keyvalues[0].name == "user"
         self._check_value(
-            ir.unit_blocks[0].variables[1].keyvalues[0].value,
+            ir.unit_blocks[0].variables[0].value.value[1].value[
+                String("user", ElementInfo(8, 9, 8, 13, "user"))
+            ],
             String,
             "test2",
             8,
             15,
             8,
-            20,
+            20
         )
-        assert ir.unit_blocks[0].variables[1].keyvalues[0].line == 8
-        assert ir.unit_blocks[0].variables[1].keyvalues[0].column == 9
-        assert ir.unit_blocks[0].variables[1].keyvalues[0].end_line == 8
-        assert ir.unit_blocks[0].variables[1].keyvalues[0].end_column == 20
 
     def test_ansible_parser_valid_vars(self) -> None:
         """
@@ -449,6 +440,6 @@ class TestAnsibleParser(TestParser):
         p = AnsibleParser()
         ir = p.parse_file(
             "tests/parser/ansible/files/node_not_supported.yml",
-            UnitBlockType.vars,
+            UnitBlockType.tasks,
         )
         assert ir is not None
