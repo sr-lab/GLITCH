@@ -31,8 +31,9 @@ class ImproperAlignment(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         if isinstance(element, AtomicUnit):
             identation = None
+
             for a in element.attributes:
-                first_line = a.code.split("\n")[0]
+                first_line = self.code_lines[a.line - 1]
                 curr_id = len(first_line) - len(first_line.lstrip())
 
                 if identation is None:

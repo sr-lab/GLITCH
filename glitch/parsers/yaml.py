@@ -325,8 +325,12 @@ class YamlParser(p.Parser, ABC):
         if v in ["null", "~"]:
             return Null(info)
         quotes = v.startswith(("'", '"')) and v.endswith(("'", '"'))
+        
+        body = self.env.parse(v).body
+        if len(body) == 0:
+            return String(v, info)
 
-        jinja_nodes = list(self.env.parse(v).body[0].iter_child_nodes())
+        jinja_nodes = list(body[0].iter_child_nodes())
 
         for node in jinja_nodes[::-1]:
             if isinstance(node, jinja2.nodes.TemplateData) and node.data.strip() in ["'", '"']:

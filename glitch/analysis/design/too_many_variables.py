@@ -5,13 +5,20 @@ from glitch.repr.inter import *
 
 
 class TooManyVariables(DesignSmellChecker):
-    def __count_variables(self, vars: List[KeyValue]) -> int:
+    def __count_variables(self, element: CodeElement) -> int:
         count = 0
-        for var in vars:
-            if isinstance(var.value, type(None)):
-                count += self.__count_variables(var.keyvalues)
-            else:
-                count += 1
+
+        if isinstance(element, Block):
+            for child in element.statements:
+                count += self.__count_variables(child)
+
+        if isinstance(element, UnitBlock):
+            count += len(element.variables)
+        elif isinstance(element, ConditionalStatement) and element.else_statement is not None:
+            count += self.__count_variables(element.else_statement)
+        elif isinstance(element, Variable):
+            count += 1
+
         return count
 
     def check(self, element: CodeElement, file: str) -> List[Error]:
@@ -19,7 +26,7 @@ class TooManyVariables(DesignSmellChecker):
             # The UnitBlock should not be of type vars, because these files are supposed to only
             # have variables
             if (
-                self.__count_variables(element.variables) / max(len(self.code_lines), 1) > 0.3  # type: ignore
+                self.__count_variables(element) / max(len(self.code_lines), 1) > 0.3  # type: ignore
             ):
                 return [
                     Error(

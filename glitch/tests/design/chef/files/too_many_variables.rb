@@ -12,7 +12,6 @@ define :sys_network_vlan_bridge, :interface => 'eth0' do
       else
         node.default['sys']['network']['interfaces'][vlan_interface] = {
           "vlan-raw-device" => interface,
-          "up" => "ifup #{bridge}"
         }
         node.default['sys']['network']['interfaces'][bridge] = {
           "auto" => false,

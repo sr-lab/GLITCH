@@ -417,7 +417,7 @@ class ConditionalStatement(Block, Expr):
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "condition": self.condition,
+            "condition": self.condition.as_dict(),
             "type": self.type.name,
             "is_default": self.is_default,
             "else_statement": (

@@ -28,6 +28,7 @@ class DesignVisitor(RuleVisitor):
         self.variable_stack: List[int] = []
         self.variables_names: List[str] = []
         self.first_code_line = inf
+        self.code_lines: List[str] = []
 
     @staticmethod
     def get_name() -> str:
@@ -58,15 +59,15 @@ class DesignVisitor(RuleVisitor):
         if u.path != "":
             with open(u.path, "r") as f:
                 try:
-                    code_lines = f.readlines()
+                    self.code_lines = f.readlines()
                     f.seek(0, 0)
                 except UnicodeDecodeError:
                     return []
         else:
-            code_lines = []
+            self.code_lines = []
 
         self.first_non_comm_line = inf
-        for i, line in enumerate(code_lines):
+        for i, line in enumerate(self.code_lines):
             if not line.startswith(self.comment):
                 self.first_non_comm_line = i + 1
                 break
@@ -97,7 +98,7 @@ class DesignVisitor(RuleVisitor):
         #     errors.append(Error('design_unnecessary_abstraction', u, file, repr(u)))
 
         for checker in self.checkers:
-            checker.code_lines = code_lines
+            checker.code_lines = self.code_lines
             checker.variables_names = self.variables_names
             errors += checker.check(u, file)
 
@@ -120,6 +121,7 @@ class DesignVisitor(RuleVisitor):
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
         for checker in self.checkers:
+            checker.code_lines = self.code_lines
             errors += checker.check(au, file)
         return errors
 
