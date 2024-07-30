@@ -5,7 +5,7 @@ from glitch.analysis.design.visitor import DesignVisitor
 from glitch.repr.inter import *
 
 
-class TooManyVariables(DesignSmellChecker):
+class LongResource(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         if isinstance(element, AtomicUnit) and element.type in DesignVisitor.EXEC:
             lines = 0

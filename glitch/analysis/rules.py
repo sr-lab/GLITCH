@@ -129,6 +129,82 @@ class Error:
 Error.agglomerate_errors()
 
 
+class ExprChecker(ABC):
+    def check(self, expr: Expr) -> bool:
+        if isinstance(expr, String):
+            return self.check_string(expr)
+        elif isinstance(expr, Integer):
+            return self.check_integer(expr)
+        elif isinstance(expr, Float):
+            return self.check_float(expr)
+        elif isinstance(expr, Complex):
+            return self.check_complex(expr)
+        elif isinstance(expr, Boolean):
+            return self.check_boolean(expr)
+        elif isinstance(expr, Null):
+            return self.check_null(expr)
+        elif isinstance(expr, Hash):
+            return self.check_hash(expr)
+        elif isinstance(expr, Array):
+            return self.check_array(expr)
+        elif isinstance(expr, VariableReference):
+            return self.check_var_reference(expr)
+        elif isinstance(expr, FunctionCall):
+            return self.check_function_call(expr)
+        elif isinstance(expr, MethodCall):
+            return self.check_method_call(expr)
+        elif isinstance(expr, UnaryOperation):
+            return self.check_unary_operation(expr)
+        elif isinstance(expr, BinaryOperation):
+            return self.check_binary_operation(expr)
+        elif isinstance(expr, ConditionalStatement):
+            return self.check_conditional_statement(expr)
+        else:
+            raise NotImplementedError(f"expr type not implemented {type(expr)}")
+        
+    def check_string(self, expr: String) -> bool:
+        return False
+    
+    def check_integer(self, expr: Integer) -> bool:
+        return False
+    
+    def check_float(self, expr: Float) -> bool:
+        return False
+    
+    def check_complex(self, expr: Complex) -> bool:
+        return False
+    
+    def check_boolean(self, expr: Boolean) -> bool:
+        return False
+    
+    def check_null(self, expr: Null) -> bool:
+        return False
+    
+    def check_hash(self, expr: Hash) -> bool:
+        return False
+    
+    def check_array(self, expr: Array) -> bool:
+        return False
+    
+    def check_var_reference(self, expr: VariableReference) -> bool:
+        return False
+    
+    def check_function_call(self, expr: FunctionCall) -> bool:
+        return False
+    
+    def check_method_call(self, expr: MethodCall) -> bool:
+        return False
+    
+    def check_unary_operation(self, expr: UnaryOperation) -> bool:
+        return False
+    
+    def check_binary_operation(self, expr: BinaryOperation) -> bool:
+        return False
+    
+    def check_conditional_statement(self, expr: ConditionalStatement) -> bool:
+        return False
+
+
 class RuleVisitor(ABC):
     def __init__(self, tech: Tech) -> None:
         super().__init__()
@@ -241,9 +317,6 @@ class RuleVisitor(ABC):
     @abstractmethod
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         pass
-
-
-Error.agglomerate_errors()
 
 
 class SmellChecker(ABC):

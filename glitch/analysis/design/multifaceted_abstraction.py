@@ -3,14 +3,16 @@ from glitch.analysis.rules import Error
 from glitch.analysis.design.smell_checker import DesignSmellChecker
 from glitch.analysis.design.visitor import DesignVisitor
 from glitch.repr.inter import *
+from glitch.analysis.expr_checkers.string_checker import StringChecker
 
 
 class TooManyVariables(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
+        checker = StringChecker(
+            lambda s: "&&" in s or ";" in s or "|" in s
+        )
         if isinstance(element, AtomicUnit) and element.type in DesignVisitor.EXEC:
-            if isinstance(element.name, str) and (
-                "&&" in element.name or ";" in element.name or "|" in element.name
-            ):
+            if checker.check(element.name):
                 return [
                     Error(
                         "design_multifaceted_abstraction", element, file, repr(element)
@@ -18,8 +20,7 @@ class TooManyVariables(DesignSmellChecker):
                 ]
             else:
                 for attribute in element.attributes:
-                    value = repr(attribute.value)
-                    if "&&" in value or ";" in value or "|" in value:
+                    if checker.check(attribute.value):
                         return [
                             Error(
                                 "design_multifaceted_abstraction",
