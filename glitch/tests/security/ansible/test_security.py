@@ -1,6 +1,6 @@
 import unittest
 
-from glitch.analysis.security import SecurityVisitor
+from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.parsers.ansible import AnsibleParser
 from glitch.tech import Tech
 
@@ -45,7 +45,7 @@ class TestSecurity(unittest.TestCase):
             "tasks",
             1,
             ["sec_empty_pass"],
-            [8],
+            [6],
         )
 
     def test_ansible_weak_crypt(self) -> None:
@@ -61,9 +61,9 @@ class TestSecurity(unittest.TestCase):
         self.__help_test(
             "tests/security/ansible/files/hard_secr.yml",
             "tasks",
-            4,
-            ["sec_hard_secr", "sec_hard_user", "sec_hard_pass", "sec_hard_secr"],
-            [7, 7, 8, 8],
+            3,
+            ["sec_hard_pass", "sec_hard_secr", "sec_hard_user"],
+            [6, 6, 6],
         )
 
     def test_ansible_invalid_bind(self) -> None:

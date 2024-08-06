@@ -28,7 +28,7 @@ from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 # NOTE: These are necessary in order for python to load the visitors.
 # Otherwise, python will not consider these types of rules.
 from glitch.analysis.design.visitor import DesignVisitor  # type: ignore
-from glitch.analysis.security import SecurityVisitor  # type: ignore
+from glitch.analysis.security.visitor import SecurityVisitor  # type: ignore
 
 
 def __parse_and_check(

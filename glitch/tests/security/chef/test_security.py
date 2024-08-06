@@ -1,6 +1,6 @@
 import unittest
 
-from glitch.analysis.security import SecurityVisitor
+from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.parsers.chef import ChefParser
 from glitch.tech import Tech
 

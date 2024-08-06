@@ -1,6 +1,6 @@
 import unittest
 
-from glitch.analysis.security import SecurityVisitor
+from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.parsers.terraform import TerraformParser
 from glitch.tech import Tech
 

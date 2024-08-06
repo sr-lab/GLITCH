@@ -4,7 +4,7 @@
     url: "https://{{ hostvars[inventory_hostname|regex_replace('ansible-1', 'checkpoint_mgmt')]['private_ip'] }}/web_api/login"
     method: POST
     body:
-      user: {{ admin }}
+      user: "{{ admin }}"
       password:
     body_format: json
     validate_certs: false

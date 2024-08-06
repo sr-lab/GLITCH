@@ -66,20 +66,20 @@ def test_cli_lint():
             "tests/cli/resources/chef_project/test.rb",
             "8",
             "sec_def_admin",
-            "user:'root'",
+            "user 'root'",
             "-",
         ]
         assert rows[1] == [
             "tests/cli/resources/chef_project/test.rb",
             "8",
             "sec_hard_secr",
-            "user:'root'",
+            "user 'root'",
             "-",
         ]
         assert rows[2] == [
             "tests/cli/resources/chef_project/test.rb",
             "8",
             "sec_hard_user",
-            "user:'root'",
+            "user 'root'",
             "-",
         ]

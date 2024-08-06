@@ -6,7 +6,7 @@ from glitch.repr.inter import *
 from glitch.analysis.expr_checkers.string_checker import StringChecker
 
 
-class TooManyVariables(DesignSmellChecker):
+class MultifacetedAbstraction(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         checker = StringChecker(
             lambda s: "&&" in s or ";" in s or "|" in s

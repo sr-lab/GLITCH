@@ -448,11 +448,7 @@ class KeyValue(CodeElement):
         self.value: Expr = value
 
     def __repr__(self) -> str:
-        value = repr(self.value).split("\n")[0]
-        if value == "None":
-            return f"{self.name}:{value}"
-        else:
-            return f"{self.name}:{value}"
+        return self.code
 
     def as_dict(self) -> Dict[str, Any]:
         return {
