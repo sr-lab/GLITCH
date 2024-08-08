@@ -72,7 +72,7 @@ class TestSecurity(unittest.TestCase):
             "tasks",
             1,
             ["sec_invalid_bind"],
-            [7],
+            [5],
         )
 
     def test_ansible_int_check(self) -> None:

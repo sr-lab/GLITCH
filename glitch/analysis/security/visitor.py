@@ -253,16 +253,6 @@ class SecurityVisitor(RuleVisitor):
         # if self.__is_http_url(c.value):
         #     errors.append(Error("sec_https", c, file, repr(c)))
 
-        # if (
-        #     re.match(r"(?:https?://|^)0.0.0.0", c.value)
-        #     or (c.name == "ip" and c.value in {"*", "::"})
-        #     or (
-        #         c.name in SecurityVisitor.__IP_BIND_COMMANDS
-        #         and (c.value == True or c.value in {"*", "::"})  # type: ignore
-        #     )
-        # ):
-        #     errors.append(Error("sec_invalid_bind", c, file, repr(c)))
-
         # if self.__is_weak_crypt(c.value, c.name):
         #     errors.append(Error("sec_weak_crypt", c, file, repr(c)))
 
@@ -324,43 +314,6 @@ class SecurityVisitor(RuleVisitor):
         #     elif value.startswith("local."):  # local value (variable)
         #         var = get_module_var(self.code, value.strip("local."))
 
-        # for item in (
-        #     SecurityVisitor.__PASSWORDS
-        #     + SecurityVisitor.__SECRETS
-        #     + SecurityVisitor.__USERS
-        # ):
-        #     if (
-        #         re.match(r"[_A-Za-z0-9$\/\.\[\]-]*{text}\b".format(text=item), c.name)
-        #         and c.name.split("[")[0]
-        #         not in SecurityVisitor.__SECRETS_WHITELIST + SecurityVisitor.__PROFILE
-        #     ):
-        #         if not c.has_variable or var:
-        #             if not c.has_variable:
-        #                 if item in SecurityVisitor.__PASSWORDS and len(c.value) == 0:
-        #                     errors.append(Error("sec_empty_pass", c, file, repr(c)))
-        #                     break
-        #             if var is not None:
-        #                 if (
-        #                     item in SecurityVisitor.__PASSWORDS
-        #                     and var.value != None
-        #                     and len(var.value) == 0
-        #                 ):
-        #                     errors.append(Error("sec_empty_pass", c, file, repr(c)))
-        #                     break
-
-        #             errors.append(Error("sec_hard_secr", c, file, repr(c)))
-        #             if item in SecurityVisitor.__PASSWORDS:
-        #                 errors.append(Error("sec_hard_pass", c, file, repr(c)))
-        #             elif item in SecurityVisitor.__USERS:
-        #                 errors.append(Error("sec_hard_user", c, file, repr(c)))
-
-        #             break
-
-        # for item in SecurityVisitor.__SSH_DIR:
-        #     if item.lower() in c.name:
-        #         if len(c.value) > 0 and "/id_rsa" in c.value:
-        #             errors.append(Error("sec_hard_secr", c, file, repr(c)))
-
         # for item in SecurityVisitor.__MISC_SECRETS:
         #     if (
         #         re.match(
@@ -381,10 +334,6 @@ class SecurityVisitor(RuleVisitor):
         #                 errors.append(Error("sec_hard_secr", c, file, repr(c)))
         #                 if "password" in item_value:
         #                     errors.append(Error("sec_hard_pass", c, file, repr(c)))
-
-        # if c.has_variable and var is not None:
-        #     c.has_variable = var.has_variable
-        #     c.value = var.value
 
         for checker in self.checkers:
             checker.code = self.code

@@ -54,7 +54,7 @@ class TestSecurity(unittest.TestCase):
 
     def test_chef_invalid_bind(self) -> None:
         self.__help_test(
-            "tests/security/chef/files/inv_bind.rb", 1, ["sec_invalid_bind"], [7]
+            "tests/security/chef/files/inv_bind.rb", 1, ["sec_invalid_bind"], [1]
         )
 
     def test_chef_int_check(self) -> None:
