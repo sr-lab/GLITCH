@@ -131,4 +131,4 @@ def parser_yacc(script_ast: str):
 
     # Build the parser
     parser = yacc()
-    return parser.parse(script_ast)
+    return parser.parse(script_ast, lexer=lexer.clone())
