@@ -443,3 +443,16 @@ class TestAnsibleParser(TestParser):
             UnitBlockType.tasks,
         )
         assert ir is not None
+
+    def test_ansible_parser_become(self) -> None:
+        """
+        Ensures that the type of the atomic unit is not become
+        """
+        p = AnsibleParser()
+        ir = p.parse_file(
+            "tests/parser/ansible/files/become.yml",
+            UnitBlockType.tasks,
+        )
+        assert ir is not None
+        assert len(ir.atomic_units) == 1
+        assert ir.atomic_units[0].type == "command"

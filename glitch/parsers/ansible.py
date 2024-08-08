@@ -14,6 +14,61 @@ from glitch.repr.inter import *
 
 
 class AnsibleParser(YamlParser):
+    __TASK_PARAMS = [
+        "ansible.builtin.include",
+        "any_errors_fatal",
+        "ansible.legacy.include",
+        "args",
+        "async",
+        "become",
+        "become_exe",
+        "become_flags",
+        "become_method",
+        "changed_when",
+        "collections",
+        "connection",
+        "debugger",
+        "delegate_facts",
+        "deletage_to",
+        "diff",
+        "environment",
+        "failed_when",
+        "ignore_errors",
+        "ignore_unreachable",
+        "include",
+        "listen",
+        "local_action",
+        "loop",
+        "loop_control",
+        "module_defaults",
+        "notify",
+        "poll",
+        "port",
+        "register",
+        "remote_user",
+        "retries",
+        "run_once",
+        "tags",
+        "throttle",
+        "timeout",
+        "until",
+        "vars",
+        "when",
+        "with_dict"
+        "with_fileglob",
+        "with_filetree",
+        "with_first_found",
+        "with_indexed_items",
+        "with_ini",
+        "with_inventory_hostnames",
+        "with_items",
+        "with_lines",
+        "with_random_choice",
+        "with_sequence",
+        "with_subelements",
+        "with_together"
+    ]
+
     def __init__(self) -> None:
         super().__init__()
     
@@ -107,7 +162,7 @@ class AnsibleParser(YamlParser):
                 elif key.value == "name":
                     name = self.get_value(val, code)
                 elif key.value != "name":
-                    if type == "":
+                    if type == "" and key.value not in AnsibleParser.__TASK_PARAMS:
                         type = key.value
                         line = task.start_mark.line + 1
 
