@@ -699,13 +699,12 @@ class PuppetParser(p.Parser):
             for name in files:
                 name_split = name.split(".")
                 if len(name_split) == 2 and name_split[-1] == "pp":
-                    res.add_block(
-                        self.parse_file(os.path.join(root, name), UnitBlockType.script)
-                    )
-
+                    block = self.parse_file(os.path.join(root, name), UnitBlockType.script)
+                    assert block is not None
+                    res.add_block(block)
         return res
 
-    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
+    def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock | None:
         unit_block: UnitBlock = UnitBlock(os.path.basename(path), UnitBlockType.script)
         unit_block.path = path
 
@@ -730,6 +729,7 @@ class PuppetParser(p.Parser):
         except Exception:
             traceback.print_exc()
             throw_exception(EXCEPTIONS["PUPPET_COULD_NOT_PARSE"], path)
+            return None
         return unit_block
 
     def parse_folder(self, path: str) -> Project:
@@ -747,7 +747,9 @@ class PuppetParser(p.Parser):
         for f in os.scandir(path):
             name_split = f.name.split(".")
             if f.is_file() and len(name_split) == 2 and name_split[-1] == "pp":
-                res.add_block(self.parse_file(f.path, UnitBlockType.script))
+                block = self.parse_file(f.path, UnitBlockType.script)
+                assert block is not None
+                res.add_block(block)
 
         subfolders = [
             f.path for f in os.scandir(f"{path}") if f.is_dir() and not f.is_symlink()
