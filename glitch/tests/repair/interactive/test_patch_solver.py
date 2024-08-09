@@ -664,6 +664,54 @@ file { 'hiera_data_dir' :
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript13(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_13 = """
+define nginx($includes) {
+  file { $includes:
+    ensure  => directory,
+    mode    => '0644',
+    owner   => 'root',
+    group   => 'root',
+  }
+}
+
+$includedir = '/etc/nginx/includes'
+nginx { 'nginx':
+  includes => $includedir,
+}
+"""
+        self._setup_patch_solver(puppet_script_13, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_defined_resource_var_path(self):
+        filesystem = FileSystemState()
+        filesystem.state["/etc/nginx/includes"] = Dir("0751", "root")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+define nginx($includes) {
+  file { $includes:
+    ensure  => directory,
+    mode    => '0751',
+    owner   => 'root',
+    group   => 'root',
+  }
+}
+
+$includedir = '/etc/nginx/includes'
+nginx { 'nginx':
+  includes => $includedir,
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()

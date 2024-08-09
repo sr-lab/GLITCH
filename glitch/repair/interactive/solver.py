@@ -74,9 +74,21 @@ class PatchSolver:
         self.vars: Dict[str, ExprRef] = {}
         self.holes: Dict[str, ExprRef] = {}
 
-        self.possible_strings = self.__get_all_strings(statement)
-        self.possible_strings += self.__get_all_strings(filesystem)
+        self.possible_strings = GetStringsVisitor().visit(statement)
+        for path, state in filesystem.state.items():
+            self.possible_strings.append(path)
+            if isinstance(state, File):
+                if state.content is not None:
+                    self.possible_strings.append(state.content)
+            if isinstance(state, (File, Dir)):
+                if state.mode is not None:
+                    self.possible_strings.append(state.mode)
+                if state.owner is not None:
+                    self.possible_strings.append(state.owner)
         self.possible_strings += [UNDEF, UNSUPPORTED, "", "nil", "file", "dir"]
+        for i in range(len(self.possible_strings)):
+            self.possible_strings += self.possible_strings[i].split(":")
+        self.possible_strings = list(set(self.possible_strings))
 
         # FIXME: check the defaults
         self.__funs = PatchSolver.__Funs(
@@ -102,39 +114,9 @@ class PatchSolver:
 
     def __const_string(self, name: str) -> ExprRef:
         var = z3.String(name)
-        self.solver.add(Or(*[var == s for s in set(self.possible_strings)]))
+        self.solver.add(Or(*[var == s for s in self.possible_strings]))
         return var
-
-    def __get_all_strings(self, object: Any) -> List[str]:
-        result: List[str] = []
-
-        def handle_string(str: str):
-            result.append(str)
-            result.extend(str.split(":"))
-
-        if getattr(object, "__dict__", None) is None:
-            if isinstance(object, (list, set)):
-                for val in object:  # type: ignore
-                    if isinstance(val, str):
-                        handle_string(val)
-                    result += self.__get_all_strings(val)
-            elif isinstance(object, dict):
-                for key, val in object.items():  # type: ignore
-                    if isinstance(val, str):
-                        handle_string(val)
-                    if isinstance(key, str):
-                        handle_string(key)
-                    result += self.__get_all_strings(key)
-                    result += self.__get_all_strings(val)
-            return result
-
-        for _, val in object.__dict__.items():
-            if isinstance(val, str):
-                handle_string(val)
-            else:
-                result += self.__get_all_strings(val)
-        return result
-
+    
     def __collect_labels(self, statement: PStatement | PExpr) -> List[int]:
         if isinstance(statement, PSeq):
             return self.__collect_labels(statement.lhs) + self.__collect_labels(
@@ -187,17 +169,6 @@ class PatchSolver:
                 + self.__collect_vars(statement.expr)
             )
         return []
-    
-    def __get_var(self, id: str) -> Optional[ExprRef]:
-        scopes = id.split("::")
-        while True:
-            if "::".join(scopes) in self.vars:
-                return self.vars["::".join(scopes)]
-            if len(scopes) == 1:
-                break
-            scopes.pop(-2)
-
-        return None
 
     def __compile_expr(self, expr: PExpr) -> Tuple[ExprRef, List[ExprRef]]:
         constraints: List[ExprRef] = []
@@ -696,4 +667,22 @@ class PatchSolver:
                         )
                 elif isinstance(ce, Variable):
                     changed_element.value = value
+                    self.__modify_codeelement(labeled_script, changed_element, value)
+                elif isinstance(ce, AtomicUnit):
+                    # Only for paths in the name
+                    # TODO: avoid repeating code
+                    au_type = NamesDatabase.get_au_type(
+                        ce.type, labeled_script.tech
+                    )
+                    attr_name = NamesDatabase.get_attr_name(
+                        "path", au_type, labeled_script.tech
+                    )
+                    value = NamesDatabase.reverse_attr_value(
+                        value,
+                        attr_name,
+                        au_type,
+                        labeled_script.tech,
+                    )
+                    changed_element.value = value
+                    ce.name = changed_element
                     self.__modify_codeelement(labeled_script, changed_element, value)

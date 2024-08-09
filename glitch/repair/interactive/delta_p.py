@@ -399,12 +399,6 @@ class PChmod(PStatement):
 
 
 @dataclass
-class Chmod(PStatement):
-    path: PExpr
-    mode: PExpr
-
-
-@dataclass
 class PChown(PStatement):
     path: PExpr
     owner: PExpr
@@ -436,3 +430,85 @@ class PIf(PStatement):
     pred: PExpr
     cons: PStatement
     alt: PStatement
+
+
+class GetStringsVisitor:
+    def visit(self, statement: PStatement | PExpr | PConst) -> List[str]:
+        if isinstance(statement, PEBinOP):
+            return self.visit_binop(statement)
+        elif isinstance(statement, PEUnOP):
+            return self.visit_unop(statement)
+        elif isinstance(statement, PMkdir):
+            return self.visit_mkdir(statement)
+        elif isinstance(statement, PWrite):
+            return self.visit_write(statement)
+        elif isinstance(statement, PCreate):
+            return self.visit_create(statement)
+        elif isinstance(statement, PRm):
+            return self.visit_rm(statement)
+        elif isinstance(statement, PCp):
+            return self.visit_cp(statement)
+        elif isinstance(statement, PChmod):
+            return self.visit_chmod(statement)
+        elif isinstance(statement, PChown):
+            return self.visit_chown(statement)
+        elif isinstance(statement, PSeq):
+            return self.visit_seq(statement)
+        elif isinstance(statement, PLet):
+            return self.visit_let(statement)
+        elif isinstance(statement, PRLet):
+            return self.visit_rlet(statement)
+        elif isinstance(statement, PIf):
+            return self.visit_if(statement)
+        elif isinstance(statement, PEConst):
+            return self.visit_const(statement)
+
+        return []
+
+    def visit_binop(self, binop: PEBinOP):
+        return self.visit(binop.lhs) + self.visit(binop.rhs)
+    
+    def visit_unop(self, unop: PEUnOP):
+        return self.visit(unop.operand)
+    
+    def visit_mkdir(self, stat: PMkdir):
+        return self.visit(stat.path)
+    
+    def visit_write(self, stat: PWrite):
+        return self.visit(stat.path) + self.visit(stat.content)
+
+    def visit_create(self, stat: PCreate):
+        return self.visit(stat.path)
+    
+    def visit_rm(self, stat: PRm):
+        return self.visit(stat.path)
+    
+    def visit_cp(self, stat: PCp):
+        return self.visit(stat.src) + self.visit(stat.dst)
+    
+    def visit_chmod(self, stat: PChmod):
+        return self.visit(stat.path) + self.visit(stat.mode)
+    
+    def visit_chown(self, stat: PChown):
+        return self.visit(stat.path) + self.visit(stat.owner)
+    
+    def visit_seq(self, stat: PSeq):
+        return self.visit(stat.lhs) + self.visit(stat.rhs)
+    
+    def visit_let(self, stat: PLet):
+        return self.visit(stat.expr) + self.visit(stat.body)
+    
+    def visit_rlet(self, stat: PRLet):
+        return self.visit(stat.expr)
+    
+    def visit_if(self, stat: PIf):
+        return (
+            self.visit(stat.pred) +
+            self.visit(stat.cons) + 
+            self.visit(stat.alt)
+        )
+
+    def visit_const(self, const: PEConst) -> List[str]:
+        if isinstance(const.const, PStr):
+            return [const.const.value]
+        return []

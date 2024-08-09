@@ -376,6 +376,10 @@ class DeltaPCompiler:
 
         statement = self.__handle_unit_block(definition)
 
+        # The scope is popped here since it allows variable references 
+        # compiled from the attributes' values to have the outside scope
+        self.scope.pop()
+
         for name, t in defined_attributes.items():
             attr, in_ub = t
             value = self._compile_expr(attr.value)
@@ -391,7 +395,6 @@ class DeltaPCompiler:
                 statement,
             )
 
-        self.scope.pop()
         return statement
 
     def __handle_atomic_unit(
