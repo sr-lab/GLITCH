@@ -24,6 +24,7 @@ class AnsibleParser(YamlParser):
         "become_exe",
         "become_flags",
         "become_method",
+        "become_user",
         "changed_when",
         "collections",
         "connection",
