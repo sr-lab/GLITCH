@@ -153,10 +153,10 @@ class PPower(PBinOp):
 
 class PStatement(ABC):
     def __get_var(self, id: str, vars: Dict[str, PExpr]) -> Optional[PExpr]:
-        scopes = id.split("::")
+        scopes = id.split(":dejavu:")
         while True:
-            if "::".join(scopes) in vars:
-                return vars["::".join(scopes)]
+            if ":dejavu:".join(scopes) in vars:
+                return vars[":dejavu:".join(scopes)]
             if len(scopes) == 1:
                 break
             scopes.pop(-2)

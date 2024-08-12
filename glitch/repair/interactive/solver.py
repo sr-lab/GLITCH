@@ -112,6 +112,17 @@ class PatchSolver:
 
         self.solver.add(Sum(list(self.unchanged.values())) == self.sum_var)
 
+    def __get_var(self, id: str) -> Optional[ExprRef]:
+        scopes = id.split(":dejavu:")
+        while True:
+            if "::".join(scopes) in self.vars:
+                return self.vars[":dejavu:".join(scopes)]
+            if len(scopes) == 1:
+                break
+            scopes.pop(-2)
+
+        return None
+
     def __const_string(self, name: str) -> ExprRef:
         var = z3.String(name)
         self.solver.add(Or(*[var == s for s in self.possible_strings]))
@@ -179,8 +190,10 @@ class PatchSolver:
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id)
             return self.vars[expr.id], constraints
-        elif isinstance(expr, PEVar) and expr.id in self.vars:
-            return self.vars[expr.id], constraints
+        elif isinstance(expr, PEVar) and self.__get_var(expr.id) is not None:
+            var = self.__get_var(expr.id)
+            assert var is not None
+            return var, constraints
         elif isinstance(expr, PEVar):
             self.vars[expr.id] = self.__const_string(expr.id)
             return self.vars[expr.id], constraints

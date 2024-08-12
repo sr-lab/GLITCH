@@ -146,7 +146,7 @@ class DeltaPCompiler:
             )
 
     def _get_scope_name(self, name: str):
-        return "::".join(self.scope + [name])
+        return ":dejavu:".join(self.scope + [name])
 
     def _get_attribute_name(
         self,

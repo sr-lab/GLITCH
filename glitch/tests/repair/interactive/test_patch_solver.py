@@ -712,6 +712,55 @@ nginx { 'nginx':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPupeptScript14(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_14 = """
+$::bind::params::binduser          = 'bind'
+
+define bind() {
+    file {'/var/named/chroot/var/log/named':
+        ensure  => directory,
+        owner   => $::bind::params::binduser,
+        group   => $::bind::params::bindgroup,
+        mode    => '0770',
+        seltype => 'var_log_t',
+    }
+}
+
+bind { 'bind':
+}
+"""
+        self._setup_patch_solver(puppet_script_14, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_defined_resource_change_outside_owner(self):
+        filesystem = FileSystemState()
+        filesystem.state["/var/named/chroot/var/log/named"] = Dir("0770", "new-owner")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        result = """
+$::bind::params::binduser          = 'new-owner'
+
+define bind() {
+    file {'/var/named/chroot/var/log/named':
+        ensure  => directory,
+        owner   => $::bind::params::binduser,
+        group   => $::bind::params::bindgroup,
+        mode    => '0770',
+        seltype => 'var_log_t',
+    }
+}
+
+bind { 'bind':
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
