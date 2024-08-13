@@ -422,6 +422,7 @@ class PatchSolver:
                 mid = (lo + hi) // 2
                 self.solver.push()
                 self.solver.add(self.sum_var >= IntVal(mid))
+                self.solver.set(timeout=int(self.timeout - elapsed))
                 if self.solver.check() == sat:
                     lo = mid + 1
                     model = self.solver.model()
