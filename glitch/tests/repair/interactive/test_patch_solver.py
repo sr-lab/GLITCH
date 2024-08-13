@@ -712,7 +712,7 @@ nginx { 'nginx':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
-class TestPatchSolverPupeptScript14(TestPatchSolver):
+class TestPatchSolverPuppetScript14(TestPatchSolver):
     def setUp(self):
         super().setUp()
         puppet_script_14 = """

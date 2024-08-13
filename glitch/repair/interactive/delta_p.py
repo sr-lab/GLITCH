@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
-from abc import ABC
-from typing import Optional, List, Union, Callable
+from abc import ABC, abstractmethod
+from typing import Optional, List, Union, Callable, Any
 
 from glitch.repair.interactive.filesystem import *
 
@@ -152,7 +152,8 @@ class PPower(PBinOp):
 
 
 class PStatement(ABC):
-    def __get_var(self, id: str, vars: Dict[str, PExpr]) -> Optional[PExpr]:
+    @staticmethod
+    def __get_var(id: str, vars: Dict[str, PExpr]) -> Optional[PExpr]:
         scopes = id.split(":dejavu:")
         while True:
             if ":dejavu:".join(scopes) in vars:
@@ -223,7 +224,9 @@ class PStatement(ABC):
         """
 
         def minimize_aux(
-            statement: "PStatement", considered_paths: List[str], vars: Dict[str, PExpr]
+            statement: "PStatement", 
+            considered_paths: List[str], 
+            vars: Dict[str, PExpr],
         ) -> "PStatement":
             if isinstance(statement, (PMkdir, PCreate, PRm, PWrite, PChmod, PChown)):
                 path = statement.__get_str(statement.path, vars)
@@ -251,6 +254,17 @@ class PStatement(ABC):
                 vars[statement.id] = statement.expr
                 body = minimize_aux(statement.body, considered_paths, vars)
                 if not isinstance(body, PSkip):
+                    # Checks if the variable is used in the body
+                    references = GetVarReferencesVisitor().visit(body)
+                    for reference in references:
+                        if PStatement.__get_var(
+                            reference.id, {statement.id: statement.expr}
+                        ) is not None:
+                            break
+                    else:
+                        # The variable is not used in the body
+                        return body
+
                     return PLet(
                         statement.id,
                         statement.expr,
@@ -432,8 +446,9 @@ class PIf(PStatement):
     alt: PStatement
 
 
-class GetStringsVisitor:
-    def visit(self, statement: PStatement | PExpr | PConst) -> List[str]:
+class TranverseDeltaPVisitor(ABC):
+    @abstractmethod
+    def visit(self, statement: PStatement | PExpr | PConst) -> Any:
         if isinstance(statement, PEBinOP):
             return self.visit_binop(statement)
         elif isinstance(statement, PEUnOP):
@@ -460,10 +475,7 @@ class GetStringsVisitor:
             return self.visit_rlet(statement)
         elif isinstance(statement, PIf):
             return self.visit_if(statement)
-        elif isinstance(statement, PEConst):
-            return self.visit_const(statement)
-
-        return []
+        return None
 
     def visit_binop(self, binop: PEBinOP):
         return self.visit(binop.lhs) + self.visit(binop.rhs)
@@ -508,7 +520,27 @@ class GetStringsVisitor:
             self.visit(stat.alt)
         )
 
+
+class GetStringsVisitor(TranverseDeltaPVisitor):
+    def visit(self, statement: PStatement | PExpr | PConst) -> List[str]:
+        res = super().visit(statement)
+        if res is not None:
+            return res
+        elif isinstance(statement, PEConst):
+            return self.visit_const(statement)
+        return []
+
     def visit_const(self, const: PEConst) -> List[str]:
         if isinstance(const.const, PStr):
             return [const.const.value]
+        return []
+
+
+class GetVarReferencesVisitor(TranverseDeltaPVisitor):
+    def visit(self, statement: PStatement | PExpr | PConst) -> List[PEVar]:
+        res = super().visit(statement)
+        if res is not None:
+            return res
+        elif isinstance(statement, PEVar):
+            return [statement]
         return []

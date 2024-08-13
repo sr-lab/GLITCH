@@ -74,7 +74,7 @@ class PuppetParser(p.Parser):
 
         elements: List[Expr] = []
         info = PuppetParser.__get_info(codeelement, code)
-        current_col = info.column
+        current_col = info.column + 1 # quote
 
         for i in range(len(interpolation)):
             if i % 2 == 1:
@@ -86,12 +86,16 @@ class PuppetParser(p.Parser):
                     path,
                     interpolation[i].split("\n"),
                 )
-                fix_info(expr, codeelement.line, current_col)
+                # it starts at 1
+                fix_info(expr, codeelement.line, current_col - 1) 
                 assert isinstance(expr, Expr)
                 elements.append(expr)
-                current_col += len(interpolation[i]) + 2
+                current_col += len(interpolation[i]) + 1
             elif interpolation[i] != "":
-                elements.append(String(interpolation[i], info))
+                expr = String(interpolation[i], info)
+                expr.column, expr.end_column = 0, len(interpolation[i])
+                fix_info(expr, codeelement.line, current_col)
+                elements.append(expr)
                 current_col += len(interpolation[i])
 
         if len(elements) == 1:
@@ -120,6 +124,8 @@ class PuppetParser(p.Parser):
                 result,
                 elements[i],
             )
+        # quote
+        result.end_column += 1
 
         return result
 
