@@ -23,6 +23,8 @@ class NamesDatabase:
                 return "file"
             case "ansible.builtin.user", Tech.ansible:
                 return "user"
+            case "ansible.builtin.package", Tech.ansible:
+                return "package"
             case _:
                 pass
         return type
@@ -49,11 +51,11 @@ class NamesDatabase:
                 return "mode"
             case "content", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "content"
-            case "state", "file", Tech.chef:
+            case "state", "file" | "user" | "package", Tech.chef:
                 return "action"
             case "state", "file", Tech.ansible:
                 return "state"
-            case "state", "file" | "user", Tech.puppet:
+            case "state", "file" | "user" | "package", Tech.puppet:
                 return "ensure"
             case _:
                 pass
@@ -81,6 +83,10 @@ class NamesDatabase:
                 return ":create"
             case "absent", "state", "file" | "user", Tech.chef:
                 return ":delete"
+            case "present", "state", "package", Tech.chef:
+                return ":install"
+            case "absent", "state", "package", Tech.chef:
+                return ":remove"
             case _:
                 pass
         return value
@@ -108,11 +114,11 @@ class NamesDatabase:
                 return "mode"
             case "content", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "content"
-            case "ensure", "file" | "user", Tech.puppet:
+            case "ensure", "file" | "user" | "package", Tech.puppet:
                 return "state"
-            case "state", "file" | "user", Tech.ansible:
+            case "state", "file" | "user" | "package", Tech.ansible:
                 return "state"
-            case "action", "file" | "user", Tech.chef:
+            case "action", "file" | "user" | "package", Tech.chef:
                 return "state"
             case _:
                 pass
@@ -145,8 +151,10 @@ class NamesDatabase:
 
         if v is not None:
             match v, name, au_type, tech:
-                case "present" | "directory" | "absent", "state", "file" | "user", Tech.puppet:
+                case "present" | "directory" | "absent", "state", "file" | "user" | "package", Tech.puppet:
                     pass
+                case "installed", "state", "package", Tech.puppet:
+                    v = "present"
                 case "file", "state", "file", Tech.puppet | Tech.ansible:
                     v = "present"
                 case "touch", "state", "file", Tech.ansible:
@@ -156,6 +164,10 @@ class NamesDatabase:
                 case ":touch" | ":nothing" | ":create_if_missing", "state", "file", Tech.chef:
                     v = "present"
                 case ":delete", "state", "file" | "user", Tech.chef:
+                    v = "absent"
+                case ":install", "state", "package", Tech.chef:
+                    v = "present"
+                case ":remove", "state", "package", Tech.chef:
                     v = "absent"
                 case _:
                     return value

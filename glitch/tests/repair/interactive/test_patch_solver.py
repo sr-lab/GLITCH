@@ -761,6 +761,35 @@ bind { 'bind':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript15(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_15 = """
+package { 'openssl':
+  ensure => installed,
+  name   => 'openssl',
+}
+"""
+        self._setup_patch_solver(puppet_script_15, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_remove_package(self):
+        filesystem = FileSystemState()
+        filesystem.state["package:openssl"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        result = """
+package { 'openssl':
+  ensure => absent,
+  name   => 'openssl',
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -1012,6 +1041,36 @@ class TestPatchSolverAnsibleScript5(TestPatchSolver):
     - role: minecraft
       vars:
         mount: "/netsoc/minecraft"
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
+class TestPatchSolverAnsibleScript6(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_6 = """---
+- name: Install ntpdate
+  ansible.builtin.package:
+    name: ntpdate
+    state: present
+"""
+        self._setup_patch_solver(ansible_script_6, UnitBlockType.tasks, Tech.ansible)
+
+    def test_patch_solver_ansible_remove_package(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["package:ntpdate"] = Nil()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Install ntpdate
+  ansible.builtin.package:
+    name: ntpdate
+    state: absent
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
@@ -1343,6 +1402,35 @@ directory "#{test_user_home}/.ssh" do
 end
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+
+class TestPatchSolverChefScript7(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_7 = """
+package 'tar' do
+  action :install
+end
+"""
+        self._setup_patch_solver(chef_script_7, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_remove_package(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["package:tar"] = Nil()
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+package 'tar' do
+  action :remove
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
 
 # class TestPatchSolverChefScript6(TestPatchSolver):
 #     def setUp(self):
