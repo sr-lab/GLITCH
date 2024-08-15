@@ -85,7 +85,9 @@ class PatchSolver:
                     self.possible_strings.append(state.mode)
                 if state.owner is not None:
                     self.possible_strings.append(state.owner)
-        self.possible_strings += [UNDEF, UNSUPPORTED, "", "nil", "file", "dir"]
+        self.possible_strings += [
+            UNDEF, UNSUPPORTED, "", "nil", "file", "dir"
+        ]
         for i in range(len(self.possible_strings)):
             self.possible_strings += self.possible_strings[i].split(":")
         self.possible_strings = list(set(self.possible_strings))
@@ -133,7 +135,7 @@ class PatchSolver:
             return self.__collect_labels(statement.lhs) + self.__collect_labels(
                 statement.rhs
             )
-        elif isinstance(statement, (PCreate, PWrite, PChmod, PChown)):
+        elif isinstance(statement, (PCreate, PWrite, PChmod, PChown, PState)):
             labels = []
             if isinstance(statement, PWrite):
                 labels = self.__collect_labels(statement.content)
@@ -165,7 +167,7 @@ class PatchSolver:
             return self.__collect_vars(statement.lhs) + self.__collect_vars(
                 statement.rhs
             )
-        elif isinstance(statement, (PCreate, PWrite, PChmod, PChown)):
+        elif isinstance(statement, (PCreate, PWrite, PChmod, PChown, PState)):
             return self.__collect_vars(statement.path)
         elif isinstance(statement, PIf):
             return (
@@ -262,6 +264,11 @@ class PatchSolver:
             path, constraints = self.__compile_expr(statement.path)
             funs.state_fun = lambda p: If(
                 p == path, StringVal("file"), previous_state_fun(p)
+            )
+        elif isinstance(statement, PState):
+            path, constraints = self.__compile_expr(statement.path)
+            funs.state_fun = lambda p: If(
+                p == path, StringVal(statement.state), previous_state_fun(p)
             )
         elif isinstance(statement, PWrite):
             path, constraints = self.__compile_expr(statement.path)

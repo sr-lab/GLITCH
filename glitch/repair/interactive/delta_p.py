@@ -302,7 +302,10 @@ class PStatement(ABC):
         for fs in fss:
             get_str: Callable[[PExpr], Optional[str]] = lambda expr: self.__get_str(expr, vars)
 
-            if isinstance(self, (PMkdir, PCreate, PRm, PWrite, PChmod, PChown)):
+            if isinstance(
+                self, 
+                (PMkdir, PCreate, PRm, PWrite, PChmod, PChown, PState)
+            ):
                 path = get_str(self.path)
                 if path is None:
                     continue
@@ -311,6 +314,8 @@ class PStatement(ABC):
 
             if isinstance(self, PSkip):
                 pass
+            elif isinstance(self, PState):
+                fs.state[path] = SState(self.state)
             elif isinstance(self, PMkdir):
                 fs.state[path] = Dir(None, None)
             elif isinstance(self, PCreate):
@@ -396,6 +401,12 @@ class PCreate(PStatement):
 
 
 @dataclass
+class PState(PStatement):
+    path: PExpr
+    state: str
+
+
+@dataclass
 class PRm(PStatement):
     path: PExpr
 
@@ -461,6 +472,8 @@ class TranverseDeltaPVisitor(ABC):
             return self.visit_create(statement)
         elif isinstance(statement, PRm):
             return self.visit_rm(statement)
+        elif isinstance(statement, PState):
+            return self.visit_state(statement)
         elif isinstance(statement, PCp):
             return self.visit_cp(statement)
         elif isinstance(statement, PChmod):
@@ -490,6 +503,9 @@ class TranverseDeltaPVisitor(ABC):
         return self.visit(stat.path) + self.visit(stat.content)
 
     def visit_create(self, stat: PCreate):
+        return self.visit(stat.path)
+    
+    def visit_state(self, stat: PState):
         return self.visit(stat.path)
     
     def visit_rm(self, stat: PRm):
@@ -529,6 +545,9 @@ class GetStringsVisitor(TranverseDeltaPVisitor):
         elif isinstance(statement, PEConst):
             return self.visit_const(statement)
         return []
+    
+    def visit_state(self, stat: PState) -> List[str]:
+        return super().visit_state(stat) + [stat.state]
 
     def visit_const(self, const: PEConst) -> List[str]:
         if isinstance(const.const, PStr):

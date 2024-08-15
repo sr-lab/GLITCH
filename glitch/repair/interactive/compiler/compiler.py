@@ -309,10 +309,31 @@ class DeltaPCompiler:
                 PIf(
                     PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
                     PRm(path),
-                    PSkip(),
+                    PIf(
+                        PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("latest"))),
+                        PState(path, "latest"),
+                        PIf(
+                            PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("purged"))),
+                            PState(path, "purged"),
+                            PIf(
+                                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("disabled"))), 
+                                PState(path, "disabled"), 
+                                PIf(
+                                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("reconfig"))),
+                                    PState(path, "reconfig"),
+                                    PIf(
+                                        PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("nothing"))),
+                                        PState(path, "nothing"),
+                                        PSkip()
+                                    )
+                                ),
+                            )
+                        )
+                    )
                 ),
             ),
         )
+        
         statement = PSeq(statement, PChmod(path, PEConst(PStr(UNDEF))))
         statement = PSeq(statement, PChown(path, PEConst(PStr(UNDEF))))
         statement = PSeq(statement, PWrite(path, PEConst(PStr(UNDEF))))

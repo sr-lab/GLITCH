@@ -87,6 +87,14 @@ class NamesDatabase:
                 return ":install"
             case "absent", "state", "package", Tech.chef:
                 return ":remove"
+            case "latest", "state", "package", Tech.chef:
+                return ":upgrade"
+            case "purged", "state", "package", Tech.chef:
+                return ":purge"
+            case "nothing", "state", "package", Tech.chef:
+                return ":nothing"
+            case "reconfig", "state", "package", Tech.chef:
+                return ":reconfig"
             case _:
                 pass
         return value
@@ -151,7 +159,9 @@ class NamesDatabase:
 
         if v is not None:
             match v, name, au_type, tech:
-                case "present" | "directory" | "absent", "state", "file" | "user" | "package", Tech.puppet:
+                case "present" | "directory" | "absent", "state", "file" | "user", Tech.puppet:
+                    pass
+                case "latest" | "present" | "absent" | "purged" | "disabled", "state", "package", Tech.puppet:
                     pass
                 case "installed", "state", "package", Tech.puppet:
                     v = "present"
@@ -163,6 +173,14 @@ class NamesDatabase:
                     v = "present"
                 case ":touch" | ":nothing" | ":create_if_missing", "state", "file", Tech.chef:
                     v = "present"
+                case ":upgrade", "state", "package", Tech.chef:
+                    v = "latest"
+                case ":purge", "state", "package", Tech.chef:
+                    v = "purged"
+                case ":reconfig", "state", "package", Tech.chef:
+                    v = "reconfig"
+                case ":nothing", "state", "package", Tech.chef:
+                    v = "nothing"
                 case ":delete", "state", "file" | "user", Tech.chef:
                     v = "absent"
                 case ":install", "state", "package", Tech.chef:

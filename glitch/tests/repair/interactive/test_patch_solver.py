@@ -789,6 +789,59 @@ package { 'openssl':
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
+    def test_patch_solver_puppet_latest_package(self):
+        filesystem = FileSystemState()
+        filesystem.state["package:openssl"] = SState("latest")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        result = """
+package { 'openssl':
+  ensure => latest,
+  name   => 'openssl',
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+    def test_patch_solver_puppet_purge_package(self):
+        filesystem = FileSystemState()
+        filesystem.state["package:openssl"] = SState("purged")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        print(models[0])
+        result = """
+package { 'openssl':
+  ensure => purged,
+  name   => 'openssl',
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+    def test_patch_solver_puppet_disabled_package(self):
+        filesystem = FileSystemState()
+        filesystem.state["package:openssl"] = SState("disabled")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        print(models[0])
+        result = """
+package { 'openssl':
+  ensure => disabled,
+  name   => 'openssl',
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
 
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
@@ -1072,6 +1125,24 @@ class TestPatchSolverAnsibleScript6(TestPatchSolver):
     name: ntpdate
     state: absent
 """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+    def test_patch_solver_ansible_latest_package(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["package:ntpdate"] = SState("latest")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Install ntpdate
+  ansible.builtin.package:
+    name: ntpdate
+    state: latest
+""" 
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
@@ -1427,6 +1498,85 @@ end
         result = """
 package 'tar' do
   action :remove
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+    def test_patch_solver_chef_latest_package(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["package:tar"] = SState("latest")
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+package 'tar' do
+  action :upgrade
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+
+class TestPatchSolverChefScript8(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_8 = """
+package 'tar' do
+  action :purge
+end
+"""
+        self._setup_patch_solver(chef_script_8, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_create_package(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["package:tar"] = File(UNDEF, UNDEF, UNDEF)
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+package 'tar' do
+  action :install
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+    def test_patch_solver_chef_reconfig_package(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["package:tar"] = SState("reconfig")
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+package 'tar' do
+  action :reconfig
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+    def test_patch_solver_chef_nothing_package(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["package:tar"] = SState("nothing")
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+package 'tar' do
+  action :nothing
 end
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)

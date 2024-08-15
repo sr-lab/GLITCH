@@ -25,6 +25,14 @@ class Nil(State):
     pass
 
 
+@dataclass
+class SState(State):
+    state: str
+
+    def __str__(self) -> str:
+        return self.state
+
+
 class FileSystemState:
     def __init__(self) -> None:
         self.state: Dict[str, State] = {}
