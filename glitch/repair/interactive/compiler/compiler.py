@@ -338,6 +338,43 @@ class DeltaPCompiler:
         statement = PSeq(statement, PChown(path, PEConst(PStr(UNDEF))))
         statement = PSeq(statement, PWrite(path, PEConst(PStr(UNDEF))))
         return PSeq(statement, PSkip())
+    
+    def __handle_service(
+        self,
+        atomic_unit: AtomicUnit,
+        attributes: __Attributes,
+    ):
+        name = attributes["name"]
+        if name == PEUndef():
+            name = self._compile_expr(atomic_unit.name)
+            self._labeled_script.add_location(atomic_unit, atomic_unit.name)
+        path = PEBinOP(PAdd(), PEConst(PStr("service:")), name)
+        name_attr = attributes.get_attribute("name")
+        if name_attr is not None:
+            self._labeled_script.add_location(atomic_unit, name_attr)
+            self._labeled_script.add_location(name_attr, name_attr.value)
+
+        state_var, label = attributes.get_var("state", atomic_unit)
+        statement = PLet(
+            state_var,
+            attributes["state"],
+            label,
+            PIf(
+                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("start"))),
+                PState(path, "start"),
+                PIf(
+                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("stop"))),
+                    PState(path, "stop"),
+                    PSkip()
+                )
+            ),
+        )
+        
+        statement = PSeq(statement, PChmod(path, PEConst(PStr(UNDEF))))
+        statement = PSeq(statement, PChown(path, PEConst(PStr(UNDEF))))
+        statement = PSeq(statement, PWrite(path, PEConst(PStr(UNDEF))))
+        return PSeq(statement, PSkip())
+        
 
     def __handle_file(
         self,
@@ -488,6 +525,13 @@ class DeltaPCompiler:
             statement = PSeq(
                 statement,
                 self.__handle_package(atomic_unit, attributes),
+            )
+        elif attributes.au_type == "service":
+            for attribute in atomic_unit.attributes:
+                attributes.add_attribute(attribute)
+            statement = PSeq(
+                statement,
+                self.__handle_service(atomic_unit, attributes),
             )
         # Defined type
         elif self._labeled_script.env.has_definition(au_type):

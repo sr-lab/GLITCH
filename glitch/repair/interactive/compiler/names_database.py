@@ -25,6 +25,8 @@ class NamesDatabase:
                 return "user"
             case "ansible.builtin.package", Tech.ansible:
                 return "package"
+            case "ansible.builtin.service", Tech.ansible:
+                return "service"
             case _:
                 pass
         return type
@@ -51,11 +53,11 @@ class NamesDatabase:
                 return "mode"
             case "content", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "content"
-            case "state", "file" | "user" | "package", Tech.chef:
+            case "state", "file" | "user" | "package" | "service", Tech.chef:
                 return "action"
             case "state", "file", Tech.ansible:
                 return "state"
-            case "state", "file" | "user" | "package", Tech.puppet:
+            case "state", "file" | "user" | "package" | "service", Tech.puppet:
                 return "ensure"
             case _:
                 pass
@@ -95,6 +97,18 @@ class NamesDatabase:
                 return ":nothing"
             case "reconfig", "state", "package", Tech.chef:
                 return ":reconfig"
+            case "start", "state", "service", Tech.puppet:
+                return "running"
+            case "stop", "state", "service", Tech.puppet:
+                return "stopped"
+            case "start", "state", "service", Tech.chef:
+                return ":start"
+            case "stop", "state", "service", Tech.chef:
+                return ":stop"
+            case "start", "state", "service", Tech.ansible:
+                return "started"
+            case "stop", "state", "service", Tech.ansible:
+                return "stopped"
             case _:
                 pass
         return value
@@ -122,11 +136,11 @@ class NamesDatabase:
                 return "mode"
             case "content", "file", Tech.puppet | Tech.chef | Tech.ansible:
                 return "content"
-            case "ensure", "file" | "user" | "package", Tech.puppet:
+            case "ensure", "file" | "user" | "package" | "service", Tech.puppet:
                 return "state"
-            case "state", "file" | "user" | "package", Tech.ansible:
+            case "state", "file" | "user" | "package" | "service", Tech.ansible:
                 return "state"
-            case "action", "file" | "user" | "package", Tech.chef:
+            case "action", "file" | "user" | "package" | "service", Tech.chef:
                 return "state"
             case _:
                 pass
@@ -165,6 +179,18 @@ class NamesDatabase:
                     pass
                 case "installed", "state", "package", Tech.puppet:
                     v = "present"
+                case "running" | "true", "state", "service", Tech.puppet:
+                    v = "start"
+                case "stopped" | "false", "state", "service", Tech.puppet:
+                    v = "stop"
+                case ":start", "state", "service", Tech.chef:
+                    v = "start"
+                case ":stop", "state", "service", Tech.chef:
+                    v = "stop"
+                case "started", "state", "service", Tech.ansible:
+                    v = "start"
+                case "stopped", "state", "service", Tech.ansible:
+                    v = "stop"
                 case "file", "state", "file", Tech.puppet | Tech.ansible:
                     v = "present"
                 case "touch", "state", "file", Tech.ansible:

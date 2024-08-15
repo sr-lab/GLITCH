@@ -843,6 +843,35 @@ package { 'openssl':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript16(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_16 = """
+service { 'openssl':
+  ensure => running,
+  name   => 'openssl',
+}
+"""
+        self._setup_patch_solver(puppet_script_16, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_stop_service(self):
+        filesystem = FileSystemState()
+        filesystem.state["service:openssl"] = SState("stop")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, debug=True)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        result = """
+service { 'openssl':
+  ensure => stopped,
+  name   => 'openssl',
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -1143,6 +1172,36 @@ class TestPatchSolverAnsibleScript6(TestPatchSolver):
     name: ntpdate
     state: latest
 """ 
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
+class TestPatchSolverAnsibleScript7(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_7 = """---
+- name: Start service httpd, if not started
+  ansible.builtin.service:
+    name: httpd
+    state: started
+"""
+        self._setup_patch_solver(ansible_script_7, UnitBlockType.tasks, Tech.ansible)
+
+    def test_patch_solver_ansible_stop_service(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["service:httpd"] = SState("stop")
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Start service httpd, if not started
+  ansible.builtin.service:
+    name: httpd
+    state: stopped
+"""
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
@@ -1582,51 +1641,29 @@ end
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
 
 
-# class TestPatchSolverChefScript6(TestPatchSolver):
-#     def setUp(self):
-#         super().setUp()
-#         chef_script_6 = """
-# return unless node['sys']['snmp']
+class TestPatchSolverChefScript9(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_9 = """
+service 'example_service' do
+  action :start
+end
+"""
+        self._setup_patch_solver(chef_script_9, UnitBlockType.script, Tech.chef)
 
-# snmpd_package = 'snmpd'
-# snmpd_defaults = '/etc/default/snmpd'
-# snmpd_user = 'snmp'
-# snmpd_group = 'snmp'
+    def test_patch_solver_chef_stop_service(self) -> None:
+        filesystem = FileSystemState()
+        filesystem.state["service:example_service"] = SState("stop")
+        assert self.statement is not None
 
-# log_levels = %w[emerg alert crit err warn notice info debug]
-# log_level_num = log_levels.rindex(node['sys']['snmp']['log_level']) || 4
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
 
-# if node['platform_family'] == 'debian' && node['platform_version'].to_i >= 9
-
-#   directory '/etc/systemd/system/snmpd.service.d/'
-
-#   file '/etc/systemd/system/snmpd.service.d/override.conf' do
-#     content <<EOF
-# # DO NOT CHANGE THIS FILE MANUALLY!
-# #
-# # This file is managed by chef.
-# # Created by sys::snmp
-
-# [Service]
-# ExecStart=
-# ExecStart=/usr/sbin/snmpd -LS#{log_level_num}d -Lf /dev/null \\
-#     -u #{snmpd_user} -g #{snmpd_user} -I -smux,mteTrigger,mteTriggerConf \\
-#     -f -p /run/snmpd.pid
-# EOF
-#     notifies :run, 'execute[sys-systemd-reload]'
-#   end
-# end
-# """
-#         self._setup_patch_solver(chef_script_6, UnitBlockType.script, Tech.chef)
-
-#     def test_patch_solver_chef_multiline_content(self) -> None:
-#         assert self.statement is not None
-#         fs = self.statement.to_filesystems()[0]
-#         assert isinstance(fs.state['/etc/systemd/system/snmpd.service.d/override.conf'], File)
-#         fs.state['/etc/systemd/system/snmpd.service.d/override.conf'].mode = "0777"
-#         print(fs.state)
-
-#         solver = PatchSolver(self.statement, fs, debug=True)
-#         models = solver.solve()
-#         assert models is not None
-#         assert len(models) == 1
+        result = """
+service 'example_service' do
+  action :stop
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
