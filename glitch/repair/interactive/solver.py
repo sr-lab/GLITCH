@@ -29,7 +29,7 @@ from z3 import (
 from glitch.repair.interactive.filesystem import FileSystemState
 from glitch.repair.interactive.filesystem import *
 from glitch.repair.interactive.delta_p import *
-from glitch.repair.interactive.values import DefaultValue, UNDEF, UNSUPPORTED
+from glitch.repair.interactive.values import UNDEF, UNSUPPORTED, DefaultValue
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 from glitch.repr.inter import (
     Attribute,
@@ -43,17 +43,8 @@ from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.repair.interactive.compiler.template_database import TemplateDatabase
 from glitch.tech import Tech
 
-Fun = Callable[[ExprRef], ExprRef]
-
 
 class PatchSolver:
-    @dataclass
-    class __Funs:
-        state_fun: Fun
-        contents_fun: Fun
-        mode_fun: Fun
-        owner_fun: Fun
-
     def __init__(
         self,
         statement: PStatement,
@@ -77,28 +68,18 @@ class PatchSolver:
         self.possible_strings = GetStringsVisitor().visit(statement)
         for path, state in filesystem.state.items():
             self.possible_strings.append(path)
-            if isinstance(state, File):
-                if state.content is not None:
-                    self.possible_strings.append(state.content)
-            if isinstance(state, (File, Dir)):
-                if state.mode is not None:
-                    self.possible_strings.append(state.mode)
-                if state.owner is not None:
-                    self.possible_strings.append(state.owner)
+            for key, value in state.attrs.items():
+                self.possible_strings.append(key)
+                self.possible_strings.append(value)
         self.possible_strings += [
-            UNDEF, UNSUPPORTED, "", "nil", "file", "dir"
+            UNDEF, UNSUPPORTED, "", "absent", "present", "directory"
         ]
         for i in range(len(self.possible_strings)):
             self.possible_strings += self.possible_strings[i].split(":")
         self.possible_strings = list(set(self.possible_strings))
 
         # FIXME: check the defaults
-        self.__funs = PatchSolver.__Funs(
-            lambda p: StringVal(UNDEF),
-            lambda p: self.__compile_expr(DefaultValue.DEFAULT_CONTENT)[0],
-            lambda p: self.__compile_expr(DefaultValue.DEFAULT_MODE)[0],
-            lambda p: self.__compile_expr(DefaultValue.DEFAULT_OWNER)[0],
-        )
+        self.__funs: Dict[str, Callable[[ExprRef], ExprRef]] = {}
 
         labels = list(set(self.__collect_labels(statement)))
         for label in labels:
@@ -225,64 +206,57 @@ class PatchSolver:
 
     def __generate_hard_constraints(self, filesystem: FileSystemState) -> None:
         for path, state in filesystem.state.items():
-            self.solver.add(
-                self.__funs.state_fun(StringVal(path)) == StringVal(str(state))
-            )
-            content, mode, owner = UNDEF, UNDEF, UNDEF
-
-            if isinstance(state, File):
-                content = UNDEF if state.content is None else state.content
-            if isinstance(state, File) or isinstance(state, Dir):
-                mode = UNDEF if state.mode is None else state.mode
-                owner = UNDEF if state.owner is None else state.owner
-
-            self.solver.add(
-                self.__funs.contents_fun(StringVal(path)) == StringVal(content)
-            )
-            self.solver.add(self.__funs.mode_fun(StringVal(path)) == StringVal(mode))
-            self.solver.add(self.__funs.owner_fun(StringVal(path)) == StringVal(owner))
+            for key, value in state.attrs.items():
+                self.solver.add(
+                    self.__funs[key](StringVal(path)) == StringVal(value)
+                )
 
     def __generate_soft_constraints(
-        self, statement: PStatement | PExpr, funs: __Funs
-    ) -> Tuple[List[ExprRef], __Funs,]:
+        self, statement: PStatement | PExpr, funs: Dict[str, Callable[[ExprRef], ExprRef]]
+    ) -> Tuple[List[ExprRef], Dict[str, Callable[[ExprRef], ExprRef]],]:
         # Avoids infinite recursion
+        previous_funs = deepcopy(funs)
         funs = deepcopy(funs)
-        # NOTE: For now it doesn't make sense to update the funs for the
-        # default values because the else will always be the default value
-        previous_state_fun = funs.state_fun
-        previous_contents_fun = funs.contents_fun
-        previous_mode_fun = funs.mode_fun
-        previous_owner_fun = funs.owner_fun
         constraints: List[ExprRef] = []
 
         if isinstance(statement, PMkdir):
             path, constraints = self.__compile_expr(statement.path)
-            funs.state_fun = lambda p: If(
-                p == path, StringVal("dir"), previous_state_fun(p)
+            if "state" not in previous_funs:
+                previous_funs["state"] = lambda p: StringVal(UNDEF)
+            funs["state"] = lambda p: If(
+                p == path, StringVal("directory"), previous_funs["state"](p)
             )
         elif isinstance(statement, PCreate):
             path, constraints = self.__compile_expr(statement.path)
-            funs.state_fun = lambda p: If(
-                p == path, StringVal("file"), previous_state_fun(p)
+            if "state" not in previous_funs:
+                previous_funs["state"] = lambda p: StringVal(UNDEF)
+            funs["state"] = lambda p: If(
+                p == path, StringVal("present"), previous_funs["state"](p)
             )
         elif isinstance(statement, PState):
             path, constraints = self.__compile_expr(statement.path)
-            funs.state_fun = lambda p: If(
-                p == path, StringVal(statement.state), previous_state_fun(p)
+            if "state" not in previous_funs:
+                previous_funs["state"] = lambda p: StringVal(UNDEF)
+            funs["state"] = lambda p: If(
+                p == path, StringVal(statement.state), previous_funs["state"](p)
             )
         elif isinstance(statement, PWrite):
             path, constraints = self.__compile_expr(statement.path)
             content, content_constraints = self.__compile_expr(statement.content)
             constraints += content_constraints
-            funs.contents_fun = lambda p: If(
+            if "content" not in previous_funs:
+                previous_funs["content"] = lambda p: StringVal(DefaultValue.DEFAULT_CONTENT)
+            funs["content"] = lambda p: If(
                 p == path,
                 content,
-                previous_contents_fun(p),
+                previous_funs["content"](p),
             )
         elif isinstance(statement, PRm):
             path, constraints = self.__compile_expr(statement.path)
-            funs.state_fun = lambda p: If(
-                p == path, StringVal("nil"), previous_state_fun(p)
+            if "state" not in previous_funs:
+                previous_funs["state"] = lambda p: StringVal(UNDEF)
+            funs["state"] = lambda p: If(
+                p == path, StringVal("absent"), previous_funs["state"](p)
             )
         elif isinstance(statement, PCp):
             src, src_constraints = self.__compile_expr(statement.src)
@@ -290,37 +264,41 @@ class PatchSolver:
             dst, dest_constraints = self.__compile_expr(statement.dst)
             constraints += dest_constraints
 
-            funs.state_fun = lambda p: If(
-                p == dst, previous_state_fun(src), previous_state_fun(p)
+            funs["state"] = lambda p: If(
+                p == dst, previous_funs["state"](src), previous_funs["state"](p)
             )
-            funs.contents_fun = lambda p: If(
+            funs["content"] = lambda p: If(
                 p == dst,
-                previous_contents_fun(src),
-                previous_contents_fun(p),
+                previous_funs["content"](src),
+                previous_funs["content"](p),
             )
-            funs.mode_fun = lambda p: If(
-                p == dst, previous_mode_fun(src), previous_mode_fun(p)
+            funs["mode"] = lambda p: If(
+                p == dst, previous_funs["mode"](src), previous_funs["mode"](p)
             )
-            funs.owner_fun = lambda p: If(
-                p == dst, previous_owner_fun(src), previous_owner_fun(p)
+            funs["owner"] = lambda p: If(
+                p == dst, previous_funs["owner"](src), previous_funs["owner"](p)
             )
         elif isinstance(statement, PChmod):
             path, constraints = self.__compile_expr(statement.path)
             mode, mode_constraints = self.__compile_expr(statement.mode)
             constraints += mode_constraints
-            funs.mode_fun = lambda p: If(
+            if "mode" not in previous_funs:
+                previous_funs["mode"] = lambda p: StringVal(DefaultValue.DEFAULT_MODE)
+            funs["mode"] = lambda p: If(
                 p == path,
                 mode,
-                previous_mode_fun(p),
+                previous_funs["mode"](p),
             )
         elif isinstance(statement, PChown):
             path, constraints = self.__compile_expr(statement.path)
             owner, owner_constraints = self.__compile_expr(statement.owner)
             constraints += owner_constraints
-            funs.owner_fun = lambda p: If(
+            if "owner" not in previous_funs:
+                previous_funs["owner"] = lambda p: StringVal(DefaultValue.DEFAULT_OWNER)
+            funs["owner"] = lambda p: If(
                 p == path,
                 owner,
-                previous_owner_fun(p),
+                previous_funs["owner"](p),
             )
         elif isinstance(statement, PSeq):
             lhs_constraints, funs = self.__generate_soft_constraints(
@@ -375,19 +353,40 @@ class PatchSolver:
                 statement.alt, funs
             )
 
-            funs.state_fun = lambda p: If(
-                condition, cons_funs.state_fun(p), alt_funs.state_fun(p)
-            )
-            funs.contents_fun = lambda p: If(
-                condition, cons_funs.contents_fun(p), alt_funs.contents_fun(p)
-            )
-            funs.mode_fun = lambda p: If(
-                condition, cons_funs.mode_fun(p), alt_funs.mode_fun(p)
-            )
-            funs.owner_fun = lambda p: If(
-                condition, cons_funs.owner_fun(p), alt_funs.owner_fun(p)
-            )
+            keys = list(funs.keys()) + list(cons_funs.keys()) + list(alt_funs.keys())
+            for key in keys:
+                if key not in cons_funs:
+                    # FIXME
+                    if key == "state":
+                        cons_funs[key] = lambda p: StringVal(UNDEF)
+                    elif key == "mode":
+                        cons_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_MODE)
+                    elif key == "owner":
+                        cons_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_OWNER)
+                    elif key == "content":
+                        cons_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_CONTENT)
+                    else:
+                        cons_funs[key] = lambda p: StringVal(UNDEF)
+                if key not in alt_funs:
+                     # FIXME
+                    if key == "state":
+                        alt_funs[key] = lambda p: StringVal(UNDEF)
+                    elif key == "mode":
+                        alt_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_MODE)
+                    elif key == "owner":
+                        alt_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_OWNER)
+                    elif key == "content":
+                        alt_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_CONTENT)
+                    else:
+                        alt_funs[key] = lambda p: StringVal(UNDEF)
+                cons = cons_funs[key]
+                alt = alt_funs[key]
 
+                # This only works like this because of Python's deep binding
+                funs[key] = lambda p, cons=cons, alt=alt: If(
+                    condition, cons(p), alt(p)
+                )
+            
             # It allows to fix variables in the unchosen branch
             unchanged = True
             for label in self.__collect_labels(statement.cons):

@@ -312,21 +312,25 @@ class PStatement(ABC):
             else:
                 path = ""
 
+            if path != "" and path not in fs.state:
+                fs.state[path] = State()
+
             if isinstance(self, PSkip):
                 pass
             elif isinstance(self, PState):
-                fs.state[path] = SState(self.state)
+                fs.state[path].attrs["state"] = self.state
             elif isinstance(self, PMkdir):
-                fs.state[path] = Dir(None, None)
+                fs.state[path].attrs["state"] = "directory"
             elif isinstance(self, PCreate):
-                fs.state[path] = File(None, None, None)
+                fs.state[path].attrs["state"] = "present"
             elif isinstance(self, PWrite):
                 content = get_str(self.content)
-                file = fs.state.get(path)
-                if isinstance(file, File):
-                    file.content = content
+                if content is not None:
+                    fs.state[path].attrs["content"] = content
+                else:
+                    fs.state[path].attrs["content"] = UNDEF
             elif isinstance(self, PRm):
-                fs.state[path] = Nil()
+                fs.state[path].attrs["state"] = "absent"
             elif isinstance(self, PCp):
                 try:
                     dst, src = get_str(self.dst), get_str(self.src)
@@ -338,14 +342,16 @@ class PStatement(ABC):
                     continue
             elif isinstance(self, PChmod):
                 mode = get_str(self.mode)
-                file = fs.state.get(path)
-                if isinstance(file, (File, Dir)):
-                    file.mode = mode
+                if mode is not None:
+                    fs.state[path].attrs["mode"] = mode
+                else:
+                    fs.state[path].attrs["mode"] = UNDEF
             elif isinstance(self, PChown):
                 owner = get_str(self.owner)
-                file = fs.state.get(path)
-                if isinstance(file, (File, Dir)):
-                    file.owner = owner
+                if owner is not None:
+                    fs.state[path].attrs["owner"] = owner
+                else:
+                    fs.state[path].attrs["owner"] = UNDEF
             elif isinstance(self, PSeq):
                 fss_lhs = self.lhs.to_filesystems(fs, vars)
                 for fs_lhs in fss_lhs:
@@ -563,3 +569,6 @@ class GetVarReferencesVisitor(TranverseDeltaPVisitor):
         elif isinstance(statement, PEVar):
             return [statement]
         return []
+    
+
+from glitch.repair.interactive.values import UNDEF

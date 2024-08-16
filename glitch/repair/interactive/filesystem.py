@@ -1,36 +1,17 @@
-from typing import Dict, Optional
-from dataclasses import dataclass
+from typing import Dict
 
 
 class State:
-    def __str__(self) -> str:
-        return self.__class__.__name__.lower()
+    def __init__(self) -> None:
+        self.attrs: Dict[str, str] = {}
 
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, State):
+            return False
+        return self.attrs == value.attrs
 
-@dataclass
-class File(State):
-    mode: Optional[str]
-    owner: Optional[str]
-    content: Optional[str]
-
-
-@dataclass
-class Dir(State):
-    mode: Optional[str]
-    owner: Optional[str]
-
-
-@dataclass
-class Nil(State):
-    pass
-
-
-@dataclass
-class SState(State):
-    state: str
-
-    def __str__(self) -> str:
-        return self.state
+    def __repr__(self) -> str:
+        return str(self.attrs)
 
 
 class FileSystemState:

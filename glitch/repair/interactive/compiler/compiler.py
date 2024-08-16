@@ -44,13 +44,13 @@ class DeltaPCompiler:
         def get_attribute_value(self, attr_name: str) -> PExpr:
             default = PEUndef()
             if attr_name == "state":
-                default = DefaultValue.DEFAULT_STATE
+                default = PEConst(PStr(DefaultValue.DEFAULT_STATE))
             elif attr_name == "mode":
-                default = DefaultValue.DEFAULT_MODE
+                default = PEConst(PStr(DefaultValue.DEFAULT_MODE))
             elif attr_name == "owner":
-                default = DefaultValue.DEFAULT_OWNER
+                default = PEConst(PStr(DefaultValue.DEFAULT_OWNER))
             elif attr_name == "content":
-                default = DefaultValue.DEFAULT_CONTENT
+                default = PEConst(PStr(DefaultValue.DEFAULT_CONTENT))
 
             return self.__attributes.get(attr_name, (default, None))[0]
 
@@ -66,13 +66,11 @@ class DeltaPCompiler:
 
             if attr is None:
                 # Creates sketched attribute
-                if attr_name == "state" and isinstance(
-                    DefaultValue.DEFAULT_STATE.const, PStr
-                ):  # HACK
+                if attr_name == "state":  # HACK
                     attr = Attribute(
                         attr_name,
                         String(
-                            DefaultValue.DEFAULT_STATE.const.value,
+                            DefaultValue.DEFAULT_STATE,
                             ElementInfo(
                                 self.__compiler._sketched,
                                 self.__compiler._sketched,
