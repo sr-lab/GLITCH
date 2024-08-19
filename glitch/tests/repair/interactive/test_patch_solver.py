@@ -72,7 +72,7 @@ class TestPatchSolver(unittest.TestCase):
         self,
         solver: PatchSolver,
         model: ModelRef,
-        filesystem: FileSystemState,
+        filesystem: SystemState,
         tech: Tech,
         final_file_content: str,
         n_filesystems: int = 1,
@@ -102,7 +102,7 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         self._setup_patch_solver(puppet_script_1, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_remove_content(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
@@ -136,7 +136,7 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
 
     def test_patch_solver_puppet_mode(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = State()
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
@@ -174,7 +174,7 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
 
     def test_patch_solver_puppet_delete_file(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = get_nil_file_state()
 
         assert self.statement is not None
@@ -215,7 +215,7 @@ class TestPatchSolverPuppetScript2(TestPatchSolver):
         self._setup_patch_solver(puppet_script_2, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_owner(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/etc/icinga2/conf.d/test.conf"] = get_nil_file_state()
         filesystem.state["/etc/icinga2/conf.d/test.conf"].attrs["state"] = "present"
         filesystem.state["/etc/icinga2/conf.d/test.conf"].attrs["owner"] = "new"
@@ -257,7 +257,7 @@ class TestPatchSolverPuppetScript3(TestPatchSolver):
         self._setup_patch_solver(puppet_script_3, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_two_files(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["test1"] = get_nil_file_state()
         filesystem.state["test1"].attrs["state"] = "present"
         filesystem.state["test1"].attrs["owner"] = "new"
@@ -304,7 +304,7 @@ class TestPatchSolverPuppetScript4(TestPatchSolver):
         self._setup_patch_solver(puppet_script_4, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_if(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         
         filesystem.state["/usr/sbin/policy-rc.d"] = get_nil_file_state()
         filesystem.state["/usr/sbin/policy-rc.d"].attrs["state"] = "present"
@@ -362,7 +362,7 @@ class TestPatchSolverPuppetScript5(TestPatchSolver):
         However, the attribute "state" should be called "ensure" in Puppet,
         so it is required to do the translation back.
         """
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/etc/dhcp/dhclient-enter-hooks"] = get_nil_file_state()
 
         assert self.statement is not None
@@ -408,7 +408,7 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
         self._setup_patch_solver(puppet_script_6, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_defined_resource_delete(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["test.conf"] = get_nil_file_state()
         filesystem.state["test2.conf"] = get_nil_file_state()
 
@@ -438,7 +438,7 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
     def test_patch_solver_puppet_defined_resource_change_owner(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["test.conf"] = get_default_file_state()
         filesystem.state["test.conf"].attrs["owner"] = "owner-test"
         filesystem.state["test.conf"].attrs["mode"] = "0644"
@@ -503,7 +503,7 @@ if($old_config != 'notfound')
         self._setup_patch_solver(puppet_script_7, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_inner_if(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         
         filesystem.state["/tmp/delete_router_interfaces_bgp.sh"] = get_nil_file_state()
         filesystem.state["/tmp/delete_router_interfaces_bgp.sh"].attrs["state"] = "present"
@@ -552,7 +552,7 @@ file { '/var/lib/puppet/gitrevision.txt' :
         self._setup_patch_solver(puppet_script_8, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_delete_variable(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/lib/puppet/gitrevision.txt"] = get_nil_file_state()
 
         assert self.statement is not None
@@ -582,7 +582,7 @@ user { 'mysql':
         self._setup_patch_solver(puppet_script_9, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_user_delete(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["user:mysql"] = State()
         filesystem.state["user:mysql"].attrs["state"] = "absent"
 
@@ -612,7 +612,7 @@ file { '/etc/plumgrid':
         self._setup_patch_solver(puppet_script_10, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_integer_mode(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/etc/plumgrid"] = get_nil_file_state()
         filesystem.state["/etc/plumgrid"].attrs["state"] = "present"
         filesystem.state["/etc/plumgrid"].attrs["mode"] = "0756"
@@ -649,7 +649,7 @@ file { '/usr/local/bin':
     def test_patch_solver_puppet_variable_undefined(self) -> None:
         # The problem is that there is no literal to repair and so
         # the solver isn't able to get a solution
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/usr/local/bin"] = State()
         filesystem.state["/usr/local/bin"].attrs["state"] = "directory"
         filesystem.state["/usr/local/bin"].attrs["mode"] = "0755"
@@ -686,7 +686,7 @@ file { 'hiera_data_dir' :
         self._setup_patch_solver(puppet_script_12, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_path_variable(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/etc/hiera"] = State()
         filesystem.state["/etc/hiera"].attrs["state"] = "directory"
         filesystem.state["/etc/hiera"].attrs["mode"] = "0751"
@@ -731,7 +731,7 @@ nginx { 'nginx':
         self._setup_patch_solver(puppet_script_13, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_defined_resource_var_path(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/etc/nginx/includes"] = State()
         filesystem.state["/etc/nginx/includes"].attrs["state"] = "directory"
         filesystem.state["/etc/nginx/includes"].attrs["mode"] = "0751"
@@ -784,7 +784,7 @@ bind { 'bind':
         self._setup_patch_solver(puppet_script_14, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_defined_resource_change_outside_owner(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/named/chroot/var/log/named"] = State()
         filesystem.state["/var/named/chroot/var/log/named"].attrs["state"] = "directory"
         filesystem.state["/var/named/chroot/var/log/named"].attrs["mode"] = "0770"
@@ -827,7 +827,7 @@ package { 'openssl':
         self._setup_patch_solver(puppet_script_15, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_remove_package(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:openssl"] = State()
         filesystem.state["package:openssl"].attrs["state"] = "absent"
 
@@ -845,7 +845,7 @@ package { 'openssl':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
     def test_patch_solver_puppet_latest_package(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:openssl"] = State()
         filesystem.state["package:openssl"].attrs["state"] = "latest"
 
@@ -863,7 +863,7 @@ package { 'openssl':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
     def test_patch_solver_puppet_purge_package(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:openssl"] = State()
         filesystem.state["package:openssl"].attrs["state"] = "purged"
 
@@ -881,7 +881,7 @@ package { 'openssl':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
     def test_patch_solver_puppet_disabled_package(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:openssl"] = State()
         filesystem.state["package:openssl"].attrs["state"] = "disabled"
 
@@ -911,7 +911,7 @@ service { 'openssl':
         self._setup_patch_solver(puppet_script_16, UnitBlockType.script, Tech.puppet)
 
     def test_patch_solver_puppet_stop_service(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["service:openssl"] = State()
         filesystem.state["service:openssl"].attrs["state"] = "stop"
 
@@ -943,7 +943,7 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
         self._setup_patch_solver(ansible_script_1, UnitBlockType.tasks, Tech.ansible)
 
     def test_patch_solver_ansible_mode(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
@@ -998,7 +998,7 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
         )
 
     def test_patch_solver_ansible_owner(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_user"
@@ -1062,7 +1062,7 @@ class TestPatchSolverAnsibleScript3(TestPatchSolver):
         self._setup_patch_solver(ansible_script_3, UnitBlockType.unknown, Tech.ansible)
 
     def test_patch_solver_ansible_user_delete(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["user:johnd"] = State()
         filesystem.state["user:johnd"].attrs["state"] = "absent"
 
@@ -1101,7 +1101,7 @@ class TestPatchSolverAnsibleScript4(TestPatchSolver):
 
     @unittest.skip("Not supported yet")
     def test_patch_solver_ansible_item(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/molecule/symfony_cli/version"] = get_nil_file_state()
         filesystem.state["/molecule/symfony_cli/version"].attrs["state"] = "directory"
         filesystem.state["/molecule/symfony_cli/version"].attrs["mode"] = "0755"
@@ -1155,7 +1155,7 @@ class TestPatchSolverAnsibleScript5(TestPatchSolver):
         self._setup_patch_solver(ansible_script_5, UnitBlockType.script, Tech.ansible)
 
     def test_patch_solver_ansible_unit_block(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/netsoc"] = get_nil_file_state()
 
         assert self.statement is not None
@@ -1197,7 +1197,7 @@ class TestPatchSolverAnsibleScript6(TestPatchSolver):
         self._setup_patch_solver(ansible_script_6, UnitBlockType.tasks, Tech.ansible)
 
     def test_patch_solver_ansible_remove_package(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:ntpdate"] = State()
         filesystem.state["package:ntpdate"].attrs["state"] = "absent"
 
@@ -1216,7 +1216,7 @@ class TestPatchSolverAnsibleScript6(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
     def test_patch_solver_ansible_latest_package(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:ntpdate"] = State()
         filesystem.state["package:ntpdate"].attrs["state"] = "latest"
 
@@ -1247,7 +1247,7 @@ class TestPatchSolverAnsibleScript7(TestPatchSolver):
         self._setup_patch_solver(ansible_script_7, UnitBlockType.tasks, Tech.ansible)
 
     def test_patch_solver_ansible_stop_service(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["service:httpd"] = State()
         filesystem.state["service:httpd"].attrs["state"] = "stop"
 
@@ -1278,7 +1278,7 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         self._setup_patch_solver(chef_script_1, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_mode(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/tmp/something"] = get_default_file_state()
         filesystem.state["/tmp/something"].attrs["mode"] = "0777"
         filesystem.state["/tmp/something"].attrs["owner"] = UNDEF
@@ -1305,7 +1305,7 @@ class TestPatchSolverChefScript1(TestPatchSolver):
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
 
     def test_patch_solver_chef_delete(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/tmp/something"] = get_nil_file_state()
 
         assert self.statement is not None
@@ -1329,7 +1329,7 @@ class TestPatchSolverChefScript1(TestPatchSolver):
 
     @unittest.skip("Not implemented yet")
     def test_patch_solver_chef_modify_to_directory(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/tmp/something"] = get_nil_file_state()
         filesystem.state["/tmp/something"].attrs["state"] = "directory"
         filesystem.state["/tmp/something"].attrs["mode"] = "0777"
@@ -1370,7 +1370,7 @@ class TestPatchSolverChefScript2(TestPatchSolver):
         self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_directory(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/tmp/something"] = get_nil_file_state()
         filesystem.state["/tmp/something"].attrs["state"] = "present"
         filesystem.state["/tmp/something"].attrs["mode"] = "0777"
@@ -1408,7 +1408,7 @@ class TestPatchSolverChefScript3(TestPatchSolver):
         self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_user_delete(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["user:test"] = State()
         filesystem.state["user:test"].attrs["state"] = "absent"
 
@@ -1427,7 +1427,7 @@ class TestPatchSolverChefScript3(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
 
     def test_patch_solver_chef_user_change(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["user:test2"] = State()
         filesystem.state["user:test2"].attrs["state"] = "present"
 
@@ -1461,7 +1461,7 @@ class TestPatchSolverChefScript4(TestPatchSolver):
         self._setup_patch_solver(chef_script_1, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_variable_mode(self):
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/tmp/something"] = get_nil_file_state()
         filesystem.state["/tmp/something"].attrs["state"] = "present"
         filesystem.state["/tmp/something"].attrs["mode"] = "0777"
@@ -1513,7 +1513,7 @@ end
         self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_minimize(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "test"
@@ -1528,7 +1528,7 @@ end
         self.statement: PStatement = PStatement.minimize(
             self.statement, ["/var/www/customers/public_html/index.php"]
         )
-        minimized_filesystem = FileSystemState()
+        minimized_filesystem = SystemState()
         minimized_filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
         minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
         minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "test"
@@ -1573,7 +1573,7 @@ end
         self._setup_patch_solver(chef_script_6, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_vars(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["/home/leia/.ssh"] = get_default_file_state()
         filesystem.state["/home/leia/.ssh"].attrs["mode"] = "0766"
         filesystem.state["/home/leia/.ssh"].attrs["owner"] = "leia"
@@ -1610,7 +1610,7 @@ end
         self._setup_patch_solver(chef_script_7, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_remove_package(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "absent"
         assert self.statement is not None
@@ -1628,7 +1628,7 @@ end
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
 
     def test_patch_solver_chef_latest_package(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "latest"
         assert self.statement is not None
@@ -1657,7 +1657,7 @@ end
         self._setup_patch_solver(chef_script_8, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_create_package(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "present"
         assert self.statement is not None
@@ -1675,7 +1675,7 @@ end
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
 
     def test_patch_solver_chef_reconfig_package(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "reconfig"
         assert self.statement is not None
@@ -1693,7 +1693,7 @@ end
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
 
     def test_patch_solver_chef_nothing_package(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "nothing"
         assert self.statement is not None
@@ -1722,7 +1722,7 @@ end
         self._setup_patch_solver(chef_script_9, UnitBlockType.script, Tech.chef)
 
     def test_patch_solver_chef_stop_service(self) -> None:
-        filesystem = FileSystemState()
+        filesystem = SystemState()
         filesystem.state["service:example_service"] = State()
         filesystem.state["service:example_service"].attrs["state"] = "stop"
         assert self.statement is not None

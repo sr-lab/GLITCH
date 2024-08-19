@@ -7,7 +7,7 @@ from glitch.repr.inter import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repair.interactive.values import DefaultValue, UNDEF
+from glitch.repair.interactive.values import DefaultValue
 
 
 class DeltaPCompiler:

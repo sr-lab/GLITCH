@@ -26,8 +26,8 @@ from z3 import (
     ExprRef,
 )
 
-from glitch.repair.interactive.filesystem import FileSystemState
-from glitch.repair.interactive.filesystem import *
+from glitch.repair.interactive.system import SystemState
+from glitch.repair.interactive.system import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.values import UNDEF, UNSUPPORTED, DefaultValue
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
@@ -48,7 +48,7 @@ class PatchSolver:
     def __init__(
         self,
         statement: PStatement,
-        filesystem: FileSystemState,
+        filesystem: SystemState,
         timeout: int = 180,
         ctx: Optional[Context] = None,
         debug: bool = False,
@@ -204,7 +204,7 @@ class PatchSolver:
         logging.warning(f"Unsupported expression: {expr}")
         return StringVal(UNSUPPORTED), constraints
 
-    def __generate_hard_constraints(self, filesystem: FileSystemState) -> None:
+    def __generate_hard_constraints(self, filesystem: SystemState) -> None:
         for path, state in filesystem.state.items():
             for key, value in state.attrs.items():
                 self.solver.add(

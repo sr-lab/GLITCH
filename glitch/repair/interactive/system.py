@@ -14,11 +14,11 @@ class State:
         return str(self.attrs)
 
 
-class FileSystemState:
+class SystemState:
     def __init__(self) -> None:
         self.state: Dict[str, State] = {}
 
     def copy(self):
-        fs = FileSystemState()
+        fs = SystemState()
         fs.state = self.state.copy()
         return fs

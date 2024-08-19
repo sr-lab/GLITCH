@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Optional, List, Union, Callable, Any
 
-from glitch.repair.interactive.filesystem import *
+from glitch.repair.interactive.system import *
 
 
 class PConst(ABC):
@@ -287,18 +287,18 @@ class PStatement(ABC):
 
     def to_filesystems(
         self,
-        fss: Union[FileSystemState, List[FileSystemState]] = [],
+        fss: Union[SystemState, List[SystemState]] = [],
         vars: Optional[Dict[str, PExpr]] = None,
-    ) -> List[FileSystemState]:
-        if isinstance(fss, FileSystemState):
+    ) -> List[SystemState]:
+        if isinstance(fss, SystemState):
             fss = [fss.copy()]
         elif fss == []:
-            fss = [FileSystemState()]
+            fss = [SystemState()]
 
         if vars is None:
             vars = {}
 
-        res_fss: List[FileSystemState] = []
+        res_fss: List[SystemState] = []
         for fs in fss:
             get_str: Callable[[PExpr], Optional[str]] = lambda expr: self.__get_str(expr, vars)
 

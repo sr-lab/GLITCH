@@ -8,7 +8,7 @@ from glitch.repair.interactive.tracer.transform import (
     get_file_system_state,
 )
 from glitch.repair.interactive.tracer.model import *
-from glitch.repair.interactive.filesystem import *
+from glitch.repair.interactive.system import *
 
 
 def test_get_affected_paths() -> None:
