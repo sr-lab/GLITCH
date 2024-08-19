@@ -583,7 +583,8 @@ user { 'mysql':
 
     def test_patch_solver_puppet_user_delete(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["user:mysql"] = get_nil_file_state()
+        filesystem.state["user:mysql"] = State()
+        filesystem.state["user:mysql"].attrs["state"] = "absent"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -827,7 +828,8 @@ package { 'openssl':
 
     def test_patch_solver_puppet_remove_package(self):
         filesystem = FileSystemState()
-        filesystem.state["package:openssl"] = get_nil_file_state()
+        filesystem.state["package:openssl"] = State()
+        filesystem.state["package:openssl"].attrs["state"] = "absent"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -844,7 +846,7 @@ package { 'openssl':
 
     def test_patch_solver_puppet_latest_package(self):
         filesystem = FileSystemState()
-        filesystem.state["package:openssl"] = get_nil_file_state()
+        filesystem.state["package:openssl"] = State()
         filesystem.state["package:openssl"].attrs["state"] = "latest"
 
         assert self.statement is not None
@@ -862,7 +864,7 @@ package { 'openssl':
 
     def test_patch_solver_puppet_purge_package(self):
         filesystem = FileSystemState()
-        filesystem.state["package:openssl"] = get_nil_file_state()
+        filesystem.state["package:openssl"] = State()
         filesystem.state["package:openssl"].attrs["state"] = "purged"
 
         assert self.statement is not None
@@ -880,7 +882,7 @@ package { 'openssl':
 
     def test_patch_solver_puppet_disabled_package(self):
         filesystem = FileSystemState()
-        filesystem.state["package:openssl"] = get_nil_file_state()
+        filesystem.state["package:openssl"] = State()
         filesystem.state["package:openssl"].attrs["state"] = "disabled"
 
         assert self.statement is not None
@@ -910,7 +912,7 @@ service { 'openssl':
 
     def test_patch_solver_puppet_stop_service(self):
         filesystem = FileSystemState()
-        filesystem.state["service:openssl"] = get_nil_file_state()
+        filesystem.state["service:openssl"] = State()
         filesystem.state["service:openssl"].attrs["state"] = "stop"
 
         assert self.statement is not None
@@ -1061,7 +1063,8 @@ class TestPatchSolverAnsibleScript3(TestPatchSolver):
 
     def test_patch_solver_ansible_user_delete(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["user:johnd"] = get_nil_file_state()
+        filesystem.state["user:johnd"] = State()
+        filesystem.state["user:johnd"].attrs["state"] = "absent"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -1195,7 +1198,8 @@ class TestPatchSolverAnsibleScript6(TestPatchSolver):
 
     def test_patch_solver_ansible_remove_package(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["package:ntpdate"] = get_nil_file_state()
+        filesystem.state["package:ntpdate"] = State()
+        filesystem.state["package:ntpdate"].attrs["state"] = "absent"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -1213,7 +1217,7 @@ class TestPatchSolverAnsibleScript6(TestPatchSolver):
 
     def test_patch_solver_ansible_latest_package(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["package:ntpdate"] = get_nil_file_state()
+        filesystem.state["package:ntpdate"] = State()
         filesystem.state["package:ntpdate"].attrs["state"] = "latest"
 
         assert self.statement is not None
@@ -1244,7 +1248,7 @@ class TestPatchSolverAnsibleScript7(TestPatchSolver):
 
     def test_patch_solver_ansible_stop_service(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["service:httpd"] = get_nil_file_state()
+        filesystem.state["service:httpd"] = State()
         filesystem.state["service:httpd"].attrs["state"] = "stop"
 
         assert self.statement is not None
@@ -1405,7 +1409,8 @@ class TestPatchSolverChefScript3(TestPatchSolver):
 
     def test_patch_solver_chef_user_delete(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["user:test"] = get_nil_file_state()
+        filesystem.state["user:test"] = State()
+        filesystem.state["user:test"].attrs["state"] = "absent"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -1423,7 +1428,7 @@ class TestPatchSolverChefScript3(TestPatchSolver):
 
     def test_patch_solver_chef_user_change(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["user:test2"] = get_nil_file_state()
+        filesystem.state["user:test2"] = State()
         filesystem.state["user:test2"].attrs["state"] = "present"
 
         assert self.statement is not None
@@ -1606,7 +1611,8 @@ end
 
     def test_patch_solver_chef_remove_package(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["package:tar"] = get_nil_file_state()
+        filesystem.state["package:tar"] = State()
+        filesystem.state["package:tar"].attrs["state"] = "absent"
         assert self.statement is not None
 
         solver = PatchSolver(self.statement, filesystem)
@@ -1623,7 +1629,7 @@ end
 
     def test_patch_solver_chef_latest_package(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["package:tar"] = get_nil_file_state()
+        filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "latest"
         assert self.statement is not None
 
@@ -1652,7 +1658,7 @@ end
 
     def test_patch_solver_chef_create_package(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["package:tar"] = get_nil_file_state()
+        filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "present"
         assert self.statement is not None
 
@@ -1670,7 +1676,7 @@ end
 
     def test_patch_solver_chef_reconfig_package(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["package:tar"] = get_nil_file_state()
+        filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "reconfig"
         assert self.statement is not None
 
@@ -1688,7 +1694,7 @@ end
 
     def test_patch_solver_chef_nothing_package(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["package:tar"] = get_nil_file_state()
+        filesystem.state["package:tar"] = State()
         filesystem.state["package:tar"].attrs["state"] = "nothing"
         assert self.statement is not None
 
@@ -1717,7 +1723,7 @@ end
 
     def test_patch_solver_chef_stop_service(self) -> None:
         filesystem = FileSystemState()
-        filesystem.state["service:example_service"] = get_nil_file_state()
+        filesystem.state["service:example_service"] = State()
         filesystem.state["service:example_service"].attrs["state"] = "stop"
         assert self.statement is not None
 

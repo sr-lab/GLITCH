@@ -275,9 +275,6 @@ class DeltaPCompiler:
                 ),
             ),
         )
-        statement = PSeq(statement, PChmod(path, PEConst(PStr(UNDEF))))
-        statement = PSeq(statement, PChown(path, PEConst(PStr(UNDEF))))
-        statement = PSeq(statement, PWrite(path, PEConst(PStr(UNDEF))))
 
         return PSeq(statement, PSkip())
     
@@ -332,9 +329,6 @@ class DeltaPCompiler:
             ),
         )
         
-        statement = PSeq(statement, PChmod(path, PEConst(PStr(UNDEF))))
-        statement = PSeq(statement, PChown(path, PEConst(PStr(UNDEF))))
-        statement = PSeq(statement, PWrite(path, PEConst(PStr(UNDEF))))
         return PSeq(statement, PSkip())
     
     def __handle_service(
@@ -368,9 +362,6 @@ class DeltaPCompiler:
             ),
         )
         
-        statement = PSeq(statement, PChmod(path, PEConst(PStr(UNDEF))))
-        statement = PSeq(statement, PChown(path, PEConst(PStr(UNDEF))))
-        statement = PSeq(statement, PWrite(path, PEConst(PStr(UNDEF))))
         return PSeq(statement, PSkip())
         
 
