@@ -8,6 +8,7 @@ from glitch.repr.inter import UnitBlockType
 from glitch.tech import Tech
 from glitch.tests.repair.interactive.delta_p.delta_p_puppet_scripts import *
 from tempfile import NamedTemporaryFile
+from glitch.repair.interactive.values import UNDEF
 
 
 class TestDeltaPCompilerPuppet(unittest.TestCase):
@@ -31,6 +32,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
             f.write(puppet_script.encode())
             f.flush()
             puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
+            assert puppet_parser is not None
             labeled_script = GLITCHLabeler.label(puppet_parser, Tech.puppet)
 
             # Check labels
@@ -55,6 +57,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
             f.write(puppet_script.encode())
             f.flush()
             puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
+            assert puppet_parser is not None
             labeled_script = GLITCHLabeler.label(puppet_parser, Tech.puppet)
 
             # Check labels
@@ -85,6 +88,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
             f.write(puppet_script.encode())
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
+            assert ir is not None
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
             statement = DeltaPCompiler(labeled_script).compile()
 
@@ -104,6 +108,7 @@ mode    => '0600',
             f.write(puppet_script.encode())
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
+            assert ir is not None
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
             statement = DeltaPCompiler(labeled_script).compile()
 
@@ -114,30 +119,52 @@ def test_delta_p_to_filesystems() -> None:
     statement = delta_p_puppet
     fss = statement.to_filesystems()
     assert len(fss) == 1
-    assert fss[0].state == {
-        "/var/www/customers/public_html/index.php": File(
-            "0755", "web_admin", "<html><body><h1>Hello World</h1></body></html>"
-        )
-    }
+    assert len(fss[0].state) == 1
+    assert "/var/www/customers/public_html/index.php" in fss[0].state
+    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["state"] == "present"
+    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["mode"] == "0755"
+    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["owner"] == "web_admin"
+    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["content"] == "<html><body><h1>Hello World</h1></body></html>"
 
 
 def test_delta_p_to_filesystems_2() -> None:
     statement = delta_p_puppet_2
     fss = statement.to_filesystems()
     assert len(fss) == 1
-    assert fss[0].state == {"/usr/sbin/policy-rc.d": Nil()}
+    assert len(fss[0].state) == 1
+    assert "/usr/sbin/policy-rc.d" in fss[0].state
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["state"] == "absent"
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["mode"] == UNDEF
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["owner"] == UNDEF
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["content"] == UNDEF
 
 
 def test_delta_p_to_filesystems_if() -> None:
     statement = delta_p_puppet_if
     fss = statement.to_filesystems()
     assert len(fss) == 2
-    assert fss[0].state == {"/usr/sbin/policy-rc.d": Nil()}
-    assert fss[1].state == {"/usr/sbin/policy-rc.d": File(None, None, None)}
+    assert len(fss[0].state) == 1
+    assert "/usr/sbin/policy-rc.d" in fss[0].state
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["state"] == "absent"
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["mode"] == UNDEF
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["owner"] == UNDEF
+    assert fss[0].state["/usr/sbin/policy-rc.d"].attrs["content"] == UNDEF
+
+    assert len(fss[1].state) == 1
+    assert "/usr/sbin/policy-rc.d" in fss[1].state
+    assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["state"] == "present"
+    assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["mode"] == UNDEF
+    assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["owner"] == UNDEF
+    assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["content"] == UNDEF
 
 
 def test_delta_p_to_filesystems_default_state() -> None:
     statement = delta_p_puppet_default_state
     fss = statement.to_filesystems()
     assert len(fss) == 1
-    assert fss[0].state == {"/root/.ssh/config": File("0600", "root", None)}
+    assert len(fss[0].state) == 1
+    assert "/root/.ssh/config" in fss[0].state
+    assert fss[0].state["/root/.ssh/config"].attrs["state"] == "present"
+    assert fss[0].state["/root/.ssh/config"].attrs["mode"] == "0600"
+    assert fss[0].state["/root/.ssh/config"].attrs["owner"] == "root"
+    assert fss[0].state["/root/.ssh/config"].attrs["content"] == UNDEF

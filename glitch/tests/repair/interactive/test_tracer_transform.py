@@ -9,10 +9,11 @@ from glitch.repair.interactive.tracer.transform import (
 )
 from glitch.repair.interactive.tracer.model import *
 from glitch.repair.interactive.system import *
+from glitch.repair.interactive.values import UNDEF
 
 
 def test_get_affected_paths() -> None:
-    sys_calls = [
+    sys_calls: List[Syscall] = [
         SOpen("open", ["file1", [OpenFlag.O_WRONLY]], 0),
         SOpenAt("openat", ["0", "file2", [OpenFlag.O_WRONLY]], 0),
         SRename("rename", ["file3", "file8"], 0),
@@ -60,18 +61,37 @@ def setup_file_system():
 @pytest.fixture
 def teardown_file_system():
     yield
+    assert temp_dir is not None
     shutil.rmtree(temp_dir.name)
 
 
-def test_get_file_system_state(setup_file_system, teardown_file_system) -> None:
+def test_get_file_system_state(setup_file_system, teardown_file_system) -> None: # type: ignore
     file4 = os.path.join(dir1, "file4")
 
     files = {dir1, file2, file3, file4}
     fs_state = get_file_system_state(files)
 
-    assert fs_state.state == {
-        dir1: Dir("775", os.getlogin()),
-        file2: File("664", os.getlogin(), ""),
-        file3: File("664", os.getlogin(), ""),
-        file4: Nil(),
-    }
+    assert len(fs_state.state) == 4
+
+    assert dir1 in fs_state.state
+    assert fs_state.state[dir1].attrs["state"] == "directory"
+    assert fs_state.state[dir1].attrs["mode"] == "775"
+    assert fs_state.state[dir1].attrs["owner"] == os.getlogin()
+
+    assert file2 in fs_state.state
+    assert fs_state.state[file2].attrs["state"] == "present"
+    assert fs_state.state[file2].attrs["mode"] == "664"
+    assert fs_state.state[file2].attrs["owner"] == os.getlogin()
+    assert fs_state.state[file2].attrs["content"] == ""
+
+    assert file3 in fs_state.state
+    assert fs_state.state[file3].attrs["state"] == "present"
+    assert fs_state.state[file3].attrs["mode"] == "664"
+    assert fs_state.state[file3].attrs["owner"] == os.getlogin()
+    assert fs_state.state[file3].attrs["content"] == ""
+
+    assert file4 in fs_state.state
+    assert fs_state.state[file4].attrs["state"] == "absent"
+    assert fs_state.state[file4].attrs["mode"] == UNDEF
+    assert fs_state.state[file4].attrs["owner"] == UNDEF
+    assert fs_state.state[file4].attrs["content"] == UNDEF
