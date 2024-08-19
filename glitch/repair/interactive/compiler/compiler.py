@@ -242,6 +242,22 @@ class DeltaPCompiler:
             # TODO: Unsupported
             logging.warning(f"Unsupported expression, got {expr}")
             return PEUnsupported()
+        
+    def __handle_attr(
+        self,
+        atomic_unit: AtomicUnit,
+        attributes: __Attributes,
+        path: PExpr,
+        attr: str
+    ):
+        state_var, label = attributes.get_var(attr, atomic_unit)
+        statement = PLet(
+            state_var,
+            attributes[attr],
+            label,
+            PAttr(path, attr, PEVar(state_var)),
+        )
+        return statement
 
     def __handle_user(
         self,
@@ -260,23 +276,10 @@ class DeltaPCompiler:
             self._labeled_script.add_location(atomic_unit, name_attr)
             self._labeled_script.add_location(name_attr, name_attr.value)
 
-        state_var, label = attributes.get_var("state", atomic_unit)
-        statement = PLet(
-            state_var,
-            attributes["state"],
-            label,
-            PIf(
-                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
-                PCreate(path),
-                PIf(
-                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
-                    PRm(path),
-                    PSkip(),
-                ),
-            ),
+        return PSeq(
+            self.__handle_attr(atomic_unit, attributes, path, "state"), 
+            PSkip()
         )
-
-        return PSeq(statement, PSkip())
     
     def __handle_package(
         self,
@@ -293,43 +296,10 @@ class DeltaPCompiler:
             self._labeled_script.add_location(atomic_unit, name_attr)
             self._labeled_script.add_location(name_attr, name_attr.value)
 
-        state_var, label = attributes.get_var("state", atomic_unit)
-        statement = PLet(
-            state_var,
-            attributes["state"],
-            label,
-            PIf(
-                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
-                PCreate(path),
-                PIf(
-                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
-                    PRm(path),
-                    PIf(
-                        PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("latest"))),
-                        PState(path, "latest"),
-                        PIf(
-                            PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("purged"))),
-                            PState(path, "purged"),
-                            PIf(
-                                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("disabled"))), 
-                                PState(path, "disabled"), 
-                                PIf(
-                                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("reconfig"))),
-                                    PState(path, "reconfig"),
-                                    PIf(
-                                        PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("nothing"))),
-                                        PState(path, "nothing"),
-                                        PSkip()
-                                    )
-                                ),
-                            )
-                        )
-                    )
-                ),
-            ),
+        return PSeq(
+            self.__handle_attr(atomic_unit, attributes, path, "state"), 
+            PSkip()
         )
-        
-        return PSeq(statement, PSkip())
     
     def __handle_service(
         self,
@@ -346,23 +316,10 @@ class DeltaPCompiler:
             self._labeled_script.add_location(atomic_unit, name_attr)
             self._labeled_script.add_location(name_attr, name_attr.value)
 
-        state_var, label = attributes.get_var("state", atomic_unit)
-        statement = PLet(
-            state_var,
-            attributes["state"],
-            label,
-            PIf(
-                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("start"))),
-                PState(path, "start"),
-                PIf(
-                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("stop"))),
-                    PState(path, "stop"),
-                    PSkip()
-                )
-            ),
+        return PSeq(
+            self.__handle_attr(atomic_unit, attributes, path, "state"), 
+            PSkip()
         )
-        
-        return PSeq(statement, PSkip())
         
 
     def __handle_file(
@@ -380,57 +337,18 @@ class DeltaPCompiler:
             path = self._compile_expr(atomic_unit.name)
             self._labeled_script.add_location(atomic_unit, atomic_unit.name)
 
-        state_var, label = attributes.get_var("state", atomic_unit)
-        statement = PLet(
-            state_var,
-            attributes["state"],
-            label,
-            PIf(
-                PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("present"))),
-                PCreate(path),
-                PIf(
-                    PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("absent"))),
-                    PRm(path),
-                    PIf(
-                        PEBinOP(PEq(), PEVar(state_var), PEConst(PStr("directory"))),
-                        PMkdir(path),
-                        PSkip(),
-                    ),
-                ),
-            ),
-        )
-
-        content_var, label = attributes.get_var("content", atomic_unit)
+        statement = self.__handle_attr(atomic_unit, attributes, path, "state")
         statement = PSeq(
             statement,
-            PLet(
-                content_var,
-                attributes["content"],
-                label,
-                PWrite(path, PEVar(content_var)),
-            ),
+            self.__handle_attr(atomic_unit, attributes, path, "content")
         )
-
-        owner_var, label = attributes.get_var("owner", atomic_unit)
         statement = PSeq(
             statement,
-            PLet(
-                owner_var,
-                attributes["owner"],
-                label,
-                PChown(path, PEVar(owner_var)),
-            ),
+            self.__handle_attr(atomic_unit, attributes, path, "owner")
         )
-
-        mode_var, label = attributes.get_var("mode", atomic_unit)
         statement = PSeq(
             statement,
-            PLet(
-                mode_var,
-                attributes["mode"],
-                label,
-                PChmod(path, PEVar(mode_var)),
-            ),
+            self.__handle_attr(atomic_unit, attributes, path, "mode")
         )
 
         return statement

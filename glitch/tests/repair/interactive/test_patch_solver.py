@@ -416,7 +416,7 @@ class TestPatchSolverPuppetScript6(TestPatchSolver):
         solver = PatchSolver(self.statement, filesystem)
         models = solver.solve()
         assert models is not None
-        assert len(models) == 2
+        assert len(models) == 4
 
         result = """
             define apache::vhost (

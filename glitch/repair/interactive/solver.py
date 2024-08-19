@@ -116,15 +116,11 @@ class PatchSolver:
             return self.__collect_labels(statement.lhs) + self.__collect_labels(
                 statement.rhs
             )
-        elif isinstance(statement, (PCreate, PWrite, PChmod, PChown, PState)):
-            labels = []
-            if isinstance(statement, PWrite):
-                labels = self.__collect_labels(statement.content)
-            elif isinstance(statement, PChmod):
-                labels = self.__collect_labels(statement.mode)
-            elif isinstance(statement, PChown):
-                labels = self.__collect_labels(statement.owner)
-            return labels + self.__collect_labels(statement.path)
+        elif isinstance(statement, PAttr):
+            return (
+                self.__collect_labels(statement.path) +
+                self.__collect_labels(statement.value)
+            )
         elif isinstance(statement, PIf):
             return (
                 self.__collect_labels(statement.pred)
@@ -148,8 +144,10 @@ class PatchSolver:
             return self.__collect_vars(statement.lhs) + self.__collect_vars(
                 statement.rhs
             )
-        elif isinstance(statement, (PCreate, PWrite, PChmod, PChown, PState)):
-            return self.__collect_vars(statement.path)
+        elif isinstance(statement, PAttr):
+            return self.__collect_vars(statement.path) + self.__collect_vars(
+                statement.value
+            )
         elif isinstance(statement, PIf):
             return (
                 self.__collect_vars(statement.pred)
@@ -219,44 +217,15 @@ class PatchSolver:
         funs = deepcopy(funs)
         constraints: List[ExprRef] = []
 
-        if isinstance(statement, PMkdir):
+        if isinstance(statement, PAttr):
             path, constraints = self.__compile_expr(statement.path)
-            if "state" not in previous_funs:
-                previous_funs["state"] = lambda p: StringVal(UNDEF)
-            funs["state"] = lambda p: If(
-                p == path, StringVal("directory"), previous_funs["state"](p)
-            )
-        elif isinstance(statement, PCreate):
-            path, constraints = self.__compile_expr(statement.path)
-            if "state" not in previous_funs:
-                previous_funs["state"] = lambda p: StringVal(UNDEF)
-            funs["state"] = lambda p: If(
-                p == path, StringVal("present"), previous_funs["state"](p)
-            )
-        elif isinstance(statement, PState):
-            path, constraints = self.__compile_expr(statement.path)
-            if "state" not in previous_funs:
-                previous_funs["state"] = lambda p: StringVal(UNDEF)
-            funs["state"] = lambda p: If(
-                p == path, StringVal(statement.state), previous_funs["state"](p)
-            )
-        elif isinstance(statement, PWrite):
-            path, constraints = self.__compile_expr(statement.path)
-            content, content_constraints = self.__compile_expr(statement.content)
-            constraints += content_constraints
-            if "content" not in previous_funs:
-                previous_funs["content"] = lambda p: StringVal(DefaultValue.DEFAULT_CONTENT)
-            funs["content"] = lambda p: If(
-                p == path,
-                content,
-                previous_funs["content"](p),
-            )
-        elif isinstance(statement, PRm):
-            path, constraints = self.__compile_expr(statement.path)
-            if "state" not in previous_funs:
-                previous_funs["state"] = lambda p: StringVal(UNDEF)
-            funs["state"] = lambda p: If(
-                p == path, StringVal("absent"), previous_funs["state"](p)
+            value, value_constraints = self.__compile_expr(statement.value)
+            constraints += value_constraints
+
+            if statement.attr not in previous_funs:
+                previous_funs[statement.attr] = lambda p: StringVal(UNDEF)
+            funs[statement.attr] = lambda p: If(
+                p == path, value, previous_funs[statement.attr](p)
             )
         elif isinstance(statement, PCp):
             src, src_constraints = self.__compile_expr(statement.src)
@@ -277,28 +246,6 @@ class PatchSolver:
             )
             funs["owner"] = lambda p: If(
                 p == dst, previous_funs["owner"](src), previous_funs["owner"](p)
-            )
-        elif isinstance(statement, PChmod):
-            path, constraints = self.__compile_expr(statement.path)
-            mode, mode_constraints = self.__compile_expr(statement.mode)
-            constraints += mode_constraints
-            if "mode" not in previous_funs:
-                previous_funs["mode"] = lambda p: StringVal(DefaultValue.DEFAULT_MODE)
-            funs["mode"] = lambda p: If(
-                p == path,
-                mode,
-                previous_funs["mode"](p),
-            )
-        elif isinstance(statement, PChown):
-            path, constraints = self.__compile_expr(statement.path)
-            owner, owner_constraints = self.__compile_expr(statement.owner)
-            constraints += owner_constraints
-            if "owner" not in previous_funs:
-                previous_funs["owner"] = lambda p: StringVal(DefaultValue.DEFAULT_OWNER)
-            funs["owner"] = lambda p: If(
-                p == path,
-                owner,
-                previous_funs["owner"](p),
             )
         elif isinstance(statement, PSeq):
             lhs_constraints, funs = self.__generate_soft_constraints(

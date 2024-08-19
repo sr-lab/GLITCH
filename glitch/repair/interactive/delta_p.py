@@ -228,7 +228,7 @@ class PStatement(ABC):
             considered_paths: List[str], 
             vars: Dict[str, PExpr],
         ) -> "PStatement":
-            if isinstance(statement, (PMkdir, PCreate, PRm, PWrite, PChmod, PChown)):
+            if isinstance(statement, PAttr):
                 path = statement.__get_str(statement.path, vars)
                 if path not in considered_paths:
                     return PSkip()
@@ -302,10 +302,7 @@ class PStatement(ABC):
         for fs in fss:
             get_str: Callable[[PExpr], Optional[str]] = lambda expr: self.__get_str(expr, vars)
 
-            if isinstance(
-                self, 
-                (PMkdir, PCreate, PRm, PWrite, PChmod, PChown, PState)
-            ):
+            if isinstance(self, PAttr):
                 path = get_str(self.path)
                 if path is None:
                     continue
@@ -317,20 +314,12 @@ class PStatement(ABC):
 
             if isinstance(self, PSkip):
                 pass
-            elif isinstance(self, PState):
-                fs.state[path].attrs["state"] = self.state
-            elif isinstance(self, PMkdir):
-                fs.state[path].attrs["state"] = "directory"
-            elif isinstance(self, PCreate):
-                fs.state[path].attrs["state"] = "present"
-            elif isinstance(self, PWrite):
-                content = get_str(self.content)
-                if content is not None:
-                    fs.state[path].attrs["content"] = content
+            elif isinstance(self, PAttr):
+                value = get_str(self.value)
+                if value is not None:
+                    fs.state[path].attrs[self.attr] = value
                 else:
-                    fs.state[path].attrs["content"] = UNDEF
-            elif isinstance(self, PRm):
-                fs.state[path].attrs["state"] = "absent"
+                    fs.state[path].attrs[self.attr] = UNDEF
             elif isinstance(self, PCp):
                 try:
                     dst, src = get_str(self.dst), get_str(self.src)
@@ -340,18 +329,6 @@ class PStatement(ABC):
                 except ValueError:
                     logging.warning(f"Invalid path: {self.src} {self.dst}")
                     continue
-            elif isinstance(self, PChmod):
-                mode = get_str(self.mode)
-                if mode is not None:
-                    fs.state[path].attrs["mode"] = mode
-                else:
-                    fs.state[path].attrs["mode"] = UNDEF
-            elif isinstance(self, PChown):
-                owner = get_str(self.owner)
-                if owner is not None:
-                    fs.state[path].attrs["owner"] = owner
-                else:
-                    fs.state[path].attrs["owner"] = UNDEF
             elif isinstance(self, PSeq):
                 fss_lhs = self.lhs.to_filesystems(fs, vars)
                 for fs_lhs in fss_lhs:
@@ -391,48 +368,16 @@ class PSkip(PStatement):
 
 
 @dataclass
-class PMkdir(PStatement):
+class PAttr(PStatement):
     path: PExpr
-
-
-@dataclass
-class PWrite(PStatement):
-    path: PExpr
-    content: PExpr
-
-
-@dataclass
-class PCreate(PStatement):
-    path: PExpr
-
-
-@dataclass
-class PState(PStatement):
-    path: PExpr
-    state: str
-
-
-@dataclass
-class PRm(PStatement):
-    path: PExpr
+    attr: str
+    value: PExpr
 
 
 @dataclass
 class PCp(PStatement):
     src: PExpr
     dst: PExpr
-
-
-@dataclass
-class PChmod(PStatement):
-    path: PExpr
-    mode: PExpr
-
-
-@dataclass
-class PChown(PStatement):
-    path: PExpr
-    owner: PExpr
 
 
 @dataclass
@@ -470,22 +415,10 @@ class TranverseDeltaPVisitor(ABC):
             return self.visit_binop(statement)
         elif isinstance(statement, PEUnOP):
             return self.visit_unop(statement)
-        elif isinstance(statement, PMkdir):
-            return self.visit_mkdir(statement)
-        elif isinstance(statement, PWrite):
-            return self.visit_write(statement)
-        elif isinstance(statement, PCreate):
-            return self.visit_create(statement)
-        elif isinstance(statement, PRm):
-            return self.visit_rm(statement)
-        elif isinstance(statement, PState):
-            return self.visit_state(statement)
+        elif isinstance(statement, PAttr):
+            return self.visit_attr(statement)
         elif isinstance(statement, PCp):
             return self.visit_cp(statement)
-        elif isinstance(statement, PChmod):
-            return self.visit_chmod(statement)
-        elif isinstance(statement, PChown):
-            return self.visit_chown(statement)
         elif isinstance(statement, PSeq):
             return self.visit_seq(statement)
         elif isinstance(statement, PLet):
@@ -502,29 +435,11 @@ class TranverseDeltaPVisitor(ABC):
     def visit_unop(self, unop: PEUnOP):
         return self.visit(unop.operand)
     
-    def visit_mkdir(self, stat: PMkdir):
-        return self.visit(stat.path)
-    
-    def visit_write(self, stat: PWrite):
-        return self.visit(stat.path) + self.visit(stat.content)
-
-    def visit_create(self, stat: PCreate):
-        return self.visit(stat.path)
-    
-    def visit_state(self, stat: PState):
-        return self.visit(stat.path)
-    
-    def visit_rm(self, stat: PRm):
-        return self.visit(stat.path)
+    def visit_attr(self, stat: PAttr):
+        return self.visit(stat.path) + self.visit(stat.value)
     
     def visit_cp(self, stat: PCp):
         return self.visit(stat.src) + self.visit(stat.dst)
-    
-    def visit_chmod(self, stat: PChmod):
-        return self.visit(stat.path) + self.visit(stat.mode)
-    
-    def visit_chown(self, stat: PChown):
-        return self.visit(stat.path) + self.visit(stat.owner)
     
     def visit_seq(self, stat: PSeq):
         return self.visit(stat.lhs) + self.visit(stat.rhs)
@@ -551,9 +466,6 @@ class GetStringsVisitor(TranverseDeltaPVisitor):
         elif isinstance(statement, PEConst):
             return self.visit_const(statement)
         return []
-    
-    def visit_state(self, stat: PState) -> List[str]:
-        return super().visit_state(stat) + [stat.state]
 
     def visit_const(self, const: PEConst) -> List[str]:
         if isinstance(const.const, PStr):
