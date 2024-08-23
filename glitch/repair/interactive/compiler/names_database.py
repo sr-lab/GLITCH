@@ -59,6 +59,10 @@ class NamesDatabase:
                 return "state"
             case "state", "file" | "user" | "package" | "service", Tech.puppet:
                 return "ensure"
+            case "enabled", "service", Tech.puppet:
+                return "enable"
+            case "enabled", "service", Tech.chef:
+                return "state"
             case _:
                 pass
         return name
@@ -109,6 +113,10 @@ class NamesDatabase:
                 return "started"
             case "stop", "state", "service", Tech.ansible:
                 return "stopped"
+            case "true", "enabled", "service", Tech.chef:
+                return ":enable"
+            case "false", "enabled", "service", Tech.chef:
+                return ":disable"
             case _:
                 pass
         return value
@@ -142,6 +150,8 @@ class NamesDatabase:
                 return "state"
             case "action", "file" | "user" | "package" | "service", Tech.chef:
                 return "state"
+            case "enable", "service", Tech.puppet:
+                return "enabled"
             case _:
                 pass
 
@@ -213,6 +223,10 @@ class NamesDatabase:
                     v = "present"
                 case ":remove", "state", "package", Tech.chef:
                     v = "absent"
+                case ":enable", "enabled", "service", Tech.chef:
+                    v = "true"
+                case ":disable", "enabled", "service", Tech.chef:
+                    v = "false"
                 case _:
                     return value
 

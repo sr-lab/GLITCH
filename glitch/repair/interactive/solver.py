@@ -417,7 +417,7 @@ class PatchSolver:
         value: str,
         tech: Tech,
     ) -> None:
-        is_string = attribute.name != "state"
+        is_string = attribute.name != "state" and value not in ["true", "false"]
         au_type = NamesDatabase.get_au_type(atomic_unit.type, tech)
         name = NamesDatabase.reverse_attr_name(
             attribute.name, au_type, labeled_script.tech

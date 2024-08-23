@@ -914,6 +914,7 @@ service { 'openssl':
         filesystem = SystemState()
         filesystem.state["service:openssl"] = State()
         filesystem.state["service:openssl"].attrs["state"] = "stop"
+        filesystem.state["service:openssl"].attrs["enabled"] = UNDEF
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -924,6 +925,26 @@ service { 'openssl':
 service { 'openssl':
   ensure => stopped,
   name   => 'openssl',
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+    def test_patch_solver_puppet_enable_service(self):
+        filesystem = SystemState()
+        filesystem.state["service:openssl"] = State()
+        filesystem.state["service:openssl"].attrs["state"] = "start"
+        filesystem.state["service:openssl"].attrs["enabled"] = "true"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        result = """
+service { 'openssl':
+  ensure => running,
+  name   => 'openssl',
+  enable => true,
 }
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
@@ -1262,6 +1283,27 @@ class TestPatchSolverAnsibleScript7(TestPatchSolver):
   ansible.builtin.service:
     name: httpd
     state: stopped
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+    def test_patch_solver_ansible_enable_service(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["service:httpd"] = State()
+        filesystem.state["service:httpd"].attrs["state"] = "start"
+        filesystem.state["service:httpd"].attrs["enabled"] = "true"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Start service httpd, if not started
+  ansible.builtin.service:
+    name: httpd
+    state: started
+    enabled: true
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
@@ -1735,6 +1777,25 @@ end
         result = """
 service 'example_service' do
   action :stop
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+    def test_patch_solver_chef_enable_service(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["service:example_service"] = State()
+        filesystem.state["service:example_service"].attrs["state"] = UNDEF
+        filesystem.state["service:example_service"].attrs["enabled"] = "true"
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+service 'example_service' do
+  action :enabled
 end
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)

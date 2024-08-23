@@ -317,7 +317,10 @@ class DeltaPCompiler:
             self._labeled_script.add_location(name_attr, name_attr.value)
 
         return PSeq(
-            self.__handle_attr(atomic_unit, attributes, path, "state"), 
+            PSeq(
+                self.__handle_attr(atomic_unit, attributes, path, "state"),
+                self.__handle_attr(atomic_unit, attributes, path, "enabled")
+            ), 
             PSkip()
         )
         
