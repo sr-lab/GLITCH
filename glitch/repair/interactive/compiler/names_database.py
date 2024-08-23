@@ -1,5 +1,6 @@
 from glitch.tech import Tech
 from glitch.repr.inter import *
+from typing import Tuple
 
 
 class NamesDatabase:
@@ -62,7 +63,7 @@ class NamesDatabase:
             case "enabled", "service", Tech.puppet:
                 return "enable"
             case "enabled", "service", Tech.chef:
-                return "state"
+                return "action"
             case _:
                 pass
         return name
@@ -122,7 +123,7 @@ class NamesDatabase:
         return value
 
     @staticmethod
-    def get_attr_name(name: str, au_type: str, tech: Tech) -> str:
+    def __get_attr_name(name: str, au_type: str, tech: Tech) -> str:
         """Returns the generic name of the attribute with the given name, atomic unit type and tech.
 
         Args:
@@ -158,7 +159,7 @@ class NamesDatabase:
         return name
 
     @staticmethod
-    def get_attr_value(value: Expr, name: str, au_type: str, tech: Tech) -> Expr:
+    def __get_attr_value(value: Expr, name: str, au_type: str, tech: Tech) -> Expr:
         """Returns the generic value of the attribute with the given value, name,
         atomic unit type and tech.
 
@@ -233,6 +234,33 @@ class NamesDatabase:
             return String(v, ElementInfo.from_code_element(value))
 
         return value
+    
+    @staticmethod
+    def get_attr_pair(value: Expr, attr_name: str, au_type: str, tech: Tech) -> Tuple[str, Expr]:
+        attr_name = NamesDatabase.__get_attr_name(attr_name, au_type, tech)
+
+        v = None
+        if isinstance(value, (VariableReference, String)):
+            v = value.value
+        if v is not None:
+            match v, attr_name, au_type, tech:
+                case ":enable", "state", "service", Tech.chef:
+                    return (
+                        "enabled",
+                        String("true", ElementInfo.from_code_element(value)),
+                    )
+                case ":disable", "state", "service", Tech.chef:
+                    return (
+                        "enabled", 
+                        String("false", ElementInfo.from_code_element(value))
+                    )
+                case _:
+                    pass
+        
+        return (
+            attr_name,
+            NamesDatabase.__get_attr_value(value, attr_name, au_type, tech)
+        )
 
 
 class NormalizationVisitor:
@@ -253,10 +281,7 @@ class NormalizationVisitor:
     def visit_atomic_unit(self, element: AtomicUnit) -> None:
         element.type = NamesDatabase.get_au_type(element.type, self.tech)
         for attr in element.attributes:
-            attr.name = NamesDatabase.get_attr_name(
-                attr.name, element.type, self.tech
-            )
-            attr.value = NamesDatabase.get_attr_value(
+            attr.name, attr.value = NamesDatabase.get_attr_pair(
                 attr.value, 
                 attr.name, 
                 element.type, 

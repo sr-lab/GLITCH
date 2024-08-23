@@ -431,18 +431,13 @@ class PatchApplier:
         value: str,
         tech: Tech,
     ) -> None:
-        is_string = attribute.name != "state" and value not in ["true", "false"]
-        au_type = NamesDatabase.get_au_type(atomic_unit.type, tech)
-        name = NamesDatabase.reverse_attr_name(
-            attribute.name, au_type, labeled_script.tech
+        name, _ = NamesDatabase.get_attr_pair(
+            inter.String(value, ElementInfo(-1, -1, -1, -1, "")),
+            attribute.name, 
+            atomic_unit.type, 
+            tech
         )
-        value = NamesDatabase.reverse_attr_value(
-            value,
-            NamesDatabase.get_attr_name(attribute.name, au_type, labeled_script.tech),
-            au_type,
-            labeled_script.tech,
-        )
-        attribute.name = name
+        is_string = name not in ["state", "enabled"] and value not in ["true", "false"]
         atomic_unit.attributes.append(attribute)
 
         path = labeled_script.script.path
@@ -461,10 +456,13 @@ class PatchApplier:
         for attr in atomic_unit.attributes:
             if not self.__is_sketch(attr):
                 last_attribute = attr
-        assert last_attribute is not None
-        line = last_attribute.line + 1
+        if last_attribute is None:
+            line = atomic_unit.line + 1
+            col = 2
+        else:
+            line = last_attribute.line + 1
+            col = len(lines[line - 2]) - len(lines[line - 2].lstrip())
         attribute.line = line
-        col = len(lines[line - 2]) - len(lines[line - 2].lstrip())
         new_line = TemplateDatabase.get_template(attribute, tech)
         value = value if not is_string else f"'{value}'"
         new_line = col * " " + new_line.format(attribute.name, value)
@@ -536,7 +534,7 @@ class PatchApplier:
 
         with open(labeled_script.script.path, "w") as f:
             f.writelines(lines)
-
+    
     def get_changes(
         self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
     ) -> List[PatchChange]:
@@ -589,12 +587,43 @@ class PatchApplier:
         # The sort is necessary to avoid problems in the textual changes
         changes.sort(key=lambda x: (x.info.line, x.info.column), reverse=True)
         return changes
-        
+
+    def reverse_changes(
+        self, labeled_script: LabeledUnitBlock, changes: List[PatchChange]
+    ) -> None:
+        def reverse(value: str, attr: str, loc_loc: AtomicUnit) -> Tuple[str, str]:
+            attr_name = NamesDatabase.reverse_attr_name(
+                attr, loc_loc.type, labeled_script.tech
+            )
+            value = NamesDatabase.reverse_attr_value(
+                value,
+                attr,
+                loc_loc.type,
+                labeled_script.tech,
+            )
+            return attr_name, value
+
+        for change in changes:
+            if isinstance(change.codeelement, (inter.String, inter.Null)):
+                loc = labeled_script.get_location(change.codeelement)
+                if isinstance(loc, Attribute):
+                    loc_loc = labeled_script.get_location(loc)
+                    if isinstance(loc_loc, AtomicUnit):
+                        loc.name, change.value = reverse(
+                            change.value, loc.name, loc_loc
+                        )
+                elif isinstance(loc, AtomicUnit):
+                    # Only for paths in the name
+                    _, change.value = reverse(
+                        change.value, "path", loc
+                    )
+                    loc.name = inter.String(change.value, change.info)
 
     def apply_patch(
         self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
     ) -> None:
         changed_elements = self.get_changes(model_ref, labeled_script)
+        self.reverse_changes(labeled_script, changed_elements)
         deleted_kvs: List[inter.KeyValue] = []
 
         for ce in changed_elements:
@@ -620,54 +649,21 @@ class PatchApplier:
             elif ce.type == "modify":
                 loc = labeled_script.get_location(ce.codeelement)
                 if isinstance(loc, Attribute):
-                    loc_loc = labeled_script.get_location(loc)
-
-                    if isinstance(loc_loc, AtomicUnit):
-                        au_type = NamesDatabase.get_au_type(
-                            loc_loc.type, labeled_script.tech
-                        )
-                        attr_name = NamesDatabase.get_attr_name(
-                            loc.name, au_type, labeled_script.tech
-                        )
-                        value = NamesDatabase.reverse_attr_value(
-                            ce.value,
-                            attr_name,
-                            au_type,
-                            labeled_script.tech,
-                        )
-                    else:
-                        # Parameters of defined resources
-                        value = ce.value
-
                     assert isinstance(ce.codeelement, inter.String)
-                    ce.codeelement.value = value
+                    ce.codeelement.value = ce.value
                     loc.value = ce.codeelement
                     self.__modify_codeelement(
-                        labeled_script, ce.codeelement, value
+                        labeled_script, ce.codeelement, ce.value
                     )
                 elif isinstance(loc, Variable):
                     assert isinstance(ce.codeelement, inter.String)
                     ce.codeelement.value = ce.value
                     self.__modify_codeelement(labeled_script, ce.codeelement, ce.value)
                 elif isinstance(loc, AtomicUnit):
-                    # Only for paths in the name
-                    # TODO: avoid repeating code
-                    au_type = NamesDatabase.get_au_type(
-                        loc.type, labeled_script.tech
-                    )
-                    attr_name = NamesDatabase.get_attr_name(
-                        "path", au_type, labeled_script.tech
-                    )
-                    value = NamesDatabase.reverse_attr_value(
-                        ce.value,
-                        attr_name,
-                        au_type,
-                        labeled_script.tech,
-                    )
                     assert isinstance(ce.codeelement, inter.String)
-                    ce.codeelement.value = value
+                    ce.codeelement.value = ce.value
                     loc.name = ce.codeelement
-                    self.__modify_codeelement(labeled_script, ce.codeelement, value)
+                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value)
             elif ce.type == "add_sketch":
                 loc = labeled_script.get_location(ce.codeelement)
                 assert isinstance(loc, Attribute)

@@ -21,7 +21,7 @@ def get_default_file_state():
     state = State()
     state.attrs["mode"] = DefaultValue.DEFAULT_MODE
     state.attrs["owner"] = DefaultValue.DEFAULT_OWNER
-    state.attrs["state"] = DefaultValue.DEFAULT_STATE
+    state.attrs["state"] = "present"
     state.attrs["content"] = DefaultValue.DEFAULT_CONTENT
     return state
 
@@ -1565,7 +1565,8 @@ end
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "test"
         filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html>This is a placeholder for the home page.</html>"
         
-        filesystem.state["/var/www/customers/public_html/index2.php"] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index2.php"] = State()
+        filesystem.state["/var/www/customers/public_html/index2.php"].attrs["state"] = UNDEF
         filesystem.state["/var/www/customers/public_html/index2.php"].attrs["mode"] = "0755"
         filesystem.state["/var/www/customers/public_html/index2.php"].attrs["owner"] = "web_admin"
         filesystem.state["/var/www/customers/public_html/index2.php"].attrs["content"] = "<html>This is a placeholder for the home page.</html>"
@@ -1591,6 +1592,7 @@ file '/var/www/customers/public_html/index.php' do
     mode '0755'
     owner 'test'
     group 'web_admin'
+    action :create
 end
 
 file '/var/www/customers/public_html/index2.php' do
@@ -1639,6 +1641,7 @@ directory "#{test_user_home}/.ssh" do
   mode '0766'
   owner test_user
   group test_user
+  action :create
   content 'leia'
 end
 """
@@ -1800,7 +1803,7 @@ end
 
         result = """
 service 'example_service' do
-  action :enabled
+  action :enable
 end
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)

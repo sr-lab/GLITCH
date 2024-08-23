@@ -7,5 +7,5 @@ UNSUPPORTED = "glitch-unsupported"
 class DefaultValue:
     DEFAULT_MODE = "644"
     DEFAULT_OWNER = "root"
-    DEFAULT_STATE = "present"
+    DEFAULT_STATE = UNDEF
     DEFAULT_CONTENT = ""
