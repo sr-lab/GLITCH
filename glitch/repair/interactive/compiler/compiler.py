@@ -5,7 +5,6 @@ from typing import Optional, Dict, Tuple, Type
 from glitch.tech import Tech
 from glitch.repr.inter import *
 from glitch.repair.interactive.delta_p import *
-from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 from glitch.repair.interactive.values import DefaultValue
 
@@ -22,21 +21,13 @@ class DeltaPCompiler:
         def __init__(
             self, compiler: "DeltaPCompiler", au_type: str, tech: Tech
         ) -> None:
-            self.au_type = NamesDatabase.get_au_type(au_type, tech)
             self.__compiler = compiler
             self.__tech = tech
             self.__attributes: Dict[str, Tuple[PExpr, Attribute]] = {}
 
         def add_attribute(self, attribute: Attribute) -> None:
-            attr_name = NamesDatabase.get_attr_name(
-                attribute.name, self.au_type, self.__tech
-            )
-
-            attribute.value = NamesDatabase.get_attr_value(
-                attribute.value, attr_name, self.au_type, self.__tech
-            )
             expr = self.__compiler._compile_expr(attribute.value)
-            self.__attributes[attr_name] = (expr, attribute)
+            self.__attributes[attribute.name] = (expr, attribute)
 
         def get_attribute(self, attr_name: str) -> Optional[Attribute]:
             return self.__attributes.get(attr_name, (None, None))[1]
@@ -138,7 +129,7 @@ class DeltaPCompiler:
 
             return (
                 self.__compiler._get_attribute_name(
-                    attr.name, attr, self.au_type, self.__tech
+                    attr.name, attr, atomic_unit.type, self.__tech
                 ),
                 label,
             )
@@ -153,8 +144,7 @@ class DeltaPCompiler:
         au_type: str,
         tech: Tech,
     ) -> str:
-        name = NamesDatabase.get_attr_name(attr_name, au_type, tech)
-        return self._get_scope_name(name + "_" + str(hash(attribute)))
+        return self._get_scope_name(attr_name + "_" + str(hash(attribute)))
 
     def _compile_expr(self, expr: Expr) -> PExpr:
         def binary_op(op: Type[PBinOp], left: Expr, right: Expr) -> PExpr:
@@ -360,8 +350,7 @@ class DeltaPCompiler:
         self,
         atomic_unit: AtomicUnit,
     ):
-        au_type = NamesDatabase.get_au_type(atomic_unit.type, self._labeled_script.tech)
-        definition = self._labeled_script.env.get_definition(au_type)
+        definition = self._labeled_script.env.get_definition(atomic_unit.type)
         self.scope += [f"defined_resource{str(random.randint(0, 28021904))}"]
 
         defined_attributes: Dict[str, Tuple[Attribute, bool]] = {}
@@ -409,16 +398,15 @@ class DeltaPCompiler:
         attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
             self, atomic_unit.type, tech
         )
-        au_type = NamesDatabase.get_au_type(atomic_unit.type, tech)
 
-        if attributes.au_type == "file":
+        if atomic_unit.type == "file":
             for attribute in atomic_unit.attributes:
                 attributes.add_attribute(attribute)
             statement = PSeq(
                 statement,
                 self.__handle_file(atomic_unit, attributes),
             )
-        elif attributes.au_type == "user":
+        elif atomic_unit.type == "user":
             for attribute in atomic_unit.attributes:
                 # HACK
                 self._compile_expr(attribute.value)
@@ -429,14 +417,14 @@ class DeltaPCompiler:
                 statement,
                 self.__handle_user(atomic_unit, attributes),
             )
-        elif attributes.au_type == "package":
+        elif atomic_unit.type == "package":
             for attribute in atomic_unit.attributes:
                 attributes.add_attribute(attribute)
             statement = PSeq(
                 statement,
                 self.__handle_package(atomic_unit, attributes),
             )
-        elif attributes.au_type == "service":
+        elif atomic_unit.type == "service":
             for attribute in atomic_unit.attributes:
                 attributes.add_attribute(attribute)
             statement = PSeq(
@@ -444,7 +432,7 @@ class DeltaPCompiler:
                 self.__handle_service(atomic_unit, attributes),
             )
         # Defined type
-        elif self._labeled_script.env.has_definition(au_type):
+        elif self._labeled_script.env.has_definition(atomic_unit.type):
             statement = PSeq(self.__handle_defined_type(atomic_unit), PSkip())
 
         return statement

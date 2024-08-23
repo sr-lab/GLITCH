@@ -1,6 +1,5 @@
 from typing import Dict
 from glitch.repr.inter import *
-from glitch.repair.interactive.compiler.names_database import NamesDatabase
 from glitch.tech import Tech
 from glitch.repair.interactive.compiler.environment import DefinedAtomicUnitEnv
 
@@ -136,9 +135,7 @@ class GLITCHLabeler:
             atomic_unit (AtomicUnit): The attribute's atomic unit.
             attribute (Attribute): The attribute.
         """
-        type = NamesDatabase.get_au_type(atomic_unit.type, labeled.tech)
-        name = NamesDatabase.get_attr_name(attribute.name, type, labeled.tech)
-        labeled.add_label(name, attribute)  # type: ignore
+        labeled.add_label(atomic_unit.name, attribute)  # type: ignore
 
     @staticmethod
     def label_atomic_unit(labeled: LabeledUnitBlock, atomic_unit: AtomicUnit) -> None:

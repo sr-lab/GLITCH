@@ -233,3 +233,47 @@ class NamesDatabase:
             return String(v, ElementInfo.from_code_element(value))
 
         return value
+
+
+class NormalizationVisitor:
+    def __init__(self, tech: Tech) -> None:
+        self.tech = tech
+    
+    def visit(self, element: CodeElement) -> None:
+        if isinstance(element, AtomicUnit):
+            self.visit_atomic_unit(element)
+        elif isinstance(element, UnitBlock):
+            self.visit_unit_block(element)
+        elif isinstance(element, ConditionalStatement):
+            self.visit_conditional_statement(element)
+        
+        if isinstance(element, Block):
+            self.visit_block(element)
+
+    def visit_atomic_unit(self, element: AtomicUnit) -> None:
+        element.type = NamesDatabase.get_au_type(element.type, self.tech)
+        for attr in element.attributes:
+            attr.name = NamesDatabase.get_attr_name(
+                attr.name, element.type, self.tech
+            )
+            attr.value = NamesDatabase.get_attr_value(
+                attr.value, 
+                attr.name, 
+                element.type, 
+                self.tech
+            )
+
+    def visit_conditional_statement(self, element: ConditionalStatement) -> None:
+        if element.else_statement is not None:
+            self.visit(element.else_statement)
+
+    def visit_unit_block(self, element: UnitBlock) -> None:
+        for ub in element.unit_blocks:
+            self.visit(ub)
+        for au in element.atomic_units:
+            self.visit(au)
+
+    def visit_block(self, element: Block) -> None:
+        for child in element.statements:
+            self.visit(child)
+        

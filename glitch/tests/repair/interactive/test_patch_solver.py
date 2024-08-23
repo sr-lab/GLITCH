@@ -13,6 +13,7 @@ from glitch.parsers.parser import Parser
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
 from glitch.repr.inter import UnitBlockType
+from glitch.repair.interactive.compiler.names_database import NormalizationVisitor
 from glitch.tech import Tech
 
 
@@ -65,6 +66,7 @@ class TestPatchSolver(unittest.TestCase):
         parser = self.__get_parser(tech)
         parsed_file = parser.parse_file(self.f.name, script_type)
         assert parsed_file is not None
+        NormalizationVisitor(tech).visit(parsed_file)
         self.labeled_script = GLITCHLabeler.label(parsed_file, tech)
         self.statement = DeltaPCompiler(self.labeled_script).compile()
 
@@ -79,6 +81,7 @@ class TestPatchSolver(unittest.TestCase):
     ) -> None:
         assert self.labeled_script is not None
         solver.apply_patch(model, self.labeled_script)
+        NormalizationVisitor(tech).visit(self.labeled_script.script)
         statement = DeltaPCompiler(self.labeled_script).compile()
         filesystems = statement.to_filesystems()
         assert len(filesystems) == n_filesystems
@@ -1271,6 +1274,7 @@ class TestPatchSolverAnsibleScript7(TestPatchSolver):
         filesystem = SystemState()
         filesystem.state["service:httpd"] = State()
         filesystem.state["service:httpd"].attrs["state"] = "stop"
+        filesystem.state["service:httpd"].attrs["enabled"] = UNDEF
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -1767,6 +1771,7 @@ end
         filesystem = SystemState()
         filesystem.state["service:example_service"] = State()
         filesystem.state["service:example_service"].attrs["state"] = "stop"
+        filesystem.state["service:example_service"].attrs["enabled"] = UNDEF
         assert self.statement is not None
 
         solver = PatchSolver(self.statement, filesystem)
