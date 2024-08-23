@@ -15,7 +15,7 @@ from glitch.repair.interactive.tracer.transform import (
     get_affected_paths,
     get_file_system_state,
 )
-from glitch.repair.interactive.solver import PatchSolver
+from glitch.repair.interactive.solver import PatchSolver, PatchApplier
 from glitch.repair.interactive.compiler.names_database import NormalizationVisitor
 from glitch.repair.interactive.delta_p import PStatement
 
@@ -56,7 +56,7 @@ def run_dejavu(path: str, pid: str, parser: Parser, type: UnitBlockType, tech: T
             f.write(original_file)
             f.flush()
             copy_labeled_script.script.path = f.name
-            solver.apply_patch(patch, copy_labeled_script)
+            PatchApplier(solver).apply_patch(patch, copy_labeled_script)
 
             f.seek(0, 0)
             patch_file = f.read()
@@ -72,5 +72,5 @@ def run_dejavu(path: str, pid: str, parser: Parser, type: UnitBlockType, tech: T
             print("=" * 49)
     p = int(input("Enter the patch number you wish to apply: "))
 
-    solver.apply_patch(patches[p], labeled_script)
+    PatchApplier(solver).apply_patch(patches[p], labeled_script)
     print(f"Patch applied to file {labeled_script.script.path} successfully!")

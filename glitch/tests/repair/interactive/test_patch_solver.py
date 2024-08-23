@@ -4,7 +4,7 @@ from z3 import ModelRef
 from tempfile import NamedTemporaryFile
 
 from glitch.repair.interactive.delta_p import *
-from glitch.repair.interactive.solver import PatchSolver
+from glitch.repair.interactive.solver import PatchSolver, PatchApplier
 from glitch.repair.interactive.values import UNDEF, DefaultValue
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.ansible import AnsibleParser
@@ -80,7 +80,7 @@ class TestPatchSolver(unittest.TestCase):
         n_filesystems: int = 1,
     ) -> None:
         assert self.labeled_script is not None
-        solver.apply_patch(model, self.labeled_script)
+        PatchApplier(solver).apply_patch(model, self.labeled_script)
         NormalizationVisitor(tech).visit(self.labeled_script.script)
         statement = DeltaPCompiler(self.labeled_script).compile()
         filesystems = statement.to_filesystems()

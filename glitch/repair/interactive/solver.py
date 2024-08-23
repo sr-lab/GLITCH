@@ -6,7 +6,7 @@ import logging
 import glitch.repr.inter as inter
 
 from copy import deepcopy
-from typing import List, Callable, Tuple, Any
+from typing import List, Callable, Tuple, Any, Literal
 from z3 import (
     Solver,
     sat,
@@ -405,10 +405,24 @@ class PatchSolver:
         
         return models
 
+
+@dataclass
+class PatchChange:
+    value: str
+    codeelement: CodeElement
+    type: Literal["add_sketch", "delete", "modify"]
+    info: ElementInfo
+
+
+class PatchApplier:
+    def __init__(self, solver: PatchSolver) -> None:
+        self.unchanged = solver.unchanged
+        self.holes = solver.holes
+
     # TODO: improve way to identify sketch
     def __is_sketch(self, codeelement: CodeElement) -> bool:
         return codeelement.line < 0 and codeelement.column < 0
-
+    
     def __add_sketch_attribute(
         self,
         labeled_script: LabeledUnitBlock,
@@ -523,9 +537,9 @@ class PatchSolver:
         with open(labeled_script.script.path, "w") as f:
             f.writelines(lines)
 
-    def apply_patch(
+    def get_changes(
         self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
-    ) -> None:
+    ) -> List[PatchChange]:
         changed: List[Tuple[int, Any]] = []
 
         for label, unchanged in self.unchanged.items():
@@ -543,9 +557,7 @@ class PatchSolver:
                 if label not in self.unchanged:  # Make sure it is not a literal
                     changed.append((label, model_ref[var]))
 
-        changed_elements: List[
-            Tuple[inter.String | inter.Null | inter.KeyValue, str, ElementInfo]
-        ] = []
+        changes: List[PatchChange] = []
 
         for change in changed:
             label, value = change
@@ -560,96 +572,107 @@ class PatchSolver:
                 )
                 codeelement.code = "''"
 
-            if isinstance(codeelement, inter.KeyValue) and value == UNDEF:
-                changed_elements.append(
-                    (codeelement, value, ElementInfo.from_code_element(codeelement))
-                )
+            info = ElementInfo.from_code_element(codeelement)
+            if value == UNDEF:
+                changes.append(PatchChange(value, codeelement, "delete", info))
                 continue
-
+            
             kv = labeled_script.get_location(codeelement)
             if not self.__is_sketch(codeelement) or isinstance(kv, Variable):
-                changed_elements.append(
-                    (codeelement, value, ElementInfo.from_code_element(codeelement))
-                )
-            elif isinstance(kv, Attribute):
+                changes.append(PatchChange(value, codeelement, "modify", info))
+            elif self.__is_sketch(codeelement) and isinstance(kv, Attribute):
                 au = labeled_script.get_location(kv)
                 assert isinstance(au, AtomicUnit)
                 info = ElementInfo.from_code_element(au.attributes[-1])
-                info.line, info.column = info.line + 1, 0
-                changed_elements.append((codeelement, value, info))
+                changes.append(PatchChange(value, codeelement, "add_sketch", info))
 
         # The sort is necessary to avoid problems in the textual changes
-        changed_elements.sort(key=lambda x: (x[2].line, x[2].column), reverse=True)
+        changes.sort(key=lambda x: (x.info.line, x.info.column), reverse=True)
+        return changes
+        
 
+    def apply_patch(
+        self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
+    ) -> None:
+        changed_elements = self.get_changes(model_ref, labeled_script)
         deleted_kvs: List[inter.KeyValue] = []
-        for changed_element, value, _ in changed_elements:
+
+        for ce in changed_elements:
             # Deleted Elements
-            if value == UNDEF and not self.__is_sketch(changed_element):
-                if isinstance(changed_element, inter.KeyValue):
-                    kv = changed_element
+            if ce.type == "delete":
+                if isinstance(ce.codeelement, inter.KeyValue):
+                    loc = ce.codeelement
                 else:
-                    kv = labeled_script.get_location(changed_element)
-                    assert isinstance(kv, inter.KeyValue)
+                    loc = labeled_script.get_location(ce.codeelement)
+                    assert isinstance(loc, inter.KeyValue)
 
-                ce = labeled_script.get_location(kv)
-                assert isinstance(ce, (AtomicUnit, UnitBlock))
+                loc_loc = labeled_script.get_location(loc)
+                assert isinstance(loc_loc, (AtomicUnit, UnitBlock))
 
-                if kv not in deleted_kvs:
-                    if isinstance(kv, Attribute):
-                        self.__delete_attribute(labeled_script, ce, kv)
-                    elif isinstance(kv, Variable):
-                        assert isinstance(ce, UnitBlock)
-                        self.__delete_variable(labeled_script, ce, kv)
-                    deleted_kvs.append(kv)
+                if loc not in deleted_kvs:
+                    if isinstance(loc, Attribute):
+                        self.__delete_attribute(labeled_script, loc_loc, loc)
+                    elif isinstance(loc, Variable):
+                        assert isinstance(loc_loc, UnitBlock)
+                        self.__delete_variable(labeled_script, loc_loc, loc)
+                    deleted_kvs.append(loc)
             # Modified elements
-            elif value != UNDEF and not isinstance(changed_element, inter.KeyValue):
-                ce = labeled_script.get_location(changed_element)
-                if isinstance(ce, Attribute):
-                    attr = ce
-                    ce = labeled_script.get_location(attr)
-                    assert isinstance(ce, (AtomicUnit, UnitBlock))
+            elif ce.type == "modify":
+                loc = labeled_script.get_location(ce.codeelement)
+                if isinstance(loc, Attribute):
+                    loc_loc = labeled_script.get_location(loc)
 
-                    if isinstance(ce, AtomicUnit) and self.__is_sketch(changed_element):
-                        self.__add_sketch_attribute(
-                            labeled_script, attr, ce, value, labeled_script.tech
+                    if isinstance(loc_loc, AtomicUnit):
+                        au_type = NamesDatabase.get_au_type(
+                            loc_loc.type, labeled_script.tech
+                        )
+                        attr_name = NamesDatabase.get_attr_name(
+                            loc.name, au_type, labeled_script.tech
+                        )
+                        value = NamesDatabase.reverse_attr_value(
+                            ce.value,
+                            attr_name,
+                            au_type,
+                            labeled_script.tech,
                         )
                     else:
-                        if isinstance(ce, AtomicUnit):
-                            au_type = NamesDatabase.get_au_type(
-                                ce.type, labeled_script.tech
-                            )
-                            attr_name = NamesDatabase.get_attr_name(
-                                attr.name, au_type, labeled_script.tech
-                            )
-                            value = NamesDatabase.reverse_attr_value(
-                                value,
-                                attr_name,
-                                au_type,
-                                labeled_script.tech,
-                            )
-                        changed_element.value = value
-                        attr.value = changed_element
-                        self.__modify_codeelement(
-                            labeled_script, changed_element, changed_element.value
-                        )
-                elif isinstance(ce, Variable):
-                    changed_element.value = value
-                    self.__modify_codeelement(labeled_script, changed_element, value)
-                elif isinstance(ce, AtomicUnit):
+                        # Parameters of defined resources
+                        value = ce.value
+
+                    assert isinstance(ce.codeelement, inter.String)
+                    ce.codeelement.value = value
+                    loc.value = ce.codeelement
+                    self.__modify_codeelement(
+                        labeled_script, ce.codeelement, value
+                    )
+                elif isinstance(loc, Variable):
+                    assert isinstance(ce.codeelement, inter.String)
+                    ce.codeelement.value = ce.value
+                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value)
+                elif isinstance(loc, AtomicUnit):
                     # Only for paths in the name
                     # TODO: avoid repeating code
                     au_type = NamesDatabase.get_au_type(
-                        ce.type, labeled_script.tech
+                        loc.type, labeled_script.tech
                     )
                     attr_name = NamesDatabase.get_attr_name(
                         "path", au_type, labeled_script.tech
                     )
                     value = NamesDatabase.reverse_attr_value(
-                        value,
+                        ce.value,
                         attr_name,
                         au_type,
                         labeled_script.tech,
                     )
-                    changed_element.value = value
-                    ce.name = changed_element
-                    self.__modify_codeelement(labeled_script, changed_element, value)
+                    assert isinstance(ce.codeelement, inter.String)
+                    ce.codeelement.value = value
+                    loc.name = ce.codeelement
+                    self.__modify_codeelement(labeled_script, ce.codeelement, value)
+            elif ce.type == "add_sketch":
+                loc = labeled_script.get_location(ce.codeelement)
+                assert isinstance(loc, Attribute)
+                loc_loc = labeled_script.get_location(loc)
+                assert isinstance(loc_loc, AtomicUnit)
+                self.__add_sketch_attribute(
+                    labeled_script, loc, loc_loc, ce.value, labeled_script.tech
+                ) 
