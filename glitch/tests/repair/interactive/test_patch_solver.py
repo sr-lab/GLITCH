@@ -104,6 +104,30 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         """
         self._setup_patch_solver(puppet_script_1, UnitBlockType.script, Tech.puppet)
 
+    def test_patch_solver_puppet_link(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = State()
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "link"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = UNDEF
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """
+            file { '/var/www/customers/public_html/index.php':
+                path => '/var/www/customers/public_html/index.php',
+                ensure => link,
+                mode => '0755',
+                owner => 'web_admin'
+            }
+        """
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
     def test_patch_solver_puppet_remove_content(self) -> None:
         filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
