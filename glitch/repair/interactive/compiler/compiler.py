@@ -1,6 +1,6 @@
 import random
 import logging
-from typing import Optional, Dict, Tuple, Type
+from typing import Optional, Dict, Tuple, Type, Set
 
 from glitch.tech import Tech
 from glitch.repr.inter import *
@@ -15,6 +15,7 @@ class DeltaPCompiler:
         self._literal = 0
         self._condition = 0
         self.scope: List[str] = []
+        self.vars: Set[str] = set()
         self._labeled_script = labeled_script
 
     class __Attributes:
@@ -145,6 +146,17 @@ class DeltaPCompiler:
         tech: Tech,
     ) -> str:
         return self._get_scope_name(attr_name + "_" + str(hash(attribute)))
+    
+    def __has_var(self, id: str) -> bool:
+        scopes = id.split(":dejavu:")
+        while True:
+            if ":dejavu:".join(scopes) in self.vars:
+                return True
+            if len(scopes) == 1:
+                break
+            scopes.pop(-2)
+
+        return False
 
     def _compile_expr(self, expr: Expr) -> PExpr:
         def binary_op(op: Type[PBinOp], left: Expr, right: Expr) -> PExpr:
@@ -226,8 +238,13 @@ class DeltaPCompiler:
             return binary_op(PMod, expr.left, expr.right)
         elif isinstance(expr, Power):
             return binary_op(PPower, expr.left, expr.right)
-        elif isinstance(expr, VariableReference):
+        elif (
+            isinstance(expr, VariableReference) 
+            and self.__has_var(self._get_scope_name(expr.value))
+        ):
             return PEVar(self._get_scope_name(expr.value))
+        elif isinstance(expr, VariableReference): # undefined variable
+            return PEUnsupported()
         else:
             # TODO: Unsupported
             logging.warning(f"Unsupported expression, got {expr}")
@@ -240,12 +257,13 @@ class DeltaPCompiler:
         path: PExpr,
         attr: str
     ):
-        state_var, label = attributes.get_var(attr, atomic_unit)
+        attr_var, label = attributes.get_var(attr, atomic_unit)
+        self.vars.add(attr_var)
         statement = PLet(
-            state_var,
+            attr_var,
             attributes[attr],
             label,
-            PAttr(path, attr, PEVar(state_var)),
+            PAttr(path, attr, PEVar(attr_var)),
         )
         return statement
 
@@ -363,6 +381,7 @@ class DeltaPCompiler:
 
         for name, attr in list(defined_attributes.items()):
             new_name = self._get_scope_name(name)
+            self.vars.add(new_name)
             defined_attributes[new_name] = attr
             defined_attributes.pop(name)
 
@@ -464,6 +483,7 @@ class DeltaPCompiler:
         variable: Variable,
     ) -> PStatement:
         name = self._get_scope_name(variable.name)
+        self.vars.add(name)
         statement = PLet(
             name,
             self._compile_expr(variable.value),
@@ -485,6 +505,12 @@ class DeltaPCompiler:
             + unit_block.unit_blocks
         )
         statements.sort(key=lambda x: (x.line, x.column), reverse=True)
+
+        # If we do not do this here, since we iterate over the statements
+        # in reverse, the variables will not be defined when expressions are
+        # compiled
+        for variable in unit_block.variables:
+            self.vars.add(self._get_scope_name(variable.name))
 
         for statement in statements:
             self._labeled_script.add_location(unit_block, statement)

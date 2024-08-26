@@ -648,7 +648,7 @@ file { '/usr/local/bin':
 """
         self._setup_patch_solver(puppet_script_11, UnitBlockType.script, Tech.puppet)
 
-    @unittest.skip("Not implemented yet")
+    #@unittest.skip("Not implemented yet")
     def test_patch_solver_puppet_variable_undefined(self) -> None:
         # The problem is that there is no literal to repair and so
         # the solver isn't able to get a solution
@@ -657,6 +657,7 @@ file { '/usr/local/bin':
         filesystem.state["/usr/local/bin"].attrs["state"] = "directory"
         filesystem.state["/usr/local/bin"].attrs["mode"] = "0755"
         filesystem.state["/usr/local/bin"].attrs["owner"] = "test"
+        filesystem.state["/usr/local/bin"].attrs["content"] = UNDEF
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)

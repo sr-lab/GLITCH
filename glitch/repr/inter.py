@@ -92,11 +92,10 @@ class Value(Expr, ABC):
         self.value = value
 
     def __eq__(self, o: object) -> bool:
-        if not isinstance(o, Value) or not isinstance(o, self.__class__):
+        if not isinstance(o, CodeElement):
             return False
         return (
-            self.value == o.value
-            and self.line == o.line
+            self.line == o.line
             and self.column == o.column
             and self.end_line == o.end_line
             and self.end_column == o.end_column
@@ -224,12 +223,10 @@ class BinaryOperation(Expr, ABC):
         self.right = right
 
     def __eq__(self, o: object) -> bool:
-        if not isinstance(o, Expr) or not isinstance(o, self.__class__):
+        if not isinstance(o, CodeElement):
             return False
         return (
-            self.left == o.left
-            and self.right == o.right
-            and self.line == o.line
+            self.line == o.line
             and self.column == o.column
             and self.end_line == o.end_line
             and self.end_column == o.end_column

@@ -98,7 +98,7 @@ class PatchSolver:
     def __get_var(self, id: str) -> Optional[ExprRef]:
         scopes = id.split(":dejavu:")
         while True:
-            if "::".join(scopes) in self.vars:
+            if ":dejavu:".join(scopes) in self.vars:
                 return self.vars[":dejavu:".join(scopes)]
             if len(scopes) == 1:
                 break
