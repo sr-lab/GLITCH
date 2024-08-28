@@ -3,6 +3,7 @@ import unittest
 from glitch.parsers.puppet import PuppetParser
 from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
+from glitch.repair.interactive.compiler.names_database import NormalizationVisitor
 from glitch.repair.interactive.delta_p import *
 from glitch.repr.inter import UnitBlockType
 from glitch.tech import Tech
@@ -31,9 +32,10 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
         with NamedTemporaryFile() as f:
             f.write(puppet_script.encode())
             f.flush()
-            puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
-            assert puppet_parser is not None
-            labeled_script = GLITCHLabeler.label(puppet_parser, Tech.puppet)
+            ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
+            assert ir is not None
+            NormalizationVisitor(Tech.puppet).visit(ir)
+            labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
 
             # Check labels
             i = 0
@@ -56,9 +58,10 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
         with NamedTemporaryFile() as f:
             f.write(puppet_script.encode())
             f.flush()
-            puppet_parser = PuppetParser().parse_file(f.name, UnitBlockType.script)
-            assert puppet_parser is not None
-            labeled_script = GLITCHLabeler.label(puppet_parser, Tech.puppet)
+            ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
+            assert ir is not None
+            NormalizationVisitor(Tech.puppet).visit(ir)
+            labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
 
             # Check labels
             i = 0
@@ -89,6 +92,7 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
             assert ir is not None
+            NormalizationVisitor(Tech.puppet).visit(ir)
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
             statement = DeltaPCompiler(labeled_script).compile()
 
@@ -109,6 +113,7 @@ mode    => '0600',
             f.flush()
             ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
             assert ir is not None
+            NormalizationVisitor(Tech.puppet).visit(ir)
             labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
             statement = DeltaPCompiler(labeled_script).compile()
 
@@ -157,14 +162,3 @@ def test_delta_p_to_filesystems_if() -> None:
     assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["owner"] == UNDEF
     assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["content"] == UNDEF
 
-
-def test_delta_p_to_filesystems_default_state() -> None:
-    statement = delta_p_puppet_default_state
-    fss = statement.to_filesystems()
-    assert len(fss) == 1
-    assert len(fss[0].state) == 1
-    assert "/root/.ssh/config" in fss[0].state
-    assert fss[0].state["/root/.ssh/config"].attrs["state"] == "present"
-    assert fss[0].state["/root/.ssh/config"].attrs["mode"] == "0600"
-    assert fss[0].state["/root/.ssh/config"].attrs["owner"] == "root"
-    assert fss[0].state["/root/.ssh/config"].attrs["content"] == UNDEF

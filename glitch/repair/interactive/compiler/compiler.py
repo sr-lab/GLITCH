@@ -6,7 +6,6 @@ from glitch.tech import Tech
 from glitch.repr.inter import *
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
-from glitch.repair.interactive.values import DefaultValue
 
 
 class DeltaPCompiler:
@@ -35,15 +34,6 @@ class DeltaPCompiler:
 
         def get_attribute_value(self, attr_name: str) -> PExpr:
             default = PEUndef()
-            if attr_name == "state":
-                default = PEConst(PStr(DefaultValue.DEFAULT_STATE))
-            elif attr_name == "mode":
-                default = PEConst(PStr(DefaultValue.DEFAULT_MODE))
-            elif attr_name == "owner":
-                default = PEConst(PStr(DefaultValue.DEFAULT_OWNER))
-            elif attr_name == "content":
-                default = PEConst(PStr(DefaultValue.DEFAULT_CONTENT))
-
             return self.__attributes.get(attr_name, (default, None))[0]
 
         def __getitem__(self, key: str) -> PExpr:
@@ -62,7 +52,7 @@ class DeltaPCompiler:
                     attr = Attribute(
                         attr_name,
                         String(
-                            DefaultValue.DEFAULT_STATE,
+                            UNDEF,
                             ElementInfo(
                                 self.__compiler._sketched,
                                 self.__compiler._sketched,

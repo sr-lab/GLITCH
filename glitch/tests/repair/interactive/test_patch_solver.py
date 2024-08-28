@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 
 from glitch.repair.interactive.delta_p import *
 from glitch.repair.interactive.solver import PatchSolver, PatchApplier
-from glitch.repair.interactive.values import UNDEF, DefaultValue
+from glitch.repair.interactive.values import UNDEF
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.ansible import AnsibleParser
 from glitch.parsers.chef import ChefParser
@@ -19,10 +19,10 @@ from glitch.tech import Tech
 
 def get_default_file_state():
     state = State()
-    state.attrs["mode"] = DefaultValue.DEFAULT_MODE
-    state.attrs["owner"] = DefaultValue.DEFAULT_OWNER
+    state.attrs["mode"] = UNDEF
+    state.attrs["owner"] = UNDEF
     state.attrs["state"] = "present"
-    state.attrs["content"] = DefaultValue.DEFAULT_CONTENT
+    state.attrs["content"] = UNDEF
     return state
 
 

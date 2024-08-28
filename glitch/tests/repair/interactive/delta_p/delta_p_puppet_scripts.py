@@ -360,7 +360,7 @@ delta_p_puppet_default_state = PSeq(
                         id="state_16",
                         expr=PRLet(
                             id="literal-8",
-                            expr=PEConst(const=PStr(value="present")),
+                            expr=PEConst(const=PStr(value="glitch-undef")),
                             label=8,
                         ),
                         label=-1,

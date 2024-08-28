@@ -29,7 +29,7 @@ from z3 import (
 from glitch.repair.interactive.system import SystemState
 from glitch.repair.interactive.system import *
 from glitch.repair.interactive.delta_p import *
-from glitch.repair.interactive.values import UNDEF, UNSUPPORTED, DefaultValue
+from glitch.repair.interactive.values import UNDEF, UNSUPPORTED
 from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 from glitch.repr.inter import (
     Attribute,
@@ -303,29 +303,9 @@ class PatchSolver:
             keys = list(funs.keys()) + list(cons_funs.keys()) + list(alt_funs.keys())
             for key in keys:
                 if key not in cons_funs:
-                    # FIXME
-                    if key == "state":
-                        cons_funs[key] = lambda p: StringVal(UNDEF)
-                    elif key == "mode":
-                        cons_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_MODE)
-                    elif key == "owner":
-                        cons_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_OWNER)
-                    elif key == "content":
-                        cons_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_CONTENT)
-                    else:
-                        cons_funs[key] = lambda p: StringVal(UNDEF)
+                    cons_funs[key] = lambda p: StringVal(UNDEF)
                 if key not in alt_funs:
-                     # FIXME
-                    if key == "state":
-                        alt_funs[key] = lambda p: StringVal(UNDEF)
-                    elif key == "mode":
-                        alt_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_MODE)
-                    elif key == "owner":
-                        alt_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_OWNER)
-                    elif key == "content":
-                        alt_funs[key] = lambda p: StringVal(DefaultValue.DEFAULT_CONTENT)
-                    else:
-                        alt_funs[key] = lambda p: StringVal(UNDEF)
+                    alt_funs[key] = lambda p: StringVal(UNDEF)
                 cons = cons_funs[key]
                 alt = alt_funs[key]
 
