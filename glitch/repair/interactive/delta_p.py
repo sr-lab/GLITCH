@@ -316,9 +316,9 @@ class PStatement(ABC):
                 pass
             elif isinstance(self, PAttr):
                 value = get_str(self.value)
-                if value is not None:
+                if path != "" and value is not None:
                     fs.state[path].attrs[self.attr] = value
-                else:
+                elif path != "":
                     fs.state[path].attrs[self.attr] = UNDEF
             elif isinstance(self, PCp):
                 try:
