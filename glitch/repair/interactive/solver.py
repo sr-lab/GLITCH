@@ -1,7 +1,7 @@
 import z3
 import sys
 import uuid
-import time
+import signal
 import logging
 import glitch.repr.inter as inter
 
@@ -309,7 +309,7 @@ class PatchSolver:
                 cons = cons_funs[key]
                 alt = alt_funs[key]
 
-                # This only works like this because of Python's deep binding
+                # The default attributes are required due to Python's deep binding
                 funs[key] = lambda p, cons=cons, alt=alt: If(
                     condition, cons(p), alt(p)
                 )
@@ -344,43 +344,48 @@ class PatchSolver:
 
     def solve(self) -> Optional[List[ModelRef]]:
         models: List[ModelRef] = []
-        start = time.time()
-        elapsed = 0
+        timed_out = False
 
-        while True and elapsed < self.timeout:
-            lo, hi = 0, len(self.unchanged) + 1
-            model = None
+        def timeout(signum: Any, frame: Any):
+            raise TimeoutError()
+        signal.signal(signal.SIGALRM, timeout)
+        signal.alarm(self.timeout)
 
-            while lo < hi and elapsed < self.timeout:
-                mid = (lo + hi) // 2
-                self.solver.push()
-                self.solver.add(self.sum_var >= IntVal(mid))
-                self.solver.set(timeout=int(self.timeout - elapsed))
-                if self.solver.check() == sat:
-                    lo = mid + 1
-                    model = self.solver.model()
+        try:
+            while True:
+                lo, hi = 0, len(self.unchanged) + 1
+                model = None
+
+                while lo < hi:
+                    mid = (lo + hi) // 2
+                    self.solver.push()
+                    self.solver.add(self.sum_var >= IntVal(mid))
+                    if self.solver.check() == sat:
+                        lo = mid + 1
+                        model = self.solver.model()
+                        self.solver.pop()
+                        continue
+                    else:
+                        hi = mid
                     self.solver.pop()
-                    elapsed = time.time() - start
-                    continue
-                else:
-                    hi = mid
-                self.solver.pop()
-                elapsed = time.time() - start
 
-            elapsed = time.time() - start
-            if model is None:
-                if self.debug:
-                    print(self.solver.unsat_core(), file=sys.stderr)
-                break
+                if model is None:
+                    if self.debug:
+                        print(self.solver.unsat_core(), file=sys.stderr)
+                    break
 
-            models.append(model)
-            # Removes conditional variables that were not used
-            dvars = filter(lambda v: model[v] is not None, self.vars.values())  # type: ignore
-            self.solver.add(Not(And([v == model[v] for v in dvars])))
+                models.append(model)
+                # Removes conditional variables that were not used
+                dvars = filter(
+                    lambda v: model[v] is not None, self.vars.values() # type: ignore
+                )  
+                self.solver.add(Not(And([v == model[v] for v in dvars])))
+        except TimeoutError:
+            timed_out = True
 
-        if elapsed >= self.timeout and len(models) > 0:
+        if timed_out and len(models) > 0:
             return models
-        elif elapsed >= self.timeout:
+        elif timed_out:
             return None
         
         return models
