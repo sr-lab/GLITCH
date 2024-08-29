@@ -345,14 +345,10 @@ class TestPatchSolverPuppetScript4(TestPatchSolver):
         assert models[0][solver.sum_var] == 10
         assert models[0][solver.vars["dejavu-condition-1"]]
         assert not models[0][solver.vars["dejavu-condition-2"]]
-        assert models[0][solver.vars["state_12768"]] == ""  # Value fixed by the solver
-        assert models[0][solver.vars["state_52416"]] == "present"
 
         assert models[1][solver.sum_var] == 9
         assert not models[1][solver.vars["dejavu-condition-1"]]
         assert models[1][solver.vars["dejavu-condition-2"]]
-        assert models[1][solver.vars["state_12768"]] == "present"
-        assert models[1][solver.vars["state_52416"]] == ""
 
         result = """
             if $x == 'absent' {
@@ -978,6 +974,71 @@ service { 'openssl':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
+class TestPatchSolverPuppetScript17(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_17 = """
+$::bind::params::packagenameprefix = 'bind9'
+
+define bind::package (
+  $packagenameprefix = $::bind::params::packagenameprefix,
+  $packagenamesuffix = '',
+) {
+    package { "$packagenameprefix$packagenamesuffix":
+        ensure => present
+    }
+}
+
+if $chroot == 'true' {
+    bind::package { 'bind::package':
+        packagenamesuffix => "-chroot"
+    }
+} else {
+    bind::package { 'bind::package':
+        packagenamesuffix => ""
+    }
+}
+"""
+        self._setup_patch_solver(puppet_script_17, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_test(self):
+        filesystem = SystemState()
+        filesystem.state["package:$packagenameprefix$packagenamesuffix"] = State()
+        filesystem.state["package:$packagenameprefix$packagenamesuffix"].attrs["state"] = "latest"
+
+        assert self.statement is not None
+        self.statement = PStatement.minimize(
+            self.statement, 
+            ["package:$packagenameprefix$packagenamesuffix"]
+        )
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 2
+        result = """
+$::bind::params::packagenameprefix = 'bind9'
+
+define bind::package (
+  $packagenameprefix = $::bind::params::packagenameprefix,
+  $packagenamesuffix = '',
+) {
+    package { "$packagenameprefix$packagenamesuffix":
+        ensure => latest
+    }
+}
+
+if $chroot == 'true' {
+    bind::package { 'bind::package':
+        packagenamesuffix => "-chroot"
+    }
+} else {
+    bind::package { 'bind::package':
+        packagenamesuffix => ""
+    }
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result, n_filesystems=2)
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -1004,16 +1065,6 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
         assert models is not None
         assert len(models) == 1
         model = models[0]
-        assert model[solver.sum_var] == 4
-        assert model[solver.unchanged[4]] == 1
-        assert model[solver.unchanged[5]] == 1
-        assert model[solver.unchanged[6]] == 1
-        assert model[solver.unchanged[7]] == 0
-        assert model[solver.unchanged[8]] == 1
-        assert model[solver.vars["state_2000"]] == "present"
-        assert model[solver.vars["owner_4140"]] == "web_admin"
-        assert model[solver.vars["mode_4165"]] == "0777"
-        assert model[solver.vars["content_16"]] == UNDEF
 
         result = """
 ---

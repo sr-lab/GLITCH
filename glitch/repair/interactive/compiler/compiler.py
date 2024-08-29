@@ -450,9 +450,11 @@ class DeltaPCompiler:
         self,
         conditional: ConditionalStatement,
     ) -> PStatement:
+        self.scope += [f"condition{str(random.randint(0, 28021904))}"]
         body = PSkip()
         for stat in conditional.statements:
             body = PSeq(body, self.__handle_code_element(stat))
+        self.scope.pop()
 
         else_statement = PSkip()
         if conditional.else_statement is not None:

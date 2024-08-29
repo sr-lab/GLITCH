@@ -315,23 +315,29 @@ class PatchSolver:
                 )
             
             # It allows to fix variables in the unchosen branch
+            labels_cons = self.__collect_labels(statement.cons)
+            labels_alt = self.__collect_labels(statement.alt)
+
             unchanged = True
-            for label in self.__collect_labels(statement.cons):
+            for label in set(labels_cons) - set(labels_alt):
                 unchanged = And(unchanged, self.unchanged[label] == 1)
             self.solver.add(Or(condition, unchanged))
 
-            fixed_vars = True
-            for var in self.__collect_vars(statement.cons):
-                fixed_vars = And(fixed_vars, self.vars[var] == "")
-            self.solver.add(Or(condition, fixed_vars))
-
             unchanged = True
-            for label in self.__collect_labels(statement.alt):
+            for label in set(labels_alt) - set(labels_cons):
                 unchanged = And(unchanged, self.unchanged[label] == 1)
             self.solver.add(Or(Not(condition), unchanged))
 
+            vars_cons = self.__collect_vars(statement.cons)
+            vars_alt = self.__collect_vars(statement.alt)
+
             fixed_vars = True
-            for var in self.__collect_vars(statement.alt):
+            for var in set(vars_cons) - set(vars_alt):
+                fixed_vars = And(fixed_vars, self.vars[var] == "")
+            self.solver.add(Or(condition, fixed_vars))
+
+            fixed_vars = True
+            for var in set(vars_alt) - set(vars_cons):
                 fixed_vars = And(fixed_vars, self.vars[var] == "")
             self.solver.add(Or(Not(condition), fixed_vars))
 
