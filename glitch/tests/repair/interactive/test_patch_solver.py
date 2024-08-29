@@ -1001,7 +1001,7 @@ if $chroot == 'true' {
 """
         self._setup_patch_solver(puppet_script_17, UnitBlockType.script, Tech.puppet)
 
-    def test_patch_solver_puppet_test(self):
+    def test_patch_solver_puppet_if_with_defined(self):
         filesystem = SystemState()
         filesystem.state["package:$packagenameprefix$packagenamesuffix"] = State()
         filesystem.state["package:$packagenameprefix$packagenamesuffix"].attrs["state"] = "latest"

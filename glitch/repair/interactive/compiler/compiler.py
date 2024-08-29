@@ -234,6 +234,12 @@ class DeltaPCompiler:
         ):
             return PEVar(self._get_scope_name(expr.value))
         elif isinstance(expr, VariableReference): # undefined variable
+            # HACK: this should be done in a different way but it is easier to
+            # do this for now.
+            if expr.value in ["present", "absent"]:
+                return self._compile_expr(
+                    String(expr.value, ElementInfo.from_code_element(expr))
+                )
             return PEUnsupported()
         else:
             # TODO: Unsupported
