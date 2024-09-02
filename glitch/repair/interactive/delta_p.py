@@ -164,20 +164,21 @@ class PStatement(ABC):
 
         return None
 
-    def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> Optional[str]:
+    @staticmethod
+    def get_str(expr: PExpr, vars: Dict[str, PExpr]) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
         elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
             return str(expr.const.value)
-        elif isinstance(expr, PEVar) and self.__get_var(expr.id, vars) is not None:
-            res = self.__get_var(expr.id, vars)
+        elif isinstance(expr, PEVar) and PStatement.__get_var(expr.id, vars) is not None:
+            res = PStatement.__get_var(expr.id, vars)
             assert res is not None
-            return self.__get_str(res, vars)
+            return PStatement.get_str(res, vars)
         elif isinstance(expr, PRLet):
-            return self.__get_str(expr.expr, vars)
+            return PStatement.get_str(expr.expr, vars)
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
-            lhs = self.__get_str(expr.lhs, vars)
-            rhs = self.__get_str(expr.rhs, vars)
+            lhs = PStatement.get_str(expr.lhs, vars)
+            rhs = PStatement.get_str(expr.rhs, vars)
             if lhs is None or rhs is None:
                 return None
             return lhs + rhs
@@ -229,14 +230,14 @@ class PStatement(ABC):
             vars: Dict[str, PExpr],
         ) -> "PStatement":
             if isinstance(statement, PAttr):
-                path = statement.__get_str(statement.path, vars)
+                path = PStatement.get_str(statement.path, vars)
                 if path not in considered_paths:
                     return PSkip()
                 else:
                     return statement
             elif isinstance(statement, PCp):
-                src = statement.__get_str(statement.src, vars)
-                dst = statement.__get_str(statement.dst, vars)
+                src = PStatement.get_str(statement.src, vars)
+                dst = PStatement.get_str(statement.dst, vars)
                 if src not in considered_paths and dst not in considered_paths:
                     return PSkip()
                 else:
@@ -300,7 +301,7 @@ class PStatement(ABC):
 
         res_fss: List[SystemState] = []
         for fs in fss:
-            get_str: Callable[[PExpr], Optional[str]] = lambda expr: self.__get_str(expr, vars)
+            get_str: Callable[[PExpr], Optional[str]] = lambda expr: PStatement.get_str(expr, vars)
 
             if isinstance(self, PAttr):
                 path = get_str(self.path)

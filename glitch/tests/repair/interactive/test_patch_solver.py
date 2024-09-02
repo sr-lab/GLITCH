@@ -1388,6 +1388,52 @@ class TestPatchSolverAnsibleScript7(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
+class TestPatchSolverAnsibleScript8(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_8 = """---
+- name: create-user
+  user:
+    name: teamcity
+    home: /opt/teamcity
+- name: add user to docker group
+  user:
+    name: teamcity
+    group: docker
+    append: yes
+"""
+        self._setup_patch_solver(ansible_script_8, UnitBlockType.unknown, Tech.ansible)
+
+    def test_patch_solver_ansible_overrided_user(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["user:teamcity"] = State()
+        filesystem.state["user:teamcity"].attrs["state"] = "absent"
+
+        assert self.statement is not None
+        self.statement = PStatement.minimize(
+            self.statement, 
+            ["user:teamcity"]
+        )
+        solver = PatchSolver(self.statement, filesystem, timeout=10)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: create-user
+  user:
+    name: teamcity
+    home: /opt/teamcity
+- name: add user to docker group
+  user:
+    name: teamcity
+    group: docker
+    append: yes
+    state: absent
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()

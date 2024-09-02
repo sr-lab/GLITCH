@@ -16,6 +16,7 @@ class DeltaPCompiler:
         self.scope: List[str] = []
         self.vars: Set[str] = set()
         self._labeled_script = labeled_script
+        self.seen_resources: List[Tuple[List[str], str]] = []
 
     class __Attributes:
         def __init__(
@@ -246,6 +247,21 @@ class DeltaPCompiler:
             logging.warning(f"Unsupported expression, got {expr}")
             return PEUnsupported()
         
+    def __check_seen_resource(
+        self,
+        path: PExpr
+    ):
+        # HACK: avoids some problems with duplicate atomic units
+        # (it only considers the last one defined)
+        path_str = PStatement.get_str(path, {})
+        if path_str is not None:
+            if (self.scope, path_str) in self.seen_resources:
+                return True
+            self.seen_resources.append(
+                (self.scope.copy(), path_str)
+            )
+        return False
+        
     def __handle_attr(
         self,
         atomic_unit: AtomicUnit,
@@ -275,6 +291,10 @@ class DeltaPCompiler:
             name = self._compile_expr(atomic_unit.name)
             self._labeled_script.add_location(atomic_unit, atomic_unit.name)
         path = PEBinOP(PAdd(), PEConst(PStr("user:")), name)
+
+        if self.__check_seen_resource(path):
+            return PSkip()
+        
         name_attr = attributes.get_attribute("name")
         if name_attr is not None:
             self._labeled_script.add_location(atomic_unit, name_attr)
@@ -295,6 +315,10 @@ class DeltaPCompiler:
             name = self._compile_expr(atomic_unit.name)
             self._labeled_script.add_location(atomic_unit, atomic_unit.name)
         path = PEBinOP(PAdd(), PEConst(PStr("package:")), name)
+
+        if self.__check_seen_resource(path):
+            return PSkip()
+
         name_attr = attributes.get_attribute("name")
         if name_attr is not None:
             self._labeled_script.add_location(atomic_unit, name_attr)
@@ -315,6 +339,10 @@ class DeltaPCompiler:
             name = self._compile_expr(atomic_unit.name)
             self._labeled_script.add_location(atomic_unit, atomic_unit.name)
         path = PEBinOP(PAdd(), PEConst(PStr("service:")), name)
+
+        if self.__check_seen_resource(path):
+            return PSkip()
+
         name_attr = attributes.get_attribute("name")
         if name_attr is not None:
             self._labeled_script.add_location(atomic_unit, name_attr)
@@ -343,6 +371,9 @@ class DeltaPCompiler:
         if path == PEUndef():
             path = self._compile_expr(atomic_unit.name)
             self._labeled_script.add_location(atomic_unit, atomic_unit.name)
+
+        if self.__check_seen_resource(path):
+            return PSkip()
 
         statement = self.__handle_attr(atomic_unit, attributes, path, "state")
         statement = PSeq(
