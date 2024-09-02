@@ -388,6 +388,8 @@ class PatchSolver:
                 self.solver.add(Not(And([v == model[v] for v in dvars])))
         except TimeoutError:
             timed_out = True
+        finally:
+            signal.alarm(0)
 
         if timed_out and len(models) > 0:
             return models
