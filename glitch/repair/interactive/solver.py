@@ -317,7 +317,6 @@ class PatchSolver:
             # It allows to fix variables in the unchosen branch
             labels_cons = self.__collect_labels(statement.cons)
             labels_alt = self.__collect_labels(statement.alt)
-            print(set(labels_cons) - set(labels_alt))
 
             unchanged = True
             for label in set(labels_cons) - set(labels_alt):
