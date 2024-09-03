@@ -574,7 +574,10 @@ class PatchApplier:
             elif self.__is_sketch(codeelement) and isinstance(kv, Attribute):
                 au = labeled_script.get_location(kv)
                 assert isinstance(au, AtomicUnit)
-                info = ElementInfo.from_code_element(au.attributes[-1])
+                if len(au.attributes) == 0:
+                    info = ElementInfo.from_code_element(au)
+                else:
+                    info = ElementInfo.from_code_element(au.attributes[-1])
                 changes.append(PatchChange(value, codeelement, "add_sketch", info))
 
         # The sort is necessary to avoid problems in the textual changes
