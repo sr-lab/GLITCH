@@ -1989,3 +1989,40 @@ service 'example_service' do
 end
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+
+
+class TestPatchSolverChefScript10(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_10 = """
+app_dir = '/var/www/customers/public_html'
+file "#{app_dir}/index.html" do
+  owner   lazy { default_apache_user }
+  group   lazy { default_apache_group }
+end
+"""
+        self._setup_patch_solver(chef_script_10, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_non_string(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["/var/www/customers/public_html/index.html"] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.html"].attrs["state"] = UNDEF
+        filesystem.state["/var/www/customers/public_html/index.html"].attrs["owner"] = "test"
+
+        assert self.statement is not None
+
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+
+        assert len(models) == 3
+
+        result = """
+app_dir = '/var/www/customers/public_html'
+file "#{app_dir}/index.html" do
+  owner   "test"
+  group   lazy { default_apache_group }
+end
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
+

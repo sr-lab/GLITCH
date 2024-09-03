@@ -317,6 +317,7 @@ class PatchSolver:
             # It allows to fix variables in the unchosen branch
             labels_cons = self.__collect_labels(statement.cons)
             labels_alt = self.__collect_labels(statement.alt)
+            print(set(labels_cons) - set(labels_alt))
 
             unchanged = True
             for label in set(labels_cons) - set(labels_alt):
@@ -652,19 +653,22 @@ class PatchApplier:
             # Modified elements
             elif ce.type == "modify":
                 loc = labeled_script.get_location(ce.codeelement)
+                if isinstance(ce.codeelement, inter.Null):
+                    ce.codeelement = inter.String(ce.value, ce.info)
+                    # HACK: Allows to add quotes in the modify_codeelement func
+                    ce.codeelement.code = "\"\""  
+                assert isinstance(ce.codeelement, inter.String)
+
                 if isinstance(loc, Attribute):
-                    assert isinstance(ce.codeelement, inter.String)
                     ce.codeelement.value = ce.value
                     loc.value = ce.codeelement
                     self.__modify_codeelement(
                         labeled_script, ce.codeelement, ce.value
                     )
                 elif isinstance(loc, Variable):
-                    assert isinstance(ce.codeelement, inter.String)
                     ce.codeelement.value = ce.value
                     self.__modify_codeelement(labeled_script, ce.codeelement, ce.value)
                 elif isinstance(loc, AtomicUnit):
-                    assert isinstance(ce.codeelement, inter.String)
                     ce.codeelement.value = ce.value
                     loc.name = ce.codeelement
                     self.__modify_codeelement(labeled_script, ce.codeelement, ce.value)
