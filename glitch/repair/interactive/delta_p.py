@@ -165,20 +165,22 @@ class PStatement(ABC):
         return None
 
     @staticmethod
-    def get_str(expr: PExpr, vars: Dict[str, PExpr]) -> Optional[str]:
+    def get_str(expr: PExpr, vars: Dict[str, PExpr], ignore_vars: bool = False) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
         elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
             return str(expr.const.value)
+        elif ignore_vars and isinstance(expr, PEVar):
+            return expr.id
         elif isinstance(expr, PEVar) and PStatement.__get_var(expr.id, vars) is not None:
             res = PStatement.__get_var(expr.id, vars)
             assert res is not None
-            return PStatement.get_str(res, vars)
+            return PStatement.get_str(res, vars, ignore_vars=ignore_vars)
         elif isinstance(expr, PRLet):
-            return PStatement.get_str(expr.expr, vars)
+            return PStatement.get_str(expr.expr, vars, ignore_vars=ignore_vars)
         elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
-            lhs = PStatement.get_str(expr.lhs, vars)
-            rhs = PStatement.get_str(expr.rhs, vars)
+            lhs = PStatement.get_str(expr.lhs, vars, ignore_vars=ignore_vars)
+            rhs = PStatement.get_str(expr.rhs, vars, ignore_vars=ignore_vars)
             if lhs is None or rhs is None:
                 return None
             return lhs + rhs

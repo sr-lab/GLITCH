@@ -253,7 +253,11 @@ class DeltaPCompiler:
     ):
         # HACK: avoids some problems with duplicate atomic units
         # (it only considers the last one defined)
-        path_str = PStatement.get_str(path, {})
+        path_str = PStatement.get_str(
+            path, 
+            {},
+            ignore_vars = True # HACK: avoids having to get the vars
+        )
         if path_str is not None:
             if (self.scope, path_str) in self.seen_resources:
                 return True

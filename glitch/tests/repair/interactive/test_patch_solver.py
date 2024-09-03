@@ -1435,6 +1435,65 @@ class TestPatchSolverAnsibleScript8(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
+class TestPatchSolverAnsibleScript9(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_9 = """---
+- name: Upgrade all the things!
+  hosts: all:!localhost
+  become: True
+
+  vars:
+    tgt_tmp_dir: "/tmp"
+
+  tasks:
+    - name: Create a lockfile
+      file:
+        path: '{{ tgt_tmp_dir }}/HELLO'
+        state: 'touch'
+      when: dist_upgrade_register_replace is defined and dist_upgrade_register_replace|changed
+
+    - name: Remove the lockfile
+      file:
+        path: '{{ tgt_tmp_dir }}/HELLO'
+        state: 'absent'
+"""
+        self._setup_patch_solver(ansible_script_9, UnitBlockType.script, Tech.ansible)
+
+    def test_patch_solver_ansible_redefined_file(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["/tmp/HELLO"] = get_default_file_state()
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, timeout=10)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 3
+
+        result = """---
+- name: Upgrade all the things!
+  hosts: all:!localhost
+  become: True
+
+  vars:
+    tgt_tmp_dir: "/tmp"
+
+  tasks:
+    - name: Create a lockfile
+      file:
+        path: '{{ tgt_tmp_dir }}/HELLO'
+        state: 'touch'
+      when: dist_upgrade_register_replace is defined and dist_upgrade_register_replace|changed
+
+    - name: Remove the lockfile
+      file:
+        path: '{{ tgt_tmp_dir }}/HELLO'
+        state: 'file'
+"""
+
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
