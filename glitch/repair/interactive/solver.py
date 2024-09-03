@@ -507,9 +507,17 @@ class PatchApplier:
     ):
         with open(labeled_script.script.path, "r") as f:
             lines = f.readlines()
+
             old_line = lines[codeelement.line - 1]
             start = codeelement.column - 1
-            end = codeelement.end_column - 1
+
+            if codeelement.line != codeelement.end_line:
+                # Cute the other lines
+                lines = lines[: codeelement.line] + lines[codeelement.end_line :]
+                end = len(old_line) - 1
+            else:
+                end = codeelement.end_column - 1
+
             if (
                 (old_line[start:end].startswith('"') or codeelement.code.startswith('"'))
                 and (old_line[start:end].endswith('"') or codeelement.code.endswith('"'))

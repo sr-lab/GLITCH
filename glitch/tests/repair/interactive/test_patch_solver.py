@@ -1039,6 +1039,7 @@ if $chroot == 'true' {
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result, n_filesystems=2)
 
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
