@@ -1,4 +1,5 @@
 import z3
+import time
 import sys
 import uuid
 import signal
@@ -53,14 +54,16 @@ class PatchSolver:
         ctx: Optional[Context] = None,
         debug: bool = False,
     ) -> None:
-        self.solver = Solver(ctx=ctx)
+        if ctx is None:
+            self.ctx = z3.Context()
+        self.solver = Solver(ctx=self.ctx)
         self.debug = debug
         if self.debug:
             self.solver.add = lambda c: self.solver.assert_and_track(c, str(c) + f" ({str(uuid.uuid4())})")  # type: ignore
 
         self.timeout = timeout
         self.statement = statement
-        self.sum_var = Int("sum")
+        self.sum_var = Int("sum", ctx=self.ctx)
         self.unchanged: Dict[int, ExprRef] = {}
         self.vars: Dict[str, ExprRef] = {}
         self.holes: Dict[str, ExprRef] = {}
@@ -83,7 +86,7 @@ class PatchSolver:
 
         labels = list(set(self.__collect_labels(statement)))
         for label in labels:
-            self.unchanged[label] = Int(f"unchanged-{label}")
+            self.unchanged[label] = Int(f"unchanged-{label}", ctx=self.ctx)
 
         constraints, self.__funs = self.__generate_soft_constraints(
             self.statement, self.__funs
@@ -107,7 +110,7 @@ class PatchSolver:
         return None
 
     def __const_string(self, name: str) -> ExprRef:
-        var = z3.String(name)
+        var = z3.String(name, ctx=self.ctx)
         self.solver.add(Or(*[var == s for s in self.possible_strings]))
         return var
     
@@ -166,10 +169,10 @@ class PatchSolver:
         constraints: List[ExprRef] = []
 
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
-            return StringVal(expr.const.value), constraints
+            return StringVal(expr.const.value, ctx=self.ctx), constraints
         # TODO: add scope handling. 
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
-            self.vars[expr.id] = Bool(expr.id)
+            self.vars[expr.id] = Bool(expr.id, ctx=self.ctx)
             return self.vars[expr.id], constraints
         elif isinstance(expr, PEVar) and self.__get_var(expr.id) is not None:
             var = self.__get_var(expr.id)
@@ -180,7 +183,7 @@ class PatchSolver:
             return self.vars[expr.id], constraints
         elif isinstance(expr, PEUndef):
             # NOTE: it is an arbitrary string to represent an undefined value
-            return StringVal(UNDEF), constraints
+            return StringVal(UNDEF, ctx=self.ctx), constraints
         elif isinstance(expr, PRLet):
             if expr.id in self.vars:
                 return self.vars[expr.id], constraints
@@ -196,17 +199,17 @@ class PatchSolver:
             if (isinstance(lhs, SeqRef) and lhs.as_string() == UNSUPPORTED) or (
                 isinstance(rhs, SeqRef) and rhs.as_string() == UNSUPPORTED
             ):
-                return StringVal(UNSUPPORTED), lhs_constraints + rhs_constraints
+                return StringVal(UNSUPPORTED, ctx=self.ctx), lhs_constraints + rhs_constraints
             return Concat(lhs, rhs), lhs_constraints + rhs_constraints
 
         logging.warning(f"Unsupported expression: {expr}")
-        return StringVal(UNSUPPORTED), constraints
+        return StringVal(UNSUPPORTED, ctx=self.ctx), constraints
 
     def __generate_hard_constraints(self, filesystem: SystemState) -> None:
         for path, state in filesystem.state.items():
             for key, value in state.attrs.items():
                 self.solver.add(
-                    self.__funs[key](StringVal(path)) == StringVal(value)
+                    self.__funs[key](StringVal(path, ctx=self.ctx)) == StringVal(value, ctx=self.ctx)
                 )
 
     def __generate_soft_constraints(
@@ -223,9 +226,9 @@ class PatchSolver:
             constraints += value_constraints
 
             if statement.attr not in previous_funs:
-                previous_funs[statement.attr] = lambda p: StringVal(UNDEF)
+                previous_funs[statement.attr] = lambda p: StringVal(UNDEF, ctx=self.ctx)
             funs[statement.attr] = lambda p: If(
-                p == path, value, previous_funs[statement.attr](p)
+                p == path, value, previous_funs[statement.attr](p), ctx=self.ctx
             )
         elif isinstance(statement, PCp):
             src, src_constraints = self.__compile_expr(statement.src)
@@ -234,18 +237,19 @@ class PatchSolver:
             constraints += dest_constraints
 
             funs["state"] = lambda p: If(
-                p == dst, previous_funs["state"](src), previous_funs["state"](p)
+                p == dst, previous_funs["state"](src), previous_funs["state"](p), ctx=self.ctx
             )
             funs["content"] = lambda p: If(
                 p == dst,
                 previous_funs["content"](src),
                 previous_funs["content"](p),
+                ctx=self.ctx
             )
             funs["mode"] = lambda p: If(
-                p == dst, previous_funs["mode"](src), previous_funs["mode"](p)
+                p == dst, previous_funs["mode"](src), previous_funs["mode"](p), ctx=self.ctx
             )
             funs["owner"] = lambda p: If(
-                p == dst, previous_funs["owner"](src), previous_funs["owner"](p)
+                p == dst, previous_funs["owner"](src), previous_funs["owner"](p), ctx=self.ctx
             )
         elif isinstance(statement, PSeq):
             lhs_constraints, funs = self.__generate_soft_constraints(
@@ -274,9 +278,9 @@ class PatchSolver:
             if statement.id in self.vars:
                 var = self.vars[statement.id]
             else:
-                var = z3.String(statement.id)
+                var = z3.String(statement.id, ctx=self.ctx)
                 self.vars[statement.id] = var
-            hole = z3.String(f"loc-{statement.id}-{statement.label}")
+            hole = z3.String(f"loc-{statement.id}-{statement.label}", ctx=self.ctx)
             self.holes[f"loc-{statement.label}"] = hole
 
             value, constraints = self.__compile_expr(statement.expr)
@@ -303,15 +307,15 @@ class PatchSolver:
             keys = list(funs.keys()) + list(cons_funs.keys()) + list(alt_funs.keys())
             for key in keys:
                 if key not in cons_funs:
-                    cons_funs[key] = lambda p: StringVal(UNDEF)
+                    cons_funs[key] = lambda p: StringVal(UNDEF, ctx=self.ctx)
                 if key not in alt_funs:
-                    alt_funs[key] = lambda p: StringVal(UNDEF)
+                    alt_funs[key] = lambda p: StringVal(UNDEF, ctx=self.ctx)
                 cons = cons_funs[key]
                 alt = alt_funs[key]
 
                 # The default attributes are required due to Python's deep binding
                 funs[key] = lambda p, cons=cons, alt=alt: If(
-                    condition, cons(p), alt(p)
+                    condition, cons(p), alt(p), ctx=self.ctx
                 )
             
             # It allows to fix variables in the unchosen branch
@@ -350,22 +354,26 @@ class PatchSolver:
 
     def solve(self) -> Optional[List[ModelRef]]:
         models: List[ModelRef] = []
-        timed_out = False
+        timed_out, interrupt = False, False
 
         def timeout(signum: Any, frame: Any):
-            raise TimeoutError()
+            nonlocal interrupt
+            self.solver.ctx.interrupt()
+            interrupt = True
         signal.signal(signal.SIGALRM, timeout)
         signal.alarm(self.timeout)
 
+        start = time.time()
+
         try:
-            while True:
+            while True and time.time() - start < self.timeout:
                 lo, hi = 0, len(self.unchanged) + 1
                 model = None
 
-                while lo < hi:
+                while lo < hi and time.time() - start < self.timeout:
                     mid = (lo + hi) // 2
                     self.solver.push()
-                    self.solver.add(self.sum_var >= IntVal(mid))
+                    self.solver.add(self.sum_var >= IntVal(mid, ctx=self.ctx))
                     if self.solver.check() == sat:
                         lo = mid + 1
                         model = self.solver.model()
@@ -386,8 +394,11 @@ class PatchSolver:
                     lambda v: model[v] is not None, self.vars.values() # type: ignore
                 )  
                 self.solver.add(Not(And([v == model[v] for v in dvars])))
-        except TimeoutError:
-            timed_out = True
+        except z3.Z3Exception as e:
+            if interrupt:
+                timed_out = True
+            else:
+                raise e
         finally:
             signal.alarm(0)
 
