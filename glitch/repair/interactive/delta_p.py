@@ -308,6 +308,7 @@ class PStatement(ABC):
             if isinstance(self, PAttr):
                 path = get_str(self.path)
                 if path is None:
+                    res_fss.append(fs)
                     continue
             else:
                 path = ""
