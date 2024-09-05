@@ -170,6 +170,8 @@ class PatchSolver:
 
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return StringVal(expr.const.value, ctx=self.ctx), constraints
+        elif isinstance(expr, PEConst) and isinstance(expr.const, PBool):
+            return StringVal(str(expr.const.value).lower(), ctx=self.ctx), constraints
         # TODO: add scope handling. 
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id, ctx=self.ctx)

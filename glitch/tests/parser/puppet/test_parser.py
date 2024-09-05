@@ -185,7 +185,6 @@ class TestPuppetParser(TestParser):
         self._check_value(unit_block.variables[1].value, Integer, 2, 2, 6, 2, 7)
 
         assert unit_block.variables[2].name == "string_interpolation"
-        print(unit_block.variables[2].as_dict())
         self._check_binary_operation(
             unit_block.variables[2].value,
             Sum,

@@ -1040,6 +1040,37 @@ if $chroot == 'true' {
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result, n_filesystems=2)
 
 
+class TestPatchSolverPuppetScript18(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        puppet_script_18 = """
+service { 'keystone':
+  ensure => running,
+  enable => true,
+}
+"""
+        self._setup_patch_solver(puppet_script_18, UnitBlockType.script, Tech.puppet)
+
+    def test_patch_solver_puppet_service(self):
+        filesystem = SystemState()
+        filesystem.state["service:keystone"] = State()
+        filesystem.state["service:keystone"].attrs["state"] = "stop"
+        filesystem.state["service:keystone"].attrs["enabled"] = "true"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        result = """
+service { 'keystone':
+  ensure => stopped,
+  enable => true,
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
+
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -1169,7 +1200,6 @@ class TestPatchSolverAnsibleScript3(TestPatchSolver):
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
-        self.statement.to_filesystems()
         models = solver.solve()
         assert models is not None
         assert len(models) == 1

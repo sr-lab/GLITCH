@@ -168,6 +168,8 @@ class PStatement(ABC):
     def get_str(expr: PExpr, vars: Dict[str, PExpr], ignore_vars: bool = False) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
+        elif isinstance(expr, PEConst) and isinstance(expr.const, PBool):
+            return str(expr.const.value).lower()
         elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
             return str(expr.const.value)
         elif ignore_vars and isinstance(expr, PEVar):
