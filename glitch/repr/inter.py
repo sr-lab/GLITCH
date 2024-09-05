@@ -144,7 +144,8 @@ class Boolean(Value):
 class Null(Value):
     def __init__(self, info: ElementInfo | None = None) -> None:
         if info is None:
-            info = ElementInfo(-1, -1, -1, -1, "")
+            # Let's hope there are no files with 2**32 lines lol
+            info = ElementInfo(2**32, 2**32, 2**32, 2**32, "")
         super().__init__(info, None)
 
 

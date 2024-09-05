@@ -221,6 +221,14 @@ class PuppetParser(p.Parser):
         condition_statement = ConditionalStatement(
             condition, ConditionalStatement.ConditionType.IF
         )
+        condition_statement.line, condition_statement.column = (
+            codeelement.line,
+            codeelement.col,
+        )
+        condition_statement.end_line, condition_statement.end_column = (
+            codeelement.end_line,
+            codeelement.end_col,
+        )
 
         for statement in codeelement.block:
             ce = PuppetParser.__process_codeelement(statement, path, code)
