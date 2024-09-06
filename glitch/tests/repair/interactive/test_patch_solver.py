@@ -1070,6 +1070,25 @@ service { 'keystone':
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
+    def test_patch_solver_puppet_disable_service(self):
+        filesystem = SystemState()
+        filesystem.state["service:keystone"] = State()
+        filesystem.state["service:keystone"].attrs["state"] = "start"
+        filesystem.state["service:keystone"].attrs["enabled"] = "false"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        result = """
+service { 'keystone':
+  ensure => running,
+  enable => false,
+}
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
+
 
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):

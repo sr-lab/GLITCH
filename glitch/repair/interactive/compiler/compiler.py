@@ -148,6 +148,20 @@ class DeltaPCompiler:
             scopes.pop(-2)
 
         return False
+    
+    def __get_prlet(self, expr: Expr, value: PExpr) -> PRLet:
+        if self._labeled_script.has_label(expr):
+            label = self._labeled_script.get_label(expr)
+        else:
+            literal_name = f"literal-{self._literal}"
+            label = self._labeled_script.add_label(literal_name, expr)
+            self._literal += 1
+
+        return PRLet(
+            f"literal-{label}",
+            value,
+            label,
+        )
 
     def _compile_expr(self, expr: Expr) -> PExpr:
         def binary_op(op: Type[PBinOp], left: Expr, right: Expr) -> PExpr:
@@ -159,36 +173,13 @@ class DeltaPCompiler:
 
         if isinstance(expr, String):
             value = PEConst(PStr(expr.value))
-
-            if self._labeled_script.has_label(expr):
-                label = self._labeled_script.get_label(expr)
-            else:
-                literal_name = f"literal-{self._literal}"
-                label = self._labeled_script.add_label(literal_name, expr)
-                self._literal += 1
-
-            return PRLet(
-                f"literal-{label}",
-                value,
-                label,
-            )
+            return self.__get_prlet(expr, value)
         elif isinstance(expr, (Integer, Float, Complex)):
             return PEConst(PNum(expr.value))
         elif isinstance(expr, Boolean):
-            return PEConst(PBool(expr.value))
+            return self.__get_prlet(expr, PEConst(PBool(expr.value)))
         elif isinstance(expr, Null):
-            if self._labeled_script.has_label(expr):
-                label = self._labeled_script.get_label(expr)
-            else:
-                literal_name = f"literal-{self._literal}"
-                label = self._labeled_script.add_label(literal_name, expr)
-                self._literal += 1
-
-            return PRLet(
-                f"literal-{label}",
-                PEUndef(),
-                label,
-            )
+            return self.__get_prlet(expr, PEUndef())
         elif isinstance(expr, Not):
             return PEUnOP(PNot(), self._compile_expr(expr.expr))
         elif isinstance(expr, Minus):

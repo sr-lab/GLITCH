@@ -443,7 +443,11 @@ class PatchApplier:
             atomic_unit.type, 
             tech
         )
-        is_string = name not in ["state", "enabled"] and value not in ["true", "false"]
+        # FIXME
+        is_string = (
+            name not in ["state", "enabled"] 
+            and value not in ["true", "false"]
+        )
         atomic_unit.attributes.append(attribute)
 
         path = labeled_script.script.path
@@ -532,12 +536,14 @@ class PatchApplier:
                 end = codeelement.end_column - 1
 
             if (
-                (old_line[start:end].startswith('"') or codeelement.code.startswith('"'))
+                value not in ["true", "false"] # FIXME
+                and (old_line[start:end].startswith('"') or codeelement.code.startswith('"'))
                 and (old_line[start:end].endswith('"') or codeelement.code.endswith('"'))
             ):
                 value = f'"{value}"'
             elif (
-                (old_line[start:end].startswith("'") or codeelement.code.startswith("'"))
+                value not in ["true", "false"] # FIXME
+                and (old_line[start:end].startswith("'") or codeelement.code.startswith("'"))
                 and (old_line[start:end].endswith("'") or codeelement.code.endswith("'"))
             ):
                 value = f"'{value}'"
