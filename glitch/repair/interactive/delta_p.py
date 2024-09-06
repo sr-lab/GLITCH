@@ -186,8 +186,6 @@ class PStatement(ABC):
             if lhs is None or rhs is None:
                 return None
             return lhs + rhs
-        elif isinstance(expr, PEUnsupported):
-            return UNSUPPORTED
         elif isinstance(expr, PEUndef):
             return None
         else:
@@ -491,4 +489,4 @@ class GetVarReferencesVisitor(TranverseDeltaPVisitor):
         return []
     
 
-from glitch.repair.interactive.values import UNDEF, UNSUPPORTED
+from glitch.repair.interactive.values import UNDEF

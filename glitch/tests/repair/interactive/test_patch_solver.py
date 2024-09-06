@@ -1090,49 +1090,6 @@ service { 'keystone':
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
-class TestPatchSolverPuppetScript19(TestPatchSolver):
-    def setUp(self):
-        super().setUp()
-        puppet_script_19 = """
-$tfile = '/tmp/testfile'
-
-$test = inline_template('')
-file { $tfile:
-  ensure  => file,
-  content => $test,
-}
-"""
-        self._setup_patch_solver(puppet_script_19, UnitBlockType.script, Tech.puppet)
-
-    def test_patch_solver_puppet_hiera(self):
-        system = self.statement.to_filesystems()[0]
-        system.state["/tmp/testfile"].attrs["state"] = "absent"
-
-        for key in list(system.state.keys()):
-            if key != "/tmp/testfile":
-                system.state.pop(key)
-
-        assert self.statement is not None
-        self.statement = PStatement.minimize(
-            self.statement, 
-            ["/tmp/testfile"]
-        )
-        solver = PatchSolver(self.statement, system)
-        models = solver.solve()
-        assert models is not None
-        assert len(models) == 1
-        result = """
-$tfile = '/tmp/testfile'
-
-$test = inline_template('')
-file { $tfile:
-  ensure  => absent,
-  content => $test,
-}
-"""
-        self._patch_solver_apply(solver, models[0], system, Tech.puppet, result)
-
-
 class TestPatchSolverAnsibleScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
