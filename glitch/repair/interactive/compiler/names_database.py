@@ -20,6 +20,8 @@ class NamesDatabase:
                 return "file"
             case "directory", Tech.chef:
                 return "file"
+            case "link", Tech.chef:
+                return "file"
             case "ansible.builtin.file", Tech.ansible:
                 return "file"
             case "ansible.builtin.user", Tech.ansible:
@@ -28,6 +30,10 @@ class NamesDatabase:
                 return "package"
             case "ansible.builtin.service", Tech.ansible:
                 return "service"
+            case "ansible.builtin.yum" | "yum", Tech.ansible:
+                return "package"
+            case "ansible.builtin.apt" | "apt", Tech.ansible:
+                return "package"
             case _:
                 pass
         return type

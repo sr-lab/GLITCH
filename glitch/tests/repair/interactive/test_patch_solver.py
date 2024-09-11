@@ -1543,6 +1543,70 @@ class TestPatchSolverAnsibleScript9(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
+class TestPatchSolverAnsibleScript10(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_10 = """---
+- name: Install the latest version of Apache
+  ansible.builtin.yum:
+    name: httpd
+    state: latest
+"""
+
+        self._setup_patch_solver(ansible_script_10, UnitBlockType.tasks, Tech.ansible)
+
+    def test_patch_solver_ansible_present_package_yum(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["package:httpd"] = State()
+        filesystem.state["package:httpd"].attrs["state"] = "present"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, timeout=10)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Install the latest version of Apache
+  ansible.builtin.yum:
+    name: httpd
+    state: present
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
+class TestPatchSolverAnsibleScript11(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_11 = """---
+- name: Install the latest version of Apache
+  ansible.builtin.apt:
+    name: httpd
+    state: latest
+"""
+
+        self._setup_patch_solver(ansible_script_11, UnitBlockType.tasks, Tech.ansible)
+
+    def test_patch_solver_ansible_present_package_apt(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["package:httpd"] = State()
+        filesystem.state["package:httpd"].attrs["state"] = "present"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, timeout=10)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: Install the latest version of Apache
+  ansible.builtin.apt:
+    name: httpd
+    state: present
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -2075,3 +2139,34 @@ end
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.chef, result)
 
+
+class TestPatchSolverChefScript11(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        chef_script_2 = """
+        link '/tmp/file' do
+            to '/etc/file'
+            action :delete
+        end
+        """
+        self._setup_patch_solver(chef_script_2, UnitBlockType.script, Tech.chef)
+
+    def test_patch_solver_chef_link(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["/tmp/file"] = get_nil_file_state()
+        filesystem.state["/tmp/file"].attrs["state"] = "present"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+
+        result = """
+        link '/tmp/file' do
+            to '/etc/file'
+            action :create
+        end
+        """
+        self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
