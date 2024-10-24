@@ -187,7 +187,7 @@ delta_p_puppet_if = PSeq(
                     lhs=PSeq(
                         lhs=PSeq(
                             lhs=PLet(
-                                id="state_6240",
+                                id="condition5668670:dejavu:state_6240",
                                 expr=PRLet(
                                     id="literal-2",
                                     expr=PEConst(const=PStr(value="absent")),
@@ -203,11 +203,13 @@ delta_p_puppet_if = PSeq(
                                         label=3,
                                     ),
                                     attr="state",
-                                    value=PEVar(id="state_6240"),
+                                    value=PEVar(
+                                        id="condition5668670:dejavu:state_6240"
+                                    ),
                                 ),
                             ),
                             rhs=PLet(
-                                id="content_16",
+                                id="condition5668670:dejavu:content_16",
                                 expr=PRLet(id="literal-4", expr=PEUndef(), label=4),
                                 label=-1,
                                 body=PAttr(
@@ -219,12 +221,14 @@ delta_p_puppet_if = PSeq(
                                         label=3,
                                     ),
                                     attr="content",
-                                    value=PEVar(id="content_16"),
+                                    value=PEVar(
+                                        id="condition5668670:dejavu:content_16"
+                                    ),
                                 ),
                             ),
                         ),
                         rhs=PLet(
-                            id="owner_256",
+                            id="condition5668670:dejavu:owner_256",
                             expr=PRLet(id="literal-5", expr=PEUndef(), label=5),
                             label=-3,
                             body=PAttr(
@@ -236,12 +240,12 @@ delta_p_puppet_if = PSeq(
                                     label=3,
                                 ),
                                 attr="owner",
-                                value=PEVar(id="owner_256"),
+                                value=PEVar(id="condition5668670:dejavu:owner_256"),
                             ),
                         ),
                     ),
                     rhs=PLet(
-                        id="mode_1296",
+                        id="condition5668670:dejavu:mode_1296",
                         expr=PRLet(id="literal-6", expr=PEUndef(), label=6),
                         label=-5,
                         body=PAttr(
@@ -251,7 +255,7 @@ delta_p_puppet_if = PSeq(
                                 label=3,
                             ),
                             attr="mode",
-                            value=PEVar(id="mode_1296"),
+                            value=PEVar(id="condition5668670:dejavu:mode_1296"),
                         ),
                     ),
                 ),
@@ -267,7 +271,7 @@ delta_p_puppet_if = PSeq(
                         lhs=PSeq(
                             lhs=PSeq(
                                 lhs=PLet(
-                                    id="state_25792",
+                                    id="condition18961807:dejavu:state_25792",
                                     expr=PRLet(
                                         id="literal-7",
                                         expr=PEConst(const=PStr(value="present")),
@@ -285,11 +289,13 @@ delta_p_puppet_if = PSeq(
                                             label=8,
                                         ),
                                         attr="state",
-                                        value=PEVar(id="state_25792"),
+                                        value=PEVar(
+                                            id="condition18961807:dejavu:state_25792"
+                                        ),
                                     ),
                                 ),
                                 rhs=PLet(
-                                    id="content_4096",
+                                    id="condition18961807:dejavu:content_4096",
                                     expr=PRLet(id="literal-9", expr=PEUndef(), label=9),
                                     label=-7,
                                     body=PAttr(
@@ -303,12 +309,14 @@ delta_p_puppet_if = PSeq(
                                             label=8,
                                         ),
                                         attr="content",
-                                        value=PEVar(id="content_4096"),
+                                        value=PEVar(
+                                            id="condition18961807:dejavu:content_4096"
+                                        ),
                                     ),
                                 ),
                             ),
                             rhs=PLet(
-                                id="owner_10000",
+                                id="condition18961807:dejavu:owner_10000",
                                 expr=PRLet(id="literal-10", expr=PEUndef(), label=10),
                                 label=-9,
                                 body=PAttr(
@@ -320,12 +328,14 @@ delta_p_puppet_if = PSeq(
                                         label=8,
                                     ),
                                     attr="owner",
-                                    value=PEVar(id="owner_10000"),
+                                    value=PEVar(
+                                        id="condition18961807:dejavu:owner_10000"
+                                    ),
                                 ),
                             ),
                         ),
                         rhs=PLet(
-                            id="mode_20736",
+                            id="condition18961807:dejavu:mode_20736",
                             expr=PRLet(id="literal-11", expr=PEUndef(), label=11),
                             label=-11,
                             body=PAttr(
@@ -337,7 +347,7 @@ delta_p_puppet_if = PSeq(
                                     label=8,
                                 ),
                                 attr="mode",
-                                value=PEVar(id="mode_20736"),
+                                value=PEVar(id="condition18961807:dejavu:mode_20736"),
                             ),
                         ),
                     ),

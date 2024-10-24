@@ -175,7 +175,8 @@ class DeltaPCompiler:
             value = PEConst(PStr(expr.value))
             return self.__get_prlet(expr, value)
         elif isinstance(expr, (Integer, Float, Complex)):
-            return PEConst(PNum(expr.value))
+            value = PEConst(PStr(str(expr.value)))
+            return self.__get_prlet(expr, value)
         elif isinstance(expr, Boolean):
             return self.__get_prlet(expr, PEConst(PBool(expr.value)))
         elif isinstance(expr, Null):

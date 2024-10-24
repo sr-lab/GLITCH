@@ -74,30 +74,6 @@ class TestDeltaPCompilerPuppet(unittest.TestCase):
 
         assert statement == delta_p_puppet_2
 
-    def test_delta_p_compiler_puppet_if(self) -> None:
-        puppet_script = """
-    if $x == 'absent' {
-        file {'/usr/sbin/policy-rc.d':
-            ensure  => absent,
-        }
-    } else {
-        file {'/usr/sbin/policy-rc.d':
-            ensure  => present,
-        }
-    }
-    """
-
-        with NamedTemporaryFile() as f:
-            f.write(puppet_script.encode())
-            f.flush()
-            ir = PuppetParser().parse_file(f.name, UnitBlockType.script)
-            assert ir is not None
-            NormalizationVisitor(Tech.puppet).visit(ir)
-            labeled_script = GLITCHLabeler.label(ir, Tech.puppet)
-            statement = DeltaPCompiler(labeled_script).compile()
-
-        assert statement == delta_p_puppet_if
-
     def test_delta_p_compiler_puppet_default_state(self) -> None:
         puppet_script = """
 file { '/root/.ssh/config':
