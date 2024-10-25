@@ -39,7 +39,7 @@ class PuppetParser(p.Parser):
         if ce.line == ce.end_line:
             res = code[ce.line - 1][max(0, ce.col - 1) : ce.end_col - 1]
         else:
-            res = code[ce.line - 1]
+            res = code[ce.line - 1][max(0, ce.col - 1) :]
 
         for line in range(ce.line, ce.end_line - 1):
             res += code[line]

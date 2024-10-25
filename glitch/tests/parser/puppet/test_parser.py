@@ -123,7 +123,7 @@ class TestPuppetParser(TestParser):
         # TODO: Support resource reference
         attribute = unit_block.unit_blocks[0].atomic_units[0].attributes[5]
         assert attribute.name == "require"
-        self._check_value(attribute.value, Null, None, -1, -1, -1, -1)
+        self._check_value(attribute.value, Null, None, 4294967296, 4294967296, 4294967296, 4294967296)
 
     def test_puppet_parser_class(self) -> None:
         """

@@ -1,9 +1,9 @@
-import unittest
 from glitch.parsers.terraform import TerraformParser
 from glitch.repr.inter import *
+from glitch.tests.parser.test_parser import TestParser
 
 
-class TestTerraform(unittest.TestCase):
+class TestTerraform(TestParser):
     def __parse(self, path: str) -> UnitBlock:
         p = TerraformParser()
         ir = p.parse_file(path, UnitBlockType.script)
@@ -17,15 +17,19 @@ class TestTerraform(unittest.TestCase):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        assert ir.atomic_units[0].name == "bqowner"
-        assert ir.atomic_units[0].type == "resource.google_service_account"
+        self._check_value(ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44)
+        assert ir.atomic_units[0].type == "google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "account_id"
-        assert ir.atomic_units[0].attributes[0].value == ""
         assert ir.atomic_units[0].attributes[0].line == 2
         assert ir.atomic_units[0].attributes[0].column == 3
         assert ir.atomic_units[0].attributes[0].end_line == 2
         assert ir.atomic_units[0].attributes[0].end_column == 20
+        assert isinstance(ir.atomic_units[0].attributes[0].value, Null)
+        assert ir.atomic_units[0].attributes[0].value.line == 2
+        assert ir.atomic_units[0].attributes[0].value.column == 16
+        assert ir.atomic_units[0].attributes[0].value.end_line == 2
+        assert ir.atomic_units[0].attributes[0].value.end_column == 20
 
     def test_terraform_parser_empty_string(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/empty_string_assign.tf")
@@ -37,11 +41,13 @@ class TestTerraform(unittest.TestCase):
         assert ir.atomic_units[0].type == "resource.google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "account_id"
-        assert ir.atomic_units[0].attributes[0].value == ""
         assert ir.atomic_units[0].attributes[0].line == 2
         assert ir.atomic_units[0].attributes[0].column == 3
         assert ir.atomic_units[0].attributes[0].end_line == 2
         assert ir.atomic_units[0].attributes[0].end_column == 18
+        self._check_value(
+            ir.atomic_units[0].attributes[0].value, String, "", 2, 16, 2, 18
+        )
 
     def test_terraform_parser_boolean_value(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/boolean_value_assign.tf")
@@ -53,11 +59,14 @@ class TestTerraform(unittest.TestCase):
         assert ir.atomic_units[0].type == "resource.google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "account_id"
-        assert ir.atomic_units[0].attributes[0].value == "True"
+
         assert ir.atomic_units[0].attributes[0].line == 2
         assert ir.atomic_units[0].attributes[0].column == 3
         assert ir.atomic_units[0].attributes[0].end_line == 2
         assert ir.atomic_units[0].attributes[0].end_column == 20
+        self._check_value(
+            ir.atomic_units[0].attributes[0].value, Boolean, True, 2, 16, 2, 20
+        )
 
     def test_terraform_parser_multiline_string(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/multiline_string_assign.tf")
@@ -69,53 +78,48 @@ class TestTerraform(unittest.TestCase):
         assert ir.atomic_units[0].type == "resource.aws_instance"
 
         assert ir.atomic_units[0].attributes[0].name == "user_data"
-        assert (
-            ir.atomic_units[0].attributes[0].value
-            == "    #!/bin/bash\n    sudo apt-get update\n    sudo apt-get install -y apache2\n    sudo systemctl start apache2"
-        )
         assert ir.atomic_units[0].attributes[0].line == 2
         assert ir.atomic_units[0].attributes[0].column == 3
         assert ir.atomic_units[0].attributes[0].end_line == 7
         assert ir.atomic_units[0].attributes[0].end_column == 6
+        self._check_value(
+            ir.atomic_units[0].attributes[0].value,
+            String,
+            "    #!/bin/bash\n    sudo apt-get update\n    sudo apt-get install -y apache2\n    sudo systemctl start apache2",
+            2,
+            19,
+            7,
+            6,
+        )
 
     def test_terraform_parser_value_has_variable(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/value_has_variable.tf")
-        assert len(ir.atomic_units) == 2
+        assert len(ir.atomic_units) == 1
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        assert len(ir.atomic_units[0].attributes) == 2
+        assert len(ir.atomic_units[0].attributes) == 1
         assert ir.atomic_units[0].name == "dataset"
         assert ir.atomic_units[0].type == "resource.google_bigquery_dataset"
-        assert len(ir.atomic_units[1].attributes) == 2
-        assert ir.atomic_units[1].name == "bqowner"
-        assert ir.atomic_units[1].type == "resource.google_service_account"
 
-        assert ir.atomic_units[0].attributes[0].name == "access"
-        assert ir.atomic_units[0].attributes[0].value == None
+        assert ir.atomic_units[0].attributes[0].name == "test"
         assert ir.atomic_units[0].attributes[0].line == 2
         assert ir.atomic_units[0].attributes[0].column == 3
-        assert ir.atomic_units[0].attributes[0].end_line == 4
-        assert ir.atomic_units[0].attributes[0].end_column == 4
-        assert len(ir.atomic_units[0].attributes[0].keyvalues) == 1
-
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].name == "user_by_email"
-        assert (
-            ir.atomic_units[0].attributes[0].keyvalues[0].value
-            == "${google_service_account.bqowner.email}"
+        assert ir.atomic_units[0].attributes[0].end_line == 2
+        assert ir.atomic_units[0].attributes[0].end_column == 31
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[0].value,
+            Sum,
+            String("test ", ElementInfo(2, 12, 2, 17, "test ")),
+            Access(
+                ElementInfo(2, 19, 2, 29, "var.value1"),
+                VariableReference("var", ElementInfo(2, 19, 2, 22, "var")),
+                VariableReference("value1", ElementInfo(2, 23, 2, 29, "value1")),
+            ),
+            2,
+            11,
+            2,
+            31,
         )
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].line == 3
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].column == 5
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].end_line == 3
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].end_column == 57
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].has_variable
-
-        assert ir.atomic_units[0].attributes[1].name == "test"
-        assert ir.atomic_units[0].attributes[1].value == "${var.value1}"
-        assert ir.atomic_units[0].attributes[1].line == 5
-        assert ir.atomic_units[0].attributes[1].column == 3
-        assert ir.atomic_units[0].attributes[1].end_line == 5
-        assert ir.atomic_units[0].attributes[1].end_column == 26
-        assert ir.atomic_units[0].attributes[1].has_variable
 
     def test_terraform_parser_dict_value(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/dict_value_assign.tf")
@@ -127,19 +131,34 @@ class TestTerraform(unittest.TestCase):
         assert ir.atomic_units[0].type == "resource.google_bigquery_dataset"
 
         assert ir.atomic_units[0].attributes[0].name == "labels"
-        assert ir.atomic_units[0].attributes[0].value == None
         assert ir.atomic_units[0].attributes[0].line == 2
         assert ir.atomic_units[0].attributes[0].column == 3
         assert ir.atomic_units[0].attributes[0].end_line == 4
         assert ir.atomic_units[0].attributes[0].end_column == 4
-        assert len(ir.atomic_units[0].attributes[0].keyvalues) == 1
-
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].name == "env"
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].value == "default"
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].line == 3
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].column == 5
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].end_line == 3
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].end_column == 20
+        assert isinstance(ir.atomic_units[0].attributes[0].value, Hash)
+        assert ir.atomic_units[0].attributes[0].value.line == 2
+        assert ir.atomic_units[0].attributes[0].value.column == 12
+        assert ir.atomic_units[0].attributes[0].value.end_line == 4
+        assert ir.atomic_units[0].attributes[0].value.end_column == 4
+        assert len(ir.atomic_units[0].attributes[0].value.value) == 1
+        self._check_value(
+            list(ir.atomic_units[0].attributes[0].value.value.items())[0][0],
+            String,
+            "env",
+            3,
+            5,
+            3,
+            8,
+        )
+        self._check_value(
+            list(ir.atomic_units[0].attributes[0].value.value.items())[0][1],
+            String,
+            "default",
+            3,
+            11,
+            3,
+            20,
+        )
 
     def test_terraform_parser_list_value(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/list_value_assign.tf")

@@ -368,6 +368,13 @@ class Block(CodeElement):
     def add_statement(self, statement: CodeElement) -> None:
         self.statements.append(statement)
 
+    def set_element_info(self, info: ElementInfo) -> None:
+        self.line = info.line
+        self.column = info.column
+        self.end_line = info.end_line
+        self.end_column = info.end_column
+        self.code = info.code
+
     @staticmethod
     def __as_dict_statement(
         stat: Dict[str, Any] | List[Any] | CodeElement | str
@@ -471,7 +478,7 @@ class AtomicUnit(Block):
         super().__init__()
         self.name: Expr = name
         self.type: str = type
-        self.attributes: list[Attribute] = []
+        self.attributes: List[Attribute] = []
 
     def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
