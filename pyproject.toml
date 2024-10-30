@@ -15,7 +15,6 @@ prettytable = "3.6.0"
 pandas = "1.5.3"
 configparser = "5.3.0"
 Jinja2 = { git = "https://github.com/Nfsaavedra/jinja", branch = "tok_loc" }
-glitch-python-hcl2 = "0.2.2"
 dockerfile-parse = "2.0.0"
 bashlex = "0.18"
 requests = "^2.31.0"
@@ -25,6 +24,7 @@ jsonschema = "^4.21.1"
 setuptools = "^69.5.1"
 tqdm = "^4.66.2"
 puppetparser = "0.2.14"
+python-hcl2 = "^5.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"

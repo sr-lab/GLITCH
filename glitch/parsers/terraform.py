@@ -1,3 +1,4 @@
+# type: ignore (#TODO)
 import os
 from hcl2.parser import hcl2
 import glitch.parsers.parser as p
@@ -6,7 +7,7 @@ from glitch.exceptions import EXCEPTIONS, throw_exception
 from glitch.repr.inter import *
 from typing import Sequence, List, Dict, Any
 
-from lark.tree import Meta
+from lark.tree import Meta, Tree
 from lark.lexer import Token
 from lark.visitors import Transformer, v_args, Discard
 
@@ -23,9 +24,13 @@ class GLITCHTransformer(Transformer):
     def __init__(self, code: List[str]):
         self.code = code
         self.attributes = []
+        self.object_elems = {}
         super().__init__()
 
     def new_line_or_comment(self, args: List) -> List:
+        return Discard
+    
+    def new_line_and_or_comma(self, args: List) -> List:
         return Discard
 
     def __get_element_code(
@@ -57,36 +62,45 @@ class GLITCHTransformer(Transformer):
                 meta.end_column,
             ),
         )
+    
+    def __parse_heredoc(self, tree: Tree) -> str:
+        res = ""
+        for arg in tree.children:
+            res += arg.value
+        return "\n".join(res.split("\n")[1:-1])
 
     @v_args(meta=True)
     def int_lit(self, meta: Meta, args: List) -> int:
         print("HI")
-
-    # @v_args(meta=True)
-    # def string_lit(self, meta: Meta, args: List) -> str:
-    #     return String(
-    #         args[0],
-    #         ElementInfo(
-    #             meta.line,
-    #             meta.column,
-    #             meta.end_line,
-    #             meta.end_column,
-    #             GLITCHTransformer.__get_element_code(
-    #                 meta.line,
-    #                 meta.column,
-    #                 meta.end_line,
-    #                 meta.end_column,
-    #             )
-    #         )
-    #     )
 
     @v_args(meta=True)
     def expr_term(self, meta: Meta, args: List) -> Expr:
         if len(args) == 0:
             return Null(self.__get_element_info(meta))
         elif len(args) == 1:
+            if isinstance(args[0], Tree) and args[0].data == 'heredoc_template':
+                return String(
+                    self.__parse_heredoc(args[0]),
+                    self.__get_element_info(meta),
+                )
+            if isinstance(args[0], Expr):
+                return args[0]
+            if (args[0].type == "STRING_LIT"):
+                return String(
+                    args[0].value[1:-1],  # Remove quotes
+                    self.__get_element_info(args[0]),
+                )
             return args[0]
         return args
+
+    def object_elem(self, args: List) -> Expr:
+        self.object_elems[args[0]] = args[2]
+
+    @v_args(meta=True)
+    def object(self, meta: Meta, args: List) -> Any:
+        res = Hash(self.object_elems, self.__get_element_info(meta))
+        self.object_elems = {}
+        return res
 
     @v_args(meta=True)
     def block(self, meta: Meta, args: List) -> Any:
@@ -109,13 +123,15 @@ class GLITCHTransformer(Transformer):
     @v_args(meta=True)
     def attribute(self, meta: Meta, args: List) -> Attribute:
         self.attributes.append(
-            Attribute(args[0].value, args[1], self.__get_element_info(meta))
+            Attribute(args[0].value, args[2], self.__get_element_info(meta))
         )
 
     @v_args(meta=True)
     def identifier(self, meta: Meta, value: Any) -> Expr | ObjectType:
         if value[0] == "null":
             return Null(self.__get_element_info(meta))
+        elif value[0] in ["true", "false"]:
+            return Boolean(value[0] == "true", self.__get_element_info(meta))
         elif value[0] == "resource":
             return GLITCHTransformer.ObjectType.RESOURCE
         return VariableReference(value[0], self.__get_element_info(meta))

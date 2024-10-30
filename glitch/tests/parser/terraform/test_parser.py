@@ -37,8 +37,10 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        assert ir.atomic_units[0].name == "bqowner"
-        assert ir.atomic_units[0].type == "resource.google_service_account"
+        self._check_value(
+            ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44
+        )
+        assert ir.atomic_units[0].type == "google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "account_id"
         assert ir.atomic_units[0].attributes[0].line == 2
@@ -55,8 +57,10 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        assert ir.atomic_units[0].name == "bqowner"
-        assert ir.atomic_units[0].type == "resource.google_service_account"
+        self._check_value(
+            ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44
+        )
+        assert ir.atomic_units[0].type == "google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "account_id"
 
@@ -74,8 +78,10 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        assert ir.atomic_units[0].name == "example"
-        assert ir.atomic_units[0].type == "resource.aws_instance"
+        self._check_value(
+            ir.atomic_units[0].name, String, "example", 1, 25, 1, 34
+        )
+        assert ir.atomic_units[0].type == "aws_instance"
 
         assert ir.atomic_units[0].attributes[0].name == "user_data"
         assert ir.atomic_units[0].attributes[0].line == 2
@@ -98,8 +104,10 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        assert ir.atomic_units[0].name == "dataset"
-        assert ir.atomic_units[0].type == "resource.google_bigquery_dataset"
+        self._check_value(
+            ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45
+        )
+        assert ir.atomic_units[0].type == "google_bigquery_dataset"
 
         assert ir.atomic_units[0].attributes[0].name == "test"
         assert ir.atomic_units[0].attributes[0].line == 2
@@ -127,8 +135,10 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        assert ir.atomic_units[0].name == "dataset"
-        assert ir.atomic_units[0].type == "resource.google_bigquery_dataset"
+        self._check_value(
+            ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45
+        )
+        assert ir.atomic_units[0].type == "google_bigquery_dataset"
 
         assert ir.atomic_units[0].attributes[0].name == "labels"
         assert ir.atomic_units[0].attributes[0].line == 2
@@ -143,7 +153,7 @@ class TestTerraform(TestParser):
         assert len(ir.atomic_units[0].attributes[0].value.value) == 1
         self._check_value(
             list(ir.atomic_units[0].attributes[0].value.value.items())[0][0],
-            String,
+            VariableReference,
             "env",
             3,
             5,

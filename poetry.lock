@@ -206,19 +206,6 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
-name = "glitch-python-hcl2"
-version = "0.2.2"
-description = "A parser for HCL2"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "glitch-python-hcl2-0.2.2.tar.gz", hash = "sha256:5282cceb8d0df792aa8d94e75baf5b19db1a1f6867fec4a2380ed903e3b3b316"},
-]
-
-[package.dependencies]
-lark = ">=1.1.5,<2.0"
-
-[[package]]
 name = "idna"
 version = "3.7"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -309,13 +296,13 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "lark"
-version = "1.1.9"
+version = "1.2.2"
 description = "a modern parsing library"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "lark-1.1.9-py3-none-any.whl", hash = "sha256:a0dd3a87289f8ccbb325901e4222e723e7d745dbfc1803eaf5f3d2ace19cf2db"},
-    {file = "lark-1.1.9.tar.gz", hash = "sha256:15fa5236490824c2c4aba0e22d2d6d823575dcaf4cdd1848e34b6ad836240fba"},
+    {file = "lark-1.2.2-py3-none-any.whl", hash = "sha256:c2276486b02f0f1b90be155f2c8ba4a8e194d42775786db622faccd652d8e80c"},
+    {file = "lark-1.2.2.tar.gz", hash = "sha256:ca807d0162cd16cef15a8feecb862d7319e7a09bdb13aef927968e45040fed80"},
 ]
 
 [package.extras]
@@ -613,6 +600,20 @@ files = [
 
 [package.dependencies]
 six = ">=1.5"
+
+[[package]]
+name = "python-hcl2"
+version = "5.1.1"
+description = "A parser for HCL2"
+optional = false
+python-versions = ">=3.7.0"
+files = [
+    {file = "python-hcl2-5.1.1.tar.gz", hash = "sha256:e5c759d902e7566b9e8f1fcbf3eeef426269904f3fc0c3bf50d9090d00d1f57c"},
+    {file = "python_hcl2-5.1.1-py3-none-any.whl", hash = "sha256:4670e90aac0b0825f3a634fc684ba94a4268dbc15b062df26f4b4441af24c29a"},
+]
+
+[package.dependencies]
+lark = ">=1,<2"
 
 [[package]]
 name = "pytz"
@@ -1039,4 +1040,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2a057873f35261b96d52bf80e9f19d297ae73b221e6e6a3e266b18c3ead36098"
+content-hash = "1328470fa1d0ca5e5b831548770e279feb88e3254ca126ea8759a5350e7be3bc"
