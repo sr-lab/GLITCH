@@ -175,53 +175,24 @@ class TestTerraform(TestParser):
         assert len(ir.atomic_units) == 1
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        assert len(ir.atomic_units[0].attributes) == 4
-        assert ir.atomic_units[0].name == "bqowner"
-        assert ir.atomic_units[0].type == "resource.google_service_account"
+        assert len(ir.atomic_units[0].attributes) == 1
+        self._check_value(
+            ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44
+        )
+        assert ir.atomic_units[0].type == "google_service_account"
 
-        assert ir.atomic_units[0].attributes[0].name == "keys[0]"
-        assert ir.atomic_units[0].attributes[0].value == "value1"
-        assert ir.atomic_units[0].attributes[0].line == 2
-        assert ir.atomic_units[0].attributes[0].column == 3
-        assert ir.atomic_units[0].attributes[0].end_line == 2
-        assert ir.atomic_units[0].attributes[0].end_column == 63
-
-        assert ir.atomic_units[0].attributes[1].name == "keys[1][0]"
-        assert ir.atomic_units[0].attributes[1].value == "1"
-        assert ir.atomic_units[0].attributes[1].line == 2
-        assert ir.atomic_units[0].attributes[1].column == 3
-        assert ir.atomic_units[0].attributes[1].end_line == 2
-        assert ir.atomic_units[0].attributes[1].end_column == 63
-
-        assert ir.atomic_units[0].attributes[2].name == "keys[1][1]"
-        assert ir.atomic_units[0].attributes[2].value == None
-        assert ir.atomic_units[0].attributes[2].line == 2
-        assert ir.atomic_units[0].attributes[2].column == 3
-        assert ir.atomic_units[0].attributes[2].end_line == 2
-        assert ir.atomic_units[0].attributes[2].end_column == 63
-        assert len(ir.atomic_units[0].attributes[2].keyvalues) == 1
-
-        assert ir.atomic_units[0].attributes[2].keyvalues[0].name == "key2"
-        assert ir.atomic_units[0].attributes[2].keyvalues[0].value == "value2"
-        assert ir.atomic_units[0].attributes[2].keyvalues[0].line == 2
-        assert ir.atomic_units[0].attributes[2].keyvalues[0].column == 26
-        assert ir.atomic_units[0].attributes[2].keyvalues[0].end_line == 2
-        assert ir.atomic_units[0].attributes[2].keyvalues[0].end_column == 41
-
-        assert ir.atomic_units[0].attributes[3].name == "keys[2]"
-        assert ir.atomic_units[0].attributes[3].value == None
-        assert ir.atomic_units[0].attributes[3].line == 2
-        assert ir.atomic_units[0].attributes[3].column == 3
-        assert ir.atomic_units[0].attributes[3].end_line == 2
-        assert ir.atomic_units[0].attributes[3].end_column == 63
-        assert len(ir.atomic_units[0].attributes[3].keyvalues) == 1
-
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].name == "key3"
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].value == "value3"
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].line == 2
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].column == 46
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].end_line == 2
-        assert ir.atomic_units[0].attributes[3].keyvalues[0].end_column == 61
+        assert ir.atomic_units[0].attributes[0].name == "keys"
+        assert isinstance(ir.atomic_units[0].attributes[0].value, Array)
+        assert len(ir.atomic_units[0].attributes[0].value.value) == 3
+        
+        self._check_value(
+            ir.atomic_units[0].attributes[0].value.value[0],
+            String,
+            "value1",
+            2, 11, 2, 19
+        )
+        assert isinstance(ir.atomic_units[0].attributes[0].value.value[1], Array)
+        assert isinstance(ir.atomic_units[0].attributes[0].value.value[2], Hash)
 
     def test_terraform_parser_dynamic_block(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/dynamic_block.tf")

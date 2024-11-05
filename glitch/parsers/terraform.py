@@ -20,14 +20,23 @@ class GLITCHTransformer(Transformer):
     class ObjectType(Enum):
         RESOURCE = 1
         ATTRIBUTE = 2
+        DYNAMIC = 3
 
     def __init__(self, code: List[str]):
         self.code = code
         self.attributes = []
+        self.comments = []
         self.object_elems = {}
         super().__init__()
 
     def new_line_or_comment(self, args: List) -> List:
+        for arg in args:
+            if isinstance(arg, Token):
+                if arg.value.startswith(("//", "#", "/*")):
+                    comment = Comment(arg.value)
+                    comment.line, comment.column = arg.line, arg.column
+                    comment.end_line, comment.end_column = arg.end_line, arg.end_column
+                    self.comments.append(comment)
         return Discard
     
     def new_line_and_or_comma(self, args: List) -> List:
@@ -71,7 +80,7 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def int_lit(self, meta: Meta, args: List) -> int:
-        print("HI")
+        return Integer(int(args[0]), self.__get_element_info(meta))
 
     @v_args(meta=True)
     def expr_term(self, meta: Meta, args: List) -> Expr:
@@ -101,9 +110,14 @@ class GLITCHTransformer(Transformer):
         res = Hash(self.object_elems, self.__get_element_info(meta))
         self.object_elems = {}
         return res
+    
+    @v_args(meta=True)
+    def tuple(self, meta: Meta, args: List) -> Any:
+        return Array(args, self.__get_element_info(meta))
 
     @v_args(meta=True)
     def block(self, meta: Meta, args: List) -> Any:
+        print(args)
         if args[0] == GLITCHTransformer.ObjectType.RESOURCE:
             au = AtomicUnit(
                 String(
@@ -123,7 +137,7 @@ class GLITCHTransformer(Transformer):
     @v_args(meta=True)
     def attribute(self, meta: Meta, args: List) -> Attribute:
         self.attributes.append(
-            Attribute(args[0].value, args[2], self.__get_element_info(meta))
+            Attribute(args[0].value.value, args[2], self.__get_element_info(meta))
         )
 
     @v_args(meta=True)
@@ -134,6 +148,8 @@ class GLITCHTransformer(Transformer):
             return Boolean(value[0] == "true", self.__get_element_info(meta))
         elif value[0] == "resource":
             return GLITCHTransformer.ObjectType.RESOURCE
+        elif value[0] == "dynamic":
+            return GLITCHTransformer.ObjectType.DYNAMIC
         return VariableReference(value[0], self.__get_element_info(meta))
 
     def start(self, args: List):
@@ -149,10 +165,13 @@ class TerraformParser(p.Parser):
                 tree = hcl2.parse(f.read() + "\n")
                 f.seek(0, 0)
                 code = f.readlines()
-                elements = GLITCHTransformer(code).transform(tree)
+                transformer = GLITCHTransformer(code)
+                elements = transformer.transform(tree)
                 for el in elements:
                     if isinstance(el, AtomicUnit):
                         unit_block.add_atomic_unit(el)
+                for c in transformer.comments:
+                    unit_block.add_comment(c)
         except:
             throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
         return unit_block
