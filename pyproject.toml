@@ -24,7 +24,7 @@ jsonschema = "^4.21.1"
 setuptools = "^69.5.1"
 tqdm = "^4.66.2"
 puppetparser = "0.2.14"
-python-hcl2 = "^5.1.1"
+python-hcl2 = {git = "https://github.com/sr-lab/python-hcl2.git"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"

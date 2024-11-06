@@ -5,7 +5,7 @@ import glitch.parsers.parser as p
 
 from glitch.exceptions import EXCEPTIONS, throw_exception
 from glitch.repr.inter import *
-from typing import Sequence, List, Dict, Any
+from typing import List, Any
 
 from lark.tree import Meta, Tree
 from lark.lexer import Token
@@ -21,6 +21,7 @@ class GLITCHTransformer(Transformer):
         RESOURCE = 1
         ATTRIBUTE = 2
         DYNAMIC = 3
+        CONTENT = 4
 
     def __init__(self, code: List[str]):
         self.code = code
@@ -77,10 +78,87 @@ class GLITCHTransformer(Transformer):
         for arg in tree.children:
             res += arg.value
         return "\n".join(res.split("\n")[1:-1])
+    
+    @v_args(meta=True)
+    def get_attr(self, meta: Meta, args: List) -> Any:
+        return args[0]
+    
+    @v_args(meta=True)
+    def index(self, meta: Meta, args: List) -> Any:
+        return args[0]
+    
+    @v_args(meta=True)
+    def index_expr_term(self, meta: Meta, args: List) -> Any:
+        return Access(self.__get_element_info(meta), args[0], args[1])
+
+    @v_args(meta=True)
+    def get_attr_expr_term(self, meta: Meta, args: List) -> Any:
+        return Access(self.__get_element_info(meta), args[0], args[1])
 
     @v_args(meta=True)
     def int_lit(self, meta: Meta, args: List) -> int:
         return Integer(int(args[0]), self.__get_element_info(meta))
+    
+    @v_args(meta=True)
+    def interpolation(self, meta: Meta, args: List) -> Any:
+        return args[0]
+    
+    @v_args(meta=True)
+    def string_lit(self, meta: Meta, args: List) -> str:
+        if len(args) == 0:
+            return String("", self.__get_element_info(meta))
+        elif len(args) == 1:
+            if isinstance(args[0], Token):
+                return String(
+                    args[0].value,
+                    self.__get_element_info(meta),
+                )
+            return args[0]
+        else:
+            for i in range(len(args)):
+                if isinstance(args[i], Token):
+                    args[i] = String(
+                        args[i].value,
+                        self.__get_element_info(args[i]),
+                    )
+
+            res = Sum(
+                ElementInfo(
+                    args[0].line,
+                    args[0].column,
+                    args[1].end_line,
+                    args[1].end_column,
+                    self.__get_element_code(
+                        args[0].line,
+                        args[0].column,
+                        args[1].end_line,
+                        args[1].end_column,
+                    )
+                ),
+                args[0], 
+                args[1]
+            )
+            for i in range(2, len(args), 2):
+                res = Sum(
+                    ElementInfo(
+                        args[i].line,
+                        args[i].column,
+                        args[i+1].end_line,
+                        args[i+1].end_column,
+                        self.__get_element_code(
+                            args[i].line,
+                            args[i].column,
+                            args[i+1].end_line,
+                            args[i+1].end_column,
+                        )
+                    ),
+                    res, 
+                    args[i+1]
+                )
+            res.line, res.column = meta.line, meta.column
+            res.end_line, res.end_column = meta.end_line, meta.end_column
+
+            return res
 
     @v_args(meta=True)
     def expr_term(self, meta: Meta, args: List) -> Expr:
@@ -94,11 +172,6 @@ class GLITCHTransformer(Transformer):
                 )
             if isinstance(args[0], Expr):
                 return args[0]
-            if (args[0].type == "STRING_LIT"):
-                return String(
-                    args[0].value[1:-1],  # Remove quotes
-                    self.__get_element_info(args[0]),
-                )
             return args[0]
         return args
 
@@ -117,19 +190,28 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def block(self, meta: Meta, args: List) -> Any:
-        print(args)
         if args[0] == GLITCHTransformer.ObjectType.RESOURCE:
             au = AtomicUnit(
-                String(
-                    args[2].value[1:-1],  # Remove quotes
-                    self.__get_element_info(args[2]),
-                ),
-                args[1].value[1:-1],
+                args[2],
+                args[1].value,
             )
             au.attributes = self.attributes
             au.set_element_info(self.__get_element_info(meta))
+            for arg in args[-1]:
+                au.add_statement(arg)
             self.attributes = []
             return au
+        elif args[0] in [GLITCHTransformer.ObjectType.CONTENT, GLITCHTransformer.ObjectType.DYNAMIC]:
+            ub = UnitBlock(str(args[0]), UnitBlockType.block)
+            for arg in args[-1]:
+                if isinstance(arg, AtomicUnit):
+                    ub.add_atomic_unit(arg)
+                elif isinstance(arg, UnitBlock):
+                    ub.add_unit_block(arg)
+            ub.attributes = self.attributes
+            ub.set_element_info(self.__get_element_info(meta))
+            self.attributes = []
+            return ub
 
     def body(self, args: List) -> Any:
         return args
@@ -150,6 +232,8 @@ class GLITCHTransformer(Transformer):
             return GLITCHTransformer.ObjectType.RESOURCE
         elif value[0] == "dynamic":
             return GLITCHTransformer.ObjectType.DYNAMIC
+        elif value[0] == "content":
+            return GLITCHTransformer.ObjectType.CONTENT
         return VariableReference(value[0], self.__get_element_info(meta))
 
     def start(self, args: List):

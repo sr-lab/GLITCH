@@ -603,17 +603,21 @@ six = ">=1.5"
 
 [[package]]
 name = "python-hcl2"
-version = "5.1.1"
+version = "0.1.dev280+gbdac501"
 description = "A parser for HCL2"
 optional = false
 python-versions = ">=3.7.0"
-files = [
-    {file = "python-hcl2-5.1.1.tar.gz", hash = "sha256:e5c759d902e7566b9e8f1fcbf3eeef426269904f3fc0c3bf50d9090d00d1f57c"},
-    {file = "python_hcl2-5.1.1-py3-none-any.whl", hash = "sha256:4670e90aac0b0825f3a634fc684ba94a4268dbc15b062df26f4b4441af24c29a"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 lark = ">=1,<2"
+
+[package.source]
+type = "git"
+url = "https://github.com/sr-lab/python-hcl2.git"
+reference = "HEAD"
+resolved_reference = "bdac5015e813553c0542c9da4f7d6ceb1ce5c5eb"
 
 [[package]]
 name = "pytz"
@@ -1040,4 +1044,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "1328470fa1d0ca5e5b831548770e279feb88e3254ca126ea8759a5350e7be3bc"
+content-hash = "3ee4c4bf12e21ea43e88b85e1ae4ed5488e1be17139b614a261d5c84fac96007"

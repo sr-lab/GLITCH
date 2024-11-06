@@ -103,7 +103,7 @@ class TestTerraform(TestParser):
         assert len(ir.atomic_units) == 1
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        assert len(ir.atomic_units[0].attributes) == 1
+        assert len(ir.atomic_units[0].attributes) == 2
         self._check_value(
             ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45
         )
@@ -127,6 +127,26 @@ class TestTerraform(TestParser):
             11,
             2,
             31,
+        )
+
+        assert ir.atomic_units[0].attributes[1].name == "test2"
+        assert ir.atomic_units[0].attributes[1].line == 3
+        assert ir.atomic_units[0].attributes[1].column == 3
+        assert ir.atomic_units[0].attributes[1].end_line == 3
+        assert ir.atomic_units[0].attributes[1].end_column == 36
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[1].value,
+            Sum,
+            String("test ", ElementInfo(3, 12, 3, 17, "test ")),
+            Access(
+                ElementInfo(3, 22, 3, 32, "var.value2"),
+                VariableReference("var", ElementInfo(3, 22, 3, 25, "var")),
+                VariableReference("value2", ElementInfo(2, 26, 3, 32, "value2")),
+            ),
+            3,
+            11,
+            3,
+            36,
         )
 
     def test_terraform_parser_dict_value(self) -> None:
@@ -199,41 +219,23 @@ class TestTerraform(TestParser):
         assert len(ir.atomic_units) == 1
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        assert len(ir.atomic_units[0].attributes) == 1
-        assert ir.atomic_units[0].name == "tfenvtest"
-        assert ir.atomic_units[0].type == "resource.aws_elastic_beanstalk_environment"
-
-        assert ir.atomic_units[0].attributes[0].name == "dynamic.setting"
-        assert ir.atomic_units[0].attributes[0].value == None
-        assert ir.atomic_units[0].attributes[0].line == 2
-        assert ir.atomic_units[0].attributes[0].column == 3
-        assert ir.atomic_units[0].attributes[0].end_line == 6
-        assert ir.atomic_units[0].attributes[0].end_column == 4
-        assert len(ir.atomic_units[0].attributes[0].keyvalues) == 1
-
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].name == "content"
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].value == None
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].line == 3
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].column == 5
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].end_line == 5
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].end_column == 6
-        assert len(ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues) == 1
-
-        assert (
-            ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues[0].name
-            == "namespace"
+        self._check_value(
+            ir.atomic_units[0].name, String, "tfenvtest", 1, 46, 1, 57
         )
-        assert (
-            ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues[0].value
-            == '${setting.value["namespace"]}'
-        )
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues[0].line == 4
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues[0].column == 7
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues[0].end_line == 4
-        assert (
-            ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues[0].end_column == 45
-        )
-        assert ir.atomic_units[0].attributes[0].keyvalues[0].keyvalues[0].has_variable
+        assert ir.atomic_units[0].type == "aws_elastic_beanstalk_environment"
+        assert len(ir.atomic_units[0].statements) == 1
+
+        assert isinstance(ir.atomic_units[0].statements[0], UnitBlock)
+        assert ir.atomic_units[0].statements[0].type == "block"
+        assert ir.atomic_units[0].statements[0].name == "ObjectType.DYNAMIC"
+        assert len(ir.atomic_units[0].statements[0].unit_blocks) == 1
+
+        assert isinstance(ir.atomic_units[0].statements[0].unit_blocks[0], UnitBlock)
+        assert ir.atomic_units[0].statements[0].unit_blocks[0].type == "block"
+        assert ir.atomic_units[0].statements[0].unit_blocks[0].name == "ObjectType.CONTENT"
+        assert len(ir.atomic_units[0].statements[0].unit_blocks[0].attributes) == 1
+
+        assert ir.atomic_units[0].statements[0].unit_blocks[0].attributes[0].name == "namespace"        
 
     def test_terraform_parser_comments(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/comments.tf")
