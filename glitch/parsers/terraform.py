@@ -100,14 +100,16 @@ class GLITCHTransformer(Transformer):
         return Integer(int(args[0]), self.__get_element_info(meta))
     
     @v_args(meta=True)
-    def interpolation(self, meta: Meta, args: List) -> Any:
+    def float_lit(self, meta: Meta, args: List) -> float:
+        return Float(float(args[0]), self.__get_element_info(meta))
+    
+    @v_args(meta=True)
+    def interpolation_maybe_nested(self, meta: Meta, args: List) -> Any:
         return args[0]
     
     @v_args(meta=True)
-    def string_lit(self, meta: Meta, args: List) -> str:
-        if len(args) == 0:
-            return String("", self.__get_element_info(meta))
-        elif len(args) == 1:
+    def string_with_interpolation(self, meta: Meta, args: List) -> str:
+        if len(args) == 1:
             if isinstance(args[0], Token):
                 return String(
                     args[0].value,
@@ -172,6 +174,11 @@ class GLITCHTransformer(Transformer):
                 )
             if isinstance(args[0], Expr):
                 return args[0]
+            if (args[0].type == "STRING_LIT"):
+                return String(
+                    args[0].value[1:-1],
+                    self.__get_element_info(args[0]),
+                )
             return args[0]
         return args
 
@@ -192,8 +199,11 @@ class GLITCHTransformer(Transformer):
     def block(self, meta: Meta, args: List) -> Any:
         if args[0] == GLITCHTransformer.ObjectType.RESOURCE:
             au = AtomicUnit(
-                args[2],
-                args[1].value,
+                String(
+                    args[2].value[1:-1],  # Remove quotes
+                    self.__get_element_info(args[2]),
+                ),
+                args[1].value[1:-1],
             )
             au.attributes = self.attributes
             au.set_element_info(self.__get_element_info(meta))

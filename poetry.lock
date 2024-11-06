@@ -603,7 +603,7 @@ six = ">=1.5"
 
 [[package]]
 name = "python-hcl2"
-version = "0.1.dev280+gbdac501"
+version = "0.1.dev295+g92071ea"
 description = "A parser for HCL2"
 optional = false
 python-versions = ">=3.7.0"
@@ -615,9 +615,9 @@ lark = ">=1,<2"
 
 [package.source]
 type = "git"
-url = "https://github.com/sr-lab/python-hcl2.git"
-reference = "HEAD"
-resolved_reference = "bdac5015e813553c0542c9da4f7d6ceb1ce5c5eb"
+url = "https://github.com/weaversam8/python-hcl2.git"
+reference = "feature/hcl2-reverse-transformer"
+resolved_reference = "92071ea4c745158caffa30f212196776b5041d51"
 
 [[package]]
 name = "pytz"
@@ -1044,4 +1044,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3ee4c4bf12e21ea43e88b85e1ae4ed5488e1be17139b614a261d5c84fac96007"
+content-hash = "ad4c62aa5b25e4db2b5020a7e0552ee0713cdea781239a0d3ab2fd127c522d0e"

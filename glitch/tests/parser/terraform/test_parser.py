@@ -264,3 +264,8 @@ class TestTerraform(TestParser):
 
         assert ir.comments[6].content == "//comment2 inside dict\n"
         assert ir.comments[6].line == 13
+
+    def test_terraform_parser_operations(self) -> None:
+        ir = self.__parse("tests/parser/terraform/files/operations.tf")
+        assert len(ir.atomic_units) == 1
+        assert len(ir.atomic_units[0].attributes) == 15
