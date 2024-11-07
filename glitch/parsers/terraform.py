@@ -73,12 +73,58 @@ class GLITCHTransformer(Transformer):
             ),
         )
     
+    def __get_element_info_from_tokens(self, start: Token, end: Token) -> ElementInfo:
+        return ElementInfo(
+            start.line,
+            start.column,
+            end.end_line,
+            end.end_column,
+            self.__get_element_code(
+                start.line,
+                start.column,
+                end.end_line,
+                end.end_column,
+            ),
+        )
+    
     def __parse_heredoc(self, tree: Tree) -> str:
         res = ""
         for arg in tree.children:
             res += arg.value
         return "\n".join(res.split("\n")[1:-1])
     
+    @v_args(meta=True)
+    def binary_op(self, meta: Meta, args: List) -> Any:
+        op_to_ir = {
+            "+": Sum,
+            "-": Subtract,
+            "*": Multiply,
+            "/": Divide,
+            "%": Modulo,
+            "&&": And,
+            "||": Or,
+            "==": Equal,
+            "!=": NotEqual,
+            ">": GreaterThan,
+            "<": LessThan,
+            ">=": GreaterThanOrEqual,
+            "<=": LessThanOrEqual,
+        }
+
+        if args[1].children[0].children[0] in op_to_ir:
+            return op_to_ir[args[1].children[0].children[0]](
+                self.__get_element_info_from_tokens(args[0], args[1].children[1]),
+                args[0],
+                args[1].children[1]
+            )
+        
+    @v_args(meta=True)
+    def unary_op(self, meta: Meta, args: List) -> Any:
+        if args[0] == "-":
+            return Minus(self.__get_element_info(meta), args[1])
+        elif args[0] == "!":
+            return Not(self.__get_element_info(meta), args[1])
+
     @v_args(meta=True)
     def get_attr(self, meta: Meta, args: List) -> Any:
         return args[0]
@@ -101,7 +147,7 @@ class GLITCHTransformer(Transformer):
     
     @v_args(meta=True)
     def float_lit(self, meta: Meta, args: List) -> float:
-        return Float(float(args[0]), self.__get_element_info(meta))
+        return Float(float("".join(args)), self.__get_element_info(meta))
     
     @v_args(meta=True)
     def interpolation_maybe_nested(self, meta: Meta, args: List) -> Any:

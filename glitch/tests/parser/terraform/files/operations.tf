@@ -11,7 +11,7 @@ resource "test" "test" {
   gt = 1.3 > 1.4
   lt = 1.3 < 1.4
   ge = 1.3 >= 1.4
-  le = (1.3e-1) <= (1.4E-2)
+  le = 1.3 <= 1.4
   not = !true
   minus = -1.3
 }

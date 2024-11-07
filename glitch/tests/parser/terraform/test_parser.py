@@ -269,3 +269,148 @@ class TestTerraform(TestParser):
         ir = self.__parse("tests/parser/terraform/files/operations.tf")
         assert len(ir.atomic_units) == 1
         assert len(ir.atomic_units[0].attributes) == 15
+       
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[0].value,
+            Sum,
+            Float(1.3, ElementInfo(2, 9, 2, 12, "1.3")),
+            Float(1.4, ElementInfo(2, 15, 2, 18, "1.4")),
+            2,
+            9,
+            2,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[1].value,
+            Subtract,
+            Float(1.3, ElementInfo(3, 9, 3, 12, "1.3")),
+            Float(1.4, ElementInfo(3, 15, 3, 18, "1.4")),
+            3,
+            9,
+            3,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[2].value,
+            Multiply,
+            Float(1.3, ElementInfo(4, 9, 4, 12, "1.3")),
+            Float(1.4, ElementInfo(4, 15, 4, 18, "1.4")),
+            4,
+            9,
+            4,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[3].value,
+            Divide,
+            Float(1.3, ElementInfo(5, 9, 5, 12, "1.3")),
+            Float(1.4, ElementInfo(5, 15, 5, 18, "1.4")),
+            5,
+            9,
+            5,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[4].value,
+            Modulo,
+            Float(1.3, ElementInfo(6, 9, 6, 12, "1.3")),
+            Float(1.4, ElementInfo(6, 15, 6, 18, "1.4")),
+            6,
+            9,
+            6,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[5].value,
+            And,
+            Float(1.3, ElementInfo(7, 9, 7, 12, "1.3")),
+            Float(1.4, ElementInfo(7, 16, 7, 19, "1.4")),
+            7,
+            9,
+            7,
+            19
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[6].value,
+            Or,
+            Float(1.3, ElementInfo(8, 8, 8, 11, "1.3")),
+            Float(1.4, ElementInfo(8, 15, 8, 18, "1.4")),
+            8,
+            8,
+            8,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[7].value,
+            Equal,
+            Float(1.3, ElementInfo(9, 8, 9, 11, "1.3")),
+            Float(1.4, ElementInfo(9, 15, 9, 18, "1.4")),
+            9,
+            8,
+            9,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[8].value,
+            NotEqual,
+            Float(1.3, ElementInfo(10, 8, 10, 11, "1.3")),
+            Float(1.4, ElementInfo(10, 15, 10, 18, "1.4")),
+            10,
+            8,
+            10,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[9].value,
+            GreaterThan,
+            Float(1.3, ElementInfo(11, 8, 11, 11, "1.3")),
+            Float(1.4, ElementInfo(11, 14, 11, 17, "1.4")),
+            11,
+            8,
+            11,
+            17
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[10].value,
+            LessThan,
+            Float(1.3, ElementInfo(12, 8, 12, 11, "1.3")),
+            Float(1.4, ElementInfo(12, 14, 12, 17, "1.4")),
+            12,
+            8,
+            12,
+            17
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[11].value,
+            GreaterThanOrEqual,
+            Float(1.3, ElementInfo(13, 8, 13, 11, "1.3")),
+            Float(1.4, ElementInfo(13, 15, 13, 18, "1.4")),
+            13,
+            8,
+            13,
+            18
+        )
+        self._check_binary_operation(
+            ir.atomic_units[0].attributes[12].value,
+            LessThanOrEqual,
+            Float(1.3, ElementInfo(14, 8, 14, 11, "1.3")),
+            Float(1.4, ElementInfo(14, 15, 14, 18, "1.4")),
+            14,
+            8,
+            14,
+            18
+        )
+        assert isinstance(ir.atomic_units[0].attributes[13].value, Not)
+        self._check_value(
+            ir.atomic_units[0].attributes[13].value.expr,
+            Boolean,
+            True,
+            15, 10, 15, 14
+        )
+        assert isinstance(ir.atomic_units[0].attributes[14].value, Minus)
+        self._check_value(
+            ir.atomic_units[0].attributes[14].value.expr,
+            Float,
+            1.3,
+            16, 12, 16, 15
+        )
