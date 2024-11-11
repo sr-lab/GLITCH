@@ -44,7 +44,10 @@ def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
         elif isinstance(syscall, SRename):
             paths.add(abspath(workdir, syscall.src))
             paths.add(abspath(workdir, syscall.dst))
-        elif isinstance(syscall, (SUnlink, SUnlinkAt, SRmdir, SMkdir, SMkdirAt)):
+        elif isinstance(
+            syscall, 
+            (SUnlink, SUnlinkAt, SRmdir, SMkdir, SMkdirAt, SChmod, SFchmodAt, FChownAt)
+        ):
             paths.add(abspath(workdir, syscall.path))
         elif isinstance(syscall, SChdir):
             workdir = syscall.path
@@ -64,7 +67,7 @@ def get_file_system_state(files: Set[str]) -> SystemState:
     """
     fs = SystemState()
     get_owner: Callable[[str], str] = lambda f: getpwuid(os.stat(f).st_uid).pw_name
-    get_mode: Callable[[str], str] = lambda f: oct(os.stat(f).st_mode & 0o777)[2:]
+    get_mode: Callable[[str], str] = lambda f: "0" + oct(os.stat(f).st_mode & 0o777)[2:]
 
     for file in files:
         if not os.path.exists(file):

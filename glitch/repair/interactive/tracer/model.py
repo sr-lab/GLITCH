@@ -34,6 +34,9 @@ def get_syscall_with_type(syscall: Syscall) -> Syscall:
         "unlink": "SUnlink",
         "unlinkat": "SUnlinkAt",
         "chdir": "SChdir",
+        "fchmodat": "SFchmodAt",
+        "chmod": "SChmod",
+        "fchownat": "FChownAt",
     }
     if syscall.cmd in verbs:
         return globals()[verbs[syscall.cmd]](
@@ -194,3 +197,45 @@ class SUnlinkAt(Syscall):
     @property
     def flags(self) -> Union[List[UnlinkFlag], str]:
         return self.args[2]
+    
+
+class SFchmodAt(Syscall):
+    @property
+    def dirfd(self) -> str:
+        return self.args[0]
+
+    @property
+    def path(self) -> str:
+        return self.args[1]
+
+    @property
+    def mode(self) -> str:
+        return self.args[2]
+
+
+class SChmod(Syscall):
+    @property
+    def path(self) -> str:
+        return self.args[0]
+
+    @property
+    def mode(self) -> str:
+        return self.args[1]
+    
+
+class FChownAt(Syscall):
+    @property
+    def dirfd(self) -> str:
+        return self.args[0]
+
+    @property
+    def path(self) -> str:
+        return self.args[1]
+
+    @property
+    def owner(self) -> str:
+        return self.args[2]
+
+    @property
+    def group(self) -> str:
+        return self.args[3]

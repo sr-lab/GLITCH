@@ -477,7 +477,8 @@ class PatchApplier:
         value = value if not is_string else f"'{value}'"
         new_line = col * " " + new_line.format(attribute.name, value)
         lines.insert(line - 1, new_line)
-
+        if not lines[line - 2].endswith("\n"):
+            lines[line - 2] =  lines[line - 2] + "\n"
         with open(path, "w") as f:
             f.writelines(lines)
 
