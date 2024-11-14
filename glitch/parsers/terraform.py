@@ -308,6 +308,37 @@ class GLITCHTransformer(Transformer):
             return GLITCHTransformer.ObjectType.CONTENT
         return VariableReference(value[0], self.__get_element_info(meta))
 
+    @v_args(meta=True)
+    def attr_splat_expr_term(self, meta: Meta, args: List) -> Any:
+        # TODO: Not supported yet
+        return Null(self.__get_element_info(meta))
+    
+    @v_args(meta=True)
+    def full_splat_expr_term(self, meta: Meta, args: List) -> Any:
+        # TODO: Not supported yet
+        return Null(self.__get_element_info(meta))
+    
+    @v_args(meta=True)
+    def for_tuple_expr(self, meta: Meta, args: List) -> Any:
+        # TODO: Not supported yet
+        return Null(self.__get_element_info(meta)) 
+    
+    @v_args(meta=True)
+    def for_object_expr(self, meta: Meta, args: List) -> Any:
+        # TODO: Not supported yet
+        return Null(self.__get_element_info(meta)) 
+    
+    @v_args(meta=True)
+    def function_call(self, meta: Meta, args: List) -> Any:
+        return FunctionCall(
+            args[0],
+            args[1],
+            self.__get_element_info(meta),
+        )
+
+    def arguments(self, args: List) -> Any:
+        return args
+
     def start(self, args: List):
         return args[0]
 

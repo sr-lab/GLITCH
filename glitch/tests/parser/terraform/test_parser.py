@@ -433,3 +433,9 @@ class TestTerraform(TestParser):
         assert isinstance(ir.atomic_units[0].attributes[0].value.else_statement, ConditionalStatement)
         assert len(ir.atomic_units[0].attributes[0].value.else_statement.statements) == 1
         assert isinstance(ir.atomic_units[0].attributes[0].value.else_statement.statements[0], Null)
+
+    def test_terraform_parser_function_call(self) -> None:
+        ir = self.__parse("tests/parser/terraform/files/function_call.tf")
+        assert len(ir.atomic_units) == 1
+        assert len(ir.atomic_units[0].attributes) == 1
+        assert isinstance(ir.atomic_units[0].attributes[0].value, FunctionCall)
