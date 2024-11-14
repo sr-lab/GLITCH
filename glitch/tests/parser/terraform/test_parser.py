@@ -414,3 +414,22 @@ class TestTerraform(TestParser):
             1.3,
             16, 12, 16, 15
         )
+
+    def test_terraform_parser_conditional(self) -> None:
+        ir = self.__parse("tests/parser/terraform/files/conditional.tf")
+        assert len(ir.atomic_units) == 1
+        assert len(ir.atomic_units[0].attributes) == 1
+
+        assert isinstance(ir.atomic_units[0].attributes[0].value, ConditionalStatement)
+        assert ir.atomic_units[0].attributes[0].value.line == 2
+        assert ir.atomic_units[0].attributes[0].value.column == 16
+        assert ir.atomic_units[0].attributes[0].value.end_line == 2
+        assert ir.atomic_units[0].attributes[0].value.end_column == 61
+
+        assert isinstance(ir.atomic_units[0].attributes[0].value.condition, Access)
+        assert len(ir.atomic_units[0].attributes[0].value.statements) == 1
+        assert isinstance(ir.atomic_units[0].attributes[0].value.statements[0], String)
+
+        assert isinstance(ir.atomic_units[0].attributes[0].value.else_statement, ConditionalStatement)
+        assert len(ir.atomic_units[0].attributes[0].value.else_statement.statements) == 1
+        assert isinstance(ir.atomic_units[0].attributes[0].value.else_statement.statements[0], Null)

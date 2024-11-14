@@ -271,6 +271,22 @@ class GLITCHTransformer(Transformer):
 
     def body(self, args: List) -> Any:
         return args
+    
+    @v_args(meta=True)
+    def conditional(self, meta: Meta, args: List) -> Any:
+        condition = ConditionalStatement(
+            args[0],
+            ConditionalStatement.ConditionType.IF,
+        )
+        condition.line, condition.column = meta.line, meta.column
+        condition.end_line, condition.end_column = meta.end_line, meta.end_column
+        condition.add_statement(args[1])
+        condition.else_statement = ConditionalStatement(
+            Null(),
+            ConditionalStatement.ConditionType.IF,
+        )
+        condition.else_statement.add_statement(args[2])
+        return condition
 
     @v_args(meta=True)
     def attribute(self, meta: Meta, args: List) -> Attribute:
