@@ -330,6 +330,12 @@ class GLITCHTransformer(Transformer):
     
     @v_args(meta=True)
     def function_call(self, meta: Meta, args: List) -> Any:
+        if len(args) == 1:
+            return FunctionCall(
+                args[0],
+                [],
+                self.__get_element_info(meta),
+            )
         return FunctionCall(
             args[0],
             args[1],

@@ -437,5 +437,6 @@ class TestTerraform(TestParser):
     def test_terraform_parser_function_call(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/function_call.tf")
         assert len(ir.atomic_units) == 1
-        assert len(ir.atomic_units[0].attributes) == 1
+        assert len(ir.atomic_units[0].attributes) == 2
         assert isinstance(ir.atomic_units[0].attributes[0].value, FunctionCall)
+        assert isinstance(ir.atomic_units[0].attributes[1].value, FunctionCall)
