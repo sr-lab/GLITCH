@@ -103,7 +103,7 @@ class TestTerraform(TestParser):
         assert len(ir.atomic_units) == 1
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        assert len(ir.atomic_units[0].attributes) == 2
+        assert len(ir.atomic_units[0].attributes) == 3
         self._check_value(
             ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45
         )
@@ -148,6 +148,8 @@ class TestTerraform(TestParser):
             3,
             36,
         )
+
+        assert isinstance(ir.atomic_units[0].attributes[2].value, Sum)   
 
     def test_terraform_parser_dict_value(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/dict_value_assign.tf")

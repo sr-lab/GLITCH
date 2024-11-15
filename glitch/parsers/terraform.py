@@ -186,22 +186,22 @@ class GLITCHTransformer(Transformer):
                 args[0], 
                 args[1]
             )
-            for i in range(2, len(args), 2):
+            for i in range(2, len(args)):
                 res = Sum(
                     ElementInfo(
-                        args[i].line,
-                        args[i].column,
-                        args[i+1].end_line,
-                        args[i+1].end_column,
+                        res.line,
+                        res.column,
+                        args[i].end_line,
+                        args[i].end_column,
                         self.__get_element_code(
-                            args[i].line,
-                            args[i].column,
-                            args[i+1].end_line,
-                            args[i+1].end_column,
+                            res.line,
+                            res.column,
+                            args[i].end_line,
+                            args[i].end_column,
                         )
                     ),
                     res, 
-                    args[i+1]
+                    args[i]
                 )
             res.line, res.column = meta.line, meta.column
             res.end_line, res.end_column = meta.end_line, meta.end_column
