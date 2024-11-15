@@ -229,12 +229,12 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0].statements[0], UnitBlock)
         assert ir.atomic_units[0].statements[0].type == "block"
-        assert ir.atomic_units[0].statements[0].name == "ObjectType.DYNAMIC"
+        assert ir.atomic_units[0].statements[0].name == "dynamic"
         assert len(ir.atomic_units[0].statements[0].unit_blocks) == 1
 
         assert isinstance(ir.atomic_units[0].statements[0].unit_blocks[0], UnitBlock)
         assert ir.atomic_units[0].statements[0].unit_blocks[0].type == "block"
-        assert ir.atomic_units[0].statements[0].unit_blocks[0].name == "ObjectType.CONTENT"
+        assert ir.atomic_units[0].statements[0].unit_blocks[0].name == "content"
         assert len(ir.atomic_units[0].statements[0].unit_blocks[0].attributes) == 1
 
         assert ir.atomic_units[0].statements[0].unit_blocks[0].attributes[0].name == "namespace"        

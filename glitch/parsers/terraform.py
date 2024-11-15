@@ -17,12 +17,6 @@ class GLITCHTransformer(Transformer):
     transforms it to a dict.
     """
 
-    class ObjectType(Enum):
-        RESOURCE = 1
-        ATTRIBUTE = 2
-        DYNAMIC = 3
-        CONTENT = 4
-
     def __init__(self, code: List[str]):
         self.code = code
         self.attributes = []
@@ -243,7 +237,7 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def block(self, meta: Meta, args: List) -> Any:
-        if args[0] == GLITCHTransformer.ObjectType.RESOURCE:
+        if args[0].value == "resource":
             au = AtomicUnit(
                 String(
                     args[2].value[1:-1],  # Remove quotes
@@ -257,8 +251,8 @@ class GLITCHTransformer(Transformer):
                 au.add_statement(arg)
             self.attributes = []
             return au
-        elif args[0] in [GLITCHTransformer.ObjectType.CONTENT, GLITCHTransformer.ObjectType.DYNAMIC]:
-            ub = UnitBlock(str(args[0]), UnitBlockType.block)
+        elif args[0].value in ["content", "dynamic"]:
+            ub = UnitBlock(args[0].value, UnitBlockType.block)
             for arg in args[-1]:
                 if isinstance(arg, AtomicUnit):
                     ub.add_atomic_unit(arg)
@@ -290,23 +284,21 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def attribute(self, meta: Meta, args: List) -> Attribute:
+        #if isinstance(args[2], )
         self.attributes.append(
-            Attribute(args[0].value.value, args[2], self.__get_element_info(meta))
+            Attribute(args[0].value, args[2], self.__get_element_info(meta))
         )
 
     @v_args(meta=True)
-    def identifier(self, meta: Meta, value: Any) -> Expr | ObjectType:
+    def identifier(self, meta: Meta, value: Any) -> Expr:
         if value[0] == "null":
             return Null(self.__get_element_info(meta))
         elif value[0] in ["true", "false"]:
             return Boolean(value[0] == "true", self.__get_element_info(meta))
-        elif value[0] == "resource":
-            return GLITCHTransformer.ObjectType.RESOURCE
-        elif value[0] == "dynamic":
-            return GLITCHTransformer.ObjectType.DYNAMIC
-        elif value[0] == "content":
-            return GLITCHTransformer.ObjectType.CONTENT
-        return VariableReference(value[0], self.__get_element_info(meta))
+        name = value[0]
+        if isinstance(name, Token):
+            name = name.value
+        return VariableReference(name, self.__get_element_info(meta))
 
     @v_args(meta=True)
     def attr_splat_expr_term(self, meta: Meta, args: List) -> Any:
@@ -367,6 +359,8 @@ class TerraformParser(p.Parser):
                     unit_block.add_comment(c)
         except:
             throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
+            return None
+    
         return unit_block
 
     def parse_module(self, path: str) -> Module:
