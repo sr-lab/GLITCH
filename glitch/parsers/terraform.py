@@ -223,7 +223,10 @@ class GLITCHTransformer(Transformer):
         return args
 
     def object_elem(self, args: List) -> Expr:
-        self.object_elems[args[0]] = args[2]
+        if len(args) == 2:
+            self.object_elems[args[0]] = args[1]
+        else:
+            self.object_elems[args[0]] = args[2]
 
     @v_args(meta=True)
     def object(self, meta: Meta, args: List) -> Any:
