@@ -603,7 +603,7 @@ six = ">=1.5"
 
 [[package]]
 name = "python-hcl2"
-version = "0.1.dev296+g7a4d815"
+version = "0.1.dev296+g986d879"
 description = "A parser for HCL2"
 optional = false
 python-versions = ">=3.7.0"
@@ -617,7 +617,7 @@ lark = ">=1,<2"
 type = "git"
 url = "https://github.com/Nfsaavedra/python-hcl2.git"
 reference = "feature/hcl2-reverse-transformer"
-resolved_reference = "7a4d81509a0722d150fc6b99d0c1b75005bde7ef"
+resolved_reference = "986d879aa65e800322221d61169d52d5111ce7e6"
 
 [[package]]
 name = "pytz"
