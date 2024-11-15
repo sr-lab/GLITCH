@@ -254,14 +254,24 @@ class GLITCHTransformer(Transformer):
                 au.add_statement(arg)
             self.attributes = []
             return au
-        elif args[0].value in ["content", "dynamic"]:
+        else:
             ub = UnitBlock(args[0].value, UnitBlockType.block)
             for arg in args[-1]:
                 if isinstance(arg, AtomicUnit):
                     ub.add_atomic_unit(arg)
                 elif isinstance(arg, UnitBlock):
                     ub.add_unit_block(arg)
-            ub.attributes = self.attributes
+            if args[0].value in ["locals"]:
+                for attr in self.attributes:
+                    ub.add_variable(
+                        Variable(
+                            attr.name,
+                            attr.value,
+                            ElementInfo.from_code_element(attr),
+                        )
+                    )
+            else:
+                ub.attributes = self.attributes
             ub.set_element_info(self.__get_element_info(meta))
             self.attributes = []
             return ub
@@ -287,7 +297,6 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def attribute(self, meta: Meta, args: List) -> Attribute:
-        #if isinstance(args[2], )
         self.attributes.append(
             Attribute(args[0].value, args[2], self.__get_element_info(meta))
         )
@@ -358,6 +367,8 @@ class TerraformParser(p.Parser):
                 for el in elements:
                     if isinstance(el, AtomicUnit):
                         unit_block.add_atomic_unit(el)
+                    elif isinstance(el, UnitBlock):
+                        unit_block.add_unit_block(el)
                 for c in transformer.comments:
                     unit_block.add_comment(c)
         except:
