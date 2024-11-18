@@ -15,7 +15,7 @@ class DeltaPCompiler:
         "service": ["state", "enabled"],
         "aws_iam_role": ["state", "assume_role_policy"],
         "aws_instance": ["state", "instance_type", "availability_zone"],
-        "aws_s3_bucket": ["state", "bucket"],
+        "aws_s3_bucket": ["state"],
     }
 
     def __init__(self, labeled_script: LabeledUnitBlock) -> None:
@@ -97,45 +97,19 @@ class DeltaPCompiler:
                         attr_name,
                         String(
                             UNDEF,
-                            ElementInfo(
-                                self.__compiler._sketched,
-                                self.__compiler._sketched,
-                                self.__compiler._sketched,
-                                self.__compiler._sketched,
-                                "",
-                            ),
+                            ElementInfo.get_sketched(),
                         ),
-                        ElementInfo(
-                            self.__compiler._sketched - 1,
-                            self.__compiler._sketched - 1,
-                            self.__compiler._sketched - 1,
-                            self.__compiler._sketched - 1,
-                            "",
-                        ),
+                        ElementInfo.get_sketched(),
                     )
                 else:
                     attr = Attribute(
                         attr_name,
-                        Null(
-                            ElementInfo(
-                                self.__compiler._sketched,
-                                self.__compiler._sketched,
-                                self.__compiler._sketched,
-                                self.__compiler._sketched,
-                                "",
-                            )
-                        ),
-                        ElementInfo(
-                            self.__compiler._sketched - 1,
-                            self.__compiler._sketched - 1,
-                            self.__compiler._sketched - 1,
-                            self.__compiler._sketched - 1,
-                            "",
-                        ),
+                        Null(ElementInfo.get_sketched()),
+                        ElementInfo.get_sketched(),
                     )
 
                 label = self.__compiler._sketched
-                self.__compiler._sketched -= 2
+                self.__compiler._sketched -= 1
                 self.add_attribute(attr)
             else:
                 # HACK

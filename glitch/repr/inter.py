@@ -1,7 +1,7 @@
 from abc import ABC
 from enum import Enum
 from dataclasses import dataclass
-from typing import List, Union, Dict, Any
+from typing import List, Union, Dict, Any, ClassVar
 
 
 @dataclass
@@ -11,6 +11,7 @@ class ElementInfo:
     end_line: int
     end_column: int
     code: str
+    sketched: ClassVar[int] = -1
 
     @staticmethod
     def from_code_element(element: "CodeElement") -> "ElementInfo":
@@ -21,6 +22,18 @@ class ElementInfo:
             element.end_column,
             element.code,
         )
+    
+    @staticmethod
+    def get_sketched() -> "ElementInfo":
+        info = ElementInfo(
+            ElementInfo.sketched,
+            ElementInfo.sketched,
+            ElementInfo.sketched,
+            ElementInfo.sketched,
+            "",
+        )
+        ElementInfo.sketched -= 1
+        return info
 
 
 class CodeElement(ABC):

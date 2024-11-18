@@ -437,6 +437,11 @@ class PatchApplier:
         value: str,
         tech: Tech,
     ) -> None:
+        # FIXME: There should be a way to change the way we apply the patch
+        # according to the technology
+        if tech == Tech.terraform and attribute.name == "state":
+            return
+
         name, _ = NamesDatabase.get_attr_pair(
             inter.String(value, ElementInfo(-1, -1, -1, -1, "")),
             attribute.name, 

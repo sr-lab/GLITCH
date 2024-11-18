@@ -34,6 +34,8 @@ class NamesDatabase:
                 return "package"
             case "ansible.builtin.apt" | "apt", Tech.ansible:
                 return "package"
+            case "amazon.aws.s3_bucket", Tech.ansible:
+                return "aws_s3_bucket"
             case _:
                 pass
         return type
@@ -70,6 +72,8 @@ class NamesDatabase:
                 return "enable"
             case "enabled", "service", Tech.chef:
                 return "action"
+            case "name", "aws_s3_bucket", Tech.terraform:
+                return "bucket"
             case _:
                 pass
         return name
@@ -159,6 +163,8 @@ class NamesDatabase:
                 return "state"
             case "enable", "service", Tech.puppet:
                 return "enabled"
+            case "bucket", "aws_s3_bucket", Tech.terraform:
+                return "name"
             case _:
                 pass
 
@@ -286,6 +292,17 @@ class NormalizationVisitor:
 
     def visit_atomic_unit(self, element: AtomicUnit) -> None:
         element.type = NamesDatabase.get_au_type(element.type, self.tech)
+        
+        # Since Terraform does not define a state, we add it manually
+        # FIXME: Probably should be in a better place
+        if self.tech == Tech.terraform:
+            element.attributes.insert(0, Attribute(
+                "state", 
+                # The element info should be unique
+                String("present", ElementInfo.get_sketched()), 
+                ElementInfo.get_sketched()
+            ))
+
         for attr in element.attributes:
             attr.name, attr.value = NamesDatabase.get_attr_pair(
                 attr.value, 

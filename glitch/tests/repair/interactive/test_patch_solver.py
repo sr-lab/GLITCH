@@ -13,7 +13,7 @@ from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.parser import Parser
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
-from glitch.repr.inter import UnitBlockType
+from glitch.repr.inter import UnitBlockType, ElementInfo
 from glitch.repair.interactive.compiler.names_database import NormalizationVisitor
 from glitch.tech import Tech
 
@@ -38,6 +38,7 @@ def get_nil_file_state():
 
 class TestPatchSolver(unittest.TestCase):
     def setUp(self):
+        ElementInfo.sketched = -1
         self.f = NamedTemporaryFile(mode="w+")
         self.labeled_script = None
         self.statement = None
@@ -1610,6 +1611,34 @@ class TestPatchSolverAnsibleScript11(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
+class TestPatchSolverAnsibleScript12(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_12 = """---
+- amazon.aws.s3_bucket:
+    name: mys3bucket
+    state: present
+"""
+        self._setup_patch_solver(ansible_script_12, UnitBlockType.tasks, Tech.ansible)
+
+    def test_patch_solver_ansible_aws_bucket(self):
+        filesystem = SystemState()
+        filesystem.state["aws_s3_bucket:new_bucket"] = State()
+        filesystem.state["aws_s3_bucket:new_bucket"].attrs["state"] = "present"
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, timeout=10)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- amazon.aws.s3_bucket:
+    name: new_bucket
+    state: present
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -2203,7 +2232,7 @@ EOF
     def test_patch_solver_terraform_iam_role(self) -> None:
         filesystem = SystemState()
         filesystem.state["aws_iam_role:test_role"] = State()
-        filesystem.state["aws_iam_role:test_role"].attrs["state"] = "glitch-undef"
+        filesystem.state["aws_iam_role:test_role"].attrs["state"] = "present"
         filesystem.state["aws_iam_role:test_role"].attrs["assume_role_policy"] = """{
     "Version": "2012-10-17",
     "Statement": [
@@ -2261,7 +2290,7 @@ resource "aws_instance" "web" {
     def test_patch_solver_terraform_aws_instance(self) -> None:
         filesystem = SystemState()
         filesystem.state["aws_instance:web"] = State()
-        filesystem.state["aws_instance:web"].attrs["state"] = "glitch-undef"
+        filesystem.state["aws_instance:web"].attrs["state"] = "present"
         filesystem.state["aws_instance:web"].attrs["instance_type"] = "t2.micro"
         filesystem.state["aws_instance:web"].attrs["availability_zone"] = "us-west-2a"
 
@@ -2293,9 +2322,8 @@ resource "aws_s3_bucket" "example" {
 
     def test_patch_solver_terraform_aws_bucket(self):
         filesystem = SystemState()
-        filesystem.state["aws_s3_bucket:example"] = State()
-        filesystem.state["aws_s3_bucket:example"].attrs["state"] = "glitch-undef"
-        filesystem.state["aws_s3_bucket:example"].attrs["bucket"] = "different-test-bucket"
+        filesystem.state["aws_s3_bucket:different-test-bucket"] = State()
+        filesystem.state["aws_s3_bucket:different-test-bucket"].attrs["state"] = "present"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
