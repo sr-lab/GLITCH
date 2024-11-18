@@ -36,6 +36,10 @@ class NamesDatabase:
                 return "package"
             case "amazon.aws.s3_bucket", Tech.ansible:
                 return "aws_s3_bucket"
+            case "amazon.aws.ec2_instance", Tech.ansible:
+                return "aws_instance"
+            case "amazon.aws.iam_role", Tech.ansible:
+                return "aws_iam_role"
             case _:
                 pass
         return type
@@ -74,6 +78,8 @@ class NamesDatabase:
                 return "action"
             case "name", "aws_s3_bucket", Tech.terraform:
                 return "bucket"
+            case "assume_role_policy", "aws_iam_role", Tech.ansible:
+                return "assume_role_policy_document"
             case _:
                 pass
         return name
@@ -165,6 +171,8 @@ class NamesDatabase:
                 return "enabled"
             case "bucket", "aws_s3_bucket", Tech.terraform:
                 return "name"
+            case "assume_role_policy_document", "aws_iam_role", Tech.ansible:
+                return "assume_role_policy"
             case _:
                 pass
 

@@ -1639,6 +1639,113 @@ class TestPatchSolverAnsibleScript12(TestPatchSolver):
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
+class TestPatchSolverAnsibleScript13(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_13 = """---
+- name: restart a particular instance by its ID
+  amazon.aws.ec2_instance:
+    name: my_instance
+    state: present
+    availability_zone: us-west-2a
+"""
+        self._setup_patch_solver(ansible_script_13, UnitBlockType.tasks, Tech.ansible)
+
+    def test_patch_solver_ansible_aws_instance(self):
+        filesystem = SystemState()
+        filesystem.state["aws_instance:my_instance"] = State()
+        filesystem.state["aws_instance:my_instance"].attrs["state"] = "present"
+        filesystem.state["aws_instance:my_instance"].attrs["availability_zone"] = "us-west-2b"
+        filesystem.state["aws_instance:my_instance"].attrs["instance_type"] = "t2.micro"
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, timeout=10)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        result = """---
+- name: restart a particular instance by its ID
+  amazon.aws.ec2_instance:
+    name: my_instance
+    state: present
+    availability_zone: us-west-2b
+    instance_type: 't2.micro'
+"""
+        self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
+
+
+class TestPatchSolverAnsibleScript14(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        ansible_script_14 = """---
+- name: Create a role with description and tags
+  amazon.aws.iam_role:
+    name: mynewrole
+    state: present
+    assume_role_policy_document: |
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": "sts:AssumeRole",
+                    "Effect": "Allow",
+                    "Sid": "",
+                    "Principal": {
+                        "Service": "ec2.amazonaws.com"
+                    }
+                }
+            ]
+        }
+"""
+        self._setup_patch_solver(ansible_script_14, UnitBlockType.tasks, Tech.ansible)
+
+    def test_patch_solver_ansible_aws_role(self):
+        filesystem = SystemState()
+        filesystem.state["aws_iam_role:mynewrole"] = State()
+        filesystem.state["aws_iam_role:mynewrole"].attrs["state"] = "present"
+        filesystem.state["aws_iam_role:mynewrole"].attrs["assume_role_policy"] = """{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Deny",
+            "Sid": "",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            }
+        }
+    ]
+}"""
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, timeout=10)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+        model = models[0]
+
+        result = """---
+- name: Create a role with description and tags
+  amazon.aws.iam_role:
+    name: mynewrole
+    state: present
+    assume_role_policy_document: |
+        {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Deny",
+            "Sid": "",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            }
+        }
+    ]
+}
+"""
+        self._patch_solver_apply(solver, model, filesystem, Tech.ansible, result)
+
+
 class TestPatchSolverChefScript1(TestPatchSolver):
     def setUp(self):
         super().setUp()

@@ -530,6 +530,7 @@ class PatchApplier:
         labeled_script: LabeledUnitBlock,
         codeelement: CodeElement,
         value: str,
+        tech: Tech,
     ):
         with open(labeled_script.script.path, "r") as f:
             lines = f.readlines()
@@ -556,8 +557,10 @@ class PatchApplier:
                 and (old_line[start:end].endswith("'") or codeelement.code.endswith("'"))
             ):
                 value = f"'{value}'"
-            elif len(value.split("\n")) > 1: # FIXME: Terraform only
-                value = f'<<EOF\n{value}\nEOF'
+            elif len(value.split("\n")) > 1:
+                value = TemplateDatabase.get_template_for_multiline_string(tech).format(
+                    value
+                )
 
             if old_line[end - 1] == "\n":
                 value = f"{value}\n"
@@ -693,15 +696,15 @@ class PatchApplier:
                     ce.codeelement.value = ce.value
                     loc.value = ce.codeelement
                     self.__modify_codeelement(
-                        labeled_script, ce.codeelement, ce.value
+                        labeled_script, ce.codeelement, ce.value, labeled_script.tech
                     )
                 elif isinstance(loc, Variable):
                     ce.codeelement.value = ce.value
-                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value)
+                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value, labeled_script.tech)
                 elif isinstance(loc, AtomicUnit):
                     ce.codeelement.value = ce.value
                     loc.name = ce.codeelement
-                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value)
+                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value, labeled_script.tech)
             elif ce.type == "add_sketch":
                 loc = labeled_script.get_location(ce.codeelement)
                 assert isinstance(loc, Attribute)
