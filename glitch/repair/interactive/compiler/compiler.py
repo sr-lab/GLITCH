@@ -9,6 +9,15 @@ from glitch.repair.interactive.compiler.labeler import LabeledUnitBlock
 
 
 class DeltaPCompiler:
+    AU_TYPE_ATTRIBUTES = {
+        "user": ["state"],
+        "package": ["state"],
+        "service": ["state", "enabled"],
+        "aws_iam_role": ["state", "assume_role_policy"],
+        "aws_instance": ["state", "instance_type", "availability_zone"],
+        "aws_s3_bucket": ["state", "bucket"],
+    }
+
     def __init__(self, labeled_script: LabeledUnitBlock) -> None:
         self._sketched = -1
         self._literal = 0
@@ -18,7 +27,41 @@ class DeltaPCompiler:
         self._labeled_script = labeled_script
         self.seen_resources: List[Tuple[List[str], str]] = []
 
-    class __Attributes:
+    class _AtomicUnitCompiler:
+        def __init__(self, name: str, compiler: "DeltaPCompiler", attributes: List[str]) -> None:
+            self.__name = name
+            self._compiler = compiler
+            self.__attributes = attributes
+
+        def compile(
+            self,
+            atomic_unit: AtomicUnit,
+            attributes: "DeltaPCompiler._Attributes",
+        ) -> PStatement:
+            name = attributes["name"]
+            if name == PEUndef():
+                name = self._compiler._compile_expr(atomic_unit.name)
+                self._compiler._labeled_script.add_location(atomic_unit, atomic_unit.name)
+            path = PEBinOP(PAdd(), PEConst(PStr(self.__name + ":")), name)
+
+            if self._compiler._check_seen_resource(path):
+                return PSkip()
+
+            name_attr = attributes.get_attribute("name")
+            if name_attr is not None:
+                self._compiler._labeled_script.add_location(atomic_unit, name_attr)
+                self._compiler._labeled_script.add_location(name_attr, name_attr.value)
+
+            statement = PSkip()
+            for attribute in self.__attributes[::-1]:
+                statement = PSeq(
+                    self._compiler._handle_attr(atomic_unit, attributes, path, attribute),
+                    statement,
+                )
+
+            return statement
+
+    class _Attributes:
         def __init__(
             self, compiler: "DeltaPCompiler", au_type: str, tech: Tech
         ) -> None:
@@ -239,7 +282,7 @@ class DeltaPCompiler:
             logging.warning(f"Unsupported expression, got {expr}")
             return PEUnsupported()
         
-    def __check_seen_resource(
+    def _check_seen_resource(
         self,
         path: PExpr
     ):
@@ -258,10 +301,10 @@ class DeltaPCompiler:
             )
         return False
         
-    def __handle_attr(
+    def _handle_attr(
         self,
         atomic_unit: AtomicUnit,
-        attributes: __Attributes,
+        attributes: _Attributes,
         path: PExpr,
         attr: str
     ):
@@ -274,89 +317,11 @@ class DeltaPCompiler:
             PAttr(path, attr, PEVar(attr_var)),
         )
         return statement
-
-    def __handle_user(
-        self,
-        atomic_unit: AtomicUnit,
-        attributes: __Attributes,
-    ):
-        # execve("/usr/sbin/useradd", ["useradd", "test2"], ...)
-        # execve("/usr/bin/sudo", ["sudo", "userdel", "test2"], ...)
-        name = attributes["name"]
-        if name == PEUndef():
-            name = self._compile_expr(atomic_unit.name)
-            self._labeled_script.add_location(atomic_unit, atomic_unit.name)
-        path = PEBinOP(PAdd(), PEConst(PStr("user:")), name)
-
-        if self.__check_seen_resource(path):
-            return PSkip()
-        
-        name_attr = attributes.get_attribute("name")
-        if name_attr is not None:
-            self._labeled_script.add_location(atomic_unit, name_attr)
-            self._labeled_script.add_location(name_attr, name_attr.value)
-
-        return PSeq(
-            self.__handle_attr(atomic_unit, attributes, path, "state"), 
-            PSkip()
-        )
     
-    def __handle_package(
-        self,
-        atomic_unit: AtomicUnit,
-        attributes: __Attributes,
-    ):
-        name = attributes["name"]
-        if name == PEUndef():
-            name = self._compile_expr(atomic_unit.name)
-            self._labeled_script.add_location(atomic_unit, atomic_unit.name)
-        path = PEBinOP(PAdd(), PEConst(PStr("package:")), name)
-
-        if self.__check_seen_resource(path):
-            return PSkip()
-
-        name_attr = attributes.get_attribute("name")
-        if name_attr is not None:
-            self._labeled_script.add_location(atomic_unit, name_attr)
-            self._labeled_script.add_location(name_attr, name_attr.value)
-
-        return PSeq(
-            self.__handle_attr(atomic_unit, attributes, path, "state"), 
-            PSkip()
-        )
-    
-    def __handle_service(
-        self,
-        atomic_unit: AtomicUnit,
-        attributes: __Attributes,
-    ):
-        name = attributes["name"]
-        if name == PEUndef():
-            name = self._compile_expr(atomic_unit.name)
-            self._labeled_script.add_location(atomic_unit, atomic_unit.name)
-        path = PEBinOP(PAdd(), PEConst(PStr("service:")), name)
-
-        if self.__check_seen_resource(path):
-            return PSkip()
-
-        name_attr = attributes.get_attribute("name")
-        if name_attr is not None:
-            self._labeled_script.add_location(atomic_unit, name_attr)
-            self._labeled_script.add_location(name_attr, name_attr.value)
-
-        return PSeq(
-            PSeq(
-                self.__handle_attr(atomic_unit, attributes, path, "state"),
-                self.__handle_attr(atomic_unit, attributes, path, "enabled")
-            ), 
-            PSkip()
-        )
-        
-
     def __handle_file(
         self,
         atomic_unit: AtomicUnit,
-        attributes: __Attributes,
+        attributes: _Attributes,
     ) -> PStatement:
         path = attributes["path"]
         path_attr = attributes.get_attribute("path")
@@ -368,21 +333,21 @@ class DeltaPCompiler:
             path = self._compile_expr(atomic_unit.name)
             self._labeled_script.add_location(atomic_unit, atomic_unit.name)
 
-        if self.__check_seen_resource(path):
+        if self._check_seen_resource(path):
             return PSkip()
 
-        statement = self.__handle_attr(atomic_unit, attributes, path, "state")
+        statement = self._handle_attr(atomic_unit, attributes, path, "state")
         statement = PSeq(
             statement,
-            self.__handle_attr(atomic_unit, attributes, path, "content")
+            self._handle_attr(atomic_unit, attributes, path, "content")
         )
         statement = PSeq(
             statement,
-            self.__handle_attr(atomic_unit, attributes, path, "owner")
+            self._handle_attr(atomic_unit, attributes, path, "owner")
         )
         statement = PSeq(
             statement,
-            self.__handle_attr(atomic_unit, attributes, path, "mode")
+            self._handle_attr(atomic_unit, attributes, path, "mode")
         )
 
         return statement
@@ -437,7 +402,7 @@ class DeltaPCompiler:
     ) -> PStatement:
         statement = PSkip()
         tech = self._labeled_script.tech
-        attributes: DeltaPCompiler.__Attributes = DeltaPCompiler.__Attributes(
+        attributes: DeltaPCompiler._Attributes = DeltaPCompiler._Attributes(
             self, atomic_unit.type, tech
         )
 
@@ -448,31 +413,14 @@ class DeltaPCompiler:
                 statement,
                 self.__handle_file(atomic_unit, attributes),
             )
-        elif atomic_unit.type == "user":
-            for attribute in atomic_unit.attributes:
-                # HACK
-                self._compile_expr(attribute.value)
-                self._labeled_script.add_location(attribute, attribute.value)
-                self._labeled_script.add_location(atomic_unit, attribute)
-                attributes.add_attribute(attribute)
-            statement = PSeq(
-                statement,
-                self.__handle_user(atomic_unit, attributes),
-            )
-        elif atomic_unit.type == "package":
+        elif atomic_unit.type in DeltaPCompiler.AU_TYPE_ATTRIBUTES:
             for attribute in atomic_unit.attributes:
                 attributes.add_attribute(attribute)
-            statement = PSeq(
-                statement,
-                self.__handle_package(atomic_unit, attributes),
-            )
-        elif atomic_unit.type == "service":
-            for attribute in atomic_unit.attributes:
-                attributes.add_attribute(attribute)
-            statement = PSeq(
-                statement,
-                self.__handle_service(atomic_unit, attributes),
-            )
+            statement = DeltaPCompiler._AtomicUnitCompiler(
+                atomic_unit.type,
+                self,
+                DeltaPCompiler.AU_TYPE_ATTRIBUTES[atomic_unit.type],
+            ).compile(atomic_unit, attributes)
         # Defined type
         elif self._labeled_script.env.has_definition(atomic_unit.type):
             statement = PSeq(self.__handle_defined_type(atomic_unit), PSkip())

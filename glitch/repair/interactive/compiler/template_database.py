@@ -20,6 +20,8 @@ class TemplateDatabase:
             return "{} {}\n"
         elif isinstance(code_element, Attribute) and tech == Tech.ansible:
             return "{}: {}\n"
+        elif isinstance(code_element, Attribute) and tech == Tech.terraform:
+            return "{} = {}\n"
 
         raise NotImplementedError(
             "Template not found for the given code element and tech."

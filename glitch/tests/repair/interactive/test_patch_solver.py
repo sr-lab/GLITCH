@@ -9,6 +9,7 @@ from glitch.repair.interactive.values import UNDEF
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.ansible import AnsibleParser
 from glitch.parsers.chef import ChefParser
+from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.parser import Parser
 from glitch.repair.interactive.compiler.labeler import GLITCHLabeler
 from glitch.repair.interactive.compiler.compiler import DeltaPCompiler
@@ -52,6 +53,8 @@ class TestPatchSolver(unittest.TestCase):
             return AnsibleParser()
         elif tech == Tech.chef:
             return ChefParser()
+        elif tech == Tech.terraform:
+            return TerraformParser()
         else:
             raise ValueError("Invalid tech")
 
@@ -2170,3 +2173,140 @@ class TestPatchSolverChefScript11(TestPatchSolver):
         end
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.chef, result)
+
+
+class TestPatchSolverTerraformScript1(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        terraform_script_1 = """
+resource "aws_iam_role" "test_role" {
+  name = "test_role"
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Sid": "",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            }
+        }
+    ]
+}
+EOF
+}
+"""
+        self._setup_patch_solver(terraform_script_1, UnitBlockType.script, Tech.terraform)
+
+    def test_patch_solver_terraform_iam_role(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["aws_iam_role:test_role"] = State()
+        filesystem.state["aws_iam_role:test_role"].attrs["state"] = "glitch-undef"
+        filesystem.state["aws_iam_role:test_role"].attrs["assume_role_policy"] = """{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Deny",
+            "Sid": "",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            }
+        }
+    ]
+}"""
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        model = models[0]
+        result = """
+resource "aws_iam_role" "test_role" {
+  name = "test_role"
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Deny",
+            "Sid": "",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            }
+        }
+    ]
+}
+EOF
+}
+"""
+        self._patch_solver_apply(solver, model, filesystem, Tech.terraform, result)
+
+
+class TestPatchSolverTerraformScript2(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        terraform_script_2 = """
+resource "aws_instance" "web" {
+  instance_type = "t3.micro"
+}
+"""
+        self._setup_patch_solver(terraform_script_2, UnitBlockType.script, Tech.terraform)
+
+    def test_patch_solver_terraform_aws_instance(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["aws_instance:web"] = State()
+        filesystem.state["aws_instance:web"].attrs["state"] = "glitch-undef"
+        filesystem.state["aws_instance:web"].attrs["instance_type"] = "t2.micro"
+        filesystem.state["aws_instance:web"].attrs["availability_zone"] = "us-west-2a"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        model = models[0]
+        result = """
+resource "aws_instance" "web" {
+  instance_type = "t2.micro"
+  availability_zone = "us-west-2a"
+}
+"""
+        self._patch_solver_apply(solver, model, filesystem, Tech.terraform, result)
+
+
+class TestPatchSolverTerraformScript3(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        terraform_script_3 = """
+resource "aws_s3_bucket" "example" {
+  bucket = "my-tf-test-bucket"
+}
+"""
+        self._setup_patch_solver(terraform_script_3, UnitBlockType.script, Tech.terraform)
+
+    def test_patch_solver_terraform_aws_bucket(self):
+        filesystem = SystemState()
+        filesystem.state["aws_s3_bucket:example"] = State()
+        filesystem.state["aws_s3_bucket:example"].attrs["state"] = "glitch-undef"
+        filesystem.state["aws_s3_bucket:example"].attrs["bucket"] = "different-test-bucket"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        model = models[0]
+        result = """
+resource "aws_s3_bucket" "example" {
+  bucket = "different-test-bucket"
+}
+"""
+        self._patch_solver_apply(solver, model, filesystem, Tech.terraform, result)

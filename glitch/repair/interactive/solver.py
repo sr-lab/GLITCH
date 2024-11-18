@@ -474,7 +474,10 @@ class PatchApplier:
             col = len(lines[line - 2]) - len(lines[line - 2].lstrip())
         attribute.line = line
         new_line = TemplateDatabase.get_template(attribute, tech)
-        value = value if not is_string else f"'{value}'"
+        if tech == Tech.terraform:
+            value = value if not is_string else f'"{value}"'
+        else:
+            value = value if not is_string else f"'{value}'"
         new_line = col * " " + new_line.format(attribute.name, value)
         lines.insert(line - 1, new_line)
         if not lines[line - 2].endswith("\n"):
@@ -548,6 +551,9 @@ class PatchApplier:
                 and (old_line[start:end].endswith("'") or codeelement.code.endswith("'"))
             ):
                 value = f"'{value}'"
+            elif len(value.split("\n")) > 1: # FIXME: Terraform only
+                value = f'<<EOF\n{value}\nEOF'
+
             if old_line[end - 1] == "\n":
                 value = f"{value}\n"
             new_line = old_line[:start] + value + old_line[end:]
