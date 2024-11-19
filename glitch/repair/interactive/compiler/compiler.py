@@ -15,7 +15,7 @@ class DeltaPCompiler:
         "service": ["state", "enabled"],
         "aws_iam_role": ["state", "assume_role_policy"],
         "aws_instance": ["state", "instance_type", "availability_zone"],
-        "aws_s3_bucket": ["state"],
+        "aws_s3_bucket": ["state", "acl"],
     }
 
     def __init__(self, labeled_script: LabeledUnitBlock) -> None:

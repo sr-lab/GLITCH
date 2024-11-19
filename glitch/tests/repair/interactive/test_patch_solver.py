@@ -1625,6 +1625,7 @@ class TestPatchSolverAnsibleScript12(TestPatchSolver):
         filesystem = SystemState()
         filesystem.state["aws_s3_bucket:new_bucket"] = State()
         filesystem.state["aws_s3_bucket:new_bucket"].attrs["state"] = "present"
+        filesystem.state["aws_s3_bucket:new_bucket"].attrs["acl"] = UNDEF
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem, timeout=10)
         models = solver.solve()
@@ -2431,6 +2432,7 @@ resource "aws_s3_bucket" "example" {
         filesystem = SystemState()
         filesystem.state["aws_s3_bucket:different-test-bucket"] = State()
         filesystem.state["aws_s3_bucket:different-test-bucket"].attrs["state"] = "present"
+        filesystem.state["aws_s3_bucket:different-test-bucket"].attrs["acl"] = "public-read"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -2442,6 +2444,7 @@ resource "aws_s3_bucket" "example" {
         result = """
 resource "aws_s3_bucket" "example" {
   bucket = "different-test-bucket"
+  acl = "public-read"
 }
 """
         self._patch_solver_apply(solver, model, filesystem, Tech.terraform, result)
