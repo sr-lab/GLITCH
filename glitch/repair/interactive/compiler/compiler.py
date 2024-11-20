@@ -112,7 +112,7 @@ class DeltaPCompiler:
                 self.__compiler._sketched -= 1
                 self.add_attribute(attr)
             else:
-                # HACK
+                # HACK: Allows to fix unsupported expressions
                 attr_value = self.get_attribute_value(attr_name)
                 if attr_value == PEUnsupported():
                     if self.__compiler._labeled_script.has_label(attr.value):
@@ -182,10 +182,17 @@ class DeltaPCompiler:
 
     def _compile_expr(self, expr: Expr) -> PExpr:
         def binary_op(op: Type[PBinOp], left: Expr, right: Expr) -> PExpr:
+            left_expr = self._compile_expr(left)
+            right_expr = self._compile_expr(right)
+            if (
+                isinstance(left_expr, PEUnsupported) 
+                or isinstance(right_expr, PEUnsupported)
+            ):
+                return PEUnsupported()
             return PEBinOP(
                 op(),
-                self._compile_expr(left),
-                self._compile_expr(right),
+                left_expr,
+                right_expr,
             )
 
         if isinstance(expr, String):

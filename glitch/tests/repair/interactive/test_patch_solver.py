@@ -2448,3 +2448,37 @@ resource "aws_s3_bucket" "example" {
 }
 """
         self._patch_solver_apply(solver, model, filesystem, Tech.terraform, result)
+
+
+class TestPatchSolverTerraformScript4(TestPatchSolver):
+    def setUp(self):
+        super().setUp()
+        terraform_script_4 = """
+resource "aws_instance" "stdby_vThunder" {
+  instance_type = "m4.xlarge"
+  availability_zone = "${var.region}a"
+}
+"""
+        self._setup_patch_solver(terraform_script_4, UnitBlockType.script, Tech.terraform)
+
+    def test_patch_solver_terraform_unsupported(self):
+        filesystem = SystemState()
+        filesystem.state["aws_instance:stdby_vThunder"] = State()
+        filesystem.state["aws_instance:stdby_vThunder"].attrs["state"] = "present"
+        filesystem.state["aws_instance:stdby_vThunder"].attrs["instance_type"] = "m3.xlarge"
+        filesystem.state["aws_instance:stdby_vThunder"].attrs["availability_zone"] = "us-west-2a"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem)
+        models = solver.solve()
+        assert models is not None
+        assert len(models) == 1
+
+        model = models[0]
+        result = """
+resource "aws_instance" "stdby_vThunder" {
+  instance_type = "m3.xlarge"
+  availability_zone = "us-west-2a"
+}
+"""
+        self._patch_solver_apply(solver, model, filesystem, Tech.terraform, result)
