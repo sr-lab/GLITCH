@@ -51,12 +51,14 @@ class PatchSolver:
         statement: PStatement,
         filesystem: SystemState,
         timeout: int = 180,
+        memory_limit: int = 1024,
         ctx: Optional[Context] = None,
         debug: bool = False,
     ) -> None:
         if ctx is None:
             self.ctx = z3.Context()
         self.solver = Solver(ctx=self.ctx)
+        self.solver.set("max_memory", memory_limit)
         self.debug = debug
         if self.debug:
             self.solver.add = lambda c: self.solver.assert_and_track(c, str(c) + f" ({str(uuid.uuid4())})")  # type: ignore
