@@ -1,7 +1,10 @@
 import z3
+import re
+import os
+import tempfile
 import time
-import sys
-import uuid
+import random
+import string
 import signal
 import logging
 import glitch.repr.inter as inter
@@ -10,9 +13,9 @@ from copy import deepcopy
 from typing import List, Callable, Tuple, Any, Literal
 from z3 import (
     Solver,
-    sat,
     If,
     IntVal,
+    BoolVal,
     Bool,
     And,
     Not,
@@ -21,7 +24,6 @@ from z3 import (
     Sum,
     Concat,
     StringVal,
-    ModelRef,
     SeqRef,
     Context,
     ExprRef,
@@ -60,8 +62,6 @@ class PatchSolver:
         self.solver = Solver(ctx=self.ctx)
         self.solver.set("max_memory", memory_limit)
         self.debug = debug
-        if self.debug:
-            self.solver.add = lambda c: self.solver.assert_and_track(c, str(c) + f" ({str(uuid.uuid4())})")  # type: ignore
 
         self.timeout = timeout
         self.statement = statement
@@ -355,9 +355,132 @@ class PatchSolver:
                 constraints.append(Or(condition, And(Not(condition), constraint)))
 
         return constraints, funs
+    
+    def __decode_smtlib2_string(self, string: str) -> str:
+        """
+        Converts SMTLIB2-style Unicode escape sequences in a string to their respective characters.
+        
+        Parameters:
+            string (str): The input string containing SMTLIB2-style Unicode escapes.
+            
+        Returns:
+            str: The decoded string.
+        """
+        def unicode_replacer(match) -> str: # type: ignore
+            hex_value = match.group(1) # type: ignore
+            return chr(int(hex_value, 16)) # type: ignore
+        
+        # Replace all matches in the string
+        return re.sub(r'\\u\{([0-9A-Fa-f]+)\}', unicode_replacer, string) # type: ignore
 
-    def solve(self) -> Optional[List[ModelRef]]:
-        models: List[ModelRef] = []
+    def __parse_z3_output(self, z3_output: str) -> Dict[str, Any]:
+        define_fun_pattern = re.compile(r'\(define-fun (\S+) \(\) (\S+)\n\s+(.+?)\)', re.DOTALL)
+        parsed_data: Dict[str, Any] = {}
+
+        for match in define_fun_pattern.finditer(z3_output):
+            name = match.group(1)
+            if name.startswith("|") and name.endswith("|"):
+                name = name[1:-1]
+            datatype = match.group(2)
+            value = match.group(3).strip()
+            
+            if datatype == "String":
+                # Replace Z3 double-escaped quotes (e.g., "") with single quotes (")
+                value = value.replace('""', '"')
+                value = value.strip('"')
+            elif datatype == "Int":
+                value = int(value)
+            elif datatype == "Bool" and value == "true":
+                value = True
+            elif datatype == "Bool" and value == "false":
+                value = False
+            
+            parsed_data[name] = value
+
+        return parsed_data
+    
+
+
+    def __add_named_to_assertions(self, smtlib_code: str) -> Tuple[str, Dict[str, str]]:
+        def generate_random_name(length: int = 10):
+            return "A" + ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+        result: List[str] = []
+        names_to_assertions: Dict[str, str] = {}
+        stack: List[int] = []
+        start_index = None
+        inside_assert = False
+        i = 0
+
+        while i < len(smtlib_code):
+            char = smtlib_code[i]
+
+            if char == '(':
+                stack.append(i)
+                if not inside_assert and smtlib_code[i:i+7] == "(assert":
+                    start_index = i
+                    inside_assert = True
+
+            elif char == ')':
+                stack.pop()
+                if inside_assert and not stack:
+                    assert_content = smtlib_code[start_index + 7:i].strip()
+                    random_name = generate_random_name()
+                    names_to_assertions[random_name] = assert_content
+                    transformed_assert = f"(assert (! {assert_content} :named {random_name}))"
+                    result.append(transformed_assert)
+                    start_index = None
+                    inside_assert = False
+                    i += 1
+                    continue
+
+            if not inside_assert:
+                result.append(char)
+            i += 1
+
+        return ''.join(result), names_to_assertions
+
+    def __run_solver(self) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        temp = tempfile.NamedTemporaryFile(mode="w+")
+        temp.write(self.solver.to_smt2())
+        temp.flush()
+        output = os.popen(f"z3 -smt2 -model {temp.name}").read()
+        temp.close()
+
+        result = output.split("\n")[0]
+        if result.strip() == "sat":
+            model = output.split("\n", 1)[1]
+            model = self.__decode_smtlib2_string(model)
+            res: Dict[str, Any] = self.__parse_z3_output(model)
+
+            return True, res
+        elif result.strip() == "unsat" and self.debug:
+            temp = tempfile.NamedTemporaryFile(mode="w+") 
+            smt2, names_to_assertions = self.__add_named_to_assertions(self.solver.to_smt2())
+            smt2 = "(set-option :produce-unsat-cores true)\n" + smt2 + "\n(get-unsat-core)"
+            temp.write(smt2)
+            temp.flush()
+            output = os.popen(f"z3 -smt2 {temp.name}").read()
+            unsat_core = output.split("\n", 1)[1].strip()[1:-1].split(" ")
+            print("=== Unsat core: ===")
+            for name in unsat_core:
+                print(names_to_assertions[name])
+            print("===================")
+            temp.close()
+
+        return False, None
+    
+    def __get_solver_value(self, value: Any) -> ExprRef | bool:
+        if isinstance(value, str):
+            return StringVal(value, ctx=self.ctx)
+        elif isinstance(value, int):
+            return IntVal(value, ctx=self.ctx)
+        elif isinstance(value, bool):
+            return BoolVal(value, ctx=self.ctx)
+        raise ValueError(f"Unsupported value type: {type(value)}")
+
+    def solve(self) -> Optional[List[Dict[str, Any]]]:
+        models: List[Dict[str, Any]] = []
         timed_out, interrupt = False, False
 
         def timeout(signum: Any, frame: Any):
@@ -378,26 +501,27 @@ class PatchSolver:
                     mid = (lo + hi) // 2
                     self.solver.push()
                     self.solver.add(self.sum_var >= IntVal(mid, ctx=self.ctx))
-                    if self.solver.check() == sat:
+                    sat, o_model = self.__run_solver()
+                    if sat:
                         lo = mid + 1
-                        model = self.solver.model()
+                        model = o_model
                         self.solver.pop()
                         continue
                     else:
                         hi = mid
+
                     self.solver.pop()
 
                 if model is None:
-                    if self.debug:
-                        print(self.solver.unsat_core(), file=sys.stderr)
                     break
 
                 models.append(model)
                 # Removes conditional variables that were not used
-                dvars = filter(
-                    lambda v: model[v] is not None, self.vars.values() # type: ignore
-                )  
-                self.solver.add(Not(And([v == model[v] for v in dvars])))
+                dvars = list(filter(
+                    lambda v: str(v) in model, self.vars.values() # type: ignore
+                ))
+
+                self.solver.add(Not(And([v == self.__get_solver_value(model[str(v)]) for v in dvars])))
         except z3.Z3Exception as e:
             if interrupt:
                 timed_out = True
@@ -573,19 +697,18 @@ class PatchApplier:
             f.writelines(lines)
     
     def get_changes(
-        self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
+        self, model_ref: Dict[str, Any], labeled_script: LabeledUnitBlock
     ) -> List[PatchChange]:
         changed: List[Tuple[int, Any]] = []
 
         for label, unchanged in self.unchanged.items():
-            if model_ref[unchanged] == 0:  # type: ignore
-                hole = self.holes[f"loc-{label}"]
-                changed.append((label, model_ref[hole]))
+            if model_ref[str(unchanged)] == 0:  # type: ignore
+                changed.append((label, model_ref[f"loc-{label}"]))
 
         # Track attributes that became undefined
         for hole in self.holes:
-            var = self.holes[hole]
-            if model_ref[var].as_string() == UNDEF:  # type: ignore
+            var = str(self.holes[hole])
+            if model_ref[var] == UNDEF:  # type: ignore
                 if hole.rsplit("-", 1)[0].endswith("-"):  # Avoid sketches
                     continue
                 label = int(hole.rsplit("-", 1)[-1])
@@ -596,7 +719,7 @@ class PatchApplier:
 
         for change in changed:
             label, value = change
-            value = value.as_string()
+            value = value
             codeelement = labeled_script.get_codeelement(label)
 
             assert isinstance(codeelement, (inter.Expr, inter.KeyValue))
@@ -660,7 +783,7 @@ class PatchApplier:
                     loc.name = inter.String(change.value, change.info)
 
     def apply_patch(
-        self, model_ref: ModelRef, labeled_script: LabeledUnitBlock
+        self, model_ref: Dict[str, Any], labeled_script: LabeledUnitBlock
     ) -> None:
         changed_elements = self.get_changes(model_ref, labeled_script)
         self.reverse_changes(labeled_script, changed_elements)
