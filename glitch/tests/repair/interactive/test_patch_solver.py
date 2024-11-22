@@ -1,4 +1,5 @@
 import os
+import pytest
 import unittest
 from tempfile import NamedTemporaryFile
 
@@ -231,6 +232,31 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
             }
         """
         self._patch_solver_apply(solver, model, filesystem, Tech.puppet, result)
+
+    def test_patch_solver_puppet_timeout(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = State()
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html><body><h1>Hello World</h1></body></html>"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, timeout=0)
+        pytest.raises(TimeoutError, solver.solve)
+
+
+    def test_patch_solver_puppet_memory_limit(self) -> None:
+        filesystem = SystemState()
+        filesystem.state["/var/www/customers/public_html/index.php"] = State()
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html><body><h1>Hello World</h1></body></html>"
+
+        assert self.statement is not None
+        solver = PatchSolver(self.statement, filesystem, memory_limit=1024 * 10)
+        pytest.raises(MemoryError, solver.solve)
 
 
 class TestPatchSolverPuppetScript2(TestPatchSolver):

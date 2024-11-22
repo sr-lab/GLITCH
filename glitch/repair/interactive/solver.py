@@ -1,11 +1,10 @@
 import z3
 import re
-import os
+import subprocess
 import tempfile
 import time
 import random
 import string
-import signal
 import logging
 import glitch.repr.inter as inter
 
@@ -53,16 +52,15 @@ class PatchSolver:
         statement: PStatement,
         filesystem: SystemState,
         timeout: int = 180,
-        memory_limit: int = 1024,
+        memory_limit: int = 1024 * 1024,
         ctx: Optional[Context] = None,
         debug: bool = False,
     ) -> None:
         if ctx is None:
             self.ctx = z3.Context()
-        self.solver = Solver(ctx=self.ctx)
-        self.solver.set("max_memory", memory_limit)
         self.debug = debug
-
+        self.memory_limit = memory_limit
+        self.constraints: List[ExprRef] = []
         self.timeout = timeout
         self.statement = statement
         self.sum_var = Int("sum", ctx=self.ctx)
@@ -93,12 +91,11 @@ class PatchSolver:
         constraints, self.__funs = self.__generate_soft_constraints(
             self.statement, self.__funs
         )
-        for constraint in constraints:
-            self.solver.add(constraint)
+        self.constraints += constraints
 
         self.__generate_hard_constraints(filesystem)
 
-        self.solver.add(Sum(list(self.unchanged.values())) == self.sum_var)
+        self.constraints.append(Sum(list(self.unchanged.values())) == self.sum_var)
 
     def __get_var(self, id: str) -> Optional[ExprRef]:
         scopes = id.split(":dejavu:")
@@ -113,7 +110,7 @@ class PatchSolver:
 
     def __const_string(self, name: str) -> ExprRef:
         var = z3.String(name, ctx=self.ctx)
-        self.solver.add(Or(*[var == s for s in self.possible_strings]))
+        self.constraints.append(Or(*[var == s for s in self.possible_strings]))
         return var
     
     def __collect_labels(self, statement: PStatement | PExpr) -> List[int]:
@@ -212,7 +209,7 @@ class PatchSolver:
     def __generate_hard_constraints(self, filesystem: SystemState) -> None:
         for path, state in filesystem.state.items():
             for key, value in state.attrs.items():
-                self.solver.add(
+                self.constraints.append(
                     self.__funs[key](StringVal(path, ctx=self.ctx)) == StringVal(value, ctx=self.ctx)
                 )
 
@@ -272,7 +269,7 @@ class PatchSolver:
             self.vars[statement.id] = var
             unchanged = self.unchanged[statement.label]
             value, constraints = self.__compile_expr(statement.expr)
-            self.solver.add(
+            self.constraints.append(
                 Or(
                     And(unchanged == 1, var == value),
                     And(unchanged == 0, var == hole),
@@ -329,12 +326,12 @@ class PatchSolver:
             unchanged = True
             for label in set(labels_cons) - set(labels_alt):
                 unchanged = And(unchanged, self.unchanged[label] == 1)
-            self.solver.add(Or(condition, unchanged))
+            self.constraints.append(Or(condition, unchanged))
 
             unchanged = True
             for label in set(labels_alt) - set(labels_cons):
                 unchanged = And(unchanged, self.unchanged[label] == 1)
-            self.solver.add(Or(Not(condition), unchanged))
+            self.constraints.append(Or(Not(condition), unchanged))
 
             vars_cons = self.__collect_vars(statement.cons)
             vars_alt = self.__collect_vars(statement.alt)
@@ -342,12 +339,12 @@ class PatchSolver:
             fixed_vars = True
             for var in set(vars_cons) - set(vars_alt):
                 fixed_vars = And(fixed_vars, self.vars[var] == "")
-            self.solver.add(Or(condition, fixed_vars))
+            self.constraints.append(Or(condition, fixed_vars))
 
             fixed_vars = True
             for var in set(vars_alt) - set(vars_cons):
                 fixed_vars = And(fixed_vars, self.vars[var] == "")
-            self.solver.add(Or(Not(condition), fixed_vars))
+            self.constraints.append(Or(Not(condition), fixed_vars))
 
             for constraint in cons_constraints:
                 constraints.append(Or(Not(condition), And(condition, constraint)))
@@ -439,14 +436,30 @@ class PatchSolver:
             i += 1
 
         return ''.join(result), names_to_assertions
-
-    def __run_solver(self) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    
+    def __run_z3(self, smt2: str, timeout: int) -> str:
         temp = tempfile.NamedTemporaryFile(mode="w+")
-        temp.write(self.solver.to_smt2())
+        temp.write(smt2)
         temp.flush()
-        output = os.popen(f"z3 -smt2 -model {temp.name}").read()
+        result = subprocess.run(
+            f"ulimit -v {self.memory_limit} && timeout {timeout} z3 -smt2 -model {temp.name}",
+            shell=True,
+            text=True,
+            capture_output=True,
+        )
+        if result.returncode == 124:
+            raise TimeoutError("Solver timed out")
+        elif result.returncode in [137, 139]:  
+            raise MemoryError("Solver ran out of memory")
         temp.close()
+        return result.stdout
 
+    def __run_solver(self, timeout: int) -> Tuple[bool, Optional[Dict[str, Any]]]:
+        solver = Solver(ctx=self.ctx)
+        for constraint in self.constraints:
+            solver.add(constraint)
+
+        output = self.__run_z3(solver.to_smt2(), timeout)
         result = output.split("\n")[0]
         if result.strip() == "sat":
             model = output.split("\n", 1)[1]
@@ -455,18 +468,14 @@ class PatchSolver:
 
             return True, res
         elif result.strip() == "unsat" and self.debug:
-            temp = tempfile.NamedTemporaryFile(mode="w+") 
-            smt2, names_to_assertions = self.__add_named_to_assertions(self.solver.to_smt2())
+            smt2, names_to_assertions = self.__add_named_to_assertions(solver.to_smt2())
             smt2 = "(set-option :produce-unsat-cores true)\n" + smt2 + "\n(get-unsat-core)"
-            temp.write(smt2)
-            temp.flush()
-            output = os.popen(f"z3 -smt2 {temp.name}").read()
+            output = self.__run_z3(smt2, timeout)
             unsat_core = output.split("\n", 1)[1].strip()[1:-1].split(" ")
             print("=== Unsat core: ===")
             for name in unsat_core:
                 print(names_to_assertions[name])
             print("===================")
-            temp.close()
 
         return False, None
     
@@ -479,62 +488,42 @@ class PatchSolver:
             return BoolVal(value, ctx=self.ctx)
         raise ValueError(f"Unsupported value type: {type(value)}")
 
-    def solve(self) -> Optional[List[Dict[str, Any]]]:
+    def solve(self) -> List[Dict[str, Any]]:
         models: List[Dict[str, Any]] = []
-        timed_out, interrupt = False, False
-
-        def timeout(signum: Any, frame: Any):
-            nonlocal interrupt
-            self.solver.ctx.interrupt()
-            interrupt = True
-        signal.signal(signal.SIGALRM, timeout)
-        signal.alarm(self.timeout)
 
         start = time.time()
+        while True and time.time() - start < self.timeout:
+            lo, hi = 0, len(self.unchanged) + 1
+            model = None
 
-        try:
-            while True and time.time() - start < self.timeout:
-                lo, hi = 0, len(self.unchanged) + 1
-                model = None
+            while lo < hi and time.time() - start < self.timeout:
+                mid = (lo + hi) // 2
+                self.constraints.append(self.sum_var >= IntVal(mid, ctx=self.ctx))
+                sat, o_model = self.__run_solver(self.timeout - int(time.time() - start))
+                if sat:
+                    lo = mid + 1
+                    model = o_model
+                    self.constraints.pop()
+                    continue
+                else:
+                    hi = mid
 
-                while lo < hi and time.time() - start < self.timeout:
-                    mid = (lo + hi) // 2
-                    self.solver.push()
-                    self.solver.add(self.sum_var >= IntVal(mid, ctx=self.ctx))
-                    sat, o_model = self.__run_solver()
-                    if sat:
-                        lo = mid + 1
-                        model = o_model
-                        self.solver.pop()
-                        continue
-                    else:
-                        hi = mid
+                self.constraints.pop()
 
-                    self.solver.pop()
+            if model is None:
+                break
 
-                if model is None:
-                    break
+            models.append(model)
+            # Removes conditional variables that were not used
+            dvars = list(filter(
+                lambda v: str(v) in model, self.vars.values() # type: ignore
+            ))
 
-                models.append(model)
-                # Removes conditional variables that were not used
-                dvars = list(filter(
-                    lambda v: str(v) in model, self.vars.values() # type: ignore
-                ))
+            self.constraints.append(Not(And([v == self.__get_solver_value(model[str(v)]) for v in dvars])))
 
-                self.solver.add(Not(And([v == self.__get_solver_value(model[str(v)]) for v in dvars])))
-        except z3.Z3Exception as e:
-            if interrupt:
-                timed_out = True
-            else:
-                raise e
-        finally:
-            signal.alarm(0)
+        if time.time() - start >= self.timeout:
+            raise TimeoutError("Solver timed out")
 
-        if timed_out and len(models) > 0:
-            return models
-        elif timed_out:
-            return None
-        
         return models
 
 
