@@ -176,9 +176,9 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                 if (
                     rule["required"] == "yes"
                     and element.type in rule["au_type"]
-                    and not self.check_required_attribute(
-                        element.attributes, rule["parents"], rule["attribute"]
-                    )
+                    and self.check_required_attribute(
+                        element, rule["parents"], rule["attribute"]
+                    ) is None
                 ):
                     errors.append(
                         Error(

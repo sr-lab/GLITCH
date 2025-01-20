@@ -3,7 +3,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.repr.inter import *
 
 
 class TerraformMissingEncryption(TerraformSmellChecker):
@@ -19,7 +19,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
                 and parent_name in config["parents"]
-                and config["values"] != [""]
+                and config["values"] != []
             ):
                 if (
                     "any_not_empty" in config["values"]
@@ -82,17 +82,19 @@ class TerraformMissingEncryption(TerraformSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
-            if element.type == "resource.aws_s3_bucket":
-                expr = "\\${aws_s3_bucket\\." + f"{element.name}\\."
+            # This does not work when the name is not a String :/
+            if element.type == "aws_s3_bucket" and isinstance(element.name, String):
+                expr = "aws_s3_bucket\\." + f"{element.name.value}\\."
                 pattern = re.compile(rf"{expr}")
+
                 r = self.get_associated_au(
                     file,
-                    "resource.aws_s3_bucket_server_side_encryption_configuration",
+                    "aws_s3_bucket_server_side_encryption_configuration",
                     "bucket",
                     pattern,
-                    [""],
+                    [],
                 )
-                if not r:
+                if r is None:
                     errors.append(
                         Error(
                             "sec_missing_encryption",
@@ -105,7 +107,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                     )
             elif element.type == "resource.aws_eks_cluster":
                 resources = self.check_required_attribute(
-                    element.attributes, ["encryption_config"], "resources[0]"
+                    element, ["encryption_config"], "resources", value="non_empty_list"
                 )
                 if isinstance(resources, KeyValue):
                     i = 0
@@ -139,33 +141,29 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                 "resource.aws_launch_configuration",
             ]:
                 ebs_block_device = self.check_required_attribute(
-                    element.attributes, [""], "ebs_block_device"
+                    element, ["ebs_block_device"], "encrypted"
                 )
-                if isinstance(ebs_block_device, KeyValue):
-                    encrypted = self.check_required_attribute(
-                        ebs_block_device.keyvalues, [""], "encrypted"
-                    )
-                    if not encrypted:
-                        errors.append(
-                            Error(
-                                "sec_missing_encryption",
-                                element,
-                                file,
-                                repr(element),
-                                f"Suggestion: check for a required attribute with name 'ebs_block_device.encrypted'.",
-                            )
+                if ebs_block_device is None:
+                    errors.append(
+                        Error(
+                            "sec_missing_encryption",
+                            element,
+                            file,
+                            repr(element),
+                            f"Suggestion: check for a required attribute with name 'ebs_block_device.encrypted'.",
                         )
+                    )
             elif element.type == "resource.aws_ecs_task_definition":
                 volume = self.check_required_attribute(
-                    element.attributes, [""], "volume"
+                    element.attributes, [], "volume"
                 )
                 if isinstance(volume, KeyValue):
                     efs_volume_config = self.check_required_attribute(
-                        volume.keyvalues, [""], "efs_volume_configuration"
+                        volume.keyvalues, [], "efs_volume_configuration"
                     )
                     if isinstance(efs_volume_config, KeyValue):
                         transit_encryption = self.check_required_attribute(
-                            efs_volume_config.keyvalues, [""], "transit_encryption"
+                            efs_volume_config.keyvalues, [], "transit_encryption"
                         )
                         if not transit_encryption:
                             errors.append(
@@ -183,9 +181,9 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                 if (
                     config["required"] == "yes"
                     and element.type in config["au_type"]
-                    and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
-                    )
+                    and self.check_required_attribute(
+                        element, config["parents"], config["attribute"]
+                    ) is None
                 ):
                     errors.append(
                         Error(

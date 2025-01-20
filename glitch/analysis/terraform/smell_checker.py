@@ -1,10 +1,10 @@
 import os
-import re
 
 from re import Pattern
-from typing import Optional, List, Callable, Any
+from typing import Optional, List, Callable
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error, SmellChecker
+from glitch.analysis.expr_checkers.string_checker import StringChecker
 
 
 class TerraformSmellChecker(SmellChecker):
@@ -59,68 +59,103 @@ class TerraformSmellChecker(SmellChecker):
         elif isinstance(code, UnitBlock):
             for au in code.atomic_units:
                 if au.type == type and self.check_required_attribute(
-                    au.attributes, attribute_parents, attribute_name, None, pattern
+                    au, attribute_parents, attribute_name, None, pattern
                 ):
                     return au
         return None
 
-    def get_attributes_with_name_and_value(
+    def get_attribute(
         self,
-        attributes: List[KeyValue] | List[Attribute],
+        element: AtomicUnit | Attribute | UnitBlock,
         parents: List[str],
         name: str,
-        value: Optional[Any] = None,
-        pattern: Optional[Pattern[str]] = None,
-    ) -> List[KeyValue]:
-        aux: List[KeyValue] = []
-        for a in attributes:
-            if a.name.split("dynamic.")[-1] == name and parents == [""]:
-                if (
-                    value and isinstance(a.value, str) and a.value.lower() == value
-                ) or (
-                    pattern
-                    and isinstance(a.value, str)
-                    and re.match(pattern, a.value.lower())
-                ):
-                    aux.append(a)
-                elif (
-                    value and isinstance(a.value, str) and a.value.lower() != value
-                ) or (
-                    pattern
-                    and isinstance(a.value, str)
-                    and not re.match(pattern, a.value.lower())
-                ):
-                    continue
-                elif not value and not pattern:
-                    aux.append(a)
-            elif a.name.split("dynamic.")[-1] in parents:
-                aux += self.get_attributes_with_name_and_value(
-                    a.keyvalues, [""], name, value, pattern
-                )
-            elif a.keyvalues != []:
-                aux += self.get_attributes_with_name_and_value(
-                    a.keyvalues, parents, name, value, pattern
-                )
-        return aux
+    ) -> Attribute | UnitBlock | None:
+        if isinstance(element, AtomicUnit):
+            for attr in element.attributes:
+                elem = self.get_attribute(attr, parents, name)
+                if elem is not None:
+                    return elem
+            for ub in element.statements:
+                if isinstance(ub, UnitBlock):
+                    elem = self.get_attribute(ub, parents, name)
+                    if elem is not None:
+                        return elem
+        elif (
+            isinstance(element, UnitBlock)
+            and element.type == UnitBlockType.block
+            and len(parents) > 0
+            and element.name == parents[0]
+        ):
+            for attribute in element.attributes:
+                elem = self.get_attribute(attribute, parents[1:], name)
+                if elem is not None:
+                    return elem
+            for ub in element.statements + element.unit_blocks:
+                if isinstance(ub, UnitBlock):
+                    elem = self.get_attribute(ub, parents[1:], name)
+                    if elem is not None:
+                        return elem
+        elif (
+            len(parents) == 0
+            and element.name == name
+        ):
+            return element
+        return None
 
     def check_required_attribute(
         self,
-        attributes: List[Attribute] | List[KeyValue],
-        parents: List[str],
+        atomic_unit: AtomicUnit,
+        parents: List[str] | List[List[str]],
         name: str,
-        value: Optional[Any] = None,
+        value: Optional[str] = None,
         pattern: Optional[Pattern[str]] = None,
-        return_all: bool = False,
-    ) -> Union[Optional[KeyValue], List[KeyValue]]:
-        attributes = self.get_attributes_with_name_and_value(
-            attributes, parents, name, value, pattern
-        )
-        if attributes != []:
-            if return_all:
-                return attributes  # type: ignore
-            return attributes[0]
-
-        return None
+    ) -> Optional[Attribute | UnitBlock]:
+        element = None
+        # In the case we have a list, we consider that one of the 
+        # parents list must be satisfied. This is particularly useful
+        # when attributes changes its location between Terraform versions.
+        has_parents_list = False
+        for parents_list in parents:
+            if isinstance(parents_list, list):
+                has_parents_list = True
+                element = self.get_attribute(atomic_unit, parents_list, name)
+                if element is not None:
+                    break
+        if not has_parents_list:
+            element = self.get_attribute(atomic_unit, parents, name) # type: ignore
+        
+        if value is not None:
+            if value == "any_not_empty":
+                value_checker = StringChecker(lambda x: len(x.strip()) > 0)
+            else:
+                value_checker = StringChecker(lambda x: x.lower() == value.lower())
+            
+            if element is not None and isinstance(element, Attribute):
+                if (
+                    value == "true" 
+                    and isinstance(element.value, Boolean) 
+                    and element.value.value
+                ):
+                    return element
+                elif (
+                    value == "false" 
+                    and isinstance(element.value, Boolean) 
+                    and not element.value.value
+                ):
+                    return element
+                elif value == "non_empty_list":
+                    if isinstance(element.value, Array) and len(element.value.value) > 0:
+                        return element
+                elif value_checker.check(element.value):
+                    return element
+                return None
+        elif pattern is not None and element is not None and isinstance(element, Attribute):
+                # HACK: using the code is sort of an hack (avoids dealing with Access)
+                if pattern.match(element.value.code) is not None:
+                    return element
+                return None
+        else:
+            return element
 
     def check_database_flags(
         self,
@@ -202,17 +237,17 @@ class TerraformSmellChecker(SmellChecker):
 
     def __check_attribute(
         self,
-        attribute: Attribute | KeyValue,
+        element: Attribute | UnitBlock,
         atomic_unit: AtomicUnit,
         parent_name: str,
         file: str,
     ) -> List[Error]:
         errors: List[Error] = []
-        errors += self._check_attribute(attribute, atomic_unit, parent_name, file)
-        for attr_child in attribute.keyvalues:
-            errors += self.__check_attribute(
-                attr_child, atomic_unit, attribute.name, file
-            )
+        if isinstance(element, Attribute):
+            errors += self._check_attribute(element, atomic_unit, parent_name, file)
+        elif element.type == UnitBlockType.block:
+            for attr in element.attributes:
+                errors += self.__check_attribute(attr, atomic_unit, attr.name, file)
         return errors
 
     def _check_attributes(self, atomic_unit: AtomicUnit, file: str) -> List[Error]:

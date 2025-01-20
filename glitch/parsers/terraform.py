@@ -19,9 +19,7 @@ class GLITCHTransformer(Transformer):
 
     def __init__(self, code: List[str]):
         self.code = code
-        self.attributes = []
         self.comments = []
-        self.object_elems = {}
         super().__init__()
 
     def new_line_or_comment(self, args: List) -> List:
@@ -224,14 +222,16 @@ class GLITCHTransformer(Transformer):
 
     def object_elem(self, args: List) -> Expr:
         if len(args) == 2:
-            self.object_elems[args[0]] = args[1]
+            return (args[0], args[1])
         else:
-            self.object_elems[args[0]] = args[2]
+            return (args[0], args[2])
 
     @v_args(meta=True)
     def object(self, meta: Meta, args: List) -> Any:
-        res = Hash(self.object_elems, self.__get_element_info(meta))
-        self.object_elems = {}
+        object_elems = {}
+        for k, v in args:
+            object_elems[k] = v
+        res = Hash(object_elems, self.__get_element_info(meta))
         return res
     
     @v_args(meta=True)
@@ -248,11 +248,13 @@ class GLITCHTransformer(Transformer):
                 ),
                 args[1].value[1:-1],
             )
-            au.attributes = self.attributes
+            au.attributes = []
             au.set_element_info(self.__get_element_info(meta))
             for arg in args[-1]:
-                au.add_statement(arg)
-            self.attributes = []
+                if isinstance(arg, Attribute):
+                    au.attributes.append(arg)
+                else:
+                    au.add_statement(arg)
             return au
         else:
             ub = UnitBlock(args[0].value, UnitBlockType.block)
@@ -261,19 +263,19 @@ class GLITCHTransformer(Transformer):
                     ub.add_atomic_unit(arg)
                 elif isinstance(arg, UnitBlock):
                     ub.add_unit_block(arg)
-            if args[0].value in ["locals"]:
-                for attr in self.attributes:
-                    ub.add_variable(
-                        Variable(
-                            attr.name,
-                            attr.value,
-                            ElementInfo.from_code_element(attr),
+                elif isinstance(arg, Attribute):
+                    if args[0].value in ["locals"]: 
+                        ub.add_variable(
+                            Variable(
+                                arg.name,
+                                arg.value,
+                                ElementInfo.from_code_element(arg),
+                            )
                         )
-                    )
-            else:
-                ub.attributes = self.attributes
+                    else:
+                        ub.add_attribute(arg)
+
             ub.set_element_info(self.__get_element_info(meta))
-            self.attributes = []
             return ub
 
     def body(self, args: List) -> Any:
@@ -297,9 +299,7 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def attribute(self, meta: Meta, args: List) -> Attribute:
-        self.attributes.append(
-            Attribute(args[0].value, args[2], self.__get_element_info(meta))
-        )
+        return Attribute(args[0].value, args[2], self.__get_element_info(meta))
 
     @v_args(meta=True)
     def identifier(self, meta: Meta, value: Any) -> Expr:

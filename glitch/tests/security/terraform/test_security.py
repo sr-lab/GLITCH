@@ -15,6 +15,7 @@ class TestSecurity(unittest.TestCase):
             filter(lambda e: e.code.startswith("sec_"), set(analysis.check(inter)))
         )
         errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))
+        print(errors)
         self.assertEqual(len(errors), n_errors)
         for i in range(n_errors):
             self.assertEqual(errors[i].code, codes[i])
@@ -69,7 +70,7 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/insecure-access-control/access-to-bigquery-dataset.tf",
             1,
             ["sec_access_control"],
-            [3],
+            [1],
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/aks-ip-ranges-enabled.tf",

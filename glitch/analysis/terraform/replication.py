@@ -56,9 +56,9 @@ class TerraformReplication(TerraformSmellChecker):
                 if (
                     config["required"] == "yes"
                     and element.type in config["au_type"]
-                    and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
-                    )
+                    and self.check_required_attribute(
+                        element, config["parents"], config["attribute"]
+                    ) is None
                 ):
                     errors.append(
                         Error(

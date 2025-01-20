@@ -34,7 +34,7 @@ class TerraformDnsWithoutDnssec(TerraformSmellChecker):
                     config["required"] == "yes"
                     and element.type in config["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                 ):
                     errors.append(

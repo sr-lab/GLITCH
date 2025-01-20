@@ -448,3 +448,9 @@ class TestTerraform(TestParser):
         assert len(ir.unit_blocks) == 1
         assert len(ir.unit_blocks[0].variables) == 1
         assert ir.unit_blocks[0].variables[0].name == "tags"
+
+    def test_terraform_parser_block_with_attribute(self) -> None:
+        ir = self.__parse("tests/parser/terraform/files/block_with_attribute.tf")
+        assert len(ir.atomic_units) == 1
+        assert len(ir.atomic_units[0].statements) == 1
+        assert len(ir.atomic_units[0].attributes) == 1
