@@ -3,6 +3,8 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
+from glitch.analysis.expr_checkers.var_checker import VariableChecker
+from glitch.analysis.expr_checkers.string_checker import StringChecker
 
 
 class TerraformVersioning(TerraformSmellChecker):
@@ -13,15 +15,17 @@ class TerraformVersioning(TerraformSmellChecker):
         parent_name: str,
         file: str,
     ) -> List[Error]:
+        var_checker = VariableChecker()
         for config in SecurityVisitor.VERSIONING:
+            string_checker = StringChecker(lambda x: x.lower() not in config["values"])
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
                 and parent_name in config["parents"]
                 and config["values"] != [""]
-                and not attribute.has_variable
+                and not var_checker.check(attribute.value)
                 and isinstance(attribute.value, str)
-                and attribute.value.lower() not in config["values"]
+                and string_checker.check(attribute.value)
             ):
                 return [Error("sec_versioning", attribute, file, repr(attribute))]
 

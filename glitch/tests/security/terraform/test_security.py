@@ -70,7 +70,7 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/insecure-access-control/access-to-bigquery-dataset.tf",
             1,
             ["sec_access_control"],
-            [1],
+            [3],
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/aks-ip-ranges-enabled.tf",
@@ -130,7 +130,7 @@ class TestSecurity(unittest.TestCase):
             "tests/security/terraform/files/insecure-access-control/cross-db-ownership-chaining.tf",
             3,
             ["sec_access_control", "sec_access_control", "sec_access_control"],
-            [1, 50, 97],
+            [1, 50, 95],
         )
         self.__help_test(
             "tests/security/terraform/files/insecure-access-control/data-factory-public-access.tf",

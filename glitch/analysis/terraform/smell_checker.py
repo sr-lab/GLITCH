@@ -63,23 +63,22 @@ class TerraformSmellChecker(SmellChecker):
                 ):
                     return au
         return None
-
-    def get_attribute(
+    
+    def get_attributes(
         self,
         element: AtomicUnit | Attribute | UnitBlock,
         parents: List[str],
         name: str,
-    ) -> Attribute | UnitBlock | None:
+    ) -> List[Attribute | UnitBlock]:
+        res: List[Attribute | UnitBlock] = []
         if isinstance(element, AtomicUnit):
             for attr in element.attributes:
-                elem = self.get_attribute(attr, parents, name)
-                if elem is not None:
-                    return elem
+                elems = self.get_attributes(attr, parents, name)
+                res.extend(elems)
             for ub in element.statements:
                 if isinstance(ub, UnitBlock):
-                    elem = self.get_attribute(ub, parents, name)
-                    if elem is not None:
-                        return elem
+                    elems = self.get_attributes(ub, parents, name)
+                    res.extend(elems)
         elif (
             isinstance(element, UnitBlock)
             and element.type == UnitBlockType.block
@@ -87,20 +86,28 @@ class TerraformSmellChecker(SmellChecker):
             and element.name == parents[0]
         ):
             for attribute in element.attributes:
-                elem = self.get_attribute(attribute, parents[1:], name)
-                if elem is not None:
-                    return elem
+                elems = self.get_attributes(attribute, parents[1:], name)
+                res.extend(elems)
             for ub in element.statements + element.unit_blocks:
                 if isinstance(ub, UnitBlock):
-                    elem = self.get_attribute(ub, parents[1:], name)
-                    if elem is not None:
-                        return elem
+                    elems = self.get_attributes(ub, parents[1:], name)
+                    res.extend(elems)
         elif (
             len(parents) == 0
             and element.name == name
         ):
-            return element
-        return None
+            res.append(element)
+        
+        return res
+
+    def get_attribute(
+        self,
+        element: AtomicUnit | Attribute | UnitBlock,
+        parents: List[str],
+        name: str,
+    ) -> Attribute | UnitBlock | None:
+        attributes = self.get_attributes(element, parents, name)
+        return attributes[0] if len(attributes) > 0 else None
 
     def check_required_attribute(
         self,
@@ -166,27 +173,32 @@ class TerraformSmellChecker(SmellChecker):
         safe_value: str,
         required_flag: bool = True,
     ) -> List[Error]:
-        database_flags = self.get_attributes_with_name_and_value(
-            au.attributes, ["settings"], "database_flags"
+        database_flags = self.get_attributes(
+            au, ["settings"], "database_flags"
         )
         found_flag = False
         errors: List[Error] = []
         if database_flags != []:
             for flag in database_flags:
+                if isinstance(flag, Attribute) or flag.name is None:
+                    continue
+            
+                # Fake AtomicUnit to use the check_required_attribute method
+                fake_au = AtomicUnit(Null(), "")
+                fake_au.statements = [flag]
                 name = self.check_required_attribute(
-                    flag.keyvalues, [""], "name", flag_name
+                    fake_au, [flag.name], "name", flag_name
                 )
+                # Attribute not found but it is not required
+                if name is None and not required_flag:
+                    continue
+
+                # Attribute found
                 if name is not None:
                     found_flag = True
-                    value = self.check_required_attribute(flag.keyvalues, [""], "value")
-                    if (
-                        isinstance(value, KeyValue)
-                        and isinstance(value.value, str)
-                        and value.value.lower() != safe_value
-                    ):
-                        errors.append(Error(smell, value, file, repr(value)))
-                        break
-                    elif not value and required_flag:
+                    value = self.check_required_attribute(fake_au, [flag.name], "value", value=safe_value)
+                    # But value is not correct
+                    if value is None:
                         errors.append(
                             Error(
                                 smell,
@@ -247,11 +259,17 @@ class TerraformSmellChecker(SmellChecker):
             errors += self._check_attribute(element, atomic_unit, parent_name, file)
         elif element.type == UnitBlockType.block:
             for attr in element.attributes:
-                errors += self.__check_attribute(attr, atomic_unit, attr.name, file)
+                errors += self._check_attribute(attr, atomic_unit, element.name, file) # type: ignore
+            for statement in element.statements:
+                if isinstance(statement, UnitBlock) and statement.type == UnitBlockType.block:
+                    errors += self.__check_attribute(statement, atomic_unit, element.name, file) # type: ignore
         return errors
 
-    def _check_attributes(self, atomic_unit: AtomicUnit, file: str) -> List[Error]:
+    def _check_attributes(self, element: AtomicUnit, file: str) -> List[Error]:
         errors: List[Error] = []
-        for attribute in atomic_unit.attributes:
-            errors += self.__check_attribute(attribute, atomic_unit, "", file)
+        for attribute in element.attributes:
+            errors += self.__check_attribute(attribute, element, "", file)
+        for statement in element.statements:
+            if isinstance(statement, UnitBlock) and statement.type == UnitBlockType.block:
+                errors += self.__check_attribute(statement, element, "", file)
         return errors

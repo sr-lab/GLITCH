@@ -185,13 +185,14 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                         element, config["parents"], config["attribute"]
                     ) is None
                 ):
+                    attribute = config["attribute"]
                     errors.append(
                         Error(
                             "sec_missing_encryption",
                             element,
                             file,
                             repr(element),
-                            f"Suggestion: check for a required attribute with name '{config['msg']}'.",
+                            f"Suggestion: check for a required attribute with name '{attribute}'.",
                         )
                     )
 

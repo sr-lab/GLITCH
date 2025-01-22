@@ -22,10 +22,17 @@ class TerraformAccessControl(TerraformSmellChecker):
                     pattern = re.compile(rf"{expr}")
                     allow_expr = '"effect":' + "\\s*" + '"allow"'
                     allow_pattern = re.compile(rf"{allow_expr}")
+
+                    pattern_checker = StringChecker(
+                        lambda x: re.search(pattern, x.lower()) is not None
+                    )
+                    allow_checker = StringChecker(
+                        lambda x: re.search(allow_pattern, x.lower()) is not None
+                    )
+                    
                     if (
-                        isinstance(attribute.value, str)
-                        and re.search(pattern, attribute.value)
-                        and re.search(allow_pattern, attribute.value)
+                        pattern_checker.check(attribute.value)
+                        and allow_checker.check(attribute.value)
                     ):
                         return [
                             Error(
@@ -33,11 +40,12 @@ class TerraformAccessControl(TerraformSmellChecker):
                             )
                         ]
 
+        star_checker = StringChecker(lambda x: x == "*")
         if (
-            re.search(r"actions\[\d+\]", attribute.name)
+            attribute.name == "actions"
             and parent_name == "permissions"
             and atomic_unit.type == "azurerm_role_definition"
-            and attribute.value == "*"
+            and star_checker.check(attribute.value)
         ):
             return [Error("sec_access_control", attribute, file, repr(attribute))]
         elif (
@@ -195,15 +203,16 @@ class TerraformAccessControl(TerraformSmellChecker):
                 if len(config["values"]) > 0:
                     values = config["values"]
 
+                required_attribute = self.check_required_attribute(
+                    element, 
+                    config["parents"], 
+                    config["attribute"], 
+                )
                 if (
                     element.type not in config["au_type"]
                     # If the attribute is not required and the attribute is not present, skip
                     # The default value is OK
-                    or (self.check_required_attribute(
-                            element, 
-                            config["parents"], 
-                            config["attribute"], 
-                    ) is None and config["required"] == "no")
+                    or (required_attribute is None and config["required"] == "no")
                 ):
                     continue
 
@@ -220,14 +229,23 @@ class TerraformAccessControl(TerraformSmellChecker):
                         satisfied = True
                     
                 if not satisfied:
+                    if required_attribute is not None:
+                        element_with_error = required_attribute
+                    else:
+                        element_with_error = element
+
                     full_name = ".".join(config["parents"] + [config["attribute"]])
+                    value = ""
+                    if len(values) > 0:
+                        value = f" with value in {values}"
+                    
                     errors.append(
                         Error(
                             "sec_access_control",
-                            element,
+                            element_with_error,
                             file,
-                            repr(element),
-                            f"Suggestion: check for a required attribute with name '{full_name}'.",
+                            repr(element_with_error),
+                            f"Suggestion: check for a required attribute with name '{full_name}'{value}.",
                         )
                     )
 

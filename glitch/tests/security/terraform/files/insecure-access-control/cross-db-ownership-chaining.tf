@@ -41,7 +41,7 @@ resource "google_sql_database_instance" "bad_example" {
 }
 
 resource "google_sql_database_instance" "bad_example2" {
-  settings{
+  settings {
     ip_configuration {
       require_ssl = true
     }

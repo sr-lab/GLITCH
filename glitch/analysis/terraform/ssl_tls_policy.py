@@ -60,16 +60,17 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                     policy["required"] == "yes"
                     and element.type in policy["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, policy["parents"], policy["attribute"]
+                        element, policy["parents"], policy["attribute"]
                     )
                 ):
+                    attribute = policy["attribute"]
                     errors.append(
                         Error(
                             "sec_ssl_tls_policy",
                             element,
                             file,
                             repr(element),
-                            f"Suggestion: check for a required attribute with name '{policy['msg']}'.",
+                            f"Suggestion: check for a required attribute with name '{attribute}'.",
                         )
                     )
 

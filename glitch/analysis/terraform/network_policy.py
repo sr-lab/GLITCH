@@ -4,6 +4,8 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.expr_checkers.var_checker import VariableChecker
+from glitch.analysis.expr_checkers.string_checker import StringChecker
 
 
 class TerraformNetworkSecurityRules(TerraformSmellChecker):
@@ -14,14 +16,16 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
         parent_name: str,
         file: str,
     ) -> List[Error]:
+        var_checker = VariableChecker()
         for rule in SecurityVisitor.NETWORK_SECURITY_RULES:
+            string_checker = StringChecker(lambda x: x.lower() not in rule["values"])
             if (
                 attribute.name == rule["attribute"]
                 and atomic_unit.type in rule["au_type"]
                 and parent_name in rule["parents"]
-                and not attribute.has_variable
+                and not var_checker.check(attribute.value)
                 and attribute.value is not None
-                and attribute.value.lower() not in rule["values"]
+                and string_checker.check(attribute.value)
                 and rule["values"] != [""]
             ):
                 return [
@@ -37,7 +41,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
         if isinstance(element, AtomicUnit):
             if element.type == "resource.azurerm_network_security_rule":
                 access = self.check_required_attribute(
-                    element.attributes, [""], "access"
+                    element, [""], "access"
                 )
                 if (
                     isinstance(access, KeyValue)
@@ -45,7 +49,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                     and access.value.lower() == "allow"
                 ):
                     protocol = self.check_required_attribute(
-                        element.attributes, [""], "protocol"
+                        element, [""], "protocol"
                     )
                     if (
                         isinstance(protocol, KeyValue)
@@ -63,7 +67,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                         and protocol.value.lower() == "tcp"
                     ):
                         dest_port_range = self.check_required_attribute(
-                            element.attributes, [""], "destination_port_range"
+                            element, [""], "destination_port_range"
                         )
                         port = (
                             isinstance(dest_port_range, KeyValue)
@@ -86,7 +90,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
 
                         if port or port_ranges:
                             source_address_prefix = self.check_required_attribute(
-                                element.attributes, [""], "source_address_prefix"
+                                element, [""], "source_address_prefix"
                             )
                             if (
                                 isinstance(source_address_prefix, KeyValue)
@@ -109,7 +113,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                                 )
             elif element.type == "resource.azurerm_network_security_group":
                 access = self.check_required_attribute(
-                    element.attributes, ["security_rule"], "access"
+                    element, ["security_rule"], "access"
                 )
                 if (
                     isinstance(access, KeyValue)
@@ -117,7 +121,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                     and access.value.lower() == "allow"
                 ):
                     protocol = self.check_required_attribute(
-                        element.attributes, ["security_rule"], "protocol"
+                        element, ["security_rule"], "protocol"
                     )
                     if (
                         isinstance(protocol, KeyValue)
@@ -135,7 +139,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                         and protocol.value.lower() == "tcp"
                     ):
                         dest_port_range = self.check_required_attribute(
-                            element.attributes,
+                            element,
                             ["security_rule"],
                             "destination_port_range",
                         )
@@ -150,7 +154,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                             ]
                         ):
                             source_address_prefix = self.check_required_attribute(
-                                element.attributes, [""], "source_address_prefix"
+                                element, [""], "source_address_prefix"
                             )
                             if (
                                 isinstance(source_address_prefix, KeyValue)
