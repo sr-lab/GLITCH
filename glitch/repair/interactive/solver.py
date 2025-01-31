@@ -75,7 +75,12 @@ class PatchSolver:
                 self.possible_strings.append(key)
                 self.possible_strings.append(value)
         self.possible_strings += [
-            UNDEF, UNSUPPORTED, "", "absent", "present", "directory"
+            UNDEF,
+            UNSUPPORTED,
+            "",
+            "absent",
+            "present",
+            "directory",
         ]
         for i in range(len(self.possible_strings)):
             self.possible_strings += self.possible_strings[i].split(":")
@@ -112,16 +117,15 @@ class PatchSolver:
         var = z3.String(name, ctx=self.ctx)
         self.constraints.append(Or(*[var == s for s in self.possible_strings]))
         return var
-    
+
     def __collect_labels(self, statement: PStatement | PExpr) -> List[int]:
         if isinstance(statement, PSeq):
             return self.__collect_labels(statement.lhs) + self.__collect_labels(
                 statement.rhs
             )
         elif isinstance(statement, PAttr):
-            return (
-                self.__collect_labels(statement.path) +
-                self.__collect_labels(statement.value)
+            return self.__collect_labels(statement.path) + self.__collect_labels(
+                statement.value
             )
         elif isinstance(statement, PIf):
             return (
@@ -171,7 +175,7 @@ class PatchSolver:
             return StringVal(expr.const.value, ctx=self.ctx), constraints
         elif isinstance(expr, PEConst) and isinstance(expr.const, PBool):
             return StringVal(str(expr.const.value).lower(), ctx=self.ctx), constraints
-        # TODO: add scope handling. 
+        # TODO: add scope handling.
         elif isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition-"):
             self.vars[expr.id] = Bool(expr.id, ctx=self.ctx)
             return self.vars[expr.id], constraints
@@ -200,7 +204,10 @@ class PatchSolver:
             if (isinstance(lhs, SeqRef) and lhs.as_string() == UNSUPPORTED) or (
                 isinstance(rhs, SeqRef) and rhs.as_string() == UNSUPPORTED
             ):
-                return StringVal(UNSUPPORTED, ctx=self.ctx), lhs_constraints + rhs_constraints
+                return (
+                    StringVal(UNSUPPORTED, ctx=self.ctx),
+                    lhs_constraints + rhs_constraints,
+                )
             return Concat(lhs, rhs), lhs_constraints + rhs_constraints
 
         logging.warning(f"Unsupported expression: {expr}")
@@ -210,11 +217,14 @@ class PatchSolver:
         for path, state in filesystem.state.items():
             for key, value in state.attrs.items():
                 self.constraints.append(
-                    self.__funs[key](StringVal(path, ctx=self.ctx)) == StringVal(value, ctx=self.ctx)
+                    self.__funs[key](StringVal(path, ctx=self.ctx))
+                    == StringVal(value, ctx=self.ctx)
                 )
 
     def __generate_soft_constraints(
-        self, statement: PStatement | PExpr, funs: Dict[str, Callable[[ExprRef], ExprRef]]
+        self,
+        statement: PStatement | PExpr,
+        funs: Dict[str, Callable[[ExprRef], ExprRef]],
     ) -> Tuple[List[ExprRef], Dict[str, Callable[[ExprRef], ExprRef]],]:
         # Avoids infinite recursion
         previous_funs = deepcopy(funs)
@@ -238,19 +248,28 @@ class PatchSolver:
             constraints += dest_constraints
 
             funs["state"] = lambda p: If(
-                p == dst, previous_funs["state"](src), previous_funs["state"](p), ctx=self.ctx
+                p == dst,
+                previous_funs["state"](src),
+                previous_funs["state"](p),
+                ctx=self.ctx,
             )
             funs["content"] = lambda p: If(
                 p == dst,
                 previous_funs["content"](src),
                 previous_funs["content"](p),
-                ctx=self.ctx
+                ctx=self.ctx,
             )
             funs["mode"] = lambda p: If(
-                p == dst, previous_funs["mode"](src), previous_funs["mode"](p), ctx=self.ctx
+                p == dst,
+                previous_funs["mode"](src),
+                previous_funs["mode"](p),
+                ctx=self.ctx,
             )
             funs["owner"] = lambda p: If(
-                p == dst, previous_funs["owner"](src), previous_funs["owner"](p), ctx=self.ctx
+                p == dst,
+                previous_funs["owner"](src),
+                previous_funs["owner"](p),
+                ctx=self.ctx,
             )
         elif isinstance(statement, PSeq):
             lhs_constraints, funs = self.__generate_soft_constraints(
@@ -318,7 +337,7 @@ class PatchSolver:
                 funs[key] = lambda p, cons=cons, alt=alt: If(
                     condition, cons(p), alt(p), ctx=self.ctx
                 )
-            
+
             # It allows to fix variables in the unchosen branch
             labels_cons = self.__collect_labels(statement.cons)
             labels_alt = self.__collect_labels(statement.alt)
@@ -352,26 +371,29 @@ class PatchSolver:
                 constraints.append(Or(condition, And(Not(condition), constraint)))
 
         return constraints, funs
-    
+
     def __decode_smtlib2_string(self, string: str) -> str:
         """
         Converts SMTLIB2-style Unicode escape sequences in a string to their respective characters.
-        
+
         Parameters:
             string (str): The input string containing SMTLIB2-style Unicode escapes.
-            
+
         Returns:
             str: The decoded string.
         """
-        def unicode_replacer(match) -> str: # type: ignore
-            hex_value = match.group(1) # type: ignore
-            return chr(int(hex_value, 16)) # type: ignore
-        
+
+        def unicode_replacer(match) -> str:  # type: ignore
+            hex_value = match.group(1)  # type: ignore
+            return chr(int(hex_value, 16))  # type: ignore
+
         # Replace all matches in the string
-        return re.sub(r'\\u\{([0-9A-Fa-f]+)\}', unicode_replacer, string) # type: ignore
+        return re.sub(r"\\u\{([0-9A-Fa-f]+)\}", unicode_replacer, string)  # type: ignore
 
     def __parse_z3_output(self, z3_output: str) -> Dict[str, Any]:
-        define_fun_pattern = re.compile(r'\(define-fun (\S+) \(\) (\S+)\n\s+(.+?)\)', re.DOTALL)
+        define_fun_pattern = re.compile(
+            r"\(define-fun (\S+) \(\) (\S+)\n\s+(.+?)\)", re.DOTALL
+        )
         parsed_data: Dict[str, Any] = {}
 
         for match in define_fun_pattern.finditer(z3_output):
@@ -380,7 +402,7 @@ class PatchSolver:
                 name = name[1:-1]
             datatype = match.group(2)
             value = match.group(3).strip()
-            
+
             if datatype == "String":
                 # Replace Z3 double-escaped quotes (e.g., "") with single quotes (")
                 value = value.replace('""', '"')
@@ -391,16 +413,16 @@ class PatchSolver:
                 value = True
             elif datatype == "Bool" and value == "false":
                 value = False
-            
+
             parsed_data[name] = value
 
         return parsed_data
-    
-
 
     def __add_named_to_assertions(self, smtlib_code: str) -> Tuple[str, Dict[str, str]]:
         def generate_random_name(length: int = 10):
-            return "A" + ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+            return "A" + "".join(
+                random.choices(string.ascii_letters + string.digits, k=length)
+            )
 
         result: List[str] = []
         names_to_assertions: Dict[str, str] = {}
@@ -412,19 +434,21 @@ class PatchSolver:
         while i < len(smtlib_code):
             char = smtlib_code[i]
 
-            if char == '(':
+            if char == "(":
                 stack.append(i)
-                if not inside_assert and smtlib_code[i:i+7] == "(assert":
+                if not inside_assert and smtlib_code[i : i + 7] == "(assert":
                     start_index = i
                     inside_assert = True
 
-            elif char == ')':
+            elif char == ")":
                 stack.pop()
                 if inside_assert and not stack:
-                    assert_content = smtlib_code[start_index + 7:i].strip()
+                    assert_content = smtlib_code[start_index + 7 : i].strip()
                     random_name = generate_random_name()
                     names_to_assertions[random_name] = assert_content
-                    transformed_assert = f"(assert (! {assert_content} :named {random_name}))"
+                    transformed_assert = (
+                        f"(assert (! {assert_content} :named {random_name}))"
+                    )
                     result.append(transformed_assert)
                     start_index = None
                     inside_assert = False
@@ -435,8 +459,8 @@ class PatchSolver:
                 result.append(char)
             i += 1
 
-        return ''.join(result), names_to_assertions
-    
+        return "".join(result), names_to_assertions
+
     def __run_z3(self, smt2: str, timeout: int) -> str:
         temp = tempfile.NamedTemporaryFile(mode="w+")
         temp.write(smt2)
@@ -449,7 +473,7 @@ class PatchSolver:
         )
         if result.returncode == 124:
             raise TimeoutError("Solver timed out")
-        elif result.returncode in [137, 139]:  
+        elif result.returncode in [137, 139]:
             raise MemoryError("Solver ran out of memory")
         temp.close()
         return result.stdout
@@ -469,7 +493,9 @@ class PatchSolver:
             return True, res
         elif result.strip() == "unsat" and self.debug:
             smt2, names_to_assertions = self.__add_named_to_assertions(solver.to_smt2())
-            smt2 = "(set-option :produce-unsat-cores true)\n" + smt2 + "\n(get-unsat-core)"
+            smt2 = (
+                "(set-option :produce-unsat-cores true)\n" + smt2 + "\n(get-unsat-core)"
+            )
             output = self.__run_z3(smt2, timeout)
             unsat_core = output.split("\n", 1)[1].strip()[1:-1].split(" ")
             print("=== Unsat core: ===")
@@ -478,7 +504,7 @@ class PatchSolver:
             print("===================")
 
         return False, None
-    
+
     def __get_solver_value(self, value: Any) -> ExprRef | bool:
         if isinstance(value, str):
             return StringVal(value, ctx=self.ctx)
@@ -499,7 +525,9 @@ class PatchSolver:
             while lo < hi and time.time() - start < self.timeout:
                 mid = (lo + hi) // 2
                 self.constraints.append(self.sum_var >= IntVal(mid, ctx=self.ctx))
-                sat, o_model = self.__run_solver(self.timeout - int(time.time() - start))
+                sat, o_model = self.__run_solver(
+                    self.timeout - int(time.time() - start)
+                )
                 if sat:
                     lo = mid + 1
                     model = o_model
@@ -515,11 +543,13 @@ class PatchSolver:
 
             models.append(model)
             # Removes conditional variables that were not used
-            dvars = list(filter(
-                lambda v: str(v) in model, self.vars.values() # type: ignore
-            ))
+            dvars = list(
+                filter(lambda v: str(v) in model, self.vars.values())  # type: ignore
+            )
 
-            self.constraints.append(Not(And([v == self.__get_solver_value(model[str(v)]) for v in dvars])))
+            self.constraints.append(
+                Not(And([v == self.__get_solver_value(model[str(v)]) for v in dvars]))
+            )
 
         if time.time() - start >= self.timeout:
             raise TimeoutError("Solver timed out")
@@ -543,7 +573,7 @@ class PatchApplier:
     # TODO: improve way to identify sketch
     def __is_sketch(self, codeelement: CodeElement) -> bool:
         return codeelement.line < 0 and codeelement.column < 0
-    
+
     def __add_sketch_attribute(
         self,
         labeled_script: LabeledUnitBlock,
@@ -559,15 +589,12 @@ class PatchApplier:
 
         name, _ = NamesDatabase.get_attr_pair(
             inter.String(value, ElementInfo(-1, -1, -1, -1, "")),
-            attribute.name, 
-            atomic_unit.type, 
-            tech
+            attribute.name,
+            atomic_unit.type,
+            tech,
         )
         # FIXME
-        is_string = (
-            name not in ["state", "enabled"] 
-            and value not in ["true", "false"]
-        )
+        is_string = name not in ["state", "enabled"] and value not in ["true", "false"]
         atomic_unit.attributes.append(attribute)
 
         path = labeled_script.script.path
@@ -601,7 +628,7 @@ class PatchApplier:
         new_line = col * " " + new_line.format(attribute.name, value)
         lines.insert(line - 1, new_line)
         if not lines[line - 2].endswith("\n"):
-            lines[line - 2] =  lines[line - 2] + "\n"
+            lines[line - 2] = lines[line - 2] + "\n"
         with open(path, "w") as f:
             f.writelines(lines)
 
@@ -661,15 +688,25 @@ class PatchApplier:
                 end = codeelement.end_column - 1
 
             if (
-                value not in ["true", "false"] # FIXME
-                and (old_line[start:end].startswith('"') or codeelement.code.startswith('"'))
-                and (old_line[start:end].endswith('"') or codeelement.code.endswith('"'))
+                value not in ["true", "false"]  # FIXME
+                and (
+                    old_line[start:end].startswith('"')
+                    or codeelement.code.startswith('"')
+                )
+                and (
+                    old_line[start:end].endswith('"') or codeelement.code.endswith('"')
+                )
             ):
                 value = f'"{value}"'
             elif (
-                value not in ["true", "false"] # FIXME
-                and (old_line[start:end].startswith("'") or codeelement.code.startswith("'"))
-                and (old_line[start:end].endswith("'") or codeelement.code.endswith("'"))
+                value not in ["true", "false"]  # FIXME
+                and (
+                    old_line[start:end].startswith("'")
+                    or codeelement.code.startswith("'")
+                )
+                and (
+                    old_line[start:end].endswith("'") or codeelement.code.endswith("'")
+                )
             ):
                 value = f"'{value}'"
             elif len(value.split("\n")) > 1:
@@ -684,7 +721,7 @@ class PatchApplier:
 
         with open(labeled_script.script.path, "w") as f:
             f.writelines(lines)
-    
+
     def get_changes(
         self, model_ref: Dict[str, Any], labeled_script: LabeledUnitBlock
     ) -> List[PatchChange]:
@@ -723,7 +760,7 @@ class PatchApplier:
             if value == UNDEF:
                 changes.append(PatchChange(value, codeelement, "delete", info))
                 continue
-            
+
             kv = labeled_script.get_location(codeelement)
             if not self.__is_sketch(codeelement) or isinstance(kv, Variable):
                 changes.append(PatchChange(value, codeelement, "modify", info))
@@ -766,9 +803,7 @@ class PatchApplier:
                         )
                 elif isinstance(loc, AtomicUnit):
                     # Only for paths in the name
-                    _, change.value = reverse(
-                        change.value, "path", loc
-                    )
+                    _, change.value = reverse(change.value, "path", loc)
                     loc.name = inter.String(change.value, change.info)
 
     def apply_patch(
@@ -803,7 +838,7 @@ class PatchApplier:
                 if isinstance(ce.codeelement, inter.Null):
                     ce.codeelement = inter.String(ce.value, ce.info)
                     # HACK: Allows to add quotes in the modify_codeelement func
-                    ce.codeelement.code = "\"\""  
+                    ce.codeelement.code = '""'
                 assert isinstance(ce.codeelement, inter.String)
 
                 if isinstance(loc, Attribute):
@@ -814,11 +849,15 @@ class PatchApplier:
                     )
                 elif isinstance(loc, Variable):
                     ce.codeelement.value = ce.value
-                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value, labeled_script.tech)
+                    self.__modify_codeelement(
+                        labeled_script, ce.codeelement, ce.value, labeled_script.tech
+                    )
                 elif isinstance(loc, AtomicUnit):
                     ce.codeelement.value = ce.value
                     loc.name = ce.codeelement
-                    self.__modify_codeelement(labeled_script, ce.codeelement, ce.value, labeled_script.tech)
+                    self.__modify_codeelement(
+                        labeled_script, ce.codeelement, ce.value, labeled_script.tech
+                    )
             elif ce.type == "add_sketch":
                 loc = labeled_script.get_location(ce.codeelement)
                 assert isinstance(loc, Attribute)
@@ -826,4 +865,4 @@ class PatchApplier:
                 assert isinstance(loc_loc, AtomicUnit)
                 self.__add_sketch_attribute(
                     labeled_script, loc, loc_loc, ce.value, labeled_script.tech
-                ) 
+                )

@@ -60,7 +60,7 @@ class GithubActionsParser(YamlParser):
                 code,
             ),
         )
-        
+
         return attr
 
     def __parse_job(self, key: Node, value: Node, lines: List[str]) -> UnitBlock:
@@ -72,11 +72,17 @@ class GithubActionsParser(YamlParser):
             if attr_key.value == "steps":
                 for step in attr_value.value:
                     step_dict: Dict[str, Node] = self.__parse_dict(step)
-                    name = Null() if "name" not in step_dict else self.get_value(step_dict["name"], lines)
+                    name = (
+                        Null()
+                        if "name" not in step_dict
+                        else self.get_value(step_dict["name"], lines)
+                    )
                     if "run" in step_dict:
                         au_type = "shell"
                     else:  # uses
-                        au_type = self._get_code(step_dict["uses"], step_dict["uses"], lines)
+                        au_type = self._get_code(
+                            step_dict["uses"], step_dict["uses"], lines
+                        )
 
                     au = AtomicUnit(name, au_type)
                     au.line, au.column = (
@@ -136,11 +142,9 @@ class GithubActionsParser(YamlParser):
         else:
             unit_block = UnitBlock(
                 self._get_code(
-                    parsed_file_value["name"], 
-                    parsed_file_value["name"],
-                    lines
+                    parsed_file_value["name"], parsed_file_value["name"], lines
                 ),
-                type
+                type,
             )
         unit_block.path = path
 

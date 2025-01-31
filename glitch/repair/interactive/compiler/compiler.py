@@ -28,7 +28,9 @@ class DeltaPCompiler:
         self.seen_resources: List[Tuple[List[str], str]] = []
 
     class _AtomicUnitCompiler:
-        def __init__(self, name: str, compiler: "DeltaPCompiler", attributes: List[str]) -> None:
+        def __init__(
+            self, name: str, compiler: "DeltaPCompiler", attributes: List[str]
+        ) -> None:
             self.__name = name
             self._compiler = compiler
             self.__attributes = attributes
@@ -41,7 +43,9 @@ class DeltaPCompiler:
             name = attributes["name"]
             if name == PEUndef():
                 name = self._compiler._compile_expr(atomic_unit.name)
-                self._compiler._labeled_script.add_location(atomic_unit, atomic_unit.name)
+                self._compiler._labeled_script.add_location(
+                    atomic_unit, atomic_unit.name
+                )
             path = PEBinOP(PAdd(), PEConst(PStr(self.__name + ":")), name)
 
             if self._compiler._check_seen_resource(path):
@@ -55,7 +59,9 @@ class DeltaPCompiler:
             statement = PSkip()
             for attribute in self.__attributes[::-1]:
                 statement = PSeq(
-                    self._compiler._handle_attr(atomic_unit, attributes, path, attribute),
+                    self._compiler._handle_attr(
+                        atomic_unit, attributes, path, attribute
+                    ),
                     statement,
                 )
 
@@ -154,7 +160,7 @@ class DeltaPCompiler:
         tech: Tech,
     ) -> str:
         return self._get_scope_name(attr_name + "_" + str(hash(attribute)))
-    
+
     def __has_var(self, id: str) -> bool:
         scopes = id.split(":dejavu:")
         while True:
@@ -165,7 +171,7 @@ class DeltaPCompiler:
             scopes.pop(-2)
 
         return False
-    
+
     def __get_prlet(self, expr: Expr, value: PExpr) -> PRLet:
         if self._labeled_script.has_label(expr):
             label = self._labeled_script.get_label(expr)
@@ -184,9 +190,8 @@ class DeltaPCompiler:
         def binary_op(op: Type[PBinOp], left: Expr, right: Expr) -> PExpr:
             left_expr = self._compile_expr(left)
             right_expr = self._compile_expr(right)
-            if (
-                isinstance(left_expr, PEUnsupported) 
-                or isinstance(right_expr, PEUnsupported)
+            if isinstance(left_expr, PEUnsupported) or isinstance(
+                right_expr, PEUnsupported
             ):
                 return PEUnsupported()
             return PEBinOP(
@@ -245,12 +250,11 @@ class DeltaPCompiler:
             return binary_op(PMod, expr.left, expr.right)
         elif isinstance(expr, Power):
             return binary_op(PPower, expr.left, expr.right)
-        elif (
-            isinstance(expr, VariableReference) 
-            and self.__has_var(self._get_scope_name(expr.value))
+        elif isinstance(expr, VariableReference) and self.__has_var(
+            self._get_scope_name(expr.value)
         ):
             return PEVar(self._get_scope_name(expr.value))
-        elif isinstance(expr, VariableReference): # undefined variable
+        elif isinstance(expr, VariableReference):  # undefined variable
             # HACK: this should be done in a different way but it is easier to
             # do this for now.
             if expr.value in ["present", "absent"]:
@@ -262,32 +266,21 @@ class DeltaPCompiler:
             # TODO: Unsupported
             logging.warning(f"Unsupported expression, got {expr}")
             return PEUnsupported()
-        
-    def _check_seen_resource(
-        self,
-        path: PExpr
-    ):
+
+    def _check_seen_resource(self, path: PExpr):
         # HACK: avoids some problems with duplicate atomic units
         # (it only considers the last one defined)
         path_str = PStatement.get_str(
-            path, 
-            {},
-            ignore_vars = True # HACK: avoids having to get the vars
+            path, {}, ignore_vars=True  # HACK: avoids having to get the vars
         )
         if path_str is not None:
             if (self.scope, path_str) in self.seen_resources:
                 return True
-            self.seen_resources.append(
-                (self.scope.copy(), path_str)
-            )
+            self.seen_resources.append((self.scope.copy(), path_str))
         return False
-        
+
     def _handle_attr(
-        self,
-        atomic_unit: AtomicUnit,
-        attributes: _Attributes,
-        path: PExpr,
-        attr: str
+        self, atomic_unit: AtomicUnit, attributes: _Attributes, path: PExpr, attr: str
     ):
         attr_var, label = attributes.get_var(attr, atomic_unit)
         self.vars.add(attr_var)
@@ -298,7 +291,7 @@ class DeltaPCompiler:
             PAttr(path, attr, PEVar(attr_var)),
         )
         return statement
-    
+
     def __handle_file(
         self,
         atomic_unit: AtomicUnit,
@@ -319,16 +312,13 @@ class DeltaPCompiler:
 
         statement = self._handle_attr(atomic_unit, attributes, path, "state")
         statement = PSeq(
-            statement,
-            self._handle_attr(atomic_unit, attributes, path, "content")
+            statement, self._handle_attr(atomic_unit, attributes, path, "content")
         )
         statement = PSeq(
-            statement,
-            self._handle_attr(atomic_unit, attributes, path, "owner")
+            statement, self._handle_attr(atomic_unit, attributes, path, "owner")
         )
         statement = PSeq(
-            statement,
-            self._handle_attr(atomic_unit, attributes, path, "mode")
+            statement, self._handle_attr(atomic_unit, attributes, path, "mode")
         )
 
         return statement
@@ -356,7 +346,7 @@ class DeltaPCompiler:
 
         statement = self.__handle_unit_block(definition)
 
-        # The scope is popped here since it allows variable references 
+        # The scope is popped here since it allows variable references
         # compiled from the attributes' values to have the outside scope
         self.scope.pop()
 

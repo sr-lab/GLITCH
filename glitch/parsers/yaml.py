@@ -118,13 +118,13 @@ class YamlParser(p.Parser, ABC):
                 comments.append((i + 1, line.strip()))
 
         return set(comments)
-    
+
     def __get_content(self, info: ElementInfo, code: List[str]) -> str:
-        content = code[info.line - 1: info.end_line]
+        content = code[info.line - 1 : info.end_line]
         if info.line == info.end_line:
-            content[0] = content[0][info.column - 1: info.end_column - 1]
+            content[0] = content[0][info.column - 1 : info.end_column - 1]
         else:
-            content[0] = content[0][info.column - 1:]
+            content[0] = content[0][info.column - 1 :]
             content[-1] = content[-1][: info.end_column - 1]
         content = "".join(content)
 
@@ -135,7 +135,7 @@ class YamlParser(p.Parser, ABC):
             content = content[2:]
             info.column += 2
 
-        l_rmvd = content[:len(content) - len(content.lstrip())]
+        l_rmvd = content[: len(content) - len(content.lstrip())]
         content = content.lstrip()
         for c in l_rmvd:
             if c == "\n":
@@ -144,7 +144,7 @@ class YamlParser(p.Parser, ABC):
             else:
                 info.column += 1
 
-        r_rmvd = content[len(content.rstrip()):]
+        r_rmvd = content[len(content.rstrip()) :]
         content = content.rstrip()
         for c in r_rmvd[::-1]:
             if c == "\n" and info.end_line > info.line:
@@ -155,7 +155,9 @@ class YamlParser(p.Parser, ABC):
 
         return content
 
-    def __parse_jinja_node(self, node: jinja2.nodes.Node, base_info: ElementInfo) -> Expr:
+    def __parse_jinja_node(
+        self, node: jinja2.nodes.Node, base_info: ElementInfo
+    ) -> Expr:
         info = deepcopy(base_info)
         code = base_info.code.split("\n")
 
@@ -325,7 +327,7 @@ class YamlParser(p.Parser, ABC):
         if v in ["null", "~"]:
             return Null(info)
         quotes = v.startswith(("'", '"')) and v.endswith(("'", '"'))
-        
+
         body = self.env.parse(v).body
         if len(body) == 0:
             return String(v, info)
@@ -333,7 +335,10 @@ class YamlParser(p.Parser, ABC):
         jinja_nodes = list(body[0].iter_child_nodes())
 
         for node in jinja_nodes[::-1]:
-            if isinstance(node, jinja2.nodes.TemplateData) and node.data.strip() in ["'", '"']:
+            if isinstance(node, jinja2.nodes.TemplateData) and node.data.strip() in [
+                "'",
+                '"',
+            ]:
                 jinja_nodes.remove(node)
 
         if len(jinja_nodes) > 1:
@@ -342,7 +347,7 @@ class YamlParser(p.Parser, ABC):
                 parts.append(self.__parse_jinja_node(node, info))
 
             if (
-                isinstance(parts[0], String) 
+                isinstance(parts[0], String)
                 and quotes
                 and parts[0].value.startswith(("'", '"'))
             ):
@@ -350,31 +355,23 @@ class YamlParser(p.Parser, ABC):
                 parts[0].column += 1
 
             if (
-                isinstance(parts[-1], String) 
+                isinstance(parts[-1], String)
                 and quotes
                 and parts[-1].value.endswith(("'", '"'))
             ):
                 parts[-1].value = parts[-1].value[:-1]
                 parts[-1].end_column -= 1
 
-            expr = Sum(
-                info, 
-                parts[0], 
-                parts[1]
-            )
+            expr = Sum(info, parts[0], parts[1])
             for part in parts[2:]:
-                expr = Sum(                
-                    info,
-                    expr, 
-                    part
-                )
+                expr = Sum(info, expr, part)
 
             return expr
         elif len(jinja_nodes) == 1:
             expr = self.__parse_jinja_node(jinja_nodes[0], info)
             if (
-                isinstance(expr, String) 
-                and quotes 
+                isinstance(expr, String)
+                and quotes
                 and expr.value.startswith(("'", '"'))
                 and expr.value.endswith(("'", '"'))
             ):
@@ -407,13 +404,13 @@ class YamlParser(p.Parser, ABC):
         elif isinstance(value, MappingNode) and isinstance(v, list):
             return Hash(
                 {
-                    self.get_value(key, code): self.get_value(val, code) # type: ignore
-                    for key, val in v # type: ignore
+                    self.get_value(key, code): self.get_value(val, code)  # type: ignore
+                    for key, val in v  # type: ignore
                 },
                 info,
             )
         elif isinstance(v, list):
-            return Array([self.get_value(val, code) for val in v], info) # type: ignore
+            return Array([self.get_value(val, code) for val in v], info)  # type: ignore
         elif isinstance(v, dict):
             return Hash(
                 {

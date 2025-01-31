@@ -9,7 +9,7 @@ def test_delta_p_minimize_let() -> None:
         PAttr(
             PEConst(const=PStr(value="test23456")),
             "state",
-            PEConst(const=PStr(value="present"))
+            PEConst(const=PStr(value="present")),
         ),
     )
 
@@ -61,25 +61,25 @@ def test_delta_p_minimize_if() -> None:
     minimized = PStatement.minimize(statement, ["test2"])
     assert isinstance(minimized, PIf)
     assert minimized == PIf(
-        PEConst(const=PBool(True)), 
+        PEConst(const=PBool(True)),
         PAttr(
             PEConst(const=PStr(value="test2")),
             "state",
             PEConst(const=PStr(value="present")),
-        ), 
-        PSkip()
+        ),
+        PSkip(),
     )
 
     minimized = PStatement.minimize(statement, ["test3"])
     assert isinstance(minimized, PIf)
     assert minimized == PIf(
-        PEConst(const=PBool(True)), 
-        PSkip(), 
+        PEConst(const=PBool(True)),
+        PSkip(),
         PAttr(
             PEConst(const=PStr(value="test3")),
             "state",
             PEConst(const=PStr(value="present")),
-        )
+        ),
     )
 
     minimized = PStatement.minimize(statement, ["test1"])

@@ -161,46 +161,46 @@ class ExprChecker(ABC):
             return self.check_conditional_statement(expr)
         else:
             raise NotImplementedError(f"expr type not implemented {type(expr)}")
-        
+
     def check_string(self, expr: String) -> bool:
         return False
-    
+
     def check_integer(self, expr: Integer) -> bool:
         return False
-    
+
     def check_float(self, expr: Float) -> bool:
         return False
-    
+
     def check_complex(self, expr: Complex) -> bool:
         return False
-    
+
     def check_boolean(self, expr: Boolean) -> bool:
         return False
-    
+
     def check_null(self, expr: Null) -> bool:
         return False
-    
+
     def check_hash(self, expr: Hash) -> bool:
         return False
-    
+
     def check_array(self, expr: Array) -> bool:
         return False
-    
+
     def check_var_reference(self, expr: VariableReference) -> bool:
         return False
-    
+
     def check_function_call(self, expr: FunctionCall) -> bool:
         return False
-    
+
     def check_method_call(self, expr: MethodCall) -> bool:
         return False
-    
+
     def check_unary_operation(self, expr: UnaryOperation) -> bool:
         return False
-    
+
     def check_binary_operation(self, expr: BinaryOperation) -> bool:
         return False
-    
+
     def check_conditional_statement(self, expr: ConditionalStatement) -> bool:
         return False
 

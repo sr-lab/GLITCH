@@ -154,9 +154,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                         )
                     )
             elif element.type == "resource.aws_ecs_task_definition":
-                volume = self.check_required_attribute(
-                    element.attributes, [], "volume"
-                )
+                volume = self.check_required_attribute(element.attributes, [], "volume")
                 if isinstance(volume, KeyValue):
                     efs_volume_config = self.check_required_attribute(
                         volume.keyvalues, [], "efs_volume_configuration"
@@ -183,7 +181,8 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                     and element.type in config["au_type"]
                     and self.check_required_attribute(
                         element, config["parents"], config["attribute"]
-                    ) is None
+                    )
+                    is None
                 ):
                     attribute = config["attribute"]
                     errors.append(

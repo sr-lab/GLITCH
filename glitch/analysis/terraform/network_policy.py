@@ -40,17 +40,13 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             if element.type == "resource.azurerm_network_security_rule":
-                access = self.check_required_attribute(
-                    element, [""], "access"
-                )
+                access = self.check_required_attribute(element, [""], "access")
                 if (
                     isinstance(access, KeyValue)
                     and isinstance(access.value, str)
                     and access.value.lower() == "allow"
                 ):
-                    protocol = self.check_required_attribute(
-                        element, [""], "protocol"
-                    )
+                    protocol = self.check_required_attribute(element, [""], "protocol")
                     if (
                         isinstance(protocol, KeyValue)
                         and isinstance(protocol.value, str)
@@ -182,7 +178,8 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                     and element.type in rule["au_type"]
                     and self.check_required_attribute(
                         element, rule["parents"], rule["attribute"]
-                    ) is None
+                    )
+                    is None
                 ):
                     errors.append(
                         Error(

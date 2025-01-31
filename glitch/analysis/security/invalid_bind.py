@@ -12,23 +12,16 @@ class InvalidBind(SecuritySmellChecker):
         check_invalid = StringChecker(
             lambda s: re.match(r"(?:https?://|^)0.0.0.0", s) is not None
         )
-        check_ipv6 = StringChecker(
-            lambda s: s in {"*", "::"}
-        )
+        check_ipv6 = StringChecker(lambda s: s in {"*", "::"})
 
-        if (
-            isinstance(element, KeyValue) and
-            (
-                check_invalid.check(element.value) or
-                (
-                    element.name == "ip" and check_ipv6.check(element.value)
-                ) or
-                (
-                    element.name in SecurityVisitor.IP_BIND_COMMANDS and
-                    (
-                        (isinstance(element.value, Boolean) and element.value.value == True)
-                        or check_ipv6.check(element.value)
-                    )
+        if isinstance(element, KeyValue) and (
+            check_invalid.check(element.value)
+            or (element.name == "ip" and check_ipv6.check(element.value))
+            or (
+                element.name in SecurityVisitor.IP_BIND_COMMANDS
+                and (
+                    (isinstance(element.value, Boolean) and element.value.value == True)
+                    or check_ipv6.check(element.value)
                 )
             )
         ):

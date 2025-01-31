@@ -111,10 +111,18 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
     def test_patch_solver_puppet_link(self) -> None:
         filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = State()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "link"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = UNDEF
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "state"
+        ] = "link"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0755"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = UNDEF
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -134,11 +142,21 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
 
     def test_patch_solver_puppet_remove_content(self) -> None:
         filesystem = SystemState()
-        filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = UNDEF
+        filesystem.state[
+            "/var/www/customers/public_html/index.php"
+        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "state"
+        ] = "present"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0755"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = UNDEF
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -169,10 +187,18 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
     def test_patch_solver_puppet_mode(self) -> None:
         filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = State()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html><body><h1>Hello World</h1></body></html>"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "state"
+        ] = "present"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0777"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = "<html><body><h1>Hello World</h1></body></html>"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -186,8 +212,7 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
         assert model[str(solver.unchanged[7])] == 1
         assert model[str(solver.unchanged[8])] == 0
         assert (
-            model["content_20672"]
-            == "<html><body><h1>Hello World</h1></body></html>"
+            model["content_20672"] == "<html><body><h1>Hello World</h1></body></html>"
         )
         assert model["state_14450"] == "present"
         assert model["mode_18972"] == "0777"
@@ -206,7 +231,9 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
 
     def test_patch_solver_puppet_delete_file(self) -> None:
         filesystem = SystemState()
-        filesystem.state["/var/www/customers/public_html/index.php"] = get_nil_file_state()
+        filesystem.state[
+            "/var/www/customers/public_html/index.php"
+        ] = get_nil_file_state()
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -236,23 +263,38 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
     def test_patch_solver_puppet_timeout(self) -> None:
         filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = State()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html><body><h1>Hello World</h1></body></html>"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "state"
+        ] = "present"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0777"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = "<html><body><h1>Hello World</h1></body></html>"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem, timeout=0)
         pytest.raises(TimeoutError, solver.solve)
 
-
     def test_patch_solver_puppet_memory_limit(self) -> None:
         filesystem = SystemState()
         filesystem.state["/var/www/customers/public_html/index.php"] = State()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["state"] = "present"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html><body><h1>Hello World</h1></body></html>"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "state"
+        ] = "present"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0777"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = "<html><body><h1>Hello World</h1></body></html>"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem, memory_limit=1024 * 10)
@@ -361,7 +403,7 @@ class TestPatchSolverPuppetScript4(TestPatchSolver):
 
     def test_patch_solver_puppet_if(self) -> None:
         filesystem = SystemState()
-        
+
         filesystem.state["/usr/sbin/policy-rc.d"] = get_nil_file_state()
         filesystem.state["/usr/sbin/policy-rc.d"].attrs["state"] = "present"
 
@@ -556,10 +598,14 @@ if($old_config != 'notfound')
 
     def test_patch_solver_puppet_inner_if(self) -> None:
         filesystem = SystemState()
-        
+
         filesystem.state["/tmp/delete_router_interfaces_bgp.sh"] = get_nil_file_state()
-        filesystem.state["/tmp/delete_router_interfaces_bgp.sh"].attrs["state"] = "present"
-        filesystem.state["/tmp/delete_router_interfaces_bgp.sh"].attrs["content"] = "test"
+        filesystem.state["/tmp/delete_router_interfaces_bgp.sh"].attrs[
+            "state"
+        ] = "present"
+        filesystem.state["/tmp/delete_router_interfaces_bgp.sh"].attrs[
+            "content"
+        ] = "test"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -697,7 +743,7 @@ file { '/usr/local/bin':
 """
         self._setup_patch_solver(puppet_script_11, UnitBlockType.script, Tech.puppet)
 
-    #@unittest.skip("Not implemented yet")
+    # @unittest.skip("Not implemented yet")
     def test_patch_solver_puppet_variable_undefined(self) -> None:
         # The problem is that there is no literal to repair and so
         # the solver isn't able to get a solution
@@ -724,7 +770,7 @@ file { '/usr/local/bin':
 """
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
-    
+
 class TestPatchSolverPuppetScript12(TestPatchSolver):
     def setUp(self):
         super().setUp()
@@ -759,7 +805,7 @@ file { 'hiera_data_dir' :
   path   => $data_dir,
   mode   => '0751',
 }
-"""     
+"""
         self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result)
 
 
@@ -1033,12 +1079,13 @@ if $chroot == 'true' {
     def test_patch_solver_puppet_if_with_defined(self):
         filesystem = SystemState()
         filesystem.state["package:$packagenameprefix$packagenamesuffix"] = State()
-        filesystem.state["package:$packagenameprefix$packagenamesuffix"].attrs["state"] = "latest"
+        filesystem.state["package:$packagenameprefix$packagenamesuffix"].attrs[
+            "state"
+        ] = "latest"
 
         assert self.statement is not None
         self.statement = PStatement.minimize(
-            self.statement, 
-            ["package:$packagenameprefix$packagenamesuffix"]
+            self.statement, ["package:$packagenameprefix$packagenamesuffix"]
         )
         solver = PatchSolver(self.statement, filesystem)
         models = solver.solve()
@@ -1066,7 +1113,9 @@ if $chroot == 'true' {
     }
 }
 """
-        self._patch_solver_apply(solver, models[0], filesystem, Tech.puppet, result, n_filesystems=2)
+        self._patch_solver_apply(
+            solver, models[0], filesystem, Tech.puppet, result, n_filesystems=2
+        )
 
 
 class TestPatchSolverPuppetScript18(TestPatchSolver):
@@ -1134,10 +1183,18 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
 
     def test_patch_solver_ansible_mode(self) -> None:
         filesystem = SystemState()
-        filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0777"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_admin"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = UNDEF
+        filesystem.state[
+            "/var/www/customers/public_html/index.php"
+        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0777"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = UNDEF
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -1179,10 +1236,18 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
 
     def test_patch_solver_ansible_owner(self) -> None:
         filesystem = SystemState()
-        filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "web_user"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = UNDEF
+        filesystem.state[
+            "/var/www/customers/public_html/index.php"
+        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0755"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "web_user"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = UNDEF
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -1410,7 +1475,7 @@ class TestPatchSolverAnsibleScript6(TestPatchSolver):
   ansible.builtin.package:
     name: ntpdate
     state: latest
-""" 
+"""
         self._patch_solver_apply(solver, models[0], filesystem, Tech.ansible, result)
 
 
@@ -1489,10 +1554,7 @@ class TestPatchSolverAnsibleScript8(TestPatchSolver):
         filesystem.state["user:teamcity"].attrs["state"] = "absent"
 
         assert self.statement is not None
-        self.statement = PStatement.minimize(
-            self.statement, 
-            ["user:teamcity"]
-        )
+        self.statement = PStatement.minimize(self.statement, ["user:teamcity"])
         solver = PatchSolver(self.statement, filesystem, timeout=10)
         models = solver.solve()
         assert models is not None
@@ -1681,7 +1743,9 @@ class TestPatchSolverAnsibleScript13(TestPatchSolver):
         filesystem = SystemState()
         filesystem.state["aws_instance:my_instance"] = State()
         filesystem.state["aws_instance:my_instance"].attrs["state"] = "present"
-        filesystem.state["aws_instance:my_instance"].attrs["availability_zone"] = "us-west-2b"
+        filesystem.state["aws_instance:my_instance"].attrs[
+            "availability_zone"
+        ] = "us-west-2b"
         filesystem.state["aws_instance:my_instance"].attrs["instance_type"] = "t2.micro"
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem, timeout=10)
@@ -1729,7 +1793,9 @@ class TestPatchSolverAnsibleScript14(TestPatchSolver):
         filesystem = SystemState()
         filesystem.state["aws_iam_role:mynewrole"] = State()
         filesystem.state["aws_iam_role:mynewrole"].attrs["state"] = "present"
-        filesystem.state["aws_iam_role:mynewrole"].attrs["assume_role_policy"] = """{
+        filesystem.state["aws_iam_role:mynewrole"].attrs[
+            "assume_role_policy"
+        ] = """{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -2020,26 +2086,50 @@ end
 
     def test_patch_solver_chef_minimize(self) -> None:
         filesystem = SystemState()
-        filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "test"
-        filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html>This is a placeholder for the home page.</html>"
-        
+        filesystem.state[
+            "/var/www/customers/public_html/index.php"
+        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0755"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "test"
+        filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = "<html>This is a placeholder for the home page.</html>"
+
         filesystem.state["/var/www/customers/public_html/index2.php"] = State()
-        filesystem.state["/var/www/customers/public_html/index2.php"].attrs["state"] = UNDEF
-        filesystem.state["/var/www/customers/public_html/index2.php"].attrs["mode"] = "0755"
-        filesystem.state["/var/www/customers/public_html/index2.php"].attrs["owner"] = "web_admin"
-        filesystem.state["/var/www/customers/public_html/index2.php"].attrs["content"] = "<html>This is a placeholder for the home page.</html>"
+        filesystem.state["/var/www/customers/public_html/index2.php"].attrs[
+            "state"
+        ] = UNDEF
+        filesystem.state["/var/www/customers/public_html/index2.php"].attrs[
+            "mode"
+        ] = "0755"
+        filesystem.state["/var/www/customers/public_html/index2.php"].attrs[
+            "owner"
+        ] = "web_admin"
+        filesystem.state["/var/www/customers/public_html/index2.php"].attrs[
+            "content"
+        ] = "<html>This is a placeholder for the home page.</html>"
 
         assert self.statement is not None
         self.statement: PStatement = PStatement.minimize(
             self.statement, ["/var/www/customers/public_html/index.php"]
         )
         minimized_filesystem = SystemState()
-        minimized_filesystem.state["/var/www/customers/public_html/index.php"] = get_default_file_state()
-        minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs["mode"] = "0755"
-        minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs["owner"] = "test"
-        minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs["content"] = "<html>This is a placeholder for the home page.</html>"
+        minimized_filesystem.state[
+            "/var/www/customers/public_html/index.php"
+        ] = get_default_file_state()
+        minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "mode"
+        ] = "0755"
+        minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "owner"
+        ] = "test"
+        minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs[
+            "content"
+        ] = "<html>This is a placeholder for the home page.</html>"
 
         solver = PatchSolver(self.statement, minimized_filesystem)
         models = solver.solve()
@@ -2283,9 +2373,15 @@ end
 
     def test_patch_solver_chef_non_string(self) -> None:
         filesystem = SystemState()
-        filesystem.state["/var/www/customers/public_html/index.html"] = get_default_file_state()
-        filesystem.state["/var/www/customers/public_html/index.html"].attrs["state"] = UNDEF
-        filesystem.state["/var/www/customers/public_html/index.html"].attrs["owner"] = "test"
+        filesystem.state[
+            "/var/www/customers/public_html/index.html"
+        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.html"].attrs[
+            "state"
+        ] = UNDEF
+        filesystem.state["/var/www/customers/public_html/index.html"].attrs[
+            "owner"
+        ] = "test"
 
         assert self.statement is not None
 
@@ -2360,13 +2456,17 @@ resource "aws_iam_role" "test_role" {
 EOF
 }
 """
-        self._setup_patch_solver(terraform_script_1, UnitBlockType.script, Tech.terraform)
+        self._setup_patch_solver(
+            terraform_script_1, UnitBlockType.script, Tech.terraform
+        )
 
     def test_patch_solver_terraform_iam_role(self) -> None:
         filesystem = SystemState()
         filesystem.state["aws_iam_role:test_role"] = State()
         filesystem.state["aws_iam_role:test_role"].attrs["state"] = "present"
-        filesystem.state["aws_iam_role:test_role"].attrs["assume_role_policy"] = """{
+        filesystem.state["aws_iam_role:test_role"].attrs[
+            "assume_role_policy"
+        ] = """{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -2418,7 +2518,9 @@ resource "aws_instance" "web" {
   instance_type = "t3.micro"
 }
 """
-        self._setup_patch_solver(terraform_script_2, UnitBlockType.script, Tech.terraform)
+        self._setup_patch_solver(
+            terraform_script_2, UnitBlockType.script, Tech.terraform
+        )
 
     def test_patch_solver_terraform_aws_instance(self) -> None:
         filesystem = SystemState()
@@ -2451,13 +2553,19 @@ resource "aws_s3_bucket" "example" {
   bucket = "my-tf-test-bucket"
 }
 """
-        self._setup_patch_solver(terraform_script_3, UnitBlockType.script, Tech.terraform)
+        self._setup_patch_solver(
+            terraform_script_3, UnitBlockType.script, Tech.terraform
+        )
 
     def test_patch_solver_terraform_aws_bucket(self):
         filesystem = SystemState()
         filesystem.state["aws_s3_bucket:different-test-bucket"] = State()
-        filesystem.state["aws_s3_bucket:different-test-bucket"].attrs["state"] = "present"
-        filesystem.state["aws_s3_bucket:different-test-bucket"].attrs["acl"] = "public-read"
+        filesystem.state["aws_s3_bucket:different-test-bucket"].attrs[
+            "state"
+        ] = "present"
+        filesystem.state["aws_s3_bucket:different-test-bucket"].attrs[
+            "acl"
+        ] = "public-read"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -2484,14 +2592,20 @@ resource "aws_instance" "stdby_vThunder" {
   availability_zone = "${var.region}a"
 }
 """
-        self._setup_patch_solver(terraform_script_4, UnitBlockType.script, Tech.terraform)
+        self._setup_patch_solver(
+            terraform_script_4, UnitBlockType.script, Tech.terraform
+        )
 
     def test_patch_solver_terraform_unsupported(self):
         filesystem = SystemState()
         filesystem.state["aws_instance:stdby_vThunder"] = State()
         filesystem.state["aws_instance:stdby_vThunder"].attrs["state"] = "present"
-        filesystem.state["aws_instance:stdby_vThunder"].attrs["instance_type"] = "m3.xlarge"
-        filesystem.state["aws_instance:stdby_vThunder"].attrs["availability_zone"] = "us-west-2a"
+        filesystem.state["aws_instance:stdby_vThunder"].attrs[
+            "instance_type"
+        ] = "m3.xlarge"
+        filesystem.state["aws_instance:stdby_vThunder"].attrs[
+            "availability_zone"
+        ] = "us-west-2a"
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)

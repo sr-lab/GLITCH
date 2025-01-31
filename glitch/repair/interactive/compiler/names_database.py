@@ -198,8 +198,7 @@ class NamesDatabase:
 
         if isinstance(value, Integer) and name == "mode":
             return String(
-                oct(value.value).replace('o', ''), 
-                ElementInfo.from_code_element(value)
+                oct(value.value).replace("o", ""), ElementInfo.from_code_element(value)
             )
 
         if v is not None:
@@ -254,9 +253,11 @@ class NamesDatabase:
             return String(v, ElementInfo.from_code_element(value))
 
         return value
-    
+
     @staticmethod
-    def get_attr_pair(value: Expr, attr_name: str, au_type: str, tech: Tech) -> Tuple[str, Expr]:
+    def get_attr_pair(
+        value: Expr, attr_name: str, au_type: str, tech: Tech
+    ) -> Tuple[str, Expr]:
         attr_name = NamesDatabase.__get_attr_name(attr_name, au_type, tech)
 
         v = None
@@ -271,22 +272,22 @@ class NamesDatabase:
                     )
                 case ":disable", "state", "service", Tech.chef:
                     return (
-                        "enabled", 
-                        String("false", ElementInfo.from_code_element(value))
+                        "enabled",
+                        String("false", ElementInfo.from_code_element(value)),
                     )
                 case _:
                     pass
-        
+
         return (
             attr_name,
-            NamesDatabase.__get_attr_value(value, attr_name, au_type, tech)
+            NamesDatabase.__get_attr_value(value, attr_name, au_type, tech),
         )
 
 
 class NormalizationVisitor:
     def __init__(self, tech: Tech) -> None:
         self.tech = tech
-    
+
     def visit(self, element: CodeElement) -> None:
         if isinstance(element, AtomicUnit):
             self.visit_atomic_unit(element)
@@ -294,29 +295,29 @@ class NormalizationVisitor:
             self.visit_unit_block(element)
         elif isinstance(element, ConditionalStatement):
             self.visit_conditional_statement(element)
-        
+
         if isinstance(element, Block):
             self.visit_block(element)
 
     def visit_atomic_unit(self, element: AtomicUnit) -> None:
         element.type = NamesDatabase.get_au_type(element.type, self.tech)
-        
+
         # Since Terraform does not define a state, we add it manually
         # FIXME: Probably should be in a better place
         if self.tech == Tech.terraform:
-            element.attributes.insert(0, Attribute(
-                "state", 
-                # The element info should be unique
-                String("present", ElementInfo.get_sketched()), 
-                ElementInfo.get_sketched()
-            ))
+            element.attributes.insert(
+                0,
+                Attribute(
+                    "state",
+                    # The element info should be unique
+                    String("present", ElementInfo.get_sketched()),
+                    ElementInfo.get_sketched(),
+                ),
+            )
 
         for attr in element.attributes:
             attr.name, attr.value = NamesDatabase.get_attr_pair(
-                attr.value, 
-                attr.name, 
-                element.type, 
-                self.tech
+                attr.value, attr.name, element.type, self.tech
             )
 
     def visit_conditional_statement(self, element: ConditionalStatement) -> None:
@@ -332,4 +333,3 @@ class NormalizationVisitor:
     def visit_block(self, element: Block) -> None:
         for child in element.statements:
             self.visit(child)
-        

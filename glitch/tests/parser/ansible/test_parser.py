@@ -102,23 +102,20 @@ class TestAnsibleParser(TestParser):
         assert isinstance(ir.atomic_units[0].attributes[3].value, Hash)
         assert len(ir.atomic_units[0].attributes[3].value.value) == 1
         assert (
-            String("executable", ElementInfo(8, 5, 8, 15, "executable")) in
-            ir.atomic_units[0].attributes[3].value.value
+            String("executable", ElementInfo(8, 5, 8, 15, "executable"))
+            in ir.atomic_units[0].attributes[3].value.value
         )
 
-        executable_value = ir.atomic_units[0].attributes[3].value.value[
-            String("executable", ElementInfo(8, 5, 8, 15, "executable"))
-        ]
+        executable_value = (
+            ir.atomic_units[0]
+            .attributes[3]
+            .value.value[String("executable", ElementInfo(8, 5, 8, 15, "executable"))]
+        )
         assert isinstance(executable_value, Array)
         assert len(executable_value.value) == 2
 
-        self._check_value(
-            executable_value.value[0], String, "/bin/bash", 8, 18, 8, 29
-        )
-        self._check_value(
-            executable_value.value[1], String, "/bin/shell", 8, 31, 8, 43
-        )
-
+        self._check_value(executable_value.value[0], String, "/bin/bash", 8, 18, 8, 29)
+        self._check_value(executable_value.value[1], String, "/bin/shell", 8, 31, 8, 43)
 
     def test_ansible_parser_valid_playbook_vars(self) -> None:
         """
@@ -222,15 +219,15 @@ class TestAnsibleParser(TestParser):
             in ir.unit_blocks[0].variables[0].value.value
         )
         self._check_value(
-            ir.unit_blocks[0].variables[0].value.value[
-                String("user", ElementInfo(7, 7, 7, 11, "user"))
-            ],
+            ir.unit_blocks[0]
+            .variables[0]
+            .value.value[String("user", ElementInfo(7, 7, 7, 11, "user"))],
             String,
             "test",
             7,
             13,
             7,
-            19
+            19,
         )
 
     def test_ansible_parser_valid_playbook_vars_list(self) -> None:
@@ -261,15 +258,16 @@ class TestAnsibleParser(TestParser):
             in ir.unit_blocks[0].variables[0].value.value[0].value
         )
         self._check_value(
-            ir.unit_blocks[0].variables[0].value.value[0].value[
-                String("user", ElementInfo(7, 9, 7, 13, "user"))
-            ],
+            ir.unit_blocks[0]
+            .variables[0]
+            .value.value[0]
+            .value[String("user", ElementInfo(7, 9, 7, 13, "user"))],
             String,
             "test1",
             7,
             15,
             7,
-            20
+            20,
         )
 
         assert isinstance(ir.unit_blocks[0].variables[0].value.value[1], Hash)
@@ -279,15 +277,16 @@ class TestAnsibleParser(TestParser):
             in ir.unit_blocks[0].variables[0].value.value[1].value
         )
         self._check_value(
-            ir.unit_blocks[0].variables[0].value.value[1].value[
-                String("user", ElementInfo(8, 9, 8, 13, "user"))
-            ],
+            ir.unit_blocks[0]
+            .variables[0]
+            .value.value[1]
+            .value[String("user", ElementInfo(8, 9, 8, 13, "user"))],
             String,
             "test2",
             8,
             15,
             8,
-            20
+            20,
         )
 
     def test_ansible_parser_valid_vars(self) -> None:

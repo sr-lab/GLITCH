@@ -65,7 +65,7 @@ def teardown_file_system():
     shutil.rmtree(temp_dir.name)
 
 
-def test_get_file_system_state(setup_file_system, teardown_file_system) -> None: # type: ignore
+def test_get_file_system_state(setup_file_system, teardown_file_system) -> None:  # type: ignore
     file4 = os.path.join(dir1, "file4")
 
     files = {dir1, file2, file3, file4}

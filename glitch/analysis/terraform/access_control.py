@@ -29,10 +29,9 @@ class TerraformAccessControl(TerraformSmellChecker):
                     allow_checker = StringChecker(
                         lambda x: re.search(allow_pattern, x.lower()) is not None
                     )
-                    
-                    if (
-                        pattern_checker.check(attribute.value)
-                        and allow_checker.check(attribute.value)
+
+                    if pattern_checker.check(attribute.value) and allow_checker.check(
+                        attribute.value
                     ):
                         return [
                             Error(
@@ -79,9 +78,7 @@ class TerraformAccessControl(TerraformSmellChecker):
             none_checker = StringChecker(lambda x: x.lower() == "none")
 
             if element.type == "aws_api_gateway_method":
-                http_method = self.check_required_attribute(
-                    element, [], "http_method"
-                )
+                http_method = self.check_required_attribute(element, [], "http_method")
                 authorization = self.check_required_attribute(
                     element, [], "authorization"
                 )
@@ -91,9 +88,8 @@ class TerraformAccessControl(TerraformSmellChecker):
                     and http_method.value is not None
                     and authorization.value is not None
                 ):
-                    if (
-                        get_checker.check(http_method.value)
-                        and none_checker.check(authorization.value)
+                    if get_checker.check(http_method.value) and none_checker.check(
+                        authorization.value
                     ):
                         api_key_required = self.check_required_attribute(
                             element, [], "api_key_required"
@@ -132,9 +128,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                         )
                     )
             elif element.type == "github_repository":
-                visibility = self.check_required_attribute(
-                    element, [], "visibility"
-                )
+                visibility = self.check_required_attribute(element, [], "visibility")
                 if isinstance(visibility, KeyValue) and isinstance(
                     visibility.value, str
                 ):
@@ -145,9 +139,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                             )
                         )
                 else:
-                    private = self.check_required_attribute(
-                        element, [], "private"
-                    )
+                    private = self.check_required_attribute(element, [], "private")
                     if isinstance(private, KeyValue) and isinstance(private.value, str):
                         if f"{private.value}".lower() != "true":
                             errors.append(
@@ -204,9 +196,9 @@ class TerraformAccessControl(TerraformSmellChecker):
                     values = config["values"]
 
                 required_attribute = self.check_required_attribute(
-                    element, 
-                    config["parents"], 
-                    config["attribute"], 
+                    element,
+                    config["parents"],
+                    config["attribute"],
                 )
                 if (
                     element.type not in config["au_type"]
@@ -220,14 +212,12 @@ class TerraformAccessControl(TerraformSmellChecker):
                 for value in values:
                     if (
                         self.check_required_attribute(
-                            element, 
-                            config["parents"], 
-                            config["attribute"], 
-                            value=value
-                        ) is not None
+                            element, config["parents"], config["attribute"], value=value
+                        )
+                        is not None
                     ):
                         satisfied = True
-                    
+
                 if not satisfied:
                     if required_attribute is not None:
                         element_with_error = required_attribute
@@ -238,7 +228,7 @@ class TerraformAccessControl(TerraformSmellChecker):
                     value = ""
                     if len(values) > 0:
                         value = f" with value in {values}"
-                    
+
                     errors.append(
                         Error(
                             "sec_access_control",

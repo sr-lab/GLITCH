@@ -37,9 +37,7 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        self._check_value(
-            ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44
-        )
+        self._check_value(ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44)
         assert ir.atomic_units[0].type == "google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "account_id"
@@ -57,9 +55,7 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        self._check_value(
-            ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44
-        )
+        self._check_value(ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44)
         assert ir.atomic_units[0].type == "google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "account_id"
@@ -78,9 +74,7 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        self._check_value(
-            ir.atomic_units[0].name, String, "example", 1, 25, 1, 34
-        )
+        self._check_value(ir.atomic_units[0].name, String, "example", 1, 25, 1, 34)
         assert ir.atomic_units[0].type == "aws_instance"
 
         assert ir.atomic_units[0].attributes[0].name == "user_data"
@@ -104,9 +98,7 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 3
-        self._check_value(
-            ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45
-        )
+        self._check_value(ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45)
         assert ir.atomic_units[0].type == "google_bigquery_dataset"
 
         assert ir.atomic_units[0].attributes[0].name == "test"
@@ -149,7 +141,7 @@ class TestTerraform(TestParser):
             36,
         )
 
-        assert isinstance(ir.atomic_units[0].attributes[2].value, Sum)   
+        assert isinstance(ir.atomic_units[0].attributes[2].value, Sum)
 
     def test_terraform_parser_dict_value(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/dict_value_assign.tf")
@@ -157,9 +149,7 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        self._check_value(
-            ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45
-        )
+        self._check_value(ir.atomic_units[0].name, String, "dataset", 1, 36, 1, 45)
         assert ir.atomic_units[0].type == "google_bigquery_dataset"
 
         assert ir.atomic_units[0].attributes[0].name == "labels"
@@ -198,20 +188,21 @@ class TestTerraform(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert len(ir.atomic_units[0].attributes) == 1
-        self._check_value(
-            ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44
-        )
+        self._check_value(ir.atomic_units[0].name, String, "bqowner", 1, 35, 1, 44)
         assert ir.atomic_units[0].type == "google_service_account"
 
         assert ir.atomic_units[0].attributes[0].name == "keys"
         assert isinstance(ir.atomic_units[0].attributes[0].value, Array)
         assert len(ir.atomic_units[0].attributes[0].value.value) == 3
-        
+
         self._check_value(
             ir.atomic_units[0].attributes[0].value.value[0],
             String,
             "value1",
-            2, 11, 2, 19
+            2,
+            11,
+            2,
+            19,
         )
         assert isinstance(ir.atomic_units[0].attributes[0].value.value[1], Array)
         assert isinstance(ir.atomic_units[0].attributes[0].value.value[2], Hash)
@@ -221,9 +212,7 @@ class TestTerraform(TestParser):
         assert len(ir.atomic_units) == 1
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
-        self._check_value(
-            ir.atomic_units[0].name, String, "tfenvtest", 1, 46, 1, 57
-        )
+        self._check_value(ir.atomic_units[0].name, String, "tfenvtest", 1, 46, 1, 57)
         assert ir.atomic_units[0].type == "aws_elastic_beanstalk_environment"
         assert len(ir.atomic_units[0].statements) == 1
 
@@ -237,7 +226,10 @@ class TestTerraform(TestParser):
         assert ir.atomic_units[0].statements[0].unit_blocks[0].name == "content"
         assert len(ir.atomic_units[0].statements[0].unit_blocks[0].attributes) == 1
 
-        assert ir.atomic_units[0].statements[0].unit_blocks[0].attributes[0].name == "namespace"        
+        assert (
+            ir.atomic_units[0].statements[0].unit_blocks[0].attributes[0].name
+            == "namespace"
+        )
 
     def test_terraform_parser_comments(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/comments.tf")
@@ -271,7 +263,7 @@ class TestTerraform(TestParser):
         ir = self.__parse("tests/parser/terraform/files/operations.tf")
         assert len(ir.atomic_units) == 1
         assert len(ir.atomic_units[0].attributes) == 15
-       
+
         self._check_binary_operation(
             ir.atomic_units[0].attributes[0].value,
             Sum,
@@ -280,7 +272,7 @@ class TestTerraform(TestParser):
             2,
             9,
             2,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[1].value,
@@ -290,7 +282,7 @@ class TestTerraform(TestParser):
             3,
             9,
             3,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[2].value,
@@ -300,7 +292,7 @@ class TestTerraform(TestParser):
             4,
             9,
             4,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[3].value,
@@ -310,7 +302,7 @@ class TestTerraform(TestParser):
             5,
             9,
             5,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[4].value,
@@ -320,7 +312,7 @@ class TestTerraform(TestParser):
             6,
             9,
             6,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[5].value,
@@ -330,7 +322,7 @@ class TestTerraform(TestParser):
             7,
             9,
             7,
-            19
+            19,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[6].value,
@@ -340,7 +332,7 @@ class TestTerraform(TestParser):
             8,
             8,
             8,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[7].value,
@@ -350,7 +342,7 @@ class TestTerraform(TestParser):
             9,
             8,
             9,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[8].value,
@@ -360,7 +352,7 @@ class TestTerraform(TestParser):
             10,
             8,
             10,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[9].value,
@@ -370,7 +362,7 @@ class TestTerraform(TestParser):
             11,
             8,
             11,
-            17
+            17,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[10].value,
@@ -380,7 +372,7 @@ class TestTerraform(TestParser):
             12,
             8,
             12,
-            17
+            17,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[11].value,
@@ -390,7 +382,7 @@ class TestTerraform(TestParser):
             13,
             8,
             13,
-            18
+            18,
         )
         self._check_binary_operation(
             ir.atomic_units[0].attributes[12].value,
@@ -400,21 +392,15 @@ class TestTerraform(TestParser):
             14,
             8,
             14,
-            18
+            18,
         )
         assert isinstance(ir.atomic_units[0].attributes[13].value, Not)
         self._check_value(
-            ir.atomic_units[0].attributes[13].value.expr,
-            Boolean,
-            True,
-            15, 10, 15, 14
+            ir.atomic_units[0].attributes[13].value.expr, Boolean, True, 15, 10, 15, 14
         )
         assert isinstance(ir.atomic_units[0].attributes[14].value, Minus)
         self._check_value(
-            ir.atomic_units[0].attributes[14].value.expr,
-            Float,
-            1.3,
-            16, 12, 16, 15
+            ir.atomic_units[0].attributes[14].value.expr, Float, 1.3, 16, 12, 16, 15
         )
 
     def test_terraform_parser_conditional(self) -> None:
@@ -432,9 +418,15 @@ class TestTerraform(TestParser):
         assert len(ir.atomic_units[0].attributes[0].value.statements) == 1
         assert isinstance(ir.atomic_units[0].attributes[0].value.statements[0], String)
 
-        assert isinstance(ir.atomic_units[0].attributes[0].value.else_statement, ConditionalStatement)
-        assert len(ir.atomic_units[0].attributes[0].value.else_statement.statements) == 1
-        assert isinstance(ir.atomic_units[0].attributes[0].value.else_statement.statements[0], Null)
+        assert isinstance(
+            ir.atomic_units[0].attributes[0].value.else_statement, ConditionalStatement
+        )
+        assert (
+            len(ir.atomic_units[0].attributes[0].value.else_statement.statements) == 1
+        )
+        assert isinstance(
+            ir.atomic_units[0].attributes[0].value.else_statement.statements[0], Null
+        )
 
     def test_terraform_parser_function_call(self) -> None:
         ir = self.__parse("tests/parser/terraform/files/function_call.tf")

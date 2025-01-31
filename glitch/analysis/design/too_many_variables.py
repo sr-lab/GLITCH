@@ -14,7 +14,10 @@ class TooManyVariables(DesignSmellChecker):
 
         if isinstance(element, UnitBlock):
             count += len(element.variables)
-        elif isinstance(element, ConditionalStatement) and element.else_statement is not None:
+        elif (
+            isinstance(element, ConditionalStatement)
+            and element.else_statement is not None
+        ):
             count += self.__count_variables(element.else_statement)
         elif isinstance(element, Variable):
             count += 1

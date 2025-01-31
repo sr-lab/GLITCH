@@ -31,7 +31,7 @@ class GLITCHTransformer(Transformer):
                     comment.end_line, comment.end_column = arg.end_line, arg.end_column
                     self.comments.append(comment)
         return Discard
-    
+
     def new_line_and_or_comma(self, args: List) -> List:
         return Discard
 
@@ -64,7 +64,7 @@ class GLITCHTransformer(Transformer):
                 meta.end_column,
             ),
         )
-    
+
     def __get_element_info_from_tokens(self, start: Token, end: Token) -> ElementInfo:
         return ElementInfo(
             start.line,
@@ -78,13 +78,13 @@ class GLITCHTransformer(Transformer):
                 end.end_column,
             ),
         )
-    
+
     def __parse_heredoc(self, tree: Tree) -> str:
         res = ""
         for arg in tree.children:
             res += arg.value
         return "\n".join(res.split("\n")[1:-1])
-    
+
     @v_args(meta=True)
     def binary_op(self, meta: Meta, args: List) -> Any:
         op_to_ir = {
@@ -107,9 +107,9 @@ class GLITCHTransformer(Transformer):
             return op_to_ir[args[1].children[0].children[0]](
                 self.__get_element_info_from_tokens(args[0], args[1].children[1]),
                 args[0],
-                args[1].children[1]
+                args[1].children[1],
             )
-        
+
     @v_args(meta=True)
     def unary_op(self, meta: Meta, args: List) -> Any:
         if args[0] == "-":
@@ -120,11 +120,11 @@ class GLITCHTransformer(Transformer):
     @v_args(meta=True)
     def get_attr(self, meta: Meta, args: List) -> Any:
         return args[0]
-    
+
     @v_args(meta=True)
     def index(self, meta: Meta, args: List) -> Any:
         return args[0]
-    
+
     @v_args(meta=True)
     def index_expr_term(self, meta: Meta, args: List) -> Any:
         return Access(self.__get_element_info(meta), args[0], args[1])
@@ -136,15 +136,15 @@ class GLITCHTransformer(Transformer):
     @v_args(meta=True)
     def int_lit(self, meta: Meta, args: List) -> int:
         return Integer(int(args[0]), self.__get_element_info(meta))
-    
+
     @v_args(meta=True)
     def float_lit(self, meta: Meta, args: List) -> float:
         return Float(float("".join(args)), self.__get_element_info(meta))
-    
+
     @v_args(meta=True)
     def interpolation_maybe_nested(self, meta: Meta, args: List) -> Any:
         return args[0]
-    
+
     @v_args(meta=True)
     def string_with_interpolation(self, meta: Meta, args: List) -> str:
         if len(args) == 1:
@@ -173,10 +173,10 @@ class GLITCHTransformer(Transformer):
                         args[0].column,
                         args[1].end_line,
                         args[1].end_column,
-                    )
+                    ),
                 ),
-                args[0], 
-                args[1]
+                args[0],
+                args[1],
             )
             for i in range(2, len(args)):
                 res = Sum(
@@ -190,10 +190,10 @@ class GLITCHTransformer(Transformer):
                             res.column,
                             args[i].end_line,
                             args[i].end_column,
-                        )
+                        ),
                     ),
-                    res, 
-                    args[i]
+                    res,
+                    args[i],
                 )
             res.line, res.column = meta.line, meta.column
             res.end_line, res.end_column = meta.end_line, meta.end_column
@@ -205,14 +205,14 @@ class GLITCHTransformer(Transformer):
         if len(args) == 0:
             return Null(self.__get_element_info(meta))
         elif len(args) == 1:
-            if isinstance(args[0], Tree) and args[0].data == 'heredoc_template':
+            if isinstance(args[0], Tree) and args[0].data == "heredoc_template":
                 return String(
                     self.__parse_heredoc(args[0]),
                     self.__get_element_info(meta),
                 )
             if isinstance(args[0], Expr):
                 return args[0]
-            if (args[0].type == "STRING_LIT"):
+            if args[0].type == "STRING_LIT":
                 return String(
                     args[0].value[1:-1],
                     self.__get_element_info(args[0]),
@@ -233,7 +233,7 @@ class GLITCHTransformer(Transformer):
             object_elems[k] = v
         res = Hash(object_elems, self.__get_element_info(meta))
         return res
-    
+
     @v_args(meta=True)
     def tuple(self, meta: Meta, args: List) -> Any:
         return Array(args, self.__get_element_info(meta))
@@ -264,7 +264,7 @@ class GLITCHTransformer(Transformer):
                 elif isinstance(arg, UnitBlock):
                     ub.add_unit_block(arg)
                 elif isinstance(arg, Attribute):
-                    if args[0].value in ["locals"]: 
+                    if args[0].value in ["locals"]:
                         ub.add_variable(
                             Variable(
                                 arg.name,
@@ -280,7 +280,7 @@ class GLITCHTransformer(Transformer):
 
     def body(self, args: List) -> Any:
         return args
-    
+
     @v_args(meta=True)
     def conditional(self, meta: Meta, args: List) -> Any:
         condition = ConditionalStatement(
@@ -316,22 +316,22 @@ class GLITCHTransformer(Transformer):
     def attr_splat_expr_term(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
         return Null(self.__get_element_info(meta))
-    
+
     @v_args(meta=True)
     def full_splat_expr_term(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
         return Null(self.__get_element_info(meta))
-    
+
     @v_args(meta=True)
     def for_tuple_expr(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
-        return Null(self.__get_element_info(meta)) 
-    
+        return Null(self.__get_element_info(meta))
+
     @v_args(meta=True)
     def for_object_expr(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
-        return Null(self.__get_element_info(meta)) 
-    
+        return Null(self.__get_element_info(meta))
+
     @v_args(meta=True)
     def function_call(self, meta: Meta, args: List) -> Any:
         if len(args) == 1:
@@ -374,7 +374,7 @@ class TerraformParser(p.Parser):
         except:
             throw_exception(EXCEPTIONS["TERRAFORM_COULD_NOT_PARSE"], path)
             return None
-    
+
         return unit_block
 
     def parse_module(self, path: str) -> Module:

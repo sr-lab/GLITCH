@@ -7,10 +7,21 @@ def test_delta_p_to_filesystems() -> None:
     assert len(fss) == 1
     assert len(fss[0].state) == 1
     assert "/var/www/customers/public_html/index.php" in fss[0].state
-    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["state"] == "present"
-    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["mode"] == "0755"
-    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["owner"] == "web_admin"
-    assert fss[0].state["/var/www/customers/public_html/index.php"].attrs["content"] == "<html><body><h1>Hello World</h1></body></html>"
+    assert (
+        fss[0].state["/var/www/customers/public_html/index.php"].attrs["state"]
+        == "present"
+    )
+    assert (
+        fss[0].state["/var/www/customers/public_html/index.php"].attrs["mode"] == "0755"
+    )
+    assert (
+        fss[0].state["/var/www/customers/public_html/index.php"].attrs["owner"]
+        == "web_admin"
+    )
+    assert (
+        fss[0].state["/var/www/customers/public_html/index.php"].attrs["content"]
+        == "<html><body><h1>Hello World</h1></body></html>"
+    )
 
 
 def test_delta_p_to_filesystems_2() -> None:
@@ -42,4 +53,3 @@ def test_delta_p_to_filesystems_if() -> None:
     assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["mode"] == UNDEF
     assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["owner"] == UNDEF
     assert fss[1].state["/usr/sbin/policy-rc.d"].attrs["content"] == UNDEF
-

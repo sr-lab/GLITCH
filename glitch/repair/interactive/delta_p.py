@@ -165,7 +165,9 @@ class PStatement(ABC):
         return None
 
     @staticmethod
-    def get_str(expr: PExpr, vars: Dict[str, PExpr], ignore_vars: bool = False) -> Optional[str]:
+    def get_str(
+        expr: PExpr, vars: Dict[str, PExpr], ignore_vars: bool = False
+    ) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
         elif isinstance(expr, PEConst) and isinstance(expr.const, PBool):
@@ -174,7 +176,9 @@ class PStatement(ABC):
             return str(expr.const.value)
         elif ignore_vars and isinstance(expr, PEVar):
             return expr.id
-        elif isinstance(expr, PEVar) and PStatement.__get_var(expr.id, vars) is not None:
+        elif (
+            isinstance(expr, PEVar) and PStatement.__get_var(expr.id, vars) is not None
+        ):
             res = PStatement.__get_var(expr.id, vars)
             assert res is not None
             return PStatement.get_str(res, vars, ignore_vars=ignore_vars)
@@ -229,8 +233,8 @@ class PStatement(ABC):
         """
 
         def minimize_aux(
-            statement: "PStatement", 
-            considered_paths: List[str], 
+            statement: "PStatement",
+            considered_paths: List[str],
             vars: Dict[str, PExpr],
         ) -> "PStatement":
             if isinstance(statement, PAttr):
@@ -262,9 +266,12 @@ class PStatement(ABC):
                     # Checks if the variable is used in the body
                     references = GetVarReferencesVisitor().visit(body)
                     for reference in references:
-                        if PStatement.__get_var(
-                            reference.id, {statement.id: statement.expr}
-                        ) is not None:
+                        if (
+                            PStatement.__get_var(
+                                reference.id, {statement.id: statement.expr}
+                            )
+                            is not None
+                        ):
                             break
                     else:
                         # The variable is not used in the body
@@ -305,7 +312,9 @@ class PStatement(ABC):
 
         res_fss: List[SystemState] = []
         for fs in fss:
-            get_str: Callable[[PExpr], Optional[str]] = lambda expr: PStatement.get_str(expr, vars)
+            get_str: Callable[[PExpr], Optional[str]] = lambda expr: PStatement.get_str(
+                expr, vars
+            )
 
             if isinstance(self, PAttr):
                 path = get_str(self.path)
@@ -437,31 +446,27 @@ class TranverseDeltaPVisitor(ABC):
 
     def visit_binop(self, binop: PEBinOP):
         return self.visit(binop.lhs) + self.visit(binop.rhs)
-    
+
     def visit_unop(self, unop: PEUnOP):
         return self.visit(unop.operand)
-    
+
     def visit_attr(self, stat: PAttr):
         return self.visit(stat.path) + self.visit(stat.value)
-    
+
     def visit_cp(self, stat: PCp):
         return self.visit(stat.src) + self.visit(stat.dst)
-    
+
     def visit_seq(self, stat: PSeq):
         return self.visit(stat.lhs) + self.visit(stat.rhs)
-    
+
     def visit_let(self, stat: PLet):
         return self.visit(stat.expr) + self.visit(stat.body)
-    
+
     def visit_rlet(self, stat: PRLet):
         return self.visit(stat.expr)
-    
+
     def visit_if(self, stat: PIf):
-        return (
-            self.visit(stat.pred) +
-            self.visit(stat.cons) + 
-            self.visit(stat.alt)
-        )
+        return self.visit(stat.pred) + self.visit(stat.cons) + self.visit(stat.alt)
 
 
 class GetStringsVisitor(TranverseDeltaPVisitor):
@@ -487,6 +492,6 @@ class GetVarReferencesVisitor(TranverseDeltaPVisitor):
         elif isinstance(statement, PEVar):
             return [statement]
         return []
-    
+
 
 from glitch.repair.interactive.values import UNDEF

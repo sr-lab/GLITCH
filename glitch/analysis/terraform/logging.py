@@ -496,7 +496,8 @@ class TerraformLogging(TerraformSmellChecker):
                     and element.type in config["au_type"]
                     and self.check_required_attribute(
                         element, config["parents"], config["attribute"]
-                    ) is None
+                    )
+                    is None
                 ):
                     errors.append(
                         Error(

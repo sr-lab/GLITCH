@@ -45,8 +45,8 @@ def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
             paths.add(abspath(workdir, syscall.src))
             paths.add(abspath(workdir, syscall.dst))
         elif isinstance(
-            syscall, 
-            (SUnlink, SUnlinkAt, SRmdir, SMkdir, SMkdirAt, SChmod, SFchmodAt, FChownAt)
+            syscall,
+            (SUnlink, SUnlinkAt, SRmdir, SMkdir, SMkdirAt, SChmod, SFchmodAt, FChownAt),
         ):
             paths.add(abspath(workdir, syscall.path))
         elif isinstance(syscall, SChdir):

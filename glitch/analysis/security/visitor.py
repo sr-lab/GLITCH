@@ -58,18 +58,14 @@ class SecurityVisitor(RuleVisitor):
     def config(self, config_path: str) -> None:
         config = configparser.ConfigParser()
         config.read(config_path)
-        SecurityVisitor.WRONG_WORDS = json.loads(
-            config["security"]["suspicious_words"]
-        )
+        SecurityVisitor.WRONG_WORDS = json.loads(config["security"]["suspicious_words"])
         SecurityVisitor.PASSWORDS = json.loads(config["security"]["passwords"])
         SecurityVisitor.USERS = json.loads(config["security"]["users"])
         SecurityVisitor.PROFILE = json.loads(config["security"]["profile"])
         SecurityVisitor.SECRETS = json.loads(config["security"]["secrets"])
         SecurityVisitor.MISC_SECRETS = json.loads(config["security"]["misc_secrets"])
         SecurityVisitor.ROLES = json.loads(config["security"]["roles"])
-        SecurityVisitor.DOWNLOAD = json.loads(
-            config["security"]["download_extensions"]
-        )
+        SecurityVisitor.DOWNLOAD = json.loads(config["security"]["download_extensions"])
         SecurityVisitor.SSH_DIR = json.loads(config["security"]["ssh_dirs"])
         SecurityVisitor.ADMIN = json.loads(config["security"]["admin"])
         SecurityVisitor.CHECKSUM = json.loads(config["security"]["checksum"])
@@ -165,9 +161,7 @@ class SecurityVisitor(RuleVisitor):
             SecurityVisitor.NAMING = json.loads(config["security"]["naming"])
             SecurityVisitor.REPLICATION = json.loads(config["security"]["replication"])
 
-        SecurityVisitor.FILE_COMMANDS = json.loads(
-            config["security"]["file_commands"]
-        )
+        SecurityVisitor.FILE_COMMANDS = json.loads(config["security"]["file_commands"])
         SecurityVisitor.SHELL_RESOURCES = json.loads(
             config["security"]["shell_resources"]
         )

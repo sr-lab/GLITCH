@@ -55,8 +55,7 @@ class AnsibleParser(YamlParser):
         "until",
         "vars",
         "when",
-        "with_dict"
-        "with_fileglob",
+        "with_dict" "with_fileglob",
         "with_filetree",
         "with_first_found",
         "with_indexed_items",
@@ -67,12 +66,12 @@ class AnsibleParser(YamlParser):
         "with_random_choice",
         "with_sequence",
         "with_subelements",
-        "with_together"
+        "with_together",
     ]
 
     def __init__(self) -> None:
         super().__init__()
-    
+
     def __create_variable(
         self,
         token: Token | Node,
@@ -94,10 +93,8 @@ class AnsibleParser(YamlParser):
             v_code,
         )
         return Variable(name, value, info)
-    
-    def __parse_vars(
-        self, node: MappingNode, code: List[str]
-    ) -> List[Variable]:
+
+    def __parse_vars(self, node: MappingNode, code: List[str]) -> List[Variable]:
         variables: List[Variable] = []
 
         for key, val in node.value:
@@ -109,10 +106,10 @@ class AnsibleParser(YamlParser):
         return variables
 
     def __create_attribute(
-        self, 
-        token: Token | Node, 
-        name: str, 
-        value: Expr, 
+        self,
+        token: Token | Node,
+        name: str,
+        value: Expr,
         val_node: Node,
         code: List[str],
     ) -> Attribute:
@@ -131,14 +128,15 @@ class AnsibleParser(YamlParser):
 
         return Attribute(name, value, info)
 
-
     def __parse_attribute(
         self, name: str, token: Token | Node, val: Any, code: List[str]
     ) -> Attribute:
         v = self.get_value(val, code)
         return self.__create_attribute(token, name, v, val, code)
 
-    def __parse_tasks(self, unit_block: UnitBlock, tasks: Node, code: List[str]) -> None:
+    def __parse_tasks(
+        self, unit_block: UnitBlock, tasks: Node, code: List[str]
+    ) -> None:
         for task in tasks.value:
             atomic_units: List[AtomicUnit] = []
             attributes: List[Attribute] = []
@@ -175,13 +173,13 @@ class AnsibleParser(YamlParser):
 
                     if isinstance(val, MappingNode) and key.value == type:
                         for atr, atr_val in val.value:
-                            attributes.append(self.__parse_attribute(
-                                atr.value, atr, atr_val, code
-                            ))
+                            attributes.append(
+                                self.__parse_attribute(atr.value, atr, atr_val, code)
+                            )
                     else:
-                        attributes.append(self.__parse_attribute(
-                            key.value, key, val, code
-                        ))
+                        attributes.append(
+                            self.__parse_attribute(key.value, key, val, code)
+                        )
 
             if is_block:
                 for au in atomic_units:
@@ -240,9 +238,9 @@ class AnsibleParser(YamlParser):
                     elif key.value in ["tasks", "pre_tasks", "post_tasks", "handlers"]:
                         self.__parse_tasks(play, value, code)
                     else:
-                        play.attributes.append(self.__parse_attribute(
-                            key.value, key, value, code
-                        ))
+                        play.attributes.append(
+                            self.__parse_attribute(key.value, key, value, code)
+                        )
 
                 unit_block.add_unit_block(play)
 

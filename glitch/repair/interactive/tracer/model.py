@@ -197,7 +197,7 @@ class SUnlinkAt(Syscall):
     @property
     def flags(self) -> Union[List[UnlinkFlag], str]:
         return self.args[2]
-    
+
 
 class SFchmodAt(Syscall):
     @property
@@ -221,7 +221,7 @@ class SChmod(Syscall):
     @property
     def mode(self) -> str:
         return self.args[1]
-    
+
 
 class FChownAt(Syscall):
     @property

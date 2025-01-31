@@ -22,7 +22,7 @@ class ElementInfo:
             element.end_column,
             element.code,
         )
-    
+
     @staticmethod
     def get_sketched() -> "ElementInfo":
         info = ElementInfo(
@@ -169,7 +169,10 @@ class Hash(Value):
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "value": [{"key": k.as_dict(), "value": v.as_dict()} for k, v in self.value.items()],
+            "value": [
+                {"key": k.as_dict(), "value": v.as_dict()}
+                for k, v in self.value.items()
+            ],
         }
 
 

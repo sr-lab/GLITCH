@@ -74,7 +74,7 @@ class PuppetParser(p.Parser):
 
         elements: List[Expr] = []
         info = PuppetParser.__get_info(codeelement, code)
-        current_col = info.column + 1 # quote
+        current_col = info.column + 1  # quote
         current_line = info.line
 
         for i in range(len(interpolation)):
@@ -88,7 +88,7 @@ class PuppetParser(p.Parser):
                     interpolation[i].split("\n"),
                 )
                 # it starts at 1
-                fix_info(expr, current_line, current_col - 1) 
+                fix_info(expr, current_line, current_col - 1)
                 assert isinstance(expr, Expr)
                 elements.append(expr)
                 current_col += len(interpolation[i]) + 1
@@ -723,7 +723,9 @@ class PuppetParser(p.Parser):
             for name in files:
                 name_split = name.split(".")
                 if len(name_split) == 2 and name_split[-1] == "pp":
-                    block = self.parse_file(os.path.join(root, name), UnitBlockType.script)
+                    block = self.parse_file(
+                        os.path.join(root, name), UnitBlockType.script
+                    )
                     assert block is not None
                     res.add_block(block)
         return res

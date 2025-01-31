@@ -26,18 +26,18 @@ class TemplateDatabase:
         raise NotImplementedError(
             "Template not found for the given code element and tech."
         )
-    
+
     @staticmethod
     def get_template_for_multiline_string(tech: Tech) -> str:
         """Returns the template for a multiline string on a given tech.
-        
+
         Args:
             tech (Tech): The tech being considered.
-            
+
         Returns:
             str: The template.
         """
         if tech == Tech.terraform:
             return "<<EOF\n{}\nEOF"
-        
+
         return "{}"

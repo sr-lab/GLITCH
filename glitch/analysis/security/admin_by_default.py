@@ -14,11 +14,15 @@ class AdminByDefault(SecuritySmellChecker):
             var_checker = VariableChecker()
 
             for item in SecurityVisitor.ROLES + SecurityVisitor.USERS:
-                if re.match(r"[_A-Za-z0-9$\/\.\[\]-]*{text}\b".format(text=item), element.name):
+                if re.match(
+                    r"[_A-Za-z0-9$\/\.\[\]-]*{text}\b".format(text=item), element.name
+                ):
                     if not var_checker.check(element.value):
                         for admin in SecurityVisitor.ADMIN:
                             str_checker = StringChecker(lambda s: admin in s)
                             if str_checker.check(element.value):
-                                return [Error("sec_def_admin", element, file, repr(element))]
-                            
+                                return [
+                                    Error("sec_def_admin", element, file, repr(element))
+                                ]
+
         return []

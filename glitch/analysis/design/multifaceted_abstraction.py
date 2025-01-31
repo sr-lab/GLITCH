@@ -8,9 +8,7 @@ from glitch.analysis.expr_checkers.string_checker import StringChecker
 
 class MultifacetedAbstraction(DesignSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
-        checker = StringChecker(
-            lambda s: "&&" in s or ";" in s or "|" in s
-        )
+        checker = StringChecker(lambda s: "&&" in s or ";" in s or "|" in s)
         if isinstance(element, AtomicUnit) and element.type in DesignVisitor.EXEC:
             if checker.check(element.name):
                 return [
