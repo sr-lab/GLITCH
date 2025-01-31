@@ -277,7 +277,7 @@ class TestHierarchicalPuppet(TestHierarchicalParsers):
                     "name": "my_hash",
                     "value": {
                         "ir_type": "Hash",
-                        "code": "$my_hash = {\n'key1' => {\n    'test1' => '1',\n    'test2' => '2',\n    },\n'key2' => 'value2',\n'key3' => 'value3',\n}",
+                        "code": "{\n'key1' => {\n    'test1' => '1',\n    'test2' => '2',\n    },\n'key2' => 'value2',\n'key3' => 'value3',\n}",
                         "value": [
                             {
                                 "key": {
@@ -287,7 +287,7 @@ class TestHierarchicalPuppet(TestHierarchicalParsers):
                                 },
                                 "value": {
                                     "ir_type": "Hash",
-                                    "code": "'key1' => {\n    'test1' => '1',\n    'test2' => '2',\n    }",
+                                    "code": "{\n    'test1' => '1',\n    'test2' => '2',\n    }",
                                     "value": [
                                         {
                                             "key": {
