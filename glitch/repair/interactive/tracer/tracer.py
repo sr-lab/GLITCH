@@ -53,5 +53,5 @@ class STrace(threading.Thread):
                 break
             self.syscalls.append(syscall)
 
-        proc.terminate()
+        proc.kill()
         return self.syscalls
