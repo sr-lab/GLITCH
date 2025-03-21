@@ -20,7 +20,7 @@ from glitch.repair.interactive.compiler.names_database import NormalizationVisit
 from glitch.repair.interactive.delta_p import PStatement
 
 
-def run_dejavu(path: str, pid: str, parser: Parser, type: UnitBlockType, tech: Tech):
+def run_infrafix(path: str, pid: str, parser: Parser, type: UnitBlockType, tech: Tech):
     inter: UnitBlock | None = parser.parse_file(path, type)
     assert inter is not None
     NormalizationVisitor(tech).visit(inter)

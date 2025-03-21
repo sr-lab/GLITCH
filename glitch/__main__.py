@@ -19,7 +19,7 @@ from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
 from glitch.exceptions import throw_exception
-from glitch.repair.interactive.main import run_dejavu
+from glitch.repair.interactive.main import run_infrafix
 from pkg_resources import resource_filename
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
@@ -284,7 +284,7 @@ def lint(
 @cli.command()
 @__common_params
 @click.argument("pid", type=str, required=True)
-def dejavu(
+def infrafix(
     path: str,
     pid: str,
     tech: str,  # type: ignore
@@ -292,7 +292,7 @@ def dejavu(
 ):
     tech: Tech = __get_tech(tech)
     parser = __get_parser(tech)
-    run_dejavu(path, pid, parser, type, tech)
+    run_infrafix(path, pid, parser, type, tech)
 
 
 @cli.command()
