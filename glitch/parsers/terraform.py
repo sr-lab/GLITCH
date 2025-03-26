@@ -135,7 +135,7 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def int_lit(self, meta: Meta, args: List) -> int:
-        return Integer(int(args[0]), self.__get_element_info(meta))
+        return Integer(int("".join(args)), self.__get_element_info(meta))
 
     @v_args(meta=True)
     def float_lit(self, meta: Meta, args: List) -> float:
