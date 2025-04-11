@@ -17,7 +17,7 @@ EXCEPTIONS = {
     "SHELL_COULD_NOT_PARSE": "Shell Command - Could not parse: {}",
     "TERRAFORM_COULD_NOT_PARSE": "Terraform - Could not parse file: {}",
     "DOCKER_SWARM_COULD_NOT_PARSE": "Swarm - Could not parse file: {}",
-    "NOMAD_COULD_NOT_PARSE": "Nomad - Could not parse file: {}",
+    "HASHICORP_NOMAD_COULD_NOT_PARSE": "Nomad - Could not parse file: {}",
 }
 
 
