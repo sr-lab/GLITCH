@@ -16,6 +16,8 @@ EXCEPTIONS = {
     "DOCKER_UNKNOW_ERROR": "Docker - Unknown Error: {}",
     "SHELL_COULD_NOT_PARSE": "Shell Command - Could not parse: {}",
     "TERRAFORM_COULD_NOT_PARSE": "Terraform - Could not parse file: {}",
+    "DOCKER_SWARM_COULD_NOT_PARSE": "Swarm - Could not parse file: {}",
+    "NOMAD_COULD_NOT_PARSE": "Nomad - Could not parse file: {}",
 }
 
 
