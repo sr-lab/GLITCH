@@ -51,7 +51,7 @@ class GLITCHTransformer(Transformer):
 
         return res
 
-    def __get_element_info(self, meta: Meta | Token) -> ElementInfo:
+    def _get_element_info(self, meta: Meta | Token) -> ElementInfo:
         return ElementInfo(
             meta.line,
             meta.column,
@@ -113,9 +113,9 @@ class GLITCHTransformer(Transformer):
     @v_args(meta=True)
     def unary_op(self, meta: Meta, args: List) -> Any:
         if args[0] == "-":
-            return Minus(self.__get_element_info(meta), args[1])
+            return Minus(self._get_element_info(meta), args[1])
         elif args[0] == "!":
-            return Not(self.__get_element_info(meta), args[1])
+            return Not(self._get_element_info(meta), args[1])
 
     @v_args(meta=True)
     def get_attr(self, meta: Meta, args: List) -> Any:
@@ -127,19 +127,19 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def index_expr_term(self, meta: Meta, args: List) -> Any:
-        return Access(self.__get_element_info(meta), args[0], args[1])
+        return Access(self._get_element_info(meta), args[0], args[1])
 
     @v_args(meta=True)
     def get_attr_expr_term(self, meta: Meta, args: List) -> Any:
-        return Access(self.__get_element_info(meta), args[0], args[1])
+        return Access(self._get_element_info(meta), args[0], args[1])
 
     @v_args(meta=True)
     def int_lit(self, meta: Meta, args: List) -> int:
-        return Integer(int("".join(args)), self.__get_element_info(meta))
+        return Integer(int("".join(args)), self._get_element_info(meta))
 
     @v_args(meta=True)
     def float_lit(self, meta: Meta, args: List) -> float:
-        return Float(float("".join(args)), self.__get_element_info(meta))
+        return Float(float("".join(args)), self._get_element_info(meta))
 
     @v_args(meta=True)
     def interpolation_maybe_nested(self, meta: Meta, args: List) -> Any:
@@ -151,7 +151,7 @@ class GLITCHTransformer(Transformer):
             if isinstance(args[0], Token):
                 return String(
                     args[0].value,
-                    self.__get_element_info(meta),
+                    self._get_element_info(meta),
                 )
             return args[0]
         else:
@@ -159,7 +159,7 @@ class GLITCHTransformer(Transformer):
                 if isinstance(args[i], Token):
                     args[i] = String(
                         args[i].value,
-                        self.__get_element_info(args[i]),
+                        self._get_element_info(args[i]),
                     )
 
             res = Sum(
@@ -203,19 +203,19 @@ class GLITCHTransformer(Transformer):
     @v_args(meta=True)
     def expr_term(self, meta: Meta, args: List) -> Expr:
         if len(args) == 0:
-            return Null(self.__get_element_info(meta))
+            return Null(self._get_element_info(meta))
         elif len(args) == 1:
             if isinstance(args[0], Tree) and args[0].data == "heredoc_template":
                 return String(
                     self.__parse_heredoc(args[0]),
-                    self.__get_element_info(meta),
+                    self._get_element_info(meta),
                 )
             if isinstance(args[0], Expr):
                 return args[0]
             if args[0].type == "STRING_LIT":
                 return String(
                     args[0].value[1:-1],
-                    self.__get_element_info(args[0]),
+                    self._get_element_info(args[0]),
                 )
             return args[0]
         return args
@@ -231,12 +231,12 @@ class GLITCHTransformer(Transformer):
         object_elems = {}
         for k, v in args:
             object_elems[k] = v
-        res = Hash(object_elems, self.__get_element_info(meta))
+        res = Hash(object_elems, self._get_element_info(meta))
         return res
 
     @v_args(meta=True)
     def tuple(self, meta: Meta, args: List) -> Any:
-        return Array(args, self.__get_element_info(meta))
+        return Array(args, self._get_element_info(meta))
 
     @v_args(meta=True)
     def block(self, meta: Meta, args: List) -> Any:
@@ -244,12 +244,12 @@ class GLITCHTransformer(Transformer):
             au = AtomicUnit(
                 String(
                     args[2].value[1:-1],  # Remove quotes
-                    self.__get_element_info(args[2]),
+                    self._get_element_info(args[2]),
                 ),
                 args[1].value[1:-1],
             )
             au.attributes = []
-            au.set_element_info(self.__get_element_info(meta))
+            au.set_element_info(self._get_element_info(meta))
             for arg in args[-1]:
                 if isinstance(arg, Attribute):
                     au.attributes.append(arg)
@@ -275,7 +275,7 @@ class GLITCHTransformer(Transformer):
                     else:
                         ub.add_attribute(arg)
 
-            ub.set_element_info(self.__get_element_info(meta))
+            ub.set_element_info(self._get_element_info(meta))
             return ub
 
     def body(self, args: List) -> Any:
@@ -299,38 +299,38 @@ class GLITCHTransformer(Transformer):
 
     @v_args(meta=True)
     def attribute(self, meta: Meta, args: List) -> Attribute:
-        return Attribute(args[0].value, args[2], self.__get_element_info(meta))
+        return Attribute(args[0].value, args[2], self._get_element_info(meta))
 
     @v_args(meta=True)
     def identifier(self, meta: Meta, value: Any) -> Expr:
         if value[0] == "null":
-            return Null(self.__get_element_info(meta))
+            return Null(self._get_element_info(meta))
         elif value[0] in ["true", "false"]:
-            return Boolean(value[0] == "true", self.__get_element_info(meta))
+            return Boolean(value[0] == "true", self._get_element_info(meta))
         name = value[0]
         if isinstance(name, Token):
             name = name.value
-        return VariableReference(name, self.__get_element_info(meta))
+        return VariableReference(name, self._get_element_info(meta))
 
     @v_args(meta=True)
     def attr_splat_expr_term(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
-        return Null(self.__get_element_info(meta))
+        return Null(self._get_element_info(meta))
 
     @v_args(meta=True)
     def full_splat_expr_term(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
-        return Null(self.__get_element_info(meta))
+        return Null(self._get_element_info(meta))
 
     @v_args(meta=True)
     def for_tuple_expr(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
-        return Null(self.__get_element_info(meta))
+        return Null(self._get_element_info(meta))
 
     @v_args(meta=True)
     def for_object_expr(self, meta: Meta, args: List) -> Any:
         # TODO: Not supported yet
-        return Null(self.__get_element_info(meta))
+        return Null(self._get_element_info(meta))
 
     @v_args(meta=True)
     def function_call(self, meta: Meta, args: List) -> Any:
@@ -338,12 +338,12 @@ class GLITCHTransformer(Transformer):
             return FunctionCall(
                 args[0],
                 [],
-                self.__get_element_info(meta),
+                self._get_element_info(meta),
             )
         return FunctionCall(
             args[0],
             args[1],
-            self.__get_element_info(meta),
+            self._get_element_info(meta),
         )
 
     def arguments(self, args: List) -> Any:
