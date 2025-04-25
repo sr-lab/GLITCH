@@ -35,8 +35,9 @@ class SwarmParser(YamlParser):
         self, type: str, unit_block: UnitBlock, dict: tuple[Any, Any], code: List[str]
     ) -> None:
         """
-        Parses and creates AtomicUnits 
+        Parses and creates AtomicUnits
         """
+
         def create_atomic_unit(
             start_line: Token | Node,
             end_line: Token | Node,
@@ -206,7 +207,7 @@ class SwarmParser(YamlParser):
         """
         We consider each subfolder of the Project folder a Module
         
-        TODO:Think if it is worth considering searching for modules recursively 
+        TODO:Think if it is worth considering searching for modules recursively
         as done for other languagues supported by GLITCH
         """
         res: Module = Module(os.path.basename(os.path.normpath(path)), path)
