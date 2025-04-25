@@ -116,6 +116,7 @@ class NomadTransformer(GLITCHTransformer):
             ub.set_element_info(self._get_element_info(meta))
             return ub
 
+
 class NomadParser(p.Parser):
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
 
@@ -169,4 +170,3 @@ class NomadParser(p.Parser):
             res.modules += aux.modules
 
         return res
-
