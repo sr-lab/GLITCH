@@ -19,10 +19,10 @@ class NomadTransformer(GLITCHTransformer):
 
     def __init__(self, code: List[str]):
         super().__init__(code)
+        self.path = ""
 
     @v_args(meta=True)
     def block(self, meta: Meta, args: List) -> Any:
-
         if args[0].value == "task":
 
             def get_task_type(atts: List[Any]) -> str:
@@ -42,7 +42,7 @@ class NomadTransformer(GLITCHTransformer):
 
         elif args[0].value == "group":
             ub: UnitBlock = UnitBlock(args[1].value, UnitBlockType.block)
-
+            ub.path = self.path
             for elem in args[-1]:
                 if isinstance(elem, AtomicUnit):
                     ub.add_atomic_unit(elem)
@@ -53,7 +53,6 @@ class NomadTransformer(GLITCHTransformer):
             return ub
 
         elif args[0].value not in ["job", "group", "task", "port"]:
-
             subatts: Dict[String, Expr] = {}
 
             for elem in args[-1]:
@@ -119,7 +118,6 @@ class NomadTransformer(GLITCHTransformer):
 
 class NomadParser(p.Parser):
     def parse_file(self, path: str, type: UnitBlockType) -> UnitBlock:
-
         try:
             with open(path) as f:
                 unit_block = None
@@ -127,11 +125,12 @@ class NomadParser(p.Parser):
                 f.seek(0, 0)
                 code = f.readlines()
                 transformer = NomadTransformer(code)
+                transformer.path = os.path.abspath(path)
                 elements = transformer.transform(tree)
 
                 if elements and isinstance(elements[0], UnitBlock):
                     unit_block = elements[0]
-                    unit_block.path = path
+                    unit_block.path = os.path.abspath(path)
                 else:
                     throw_exception(EXCEPTIONS["HASHICORP_NOMAD_COULD_NOT_PARSE"], path)
                     return None
