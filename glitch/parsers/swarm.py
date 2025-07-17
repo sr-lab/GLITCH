@@ -254,7 +254,6 @@ class SwarmParser(YamlParser):
                     if os.path.exists(joint_path):
                         include_file_unit_block = self.parse_file(joint_path)
 
-                        print(f"HEY{include_file_unit_block}")
                         for ub in include_file_unit_block.unit_blocks:
                             for ub_curr in file_unit_block.unit_blocks:
                                 if ub.name == ub_curr.name:
