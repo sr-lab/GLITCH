@@ -2,7 +2,7 @@
 
 import os
 from typing import Any, List, Optional
-
+import re
 from ruamel.yaml.main import YAML
 from ruamel.yaml.nodes import (
     MappingNode,
@@ -103,6 +103,20 @@ class SwarmParser(YamlParser):
         if isinstance(val, MappingNode):
             for att in val.value:
                 if isinstance(att, tuple):
+                    if isinstance(att[1], ScalarNode) and att[1].tag.endswith("bool"):
+                        # HACK: turn boolean scalar node values strings into
+                        #  real booleans values for get_value method,
+                        #  taking into account yaml 1.1 using the spec provided regexp (used by compose)
+
+                        if re.match(
+                            "y|Y|yes|Yes|YES|true|True|TRUE|on|On|ON", att[1].value
+                        ):
+                            att[1].value = True
+                        elif re.match(
+                            "n|N|no|No|NO|false|False|FALSE|off|Off|OFF", att[1].value
+                        ):
+                            att[1].value = False
+
                     att_value: Expr = self.get_value(att[1], code)
                     if att[0].value == "environment" and isinstance(
                         att[1], SequenceNode
