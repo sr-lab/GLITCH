@@ -78,7 +78,7 @@ class SecurityVisitor(RuleVisitor):
 
             if img_name != "":
                 for off_img in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
-                    if img_name.startswith(off_img):
+                    if img_name == off_img:
                         return []
 
                 return [Error("sec_non_official_image", element, file, repr(element))]
