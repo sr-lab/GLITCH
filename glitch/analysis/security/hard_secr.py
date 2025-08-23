@@ -28,10 +28,13 @@ class HardcodedSecret(SecuritySmellChecker):
             SecurityVisitor.PASSWORDS + SecurityVisitor.SECRETS + SecurityVisitor.USERS
         ):
             secr_checker = StringChecker(
-                lambda s: re.match(
+                lambda s: (re.match(
                     r"[_A-Za-z0-9$\/\.\[\]-]*{text}\b".format(text=item), s
                 )
-                is not None
+                is not None) or (re.match(
+                    r"[_A-Za-z0-9$\/\.\[\]-]*{text}\b".format(text=item.upper()), s
+                )
+                is not None)
             )
             if secr_checker.check(name) and not whitelist_checker.check(name):
                 if not var_checker.check(value):
@@ -77,6 +80,9 @@ class HardcodedSecret(SecuritySmellChecker):
             )
         elif isinstance(element, KeyValue) and isinstance(element.value, Hash):
             for key, value in element.value.value.items():
+                #HACK: ignore cases where values are obtained via environment variables
+                if isinstance(value,String) and value.value.startswith("${") and value.value.endswith("}"):
+                    continue
                 errors += self.__check_pair(element, key, value, file)
 
         return errors
