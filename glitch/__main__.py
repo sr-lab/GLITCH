@@ -18,6 +18,8 @@ from glitch.parsers.chef import ChefParser
 from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
+from glitch.parsers.swarm import SwarmParser
+from glitch.parsers.nomad import NomadParser
 from glitch.exceptions import throw_exception
 from glitch.repair.interactive.main import run_infrafix
 from pkg_resources import resource_filename
@@ -90,6 +92,10 @@ def __get_parser(tech: Tech) -> Parser:
         return TerraformParser()
     elif tech == Tech.gha:
         return GithubActionsParser()
+    elif tech == Tech.swarm:
+        return SwarmParser()
+    elif tech == Tech.nomad:
+        return NomadParser()
     else:
         raise ValueError(f"Invalid tech: {tech}")
 
