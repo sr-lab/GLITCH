@@ -33,11 +33,14 @@ class NomadTransformer(GLITCHTransformer):
 
             name: String = String(args[1].value, self._get_element_info(args[1]))
             au = AtomicUnit(name, f"task.{get_task_type(args[-1])}")
+            
+            au.set_element_info(self._get_element_info(meta))
             for elem in args[-1]:
                 if isinstance(elem, Attribute):
                     au.add_attribute(elem)
                 else:
                     print(f"#####ERROR PARSING ELEMENT:{elem} IN A TASK#####")
+
             return au
 
         elif args[0].value == "group":
@@ -91,7 +94,7 @@ class NomadTransformer(GLITCHTransformer):
 
             val_hash: Hash = Hash(
                 {
-                    String("port_name", self._get_element_info(args[1])): String(
+                    String("port", self._get_element_info(args[1])): String(
                         args[1].value, self._get_element_info(args[1])
                     ),
                     **atts,
@@ -140,7 +143,7 @@ class NomadParser(p.Parser):
         except:
             throw_exception(EXCEPTIONS["HASHICORP_NOMAD_COULD_NOT_PARSE"], path)
             return None
-
+        
         return unit_block
 
     def parse_module(self, path: str) -> Module:

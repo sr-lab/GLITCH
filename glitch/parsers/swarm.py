@@ -19,6 +19,7 @@ from glitch.repr.inter import (
     Attribute,
     Comment,
     ElementInfo,
+    Null,
     Expr,
     Hash,
     Module,
@@ -136,12 +137,15 @@ class SwarmParser(YamlParser):
                         for elem in att_value.value:
                             elem_info: ElementInfo = ElementInfo.from_code_element(elem)
                             curr_str = elem.value
-                            split_str = curr_str.split("=")
-                            assert len(split_str) == 2
-                            key, n_val = split_str
+                            split_str = curr_str.split("=",1)
+                            if len(split_str) == 2:
+                                key, n_val = split_str
+                                val_s = String(n_val, elem_info)
+                            else:
+                                key = curr_str
+                                val_s = Null(elem_info)
 
                             key_s = String(key, elem_info)
-                            val_s = String(n_val, elem_info)
                             fixed_env[key_s] = val_s
                         att_info = ElementInfo.from_code_element(att_value)
                         att_value = Hash(fixed_env, att_info)
@@ -293,7 +297,7 @@ class SwarmParser(YamlParser):
                             #    deps.append(attribute.value.value)
                             if isinstance(attribute.value, Hash):
                                 # adds the name of file as a dependency
-                                for k, v in attribute.value.value:
+                                for k, v in attribute.value.value.items():
                                     if k.value == "file":
                                         deps.append(v.value)
                                         break
@@ -357,7 +361,7 @@ class SwarmParser(YamlParser):
                                             break
                             break
 
-                return file_unit_block
+            return file_unit_block
         except:
             throw_exception(EXCEPTIONS["DOCKER_SWARM_COULD_NOT_PARSE"], path)
 
@@ -385,42 +389,38 @@ class SwarmParser(YamlParser):
         different parts of the system are in each part subfolder
         we consider each subfolder a Module
         """
-        if root:
-            res: Project = Project(os.path.basename(os.path.normpath(path)))
+        
+        res: Project = Project(os.path.basename(os.path.normpath(path)))
 
-            subfolders = [
-                f.path
-                for f in os.scandir(f"{path}")
-                if f.is_dir() and not f.is_symlink()
-            ]
+        subfolders = [
+            f.path
+            for f in os.scandir(f"{path}")
+            if f.is_dir() and not f.is_symlink()
+        ]
 
-            for d in subfolders:
-                res.add_module(self.parse_module(d))
+        for d in subfolders:
+            res.add_module(self.parse_module(d))
 
-            files = [
-                f.path
-                for f in os.scandir(f"{path}")
-                if f.is_file()
-                and not f.is_symlink()
-                and f.path.endswith((".yml", ".yaml"))
-            ]
+        files = [
+            f.path
+            for f in os.scandir(f"{path}")
+            if f.is_file()
+            and not f.is_symlink()
+            and f.path.endswith((".yml", ".yaml"))
+        ]
 
-            for fi in files:
-                res.add_block(self.parse_file(fi))
-            return res
-        else:
-            return None
+        for fi in files:
+            res.add_block(self.parse_file(fi))
 
+        return res
+    
     def parse_module(self, path) -> Module:
         """
-        We consider each subfolder of the Project folder a Module
-
-        TODO: Think if it is worth considering searching for modules recursively
-        especially now since includes and extends from other YAMLs are now implemented
-
+        We consider each subfolder of the Project folder a Module 
         as done for other languagues supported by GLITCH
         """
         res: Module = Module(os.path.basename(os.path.normpath(path)), path)
+        super().parse_file_structure(res.folder,path)
 
         files = [
             f.path
