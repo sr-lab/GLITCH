@@ -100,7 +100,7 @@ def print_stats(
                 "\\textbf{Smell}",
                 "\\textbf{Occurrences}",
                 "\\textbf{Smell density (Smell/KLoC)}",
-                "\\textbf{Proportion of scripts (%)}",
+                "\\textbf{Proportion of scripts (\\%)}",
             ],
         )
         latex = (  # type: ignore
