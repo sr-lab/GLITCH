@@ -326,15 +326,31 @@ class SwarmParser(YamlParser):
                                 service_from = v.value
                         curr_path = os.path.split(path)[0]
                         joint_path = os.path.normpath(os.path.join(curr_path, file))
-                        if os.path.exists(joint_path):
-                            service_from_file_unit_block = self.parse_file(joint_path)
-                            service_from_list = (
-                                service_from_file_unit_block.atomic_units
-                            )
+                        if os.path.normpath(path) != joint_path:
+                            if os.path.exists(joint_path):
+                                service_from_file_unit_block = self.parse_file(joint_path)
+                                if service_from_file_unit_block is not None:
+                                    for u_block in service_from_file_unit_block.unit_blocks:
+                                        if u_block.type == UnitBlockType.block and u_block.name == "services": 
+                                            service_from_list += u_block.atomic_units
+                                            break
+                                    
+                                else:
+                                    print(
+                                    f'Failed to parse extends file expected at "{joint_path}". File not found.'
+                                )
+                            else:
+                                print(
+                                    f'Failed to parse extends file expected at "{joint_path}". File not found.'
+                                )
                         else:
+                            # Avoid infinite recursion from same file
+                            #service_from_list = services
+                            # something else missing 
                             print(
-                                f'Failed to parse extends file expected at "{joint_path}". File not found.'
+                                   f'Failed to parse extends file expected at "{joint_path}". File not found.'
                             )
+                            #
 
                     for s in service_from_list:
                         if s.name.value == service_from:
