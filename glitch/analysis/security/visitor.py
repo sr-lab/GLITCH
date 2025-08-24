@@ -78,7 +78,16 @@ class SecurityVisitor(RuleVisitor):
 
             if img_name != "":
                 for off_img in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
-                    if img_name == off_img:
+                    off_img_dockerio = f"docker.io/library/{off_img}"
+                    off_img_library = f"library/{off_img}"
+                    off_img_complete_link = f"registry.hub.docker.com/library/{off_img}"
+
+                    if (
+                        img_name == off_img
+                        or img_name == off_img_dockerio
+                        or img_name == off_img_library
+                        or img_name == off_img_complete_link
+                    ):
                         return []
 
                 return [Error("sec_non_official_image", element, file, repr(element))]

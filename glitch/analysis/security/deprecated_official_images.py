@@ -26,7 +26,18 @@ class DeprecatedOfficialDockerImages(SecuritySmellChecker):
         if image != "":
             img_name, _, _ = SecurityVisitor.image_parser(image)
             for obsolete_img in SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES:
-                if img_name == obsolete_img:
+                obsolete_img_dockerio = f"docker.io/library/{obsolete_img}"
+                obsolete_img_library = f"library/{obsolete_img}"
+                obsolete_img_complete_link = (
+                    f"registry.hub.docker.com/library/{obsolete_img}"
+                )
+
+                if (
+                    img_name == obsolete_img
+                    or img_name == obsolete_img_dockerio
+                    or img_name == obsolete_img_library
+                    or img_name == obsolete_img_complete_link
+                ):
                     errors.append(
                         Error("sec_depr_off_imgs", bad_element, file, repr(bad_element))
                     )
