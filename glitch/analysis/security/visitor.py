@@ -134,10 +134,13 @@ class SecurityVisitor(RuleVisitor):
                             Error("sec_image_integrity", element, file, repr(element))
                         )
 
-                elif image != "" and has_tag:
-                    errors.append(
-                        Error("sec_image_integrity", element, file, repr(element))
-                    )
+                if image != "" and has_tag:
+                    tag = tag.lower()
+                    if not has_digest:
+                        errors.append(
+                            Error("sec_image_integrity", element, file, repr(element))
+                        )
+
                     dangerous_tags: List[str] = SecurityVisitor.DANGEROUS_IMAGE_TAGS
 
                     for dt in dangerous_tags:
@@ -146,7 +149,7 @@ class SecurityVisitor(RuleVisitor):
                                 Error("sec_unstable_tag", element, file, repr(element))
                             )
                             break
-                elif (
+                if (
                     image != "" and not has_digest and not has_tag
                 ):  # Image not tagged, avoids mistakenely nomad tasks without images (non-docker or non-podman)
                     errors.append(
