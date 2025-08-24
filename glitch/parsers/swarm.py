@@ -203,7 +203,7 @@ class SwarmParser(YamlParser):
                     file_unit_block.path = os.path.abspath(path)
                     if isinstance(parsed_file.value, list):
                         for field in parsed_file.value:
-                            if field[0].value == "version":
+                            if field[0].value == "version" or field[0].value == "name":
                                 expr: Expr = self.get_value(field[1], code)
                                 info: ElementInfo = ElementInfo(
                                     field[0].start_mark.line + 1,
