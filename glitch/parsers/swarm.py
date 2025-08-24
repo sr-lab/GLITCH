@@ -137,7 +137,7 @@ class SwarmParser(YamlParser):
                         for elem in att_value.value:
                             elem_info: ElementInfo = ElementInfo.from_code_element(elem)
                             curr_str = elem.value
-                            split_str = curr_str.split("=",1)
+                            split_str = curr_str.split("=", 1)
                             if len(split_str) == 2:
                                 key, n_val = split_str
                                 val_s = String(n_val, elem_info)
@@ -177,7 +177,10 @@ class SwarmParser(YamlParser):
         return attributes
 
     def parse_file(
-        self, path: str, type: UnitBlockType = UnitBlockType.script
+        self,
+        path: str,
+        type: UnitBlockType = UnitBlockType.script,
+        extends: bool = True,
     ) -> Optional[UnitBlock]:
         """
         Parses a stack/compose file into a UnitBlock each with its respective
@@ -269,7 +272,7 @@ class SwarmParser(YamlParser):
                 for inc in includes:
                     curr_path = os.path.split(path)[0]
                     joint_path = os.path.normpath(os.path.join(curr_path, inc))
-                    if os.path.exists(joint_path):
+                    if os.path.exists(joint_path) and os.path.isfile(joint_path):
                         include_file_unit_block = self.parse_file(joint_path)
 
                         for ub in include_file_unit_block.unit_blocks:
@@ -289,93 +292,101 @@ class SwarmParser(YamlParser):
                     if ub.name == "services":
                         services = ub.atomic_units
                 # FIXME: Handling the extends from the same file or from other files, might not be the best way
-                for service in services:
-                    for attribute in service.attributes:
-                        if attribute.name == "extends":
-                            deps = []
-                            # if isinstance(attribute.value,String):
-                            #    deps.append(attribute.value.value)
-                            if isinstance(attribute.value, Hash):
-                                # adds the name of file as a dependency
-                                for k, v in attribute.value.value.items():
-                                    if k.value == "file":
-                                        deps.append(v.value)
-                                        break
-
-                            file_unit_block.add_dependency(Dependency(deps))
-                            to_extend.append([service, attribute])
-                            break
-
-                for service_to, attribute in to_extend:
-                    att: Attribute = attribute
-                    service_from_list = []
-                    service_from = ""
-
-                    if isinstance(att.value, String):
-                        service_from = att.value.value
-                        service_from_list = services
-
-                    elif isinstance(att.value, Hash):
-                        hash_dict = att.value.value
-                        file = ""
-                        service_from = ""
-                        for k, v in hash_dict.items():
-                            if k.value == "file":
-                                file = v.value
-                            elif k.value == "service":
-                                service_from = v.value
-                        curr_path = os.path.split(path)[0]
-                        joint_path = os.path.normpath(os.path.join(curr_path, file))
-                        if os.path.normpath(path) != joint_path:
-                            if os.path.exists(joint_path):
-                                service_from_file_unit_block = self.parse_file(joint_path)
-                                if service_from_file_unit_block is not None:
-                                    for u_block in service_from_file_unit_block.unit_blocks:
-                                        if u_block.type == UnitBlockType.block and u_block.name == "services": 
-                                            service_from_list += u_block.atomic_units
+                if extends:
+                    for service in services:
+                        for attribute in service.attributes:
+                            if attribute.name == "extends":
+                                deps = []
+                                # if isinstance(attribute.value,String):
+                                #    deps.append(attribute.value.value)
+                                if isinstance(attribute.value, Hash):
+                                    # adds the name of file as a dependency
+                                    for k, v in attribute.value.value.items():
+                                        if k.value == "file":
+                                            deps.append(v.value)
                                             break
-                                    
+                                file_unit_block.add_dependency(Dependency(deps))
+                                to_extend.append([service, attribute])
+                                break
+
+                    for service_to, attribute in to_extend:
+                        att: Attribute = attribute
+                        service_from_list = []
+                        service_from = ""
+
+                        if isinstance(att.value, String):
+                            service_from = att.value.value
+                            service_from_list = services
+
+                        elif isinstance(att.value, Hash):
+                            hash_dict = att.value.value
+                            file = ""
+                            service_from = ""
+                            for k, v in hash_dict.items():
+                                if k.value == "file":
+                                    file = v.value
+                                elif k.value == "service":
+                                    service_from = v.value
+                            curr_path = os.path.split(path)[0]
+                            joint_path = os.path.normpath(os.path.join(curr_path, file))
+                            if os.path.normpath(path) != joint_path:
+                                if os.path.exists(joint_path):
+                                    service_from_file_unit_block = self.parse_file(
+                                        joint_path, extends=False
+                                    )
+                                    if service_from_file_unit_block is not None:
+                                        for (
+                                            u_block
+                                        ) in service_from_file_unit_block.unit_blocks:
+                                            if (
+                                                u_block.type == UnitBlockType.block
+                                                and u_block.name == "services"
+                                            ):
+                                                service_from_list += (
+                                                    u_block.atomic_units
+                                                )
+                                                break
+
+                                    else:
+                                        print(
+                                            f'Failed to parse extends file expected at "{joint_path}". File not found.'
+                                        )
                                 else:
                                     print(
-                                    f'Failed to parse extends file expected at "{joint_path}". File not found.'
-                                )
+                                        f'Failed to parse extends file expected at "{joint_path}". File not found.'
+                                    )
                             else:
-                                print(
-                                    f'Failed to parse extends file expected at "{joint_path}". File not found.'
-                                )
-                        else:
-                            # Avoid infinite recursion from same file
-                            #service_from_list = services
-                            # something else missing 
-                            print(
-                                   f'Failed to parse extends file expected at "{joint_path}". File not found.'
-                            )
-                            #
+                                service_from_list = services
 
-                    for s in service_from_list:
-                        if s.name.value == service_from:
-                            att_names = [x.name for x in service_to.attributes]
+                                # print(
+                                #    f'Failed to parse extends file expected at "{joint_path}". File not found.'
+                                # )
+                                #
 
-                            for s_att in s.attributes:
-                                if s_att.name in ["depends_on", "volumes_from"]:
-                                    continue
-                                elif s_att.name not in att_names:
-                                    service_to.add_attribute(s_att)
-                                elif s_att.name in att_names:
-                                    for to_att in service_to.attributes:
-                                        if to_att.name == s_att.name:
-                                            if isinstance(to_att.value, Array):
-                                                self.__handle_array(
-                                                    s_att.value, to_att.value
-                                                )
-                                            elif isinstance(to_att.value, Hash):
-                                                self.__handle_hash(
-                                                    s_att.value, to_att.value
-                                                )
-                                            else:
-                                                continue
-                                            break
-                            break
+                        for s in service_from_list:
+                            if s.name.value == service_from:
+                                att_names = [x.name for x in service_to.attributes]
+
+                                for s_att in s.attributes:
+                                    if s_att.name in ["depends_on", "volumes_from"]:
+                                        continue
+                                    elif s_att.name not in att_names:
+                                        service_to.add_attribute(s_att)
+                                    elif s_att.name in att_names:
+                                        for to_att in service_to.attributes:
+                                            if to_att.name == s_att.name:
+                                                if isinstance(to_att.value, Array):
+                                                    self.__handle_array(
+                                                        s_att.value, to_att.value
+                                                    )
+                                                elif isinstance(to_att.value, Hash):
+                                                    self.__handle_hash(
+                                                        s_att.value, to_att.value
+                                                    )
+                                                else:
+                                                    continue
+                                                break
+                                break
 
             return file_unit_block
         except:
@@ -405,13 +416,11 @@ class SwarmParser(YamlParser):
         different parts of the system are in each part subfolder
         we consider each subfolder a Module
         """
-        
+
         res: Project = Project(os.path.basename(os.path.normpath(path)))
 
         subfolders = [
-            f.path
-            for f in os.scandir(f"{path}")
-            if f.is_dir() and not f.is_symlink()
+            f.path for f in os.scandir(f"{path}") if f.is_dir() and not f.is_symlink()
         ]
 
         for d in subfolders:
@@ -420,23 +429,21 @@ class SwarmParser(YamlParser):
         files = [
             f.path
             for f in os.scandir(f"{path}")
-            if f.is_file()
-            and not f.is_symlink()
-            and f.path.endswith((".yml", ".yaml"))
+            if f.is_file() and not f.is_symlink() and f.path.endswith((".yml", ".yaml"))
         ]
 
         for fi in files:
             res.add_block(self.parse_file(fi))
 
         return res
-    
+
     def parse_module(self, path) -> Module:
         """
-        We consider each subfolder of the Project folder a Module 
+        We consider each subfolder of the Project folder a Module
         as done for other languagues supported by GLITCH
         """
         res: Module = Module(os.path.basename(os.path.normpath(path)), path)
-        super().parse_file_structure(res.folder,path)
+        super().parse_file_structure(res.folder, path)
 
         files = [
             f.path
