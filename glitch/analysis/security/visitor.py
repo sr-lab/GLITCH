@@ -18,29 +18,6 @@ from glitch.analysis.security.smell_checker import SecuritySmellChecker
 class SecurityVisitor(RuleVisitor):
     __URL_REGEX = r"^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([_\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
 
-    @staticmethod
-    def image_parser(img_name: str):
-        image, tag, digest = "", "", ""
-
-        if "@" in img_name:
-            parts_dig = img_name.split("@")
-            digest = parts_dig[-1]
-            if ":" in parts_dig[0]:
-                parts_tag = parts_dig[0].split(":")
-                image = parts_tag[0]
-                tag = parts_tag[1]
-            else:
-                image = parts_dig[0]
-
-        elif ":" in img_name:
-            parts_tag = img_name.split(":")
-            image = parts_tag[0]
-            tag = parts_tag[1]
-        else:
-            image = img_name
-
-        return image, tag, digest
-
     class NonOfficialImageSmell(SmellChecker):
         def check(self, element: CodeElement, file: str) -> List[Error]:
             return []
