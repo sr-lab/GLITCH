@@ -61,6 +61,7 @@ class SecurityVisitor(RuleVisitor):
     class OrchestratorNonOfficialImageSmell(SmellChecker):
         def check(self, element: CodeElement, file: str) -> List[Error]:
             image = ""
+            bad_element = element
             if isinstance(element, KeyValue) and element.name == "image":
                 if isinstance(element.value, String):
                     image = element.value.value
@@ -72,6 +73,7 @@ class SecurityVisitor(RuleVisitor):
                 for k, v in element.value.value.items():
                     if isinstance(k, String) and k.value == "image":
                         image = v.value
+                        bad_element = v
                         break
 
             img_name, _, _ = SecurityVisitor.image_parser(image)
@@ -89,8 +91,8 @@ class SecurityVisitor(RuleVisitor):
                         or img_name == off_img_complete_link
                     ):
                         return []
-
-                return [Error("sec_non_official_image", element, file, repr(element))]
+                    
+                return [Error("sec_non_official_image", bad_element, file, repr(bad_element))]
 
             return []
 
@@ -101,19 +103,20 @@ class SecurityVisitor(RuleVisitor):
     class OrchestratorImageTagsSmell(SmellChecker):
         def check(self, element: CodeElement, file: str) -> List[Error]:
             errors: List[Error] = []
-
+            bad_element = element
             if isinstance(element, KeyValue) and (
                 (element.name == "image" and isinstance(element.value, String))
                 or (isinstance(element.value, Hash) and element.name == "config")
             ):
                 image = ""
-
+                
                 if isinstance(element.value, String):
                     image = element.value.value
                 else:
                     for k, v in element.value.value.items():
                         if isinstance(k, String) and k.value == "image":
                             image = v.value
+                            bad_element = v
                             break
 
                 has_digest, has_tag = False, False
@@ -131,14 +134,14 @@ class SecurityVisitor(RuleVisitor):
                         checksum_s[0] == "sha256" and len(checksum) != 64
                     ):  # sha256 256 digest -> 64 hexadecimal digits
                         errors.append(
-                            Error("sec_image_integrity", element, file, repr(element))
+                            Error("sec_image_integrity", bad_element, file, repr(bad_element))
                         )
 
                 if image != "" and has_tag:
                     tag = tag.lower()
                     if not has_digest:
                         errors.append(
-                            Error("sec_image_integrity", element, file, repr(element))
+                            Error("sec_image_integrity", bad_element, file, repr(bad_element))
                         )
 
                     dangerous_tags: List[str] = SecurityVisitor.DANGEROUS_IMAGE_TAGS
@@ -146,14 +149,14 @@ class SecurityVisitor(RuleVisitor):
                     for dt in dangerous_tags:
                         if dt in tag:
                             errors.append(
-                                Error("sec_unstable_tag", element, file, repr(element))
+                                Error("sec_unstable_tag", bad_element, file, repr(bad_element))
                             )
                             break
                 if (
                     image != "" and not has_digest and not has_tag
                 ):  # Image not tagged, avoids mistakenely nomad tasks without images (non-docker or non-podman)
                     errors.append(
-                        Error("sec_no_image_tag", element, file, repr(element))
+                        Error("sec_no_image_tag", bad_element, file, repr(bad_element))
                     )
 
             return errors
