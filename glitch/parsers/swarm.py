@@ -280,7 +280,7 @@ class SwarmParser(YamlParser):
                         for attribute in service.attributes:
                             if attribute.name == "extends":
                                 deps = []
-                                
+
                                 if isinstance(attribute.value, Hash):
                                     # adds the name of file as a dependency
                                     for k, v in attribute.value.value.items():
