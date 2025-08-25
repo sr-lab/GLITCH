@@ -268,23 +268,6 @@ class SwarmParser(YamlParser):
                         file_unit_block.add_comment(c)
                 file_unit_block.code = "".join(code)
 
-                # FIXME: Handling the includes, might not be the best way
-                for inc in includes:
-                    curr_path = os.path.split(path)[0]
-                    joint_path = os.path.normpath(os.path.join(curr_path, inc))
-                    if os.path.exists(joint_path) and os.path.isfile(joint_path):
-                        include_file_unit_block = self.parse_file(joint_path)
-
-                        for ub in include_file_unit_block.unit_blocks:
-                            for ub_curr in file_unit_block.unit_blocks:
-                                if ub.name == ub_curr.name:
-                                    for au in ub.atomic_units:
-                                        ub_curr.add_atomic_unit(au)
-                    else:
-                        print(
-                            f'Failed to parse include file expected at "{joint_path}". File not found.'
-                        )
-
                 to_extend: List[List[AtomicUnit, Attribute]] = []
 
                 services = []
