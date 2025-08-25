@@ -4,7 +4,7 @@ from glitch.repr.inter import CodeElement, KeyValue, Boolean, Hash, String
 from typing import List
 
 
-class PrivigedContainerUse(SecuritySmellChecker):
+class PrivilegedContainerUse(SecuritySmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         if isinstance(element, KeyValue):
 
