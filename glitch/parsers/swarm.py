@@ -297,8 +297,7 @@ class SwarmParser(YamlParser):
                         for attribute in service.attributes:
                             if attribute.name == "extends":
                                 deps = []
-                                # if isinstance(attribute.value,String):
-                                #    deps.append(attribute.value.value)
+                                
                                 if isinstance(attribute.value, Hash):
                                     # adds the name of file as a dependency
                                     for k, v in attribute.value.value.items():
@@ -357,11 +356,6 @@ class SwarmParser(YamlParser):
                                     )
                             else:
                                 service_from_list = services
-
-                                # print(
-                                #    f'Failed to parse extends file expected at "{joint_path}". File not found.'
-                                # )
-                                #
 
                         for s in service_from_list:
                             if s.name.value == service_from:
