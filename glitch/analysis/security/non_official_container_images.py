@@ -6,11 +6,12 @@ from glitch.analysis.utils import parse_container_image_name
 from typing import List
 
 
-class DeprecatedOfficialDockerImages(SecuritySmellChecker):
+class NonOfficialContainerImage(SecuritySmellChecker):
+    # NOTE: This is the implementation for Nomad and Swarm
     def check(self, element: CodeElement, file: str) -> List[Error]:
-        errors: List[Error] = []
         image = ""
         bad_element = element
+
         if isinstance(element, KeyValue) and element.name == "image":
             if isinstance(element.value, String):
                 image = element.value.value
@@ -24,24 +25,25 @@ class DeprecatedOfficialDockerImages(SecuritySmellChecker):
                     image = v.value
                     bad_element = v
                     break
-        if image != "":
-            img_name, _, _ = parse_container_image_name(image)
-            for obsolete_img in SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES:
-                obsolete_img_dockerio = f"docker.io/library/{obsolete_img}"
-                obsolete_img_library = f"library/{obsolete_img}"
-                obsolete_img_complete_link = (
-                    f"registry.hub.docker.com/library/{obsolete_img}"
-                )
+
+        img_name, _, _ = parse_container_image_name(image)
+
+        if img_name != "":
+            for off_img in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
+                off_img_dockerio = f"docker.io/library/{off_img}"
+                off_img_library = f"library/{off_img}"
+                off_img_complete_link = f"registry.hub.docker.com/library/{off_img}"
 
                 if (
-                    img_name == obsolete_img
-                    or img_name == obsolete_img_dockerio
-                    or img_name == obsolete_img_library
-                    or img_name == obsolete_img_complete_link
+                    img_name == off_img
+                    or img_name == off_img_dockerio
+                    or img_name == off_img_library
+                    or img_name == off_img_complete_link
                 ):
-                    errors.append(
-                        Error("sec_depr_off_imgs", bad_element, file, repr(bad_element))
-                    )
-                    break
+                    return []
 
-        return errors
+            return [
+                Error("sec_non_official_image", bad_element, file, repr(bad_element))
+            ]
+
+        return []

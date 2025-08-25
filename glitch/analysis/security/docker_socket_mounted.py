@@ -4,7 +4,7 @@ from glitch.repr.inter import CodeElement, KeyValue, Hash, String,Array
 from typing import List
 
 
-class DockerSocketMountedInsideContainerUse(SecuritySmellChecker):
+class DockerSocketMountedInsideContainer(SecuritySmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
         if isinstance(element, KeyValue):

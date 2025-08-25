@@ -4,7 +4,7 @@ from glitch.repr.inter import CodeElement, Hash, AtomicUnit, Array, Boolean
 from typing import List
 
 
-class MissingHealthchecksCheck(SecuritySmellChecker):
+class MissingHealthchecks(SecuritySmellChecker):
     #NOTE: This class checks for Missing Healthchecks smell in Nomad and Swarm
     # But it is checking for the WobblyServiceInteraction in Nomad
     def check(self, element: CodeElement, file: str) -> List[Error]:

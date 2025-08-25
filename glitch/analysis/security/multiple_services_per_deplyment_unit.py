@@ -2,10 +2,11 @@ from glitch.analysis.rules import Error
 from glitch.analysis.security.smell_checker import SecuritySmellChecker
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.repr.inter import CodeElement, Hash, String, UnitBlock, UnitBlockType
+from glitch.analysis.utils import parse_container_image_name
 from typing import List
 
 
-class MultipleServicesPerDeploymentUnitCheck(SecuritySmellChecker):
+class MultipleServicesPerDeploymentUnit(SecuritySmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         # FIXME: Besides log collectors, there are other types of agents/sidecars for observability (some of which are also on the log collector list)
         # and proxies which should also be allowed besides the main microservice
@@ -19,7 +20,7 @@ class MultipleServicesPerDeploymentUnitCheck(SecuritySmellChecker):
                         if att.name == "config" and isinstance(att.value, Hash):
                             for k, v in att.value.value.items():
                                 if isinstance(k, String) and k.value == "image":
-                                    image_name, _, _ = SecurityVisitor.image_parser(
+                                    image_name, _, _ = parse_container_image_name(
                                         v.value
                                     )
                                     break

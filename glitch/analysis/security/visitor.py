@@ -58,209 +58,6 @@ class SecurityVisitor(RuleVisitor):
                 return [Error("sec_non_official_image", element, file, repr(element))]
             return []
 
-    class OrchestratorNonOfficialImageSmell(SmellChecker):
-        def check(self, element: CodeElement, file: str) -> List[Error]:
-            image = ""
-            bad_element = element
-            if isinstance(element, KeyValue) and element.name == "image":
-                if isinstance(element.value, String):
-                    image = element.value.value
-            elif (
-                isinstance(element, KeyValue)
-                and element.name == "config"
-                and isinstance(element.value, Hash)
-            ):
-                for k, v in element.value.value.items():
-                    if isinstance(k, String) and k.value == "image":
-                        image = v.value
-                        bad_element = v
-                        break
-
-            img_name, _, _ = SecurityVisitor.image_parser(image)
-
-            if img_name != "":
-                for off_img in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
-                    off_img_dockerio = f"docker.io/library/{off_img}"
-                    off_img_library = f"library/{off_img}"
-                    off_img_complete_link = f"registry.hub.docker.com/library/{off_img}"
-
-                    if (
-                        img_name == off_img
-                        or img_name == off_img_dockerio
-                        or img_name == off_img_library
-                        or img_name == off_img_complete_link
-                    ):
-                        return []
-
-                return [
-                    Error(
-                        "sec_non_official_image", bad_element, file, repr(bad_element)
-                    )
-                ]
-
-            return []
-
-    class ImageTagsSmell(SmellChecker):
-        def check(self, element: CodeElement, file: str) -> List[Error]:
-            return []
-
-    class OrchestratorImageTagsSmell(SmellChecker):
-        def check(self, element: CodeElement, file: str) -> List[Error]:
-            errors: List[Error] = []
-            bad_element = element
-            if isinstance(element, KeyValue) and (
-                (element.name == "image" and isinstance(element.value, String))
-                or (isinstance(element.value, Hash) and element.name == "config")
-            ):
-                image = ""
-
-                if isinstance(element.value, String):
-                    image = element.value.value
-                else:
-                    for k, v in element.value.value.items():
-                        if isinstance(k, String) and k.value == "image":
-                            image = v.value
-                            bad_element = v
-                            break
-
-                has_digest, has_tag = False, False
-                _, tag, digest = SecurityVisitor.image_parser(image)
-
-                if tag != "":
-                    has_tag = True
-                if digest != "":
-                    has_digest = True
-
-                if image != "" and has_digest:  # image tagged with digest
-                    checksum_s = digest.split(":")
-                    checksum = checksum_s[-1]
-                    if (
-                        checksum_s[0] == "sha256" and len(checksum) != 64
-                    ):  # sha256 256 digest -> 64 hexadecimal digits
-                        errors.append(
-                            Error(
-                                "sec_image_integrity",
-                                bad_element,
-                                file,
-                                repr(bad_element),
-                            )
-                        )
-
-                if image != "" and has_tag:
-                    tag = tag.lower()
-                    if not has_digest:
-                        errors.append(
-                            Error(
-                                "sec_image_integrity",
-                                bad_element,
-                                file,
-                                repr(bad_element),
-                            )
-                        )
-
-                    dangerous_tags: List[str] = SecurityVisitor.DANGEROUS_IMAGE_TAGS
-
-                    for dt in dangerous_tags:
-                        if dt in tag:
-                            errors.append(
-                                Error(
-                                    "sec_unstable_tag",
-                                    bad_element,
-                                    file,
-                                    repr(bad_element),
-                                )
-                            )
-                            break
-                if (
-                    image != "" and not has_digest and not has_tag
-                ):  # Image not tagged, avoids mistakenely nomad tasks without images (non-docker or non-podman)
-                    errors.append(
-                        Error("sec_no_image_tag", bad_element, file, repr(bad_element))
-                    )
-
-            return errors
-
-    class LogAggregatorAbsenceSmell(SmellChecker):
-        def check(self, element: CodeElement, file: str) -> List[Error]:
-            return []
-
-    class OrchestratorLogAggregatorAbsenceSmell(SmellChecker):
-        # By default Docker uses the
-        def check(self, element: CodeElement, file: str) -> List[Error]:
-            errors: List[Error] = []
-            if isinstance(element, UnitBlock):
-                # HACK: Besides the ones we are explicitly stating a registry we assume the default, normally Docker hub
-                log_collectors: List[str] = (
-                    SecurityVisitor.LOG_AGGREGATORS_AND_COLLECTORS
-                )
-
-                log_drivers: List[str] = SecurityVisitor.DOCKER_LOG_DRIVERS
-
-                has_log_collector = False
-
-                for au in element.atomic_units:
-                    if au.type != "service" and not au.type.startswith("task."):
-                        # Don't analyze Unit Blocks which aren't tasks or services
-                        return []
-
-                    for att in au.attributes:
-                        image = ""
-                        if att.name == "config" and isinstance(att.value, Hash):
-                            for k, v in att.value.value.items():
-                                if isinstance(k, String) and k.value == "image":
-                                    image = v.value
-                                    break
-
-                        elif att.name == "image" and isinstance(att.value, String):
-                            image = att.value.value
-
-                        img_name, _, _ = SecurityVisitor.image_parser(image)
-
-                        if image != "":
-                            for lc in log_collectors:
-                                if img_name.startswith(lc):
-                                    return []
-                            break
-
-                # if it doesn't have a log collector/aggregator in the deployment
-                if not has_log_collector:
-                    for au in element.atomic_units:
-                        has_logging = False
-                        for att in au.attributes:
-                            if has_logging:
-                                break
-                            if att.name == "logging" and isinstance(att.value, Hash):
-                                for k, v in att.value.value.items():
-                                    if (
-                                        k.value == "driver"
-                                        and isinstance(v, String)
-                                        and v.value in log_drivers
-                                    ):
-                                        has_logging = True
-                                        break
-                            elif att.name == "config" and isinstance(att.value, Hash):
-                                for k, v in att.value.value.items():
-                                    if (
-                                        isinstance(k, String)
-                                        and k.value == "logging"
-                                        and isinstance(v, Hash)
-                                    ):
-                                        for _k, _v in v.value.items():
-                                            if (
-                                                _k.value == "driver"
-                                                and isinstance(_v, String)
-                                                and _v.value in log_drivers
-                                            ):
-                                                has_logging = True
-                                                break
-                                    if has_logging:
-                                        break
-
-                        if not has_logging:
-                            errors.append(Error("arc_no_logging", au, file, repr(au)))
-
-            return errors
-
     def __init__(self, tech: Tech) -> None:
         super().__init__(tech)
 
@@ -272,14 +69,8 @@ class SecurityVisitor(RuleVisitor):
             for child in TerraformSmellChecker.__subclasses__():
                 self.checkers.append(child())
 
-        self.image_tag_smells = SecurityVisitor.ImageTagsSmell()
-        self.log_agg_smell = SecurityVisitor.LogAggregatorAbsenceSmell()
         if tech == Tech.docker:
             self.non_off_img = SecurityVisitor.DockerNonOfficialImageSmell()
-        elif tech in [Tech.swarm, Tech.nomad]:
-            self.non_off_img = SecurityVisitor.OrchestratorNonOfficialImageSmell()
-            self.image_tag_smells = SecurityVisitor.OrchestratorImageTagsSmell()
-            self.log_agg_smell = SecurityVisitor.OrchestratorLogAggregatorAbsenceSmell()
         else:
             self.non_off_img = SecurityVisitor.NonOfficialImageSmell()
 
@@ -480,12 +271,6 @@ class SecurityVisitor(RuleVisitor):
     def __check_keyvalue(self, c: KeyValue, file: str) -> List[Error]:
         errors: List[Error] = []
 
-        # official docker image for swarm and nomad
-
-        errors += self.non_off_img.check(c, file)
-        # image tags smells for swarm and nomad
-        errors += self.image_tag_smells.check(c, file)
-
         # check https/tls/ssl in Hash values
         if isinstance(c.value, Hash):
             pairs_to_check = [c.value.value]
@@ -664,7 +449,6 @@ class SecurityVisitor(RuleVisitor):
 
         errors += missing_integrity_checks.values()
         errors += self.non_off_img.check(u, file)
-        errors += self.log_agg_smell.check(u, file)
 
         for checker in self.checkers:
             checker.code = self.code
@@ -673,7 +457,9 @@ class SecurityVisitor(RuleVisitor):
         return errors
 
     @staticmethod
-    def check_integrity_check(au: AtomicUnit, path: str) -> Optional[Tuple[str|None, Error]]:
+    def check_integrity_check(
+        au: AtomicUnit, path: str
+    ) -> Optional[Tuple[str | None, Error]]:
         for item in SecurityVisitor.DOWNLOAD:
             if not isinstance(au.name, str):
                 continue

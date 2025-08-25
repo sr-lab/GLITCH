@@ -10,10 +10,11 @@ from glitch.repr.inter import (
     UnitBlock,
     UnitBlockType,
 )
+from glitch.analysis.utils import parse_container_image_name
 from typing import List, Dict, Any
 
 
-class NoAPIGatewayCheck(SecuritySmellChecker):
+class NoAPIGateway(SecuritySmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
         # Tries to follow an logic similar to the one presented for Kubernetes pods ond doi: 10.5220/0011845500003488
@@ -100,7 +101,7 @@ class NoAPIGatewayCheck(SecuritySmellChecker):
                                                     )
 
                             if isinstance(k, String) and k.value == "image":
-                                image_name, _, _ = SecurityVisitor.image_parser(v.value)
+                                image_name, _, _ = parse_container_image_name(v.value)
                                 if (
                                     image_name in SecurityVisitor.API_GATEWAYS
                                     or is_api_gateway
