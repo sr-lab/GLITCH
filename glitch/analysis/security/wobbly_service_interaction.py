@@ -5,7 +5,9 @@ from typing import List
 
 
 class WobblyServiceInteractionCheck(SecuritySmellChecker):
-    #FIXME: The class is currently wrongly named
+    #FIXME: The class is currently wrongly named should 
+    # be missinghealthchecks, although in part it is checking for the WobblyServiceInteraction 
+    # in the case of Nomad (See Consul Comment below) so the checks need to be split
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
         
@@ -24,7 +26,7 @@ class WobblyServiceInteractionCheck(SecuritySmellChecker):
                             if k.value == "disable" and (
                                 v.value or v.value.lower() == "true"
                             ):
-                                errors.append(Error("arc_wobbly", au, file, repr(au)))
+                                errors.append(Error("arc_missing_healthchecks", au, file, repr(au)))
                                 break
                             elif k.value == "test":
                                 if isinstance(v.value, Array):
@@ -33,7 +35,7 @@ class WobblyServiceInteractionCheck(SecuritySmellChecker):
                                         and v.value.value[0] == "NONE"
                                     ):
                                         errors.append(
-                                            Error("arc_wobbly", au, file, repr(au))
+                                            Error("arc_missing_healthchecks", au, file, repr(au))
                                         )
                                         break
                     break
@@ -72,7 +74,7 @@ class WobblyServiceInteractionCheck(SecuritySmellChecker):
                                 break
 
                     if not found_healthcheck:
-                        errors.append(Error("arc_wobbly", au, file, repr(au)))
+                        errors.append(Error("arc_missing_healthchecks", au, file, repr(au)))
 
                 if (
                     att.name in ["config", "service"]
@@ -80,9 +82,9 @@ class WobblyServiceInteractionCheck(SecuritySmellChecker):
                     and not found_healthcheck
                     and has_disable_nomad
                 ):
-                    errors.append(Error("arc_wobbly", au, file, repr(au)))
+                    errors.append(Error("arc_missing_healthchecks", au, file, repr(au)))
         
             if element.type == "service" and not found_healthcheck:
-                errors.append(Error("arc_wobbly",au,file,repr(au)))
+                errors.append(Error("arc_missing_healthchecks",au,file,repr(au)))
 
         return errors
