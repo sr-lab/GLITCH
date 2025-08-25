@@ -50,6 +50,7 @@ class Error:
                 "sec_privileged_containers": "Use of Privileged Containers - Developers should always try to give and use the least privileges possible. Use of privileged containers severely thins out the security and isolation provided by container runtimes, its use should be avoided as much as possible (CWE-250)",
                 "arc_multiple_services": "Multiple Services per Deployment Unit - If you are following a Microservices architecture you are violating the idependent deployability rule by deploying multiple microservices in the same group.",
                 "sec_depr_off_imgs" : "Use of deprecated official Docker images - Use of official deprecated images should be avoided as it makes you open to vulnerabilities, quality issues and unfixed bugs (CWE-1104)",
+                "arc_wobbly_service_interaction" : "Wobbly Service Interaction - If you are following a Microservices you are likely compromising the principle of isolation of failures of microservice. Using a Consul sidecar proxy allows having Circuit Breakers and Timeouts that avoid cascading failures due to wobbly interactions between microservices",
             },
             Tech.terraform: {
                 "sec_integrity_policy": "Integrity Policy - Image tag is prone to be mutable or integrity monitoring is disabled. (CWE-471)",
