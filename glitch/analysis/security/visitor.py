@@ -397,12 +397,6 @@ class SecurityVisitor(RuleVisitor):
                 "docker_log_drivers"
             )
             SecurityVisitor.API_GATEWAYS = self._load_data_file("api_gateways")
-            SecurityVisitor.DATABASES_AND_KVS = self._load_data_file(
-                "databases_and_kvs"
-            )
-            SecurityVisitor.MESSAGE_QUEUES_AND_EVENT_BROKERS = self._load_data_file(
-                "message_queues_and_event_brokers"
-            )
 
     @staticmethod
     def _load_data_file(file: str) -> List[str]:
