@@ -3,7 +3,7 @@ import re
 import json
 import glitch
 import configparser
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
 from nltk.tokenize import WordPunctTokenizer  # type: ignore
 from typing import Tuple, List, Optional
@@ -91,8 +91,12 @@ class SecurityVisitor(RuleVisitor):
                         or img_name == off_img_complete_link
                     ):
                         return []
-                    
-                return [Error("sec_non_official_image", bad_element, file, repr(bad_element))]
+
+                return [
+                    Error(
+                        "sec_non_official_image", bad_element, file, repr(bad_element)
+                    )
+                ]
 
             return []
 
@@ -109,7 +113,7 @@ class SecurityVisitor(RuleVisitor):
                 or (isinstance(element.value, Hash) and element.name == "config")
             ):
                 image = ""
-                
+
                 if isinstance(element.value, String):
                     image = element.value.value
                 else:
@@ -134,14 +138,24 @@ class SecurityVisitor(RuleVisitor):
                         checksum_s[0] == "sha256" and len(checksum) != 64
                     ):  # sha256 256 digest -> 64 hexadecimal digits
                         errors.append(
-                            Error("sec_image_integrity", bad_element, file, repr(bad_element))
+                            Error(
+                                "sec_image_integrity",
+                                bad_element,
+                                file,
+                                repr(bad_element),
+                            )
                         )
 
                 if image != "" and has_tag:
                     tag = tag.lower()
                     if not has_digest:
                         errors.append(
-                            Error("sec_image_integrity", bad_element, file, repr(bad_element))
+                            Error(
+                                "sec_image_integrity",
+                                bad_element,
+                                file,
+                                repr(bad_element),
+                            )
                         )
 
                     dangerous_tags: List[str] = SecurityVisitor.DANGEROUS_IMAGE_TAGS
@@ -149,7 +163,12 @@ class SecurityVisitor(RuleVisitor):
                     for dt in dangerous_tags:
                         if dt in tag:
                             errors.append(
-                                Error("sec_unstable_tag", bad_element, file, repr(bad_element))
+                                Error(
+                                    "sec_unstable_tag",
+                                    bad_element,
+                                    file,
+                                    repr(bad_element),
+                                )
                             )
                             break
                 if (
@@ -632,6 +651,9 @@ class SecurityVisitor(RuleVisitor):
         missing_integrity_checks = {}
         for au in u.atomic_units:
             result = self.check_integrity_check(au, file)
+            if result is not None and result[0] is None:
+                errors.append(result[1])
+                continue
             if result is not None:
                 missing_integrity_checks[result[0]] = result[1]
                 continue
@@ -651,7 +673,7 @@ class SecurityVisitor(RuleVisitor):
         return errors
 
     @staticmethod
-    def check_integrity_check(au: AtomicUnit, path: str) -> Optional[Tuple[str, Error]]:
+    def check_integrity_check(au: AtomicUnit, path: str) -> Optional[Tuple[str|None, Error]]:
         for item in SecurityVisitor.DOWNLOAD:
             if not isinstance(au.name, str):
                 continue
@@ -672,6 +694,32 @@ class SecurityVisitor(RuleVisitor):
                 if isinstance(a.value, str)
                 else repr(a.value).strip().lower()
             )
+
+            # Nomad integrity check
+            if a.name == "artifact" and isinstance(a.value, Hash):
+                found_checksum = False
+                for k, v in a.value.value.items():
+                    if (
+                        isinstance(k, String)
+                        and k.value == "options"
+                        and isinstance(v, Hash)
+                    ):
+                        for _k, _ in v.value.items():
+                            if isinstance(_k, String) and _k.value == "checksum":
+                                found_checksum = True
+                                break
+                    elif (
+                        isinstance(k, String)
+                        and k.value == "source"
+                        and isinstance(v, String)
+                    ):
+                        # artifact uses https://github.com/hashicorp/go-getter
+                        parsed_source = urlparse(v.value)  # type: ignore
+                        checksum = parse_qs(parsed_source.query).get("checksum", [])  # type: ignore
+                        if checksum:
+                            found_checksum = True
+                if not found_checksum:
+                    return (None, Error("sec_no_int_check", a, path, repr(a)))  # type: ignore
 
             for item in SecurityVisitor.DOWNLOAD:
                 if not re.search(
