@@ -38,18 +38,26 @@ def __parse_and_check(
     parser: Parser,
     analyses: List[RuleVisitor],
     stats: FileStats,
+    rego_engine: bool,
+    rego_library: str
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
     # Avoids problems with multiple threads (and possibly multiple files)
     # sharing the same object
-    analyses = deepcopy(analyses)
+    
+    if not rego_engine:
+        analyses = deepcopy(analyses)
 
-    if inter != None:
-        for analysis in analyses:
-            errors.update(analysis.check(inter))
-        stats.compute(inter)
-
+        if inter != None:
+            for analysis in analyses:
+                errors.update(analysis.check(inter))
+            stats.compute(inter)
+    else:
+        inputRego = json.dumps(inter.as_dict(), indent=2)
+        
+        # TODO: Implement the Rego engine call here
+        
     return errors
 
 
@@ -275,7 +283,7 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats
+                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library
             )
         )
         future_to_path[futures[-1]] = p
