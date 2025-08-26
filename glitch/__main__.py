@@ -205,6 +205,18 @@ def cli():
     help="Number of parallel workers to use. Defaults to 1.",
     default=1,
 )
+@click.option(
+    "--rego-engine",
+    type=bool,
+    help="Whether to use the Rego engine for the analysis. Defaults to False.",
+    default=False
+)
+@click.option(
+    "--rego-library",
+    type=click.Choice(("regopy", "go")),
+    help="The Rego library used by the engine. Defaults to 'regopy'.",
+    default="regopy"
+)
 @click.argument("output", type=click.Path(), required=False)
 def lint(
     tech: str,  # type: ignore
