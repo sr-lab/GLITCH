@@ -206,13 +206,13 @@ def cli():
     default=1,
 )
 @click.option(
-    "--rego-engine",
+    "--rego_engine",
     type=bool,
     help="Whether to use the Rego engine for the analysis. Defaults to False.",
     default=False
 )
 @click.option(
-    "--rego-library",
+    "--rego_library",
     type=click.Choice(("regopy", "go")),
     help="The Rego library used by the engine. Defaults to 'regopy'.",
     default="regopy"
@@ -230,6 +230,8 @@ def lint(
     table_format: str,
     linter: bool,
     n_workers: int,
+    rego_engine: bool,
+    rego_library: str
 ):
     tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
