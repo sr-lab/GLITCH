@@ -23,6 +23,7 @@ from glitch.repair.interactive.main import run_infrafix
 from pkg_resources import resource_filename
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
+from glitch.rego.engine import run_analyses
 
 
 # NOTE: These are necessary in order for python to load the visitors.
@@ -39,7 +40,9 @@ def __parse_and_check(
     analyses: List[RuleVisitor],
     stats: FileStats,
     rego_engine: bool,
-    rego_library: str
+    rego_library: str,
+    config: str,
+    smell_types: Tuple[str, ...]
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
@@ -54,10 +57,12 @@ def __parse_and_check(
                 errors.update(analysis.check(inter))
             stats.compute(inter)
     else:
+        # TODO: transform indent=None once it is working
         inputRego = json.dumps(inter.as_dict(), indent=2)
         
         # TODO: Implement the Rego engine call here
-        
+        errors.update(run_analyses(inputRego, config, smell_types, rego_library == "regopy"))
+
     return errors
 
 
@@ -283,7 +288,7 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library
+                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library, config, smell_types
             )
         )
         future_to_path[futures[-1]] = p
