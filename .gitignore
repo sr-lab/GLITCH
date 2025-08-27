@@ -5,6 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
+glitch/rego/go/library/librego.h
 
 # Distribution / packaging
 .Python
