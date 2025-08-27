@@ -288,7 +288,7 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library, config, smell_types
+                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library, "./glitch/configs/json/default.json", smell_types
             )
         )
         future_to_path[futures[-1]] = p
