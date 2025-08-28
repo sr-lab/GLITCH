@@ -166,10 +166,12 @@ class SwarmParser(YamlParser):
                             split_str = curr_str.split("=", 1)
                             if len(split_str) == 2:
                                 key, n_val = split_str
+                                if n_val.strip() in ["\"\"", "''"]:
+                                    n_val = ""
                                 if n_val.startswith("${") and n_val.endswith("}"):
                                     val_s = VariableReference(n_val, elem_info)
                                 else:
-                                    val_s = String(n_val, elem_info)
+                                    val_s = String(n_val.strip(), elem_info)
                             else:
                                 key = curr_str
                                 val_s = Null(elem_info)
