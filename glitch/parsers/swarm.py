@@ -29,6 +29,7 @@ from glitch.repr.inter import (
     UnitBlockType,
     Array,
     Dependency,
+    VariableReference,
 )
 
 
@@ -119,6 +120,31 @@ class SwarmParser(YamlParser):
                             att[1].value = False
 
                     att_value: Expr = self.get_value(att[1], code)
+
+                    if (
+                        att[0].value == "environment"
+                        and isinstance(att[1], MappingNode)
+                        and isinstance(att_value, Hash)
+                    ):
+                        temp_value_copy = att_value.value.copy()
+                        modified = False
+                        for k, v in att_value.value.items():
+                            if (
+                                isinstance(v, String)
+                                and v.value.startswith("${")
+                                and v.value.endswith("}")
+                            ):
+                                new_val = VariableReference(
+                                    v.value, ElementInfo.from_code_element(v)
+                                )
+                                temp_value_copy[k] = new_val
+                                modified = True
+                        if modified:
+                            att_value = Hash(
+                                temp_value_copy,
+                                ElementInfo.from_code_element(att_value),
+                            )
+
                     if att[0].value == "environment" and isinstance(
                         att[1], SequenceNode
                     ):
@@ -140,7 +166,10 @@ class SwarmParser(YamlParser):
                             split_str = curr_str.split("=", 1)
                             if len(split_str) == 2:
                                 key, n_val = split_str
-                                val_s = String(n_val, elem_info)
+                                if n_val.startswith("${") and n_val.endswith("}"):
+                                    val_s = VariableReference(n_val, elem_info)
+                                else:
+                                    val_s = String(n_val, elem_info)
                             else:
                                 key = curr_str
                                 val_s = Null(elem_info)
