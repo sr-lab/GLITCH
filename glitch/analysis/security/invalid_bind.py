@@ -5,6 +5,7 @@ from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.repr.inter import *
 from glitch.analysis.expr_checkers.string_checker import StringChecker
 from typing import List
+from shlex import split as shsplit
 
 
 class InvalidBind(SecuritySmellChecker):
@@ -27,4 +28,10 @@ class InvalidBind(SecuritySmellChecker):
         ):
             return [Error("sec_invalid_bind", element, file, repr(element))]
 
+        if isinstance(element, KeyValue) and isinstance(element.value, String):
+            #HACK: splits a string in command parts as for complete commmands invocations the regex wasn't
+            #  matching on full command invocations that included a reference to "0.0.0.0" or the its http/s variants 
+            for part in shsplit(element.value.value):
+                if check_invalid.str_check(part):
+                    return [Error("sec_invalid_bind", element, file, repr(element))]
         return []
