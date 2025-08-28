@@ -18,7 +18,7 @@ class Error:
             "sec_hard_secr": "Hard-coded secret - Developers should not reveal sensitive information in the source code. (CWE-798)",
             "sec_hard_pass": "Hard-coded password - Developers should not reveal sensitive information in the source code. (CWE-259)",
             "sec_hard_user": "Hard-coded user - Developers should not reveal sensitive information in the source code. (CWE-798)",
-            "sec_invalid_bind": "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issues. (CWE-284)",
+            "sec_invalid_bind": "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issue. (CWE-284)",
             "sec_no_int_check": "No integrity check - The content of files downloaded from the internet should be checked. (CWE-353)",
             "sec_no_default_switch": "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)",
             "sec_full_permission_filesystem": "Full permission to the filesystem - Files should not have full permissions to every user. (CWE-732)",
