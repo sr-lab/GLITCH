@@ -173,20 +173,17 @@ class SecurityVisitor(RuleVisitor):
             "official_docker_images"
         )
 
-        if self.tech in [Tech.swarm, Tech.nomad]:
-            SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES = self._load_data_file(
-                "deprecated_official_docker_images"
-            )
-            SecurityVisitor.LOG_AGGREGATORS_AND_COLLECTORS = self._load_data_file(
-                "log_collectors_and_aggregators"
-            )
-            SecurityVisitor.DANGEROUS_IMAGE_TAGS = self._load_data_file(
-                "dangerous_image_tags"
-            )
-            SecurityVisitor.DOCKER_LOG_DRIVERS = self._load_data_file(
-                "docker_log_drivers"
-            )
-            SecurityVisitor.API_GATEWAYS = self._load_data_file("api_gateways")
+        SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES = self._load_data_file(
+            "deprecated_official_docker_images"
+        )
+        SecurityVisitor.LOG_AGGREGATORS_AND_COLLECTORS = self._load_data_file(
+            "log_collectors_and_aggregators"
+        )
+        SecurityVisitor.DANGEROUS_IMAGE_TAGS = self._load_data_file(
+            "dangerous_image_tags"
+        )
+        SecurityVisitor.DOCKER_LOG_DRIVERS = self._load_data_file("docker_log_drivers")
+        SecurityVisitor.API_GATEWAYS = self._load_data_file("api_gateways")
 
     @staticmethod
     def _load_data_file(file: str) -> List[str]:
