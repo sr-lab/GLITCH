@@ -10,7 +10,7 @@ from typing import Tuple, List, Optional
 
 from glitch.tech import Tech
 from glitch.repr.inter import *
-
+from glitch.analysis.expr_checkers.string_checker import StringChecker
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.security.smell_checker import SecuritySmellChecker
 
@@ -249,18 +249,36 @@ class SecurityVisitor(RuleVisitor):
         errors: List[Error] = []
 
         # check https/tls/ssl in Hash values
+
+        ssl_checker = StringChecker(lambda x: self.__is_http_url(x))
+        weak_crypt_checker = StringChecker(lambda x: self.__is_weak_crypt(x, ""))
+
         if isinstance(c.value, Hash):
             pairs_to_check = [c.value.value]
 
             while pairs_to_check:
-                for k, v in pairs_to_check[0].items():
-                    if isinstance(v, String) and self.__is_http_url(v.value):
+                for _, v in pairs_to_check[0].items():
+                    if ssl_checker.check(v):
                         errors.append(Error("sec_https", v, file, repr(v)))
-                    if isinstance(v, String) and self.__is_weak_crypt(v.value, k.value):
+                    if weak_crypt_checker.check(v):
                         errors.append(Error("sec_weak_crypt", v, file, repr(v)))
                     if isinstance(v, Hash):
                         pairs_to_check.append(v.value)
+
                 pairs_to_check.pop(0)
+
+        elif isinstance(c.value, Array):
+            for x in c.value.value:
+                if ssl_checker.check(x):
+                    errors.append(Error("sec_https", x, file, repr(x)))
+                if weak_crypt_checker.check(x):
+                    errors.append(Error("sec_weak_crypt", x, file, repr(x)))
+
+        else:
+            if ssl_checker.check(c.value):
+                errors.append(Error("sec_https", c, file, repr(c)))
+            if weak_crypt_checker.check(c.value):
+                errors.append(Error("sec_weak_crypt", c, file, repr(c)))
 
         c.name = c.name.strip().lower()
 
@@ -461,6 +479,7 @@ class SecurityVisitor(RuleVisitor):
             # Nomad integrity check
             if a.name == "artifact" and isinstance(a.value, Hash):
                 found_checksum = False
+
                 for k, v in a.value.value.items():
                     if (
                         isinstance(k, String)
