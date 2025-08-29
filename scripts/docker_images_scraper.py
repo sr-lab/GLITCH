@@ -20,9 +20,11 @@ while current < total:
     if current < total:
         res = ses.get(next_url + f"&from={current}", headers=headers).json()
 
-with open("official_images", "w") as f:
+with open("official_docker_images", "w") as f:
+    images_list.sort()
     f.write("\n".join(images_list))
 
-with open("official_deprecated_images", "w") as f:
+with open("deprecated_official_docker_images", "w") as f:
+    deprecated.sort()
     f.write("\n".join(deprecated))
 
