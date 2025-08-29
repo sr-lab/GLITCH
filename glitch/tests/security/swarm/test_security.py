@@ -28,11 +28,6 @@ class TestSecurity(unittest.TestCase):
             self.assertEqual(errors[i].code, codes[i])
             self.assertEqual(errors[i].line, lines[i])
 
-    def tearDown(self) -> None:
-        super().tearDown()
-        if os.path.exists("docker-compose.yml"):
-            os.remove("docker-compose.yml")
-
     def test_swarm_admin(self) -> None:
         self.__help_test(
             "tests/security/swarm/files/admin.yml",
