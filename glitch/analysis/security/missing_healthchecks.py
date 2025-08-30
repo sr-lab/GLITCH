@@ -20,6 +20,11 @@ class MissingHealthchecks(SecuritySmellChecker):
 
         # nomad group tasks
         if isinstance(element, UnitBlock) and element.type == UnitBlockType.block:
+            # HACK: avoid wrong for swarm
+            for au in element.atomic_units:
+                if not au.type.startswith("task."):
+                    return []
+
             services_info: List[Dict[str, bool | str | None]] = []
 
             # getting the services and consul sidecars at group level
@@ -108,7 +113,7 @@ class MissingHealthchecks(SecuritySmellChecker):
                 )
 
         # swarm
-        if isinstance(element, AtomicUnit):
+        if isinstance(element, AtomicUnit) and element.type == "service":
             found_healthcheck = False
 
             for att in element.attributes:
@@ -147,7 +152,7 @@ class MissingHealthchecks(SecuritySmellChecker):
                                         break
                     break
 
-            if element.type == "service" and not found_healthcheck:
+            if not found_healthcheck:
                 errors.append(
                     Error("arc_missing_healthchecks", element, file, repr(element))
                 )
