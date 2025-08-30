@@ -31,7 +31,8 @@ class SecurityVisitor(RuleVisitor):
             ):
                 return []
             image = element.name.split(":")
-            if image[0] not in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
+            all_official_imgs = SecurityVisitor.DOCKER_OFFICIAL_IMAGES + SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES
+            if image[0] not in all_official_imgs:
                 return [Error("sec_non_official_image", element, file, repr(element))]
             return []
 

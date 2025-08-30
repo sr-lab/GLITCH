@@ -29,7 +29,8 @@ class NonOfficialContainerImage(SecuritySmellChecker):
         img_name, _, _ = parse_container_image_name(image)
 
         if img_name != "":
-            for off_img in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
+            all_official_images:List[str] = SecurityVisitor.DOCKER_OFFICIAL_IMAGES + SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES
+            for off_img in all_official_images:
                 off_img_dockerio = f"docker.io/library/{off_img}"
                 off_img_library = f"library/{off_img}"
                 off_img_complete_link = f"registry.hub.docker.com/library/{off_img}"
