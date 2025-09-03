@@ -1,12 +1,8 @@
 package glitch_lib
 
 _gather_parent_unit_blocks[ub] {
-	ub := input.modules[_].blocks[_]
-}
-
-_gather_parent_unit_blocks[ub] {
-	input.ir_type == "UnitBlock"
-	ub := input
+    walk(input, [_, ub])
+    ub.ir_type == "UnitBlock"
 }
 
 all_atomic_units(node) = units {
