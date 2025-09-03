@@ -57,10 +57,11 @@ def __parse_and_check(
                 errors.update(analysis.check(inter))
             stats.compute(inter)
     else:
-        # TODO: transform indent=None once it is working
+        # TODO: transform indent=None once it is working properly
         inputRego = json.dumps(inter.as_dict(), indent=2)
         
-        # TODO: Implement the Rego engine call here
+        # TODO: Implement capability to select which analysis we want later 
+        
         errors.update(run_analyses(inputRego, config, smell_types, rego_library == "regopy"))
 
     return errors
@@ -250,7 +251,7 @@ def lint(
     type = UnitBlockType(type)
     module = folder_strategy == "module"
 
-    if config != "configs/default.ini" and not os.path.exists(config):
+    if (config != "configs/default.ini" or config != "configs/json/default.json") and not os.path.exists(config):
         raise click.BadOptionUsage(
             "config", f"Invalid value for 'config': Path '{config}' does not exist."
         )
@@ -260,6 +261,8 @@ def lint(
         )
     elif config == "configs/default.ini":
         config = resource_filename("glitch", "configs/default.ini")
+    elif config == "configs/json/default.json":
+        config = resource_filename("glitch", "configs/json/default.json")
 
     parser = __get_parser(tech)
     if tech == Tech.terraform:
@@ -274,7 +277,8 @@ def lint(
     for r in rules:
         if smell_types == () or r.get_name() in smell_types:
             analysis = r(tech)
-            analysis.config(config)
+            if not rego_engine: # This is needed since we are trying to pass a json config file, and the parser for config breaks with it
+                analysis.config(config)
             analyses.append(analysis)
 
     errors: List[Error] = []
