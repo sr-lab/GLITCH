@@ -67,7 +67,7 @@ class LogAggregatorAbsence(SecuritySmellChecker):
                                 ):
                                     for _k, _v in v.value.items():
                                         if (
-                                            _k.value == "driver"
+                                            _k.value == "type"
                                             and isinstance(_v, String)
                                             and _v.value in log_drivers
                                         ):
