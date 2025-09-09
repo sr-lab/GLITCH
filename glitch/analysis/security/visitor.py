@@ -433,7 +433,11 @@ class SecurityVisitor(RuleVisitor):
         for au in u.atomic_units:
             result = self.check_integrity_check(au, file)
             if result is not None and result[0] is None:
-                errors.append(result[1])
+                if isinstance(result[1], Error):
+                    errors.append(result[1])
+                else:
+                    for err in result[1]:
+                        errors.append(err)
                 continue
             if result is not None:
                 missing_integrity_checks[result[0]] = result[1]
@@ -455,7 +459,7 @@ class SecurityVisitor(RuleVisitor):
     @staticmethod
     def check_integrity_check(
         au: AtomicUnit, path: str
-    ) -> Optional[Tuple[str | None, Error]]:
+    ) -> Optional[Tuple[str | None, Error | List[Error]]]:
         for item in SecurityVisitor.DOWNLOAD:
             if not isinstance(au.name, str):
                 continue
@@ -469,7 +473,7 @@ class SecurityVisitor(RuleVisitor):
             return os.path.basename(au.name), Error(
                 "sec_no_int_check", au, path, repr(au)
             )
-
+        errors: List[Error] = []
         for a in au.attributes:
             value = (
                 a.value.strip().lower()
@@ -502,8 +506,10 @@ class SecurityVisitor(RuleVisitor):
                         if checksum:
                             found_checksum = True
                 if not found_checksum:
-                    return (None, Error("sec_no_int_check", a, path, repr(a)))  # type: ignore
+                    errors.append(Error("sec_no_int_check", a, path, repr(a)))  # type: ignore
 
+            if len(errors) > 0:
+                continue
             for item in SecurityVisitor.DOWNLOAD:
                 if not re.search(
                     r"(http|https|www)[^ ,]*\.{text}".format(text=item), value
@@ -515,6 +521,8 @@ class SecurityVisitor(RuleVisitor):
                     "sec_no_int_check", au, path, repr(a)
                 )  # type: ignore
 
+        if len(errors) > 0:
+            return (None, errors)
         return None
 
     @staticmethod
