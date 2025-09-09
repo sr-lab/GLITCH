@@ -49,17 +49,17 @@ class ContainerImageTagsSmells(SecuritySmellChecker):
                         )
                     )
 
+            if image != "" and not has_digest:
+                errors.append(
+                    Error(
+                        "sec_image_integrity",
+                        bad_element,
+                        file,
+                        repr(bad_element),
+                    )
+                )
             if image != "" and has_tag:
                 tag = tag.lower()
-                if not has_digest:
-                    errors.append(
-                        Error(
-                            "sec_image_integrity",
-                            bad_element,
-                            file,
-                            repr(bad_element),
-                        )
-                    )
 
                 dangerous_tags: List[str] = SecurityVisitor.DANGEROUS_IMAGE_TAGS
 
