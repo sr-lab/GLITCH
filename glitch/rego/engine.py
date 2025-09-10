@@ -20,7 +20,14 @@ def run_analyses(
         with open(config) as f:
             data = json.load(f)
 
-    rego_modules = load_rego_modules_from_folder("./glitch/rego/queries/security")
+    rego_modules: dict[str, str] = {}
+
+    load_rego_modules_from_folder("./glitch/rego/queries/library", rego_modules)
+    
+    if "security" in smell_types:
+        load_rego_modules_from_folder("./glitch/rego/queries/security", rego_modules)
+    if "design" in smell_types:
+        load_rego_modules_from_folder("./glitch/rego/queries/design", rego_modules)
 
     result = run_rego(input_data, data, rego_modules)
 
@@ -50,14 +57,12 @@ def run_analyses(
     return errors
 
 
-def load_rego_modules_from_folder(folder_path: str) -> dict[str, str]:
-    modules = {}
+def load_rego_modules_from_folder(folder_path: str, result: dict[str, str]) -> None:
     for filename in os.listdir(folder_path):
         if filename.endswith('.rego'):
             file_path = os.path.join(folder_path, filename)
             with open(file_path, 'r') as f:
-                modules[filename] = f.read()
-    return modules # type: ignore
+                result[filename] = f.read()
 
 def element_from_dict(data: dict) -> CodeElement:
     """
