@@ -3,14 +3,14 @@ import re
 import json
 import glitch
 import configparser
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from glitch.analysis.rules import Error, RuleVisitor, SmellChecker
 from nltk.tokenize import WordPunctTokenizer  # type: ignore
 from typing import Tuple, List, Optional
 
 from glitch.tech import Tech
 from glitch.repr.inter import *
-
+from glitch.analysis.expr_checkers.string_checker import StringChecker
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.security.smell_checker import SecuritySmellChecker
 
@@ -31,7 +31,11 @@ class SecurityVisitor(RuleVisitor):
             ):
                 return []
             image = element.name.split(":")
-            if image[0] not in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
+            all_official_imgs = (
+                SecurityVisitor.DOCKER_OFFICIAL_IMAGES
+                + SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES
+            )
+            if image[0] not in all_official_imgs:
                 return [Error("sec_non_official_image", element, file, repr(element))]
             return []
 
@@ -173,6 +177,18 @@ class SecurityVisitor(RuleVisitor):
             "official_docker_images"
         )
 
+        SecurityVisitor.DEPRECATED_OFFICIAL_DOCKER_IMAGES = self._load_data_file(
+            "deprecated_official_docker_images"
+        )
+        SecurityVisitor.LOG_AGGREGATORS_AND_COLLECTORS = self._load_data_file(
+            "log_collectors_and_aggregators"
+        )
+        SecurityVisitor.DANGEROUS_IMAGE_TAGS = self._load_data_file(
+            "dangerous_image_tags"
+        )
+        SecurityVisitor.DOCKER_LOG_DRIVERS = self._load_data_file("docker_log_drivers")
+        SecurityVisitor.API_GATEWAYS = self._load_data_file("api_gateways")
+
     @staticmethod
     def _load_data_file(file: str) -> List[str]:
         folder_path = os.path.dirname(os.path.realpath(glitch.__file__))
@@ -232,6 +248,39 @@ class SecurityVisitor(RuleVisitor):
 
     def __check_keyvalue(self, c: KeyValue, file: str) -> List[Error]:
         errors: List[Error] = []
+
+        # check https/tls/ssl in Hash values
+
+        ssl_checker = StringChecker(lambda x: self.__is_http_url(x))
+        weak_crypt_checker = StringChecker(lambda x: self.__is_weak_crypt(x, ""))
+
+        if isinstance(c.value, Hash):
+            pairs_to_check = [c.value.value]
+
+            while pairs_to_check:
+                for _, v in pairs_to_check[0].items():
+                    if ssl_checker.check(v):
+                        errors.append(Error("sec_https", v, file, repr(v)))
+                    if weak_crypt_checker.check(v):
+                        errors.append(Error("sec_weak_crypt", v, file, repr(v)))
+                    if isinstance(v, Hash):
+                        pairs_to_check.append(v.value)
+
+                pairs_to_check.pop(0)
+
+        elif isinstance(c.value, Array):
+            for x in c.value.value:
+                if ssl_checker.check(x):
+                    errors.append(Error("sec_https", x, file, repr(x)))
+                if weak_crypt_checker.check(x):
+                    errors.append(Error("sec_weak_crypt", x, file, repr(x)))
+
+        else:
+            if ssl_checker.check(c.value):
+                errors.append(Error("sec_https", c, file, repr(c)))
+            if weak_crypt_checker.check(c.value):
+                errors.append(Error("sec_weak_crypt", c, file, repr(c)))
+
         c.name = c.name.strip().lower()
 
         # if isinstance(c.value, type(None)):
@@ -383,6 +432,13 @@ class SecurityVisitor(RuleVisitor):
         missing_integrity_checks = {}
         for au in u.atomic_units:
             result = self.check_integrity_check(au, file)
+            if result is not None and result[0] is None:
+                if isinstance(result[1], Error):
+                    errors.append(result[1])
+                else:
+                    for err in result[1]:
+                        errors.append(err)
+                continue
             if result is not None:
                 missing_integrity_checks[result[0]] = result[1]
                 continue
@@ -394,10 +450,16 @@ class SecurityVisitor(RuleVisitor):
         errors += missing_integrity_checks.values()
         errors += self.non_off_img.check(u, file)
 
+        for checker in self.checkers:
+            checker.code = self.code
+            errors += checker.check(u, file)
+
         return errors
 
     @staticmethod
-    def check_integrity_check(au: AtomicUnit, path: str) -> Optional[Tuple[str, Error]]:
+    def check_integrity_check(
+        au: AtomicUnit, path: str
+    ) -> Optional[Tuple[str | None, Error | List[Error]]]:
         for item in SecurityVisitor.DOWNLOAD:
             if not isinstance(au.name, str):
                 continue
@@ -411,7 +473,7 @@ class SecurityVisitor(RuleVisitor):
             return os.path.basename(au.name), Error(
                 "sec_no_int_check", au, path, repr(au)
             )
-
+        errors: List[Error] = []
         for a in au.attributes:
             value = (
                 a.value.strip().lower()
@@ -419,6 +481,35 @@ class SecurityVisitor(RuleVisitor):
                 else repr(a.value).strip().lower()
             )
 
+            # Nomad integrity check
+            if a.name == "artifact" and isinstance(a.value, Hash):
+                found_checksum = False
+
+                for k, v in a.value.value.items():
+                    if (
+                        isinstance(k, String)
+                        and k.value == "options"
+                        and isinstance(v, Hash)
+                    ):
+                        for _k, _ in v.value.items():
+                            if isinstance(_k, String) and _k.value == "checksum":
+                                found_checksum = True
+                                break
+                    elif (
+                        isinstance(k, String)
+                        and k.value == "source"
+                        and isinstance(v, String)
+                    ):
+                        # artifact uses https://github.com/hashicorp/go-getter
+                        parsed_source = urlparse(v.value)  # type: ignore
+                        checksum = parse_qs(parsed_source.query).get("checksum", [])  # type: ignore
+                        if checksum:
+                            found_checksum = True
+                if not found_checksum:
+                    errors.append(Error("sec_no_int_check", a, path, repr(a)))  # type: ignore
+
+            if len(errors) > 0:
+                continue
             for item in SecurityVisitor.DOWNLOAD:
                 if not re.search(
                     r"(http|https|www)[^ ,]*\.{text}".format(text=item), value
@@ -429,6 +520,9 @@ class SecurityVisitor(RuleVisitor):
                 return os.path.basename(a.value), Error(  # type: ignore
                     "sec_no_int_check", au, path, repr(a)
                 )  # type: ignore
+
+        if len(errors) > 0:
+            return (None, errors)
         return None
 
     @staticmethod

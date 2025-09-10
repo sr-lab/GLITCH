@@ -1,0 +1,9 @@
+services:
+  service_example:
+    image: nginx:latest
+    healthcheck:
+      test: "curl --fail http://localhost:80/ || exit 1"
+      interval: 30s
+      retries: 5s
+    logging:
+        driver: elastic/elastic-logging-plugin
