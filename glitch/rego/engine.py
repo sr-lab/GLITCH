@@ -22,12 +22,17 @@ def run_analyses(
 
     rego_modules: dict[str, str] = {}
 
+
+    if not os.path.exists("./glitch/rego/queries/library"):
+        raise FileNotFoundError("The rego query library does not exist.")
+    
     load_rego_modules_from_folder("./glitch/rego/queries/library", rego_modules)
     
-    if "security" in smell_types:
-        load_rego_modules_from_folder("./glitch/rego/queries/security", rego_modules)
-    if "design" in smell_types:
-        load_rego_modules_from_folder("./glitch/rego/queries/design", rego_modules)
+    for smell_type in smell_types:
+        if os.path.exists(f"./glitch/rego/queries/{smell_type}"):
+            load_rego_modules_from_folder(f"./glitch/rego/queries/{smell_type}", rego_modules)
+        else:
+            print(f"Warning: The rego queries for smell type '{smell_type}' are mislabeled or do not exist. Skipping.")
 
     result = run_rego(input_data, data, rego_modules)
 
