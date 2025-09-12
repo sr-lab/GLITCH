@@ -261,14 +261,16 @@ def lint(
         )
     elif config == "configs/default.ini":
         config = resource_filename("glitch", "configs/default.ini")
-    elif config == "configs/json/default.json":
-        config = resource_filename("glitch", "configs/json/default.json")
 
     parser = __get_parser(tech)
-    if tech == Tech.terraform:
+    if tech == Tech.terraform and not rego_engine:
         config = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
 
+    if config == "configs/json/default.json":
+        print("Using default JSON config for Rego engine.")
+        config = resource_filename("glitch", "configs/json/default.json")
+    
     if smell_types == ():
         smell_types = get_smell_types()
 
@@ -292,7 +294,7 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library, "./glitch/configs/json/default.json", smell_types
+                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library, config, smell_types
             )
         )
         future_to_path[futures[-1]] = p
