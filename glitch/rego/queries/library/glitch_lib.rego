@@ -67,7 +67,7 @@ check_string(node, pattern) {
 } else {
 	# If it is an array or set
     not is_string(pattern)
-    contains(lower(node.value), pattern[_])
+    contains(node.value, pattern[_])
 }
 
 # Implemented as a substitute for VarChecker, checks if there is at least one VariableReference and passes if there isn't
@@ -82,5 +82,5 @@ has_variable_reference(node) {
 
 # Check if a string contains a substring
 contains(str, substr) {
-    regex.match(sprintf(".*%s.*", [substr]), str)
+    regex.match(sprintf("(?i).*%s.*", [substr]), str)
 }
