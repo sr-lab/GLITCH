@@ -2,7 +2,7 @@ import json
 import os
 
 from typing import Tuple, List
-from glitch.rego.go.wrapper import run_rego
+from glitch.rego.rego_python.src.rego_python import run_rego
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error
 
