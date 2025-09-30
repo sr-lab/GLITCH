@@ -5,18 +5,34 @@ import os
 from pathlib import Path
 
 def _get_lib_path():
-    system = platform.system().lower()
-    machine = platform.machine().lower()
+    system = platform.system().lower()      # 'windows', 'linux', 'darwin'
+    machine = platform.machine().lower()    # 'x86_64', 'amd64', 'arm64', 'aarch64', etc.
 
-    base = Path(__file__).parent / "libs"
-    if system == "linux" and "x86_64" in machine:
-        return base / "linux-x86_64" / "librego.so"
-    #elif system == "darwin" and "x86_64" in machine:
-    #    return base / "darwin-x86_64" / "librego.dylib"
-    #elif system == "windows" and "amd64" in machine:
-    #    return base / "windows-x86_64" / "librego.dll"
-    else:
+    base = Path(__file__).parent / "bin"
+
+    EXTENSIONS = {
+        "linux": "so",
+        "darwin": "dylib",
+        "windows": "dll",
+    }
+
+    # normalize architecture names
+    ARCH_MAP = {
+        "amd64": "x86_64",
+        "x86_64": "x86_64",
+        "aarch64": "arm64",
+        "arm64": "arm64",
+    }
+
+    try:
+        arch = ARCH_MAP[machine]
+        ext = EXTENSIONS[system]
+    except KeyError:
         raise OSError(f"Unsupported platform: {system} {machine}")
+
+    filename = f"librego-{system}-{arch}.{ext}"
+    return base / filename
+
 
 lib = ctypes.CDLL(str(_get_lib_path()))
 
