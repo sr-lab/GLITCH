@@ -34,9 +34,10 @@ jobs:
           - os: windows
             arch: amd64
             os_runner: windows-latest
-          - os: windows
-            arch: arm64
-            os_runner: windows-11-arm
+          #- os: windows
+          #  arch: arm64
+          #  os_runner: windows-11-arm
+          # This fails the build because the runner is still limited
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -66,6 +67,14 @@ jobs:
 
           cd glitch/rego/rego_python/src/rego_python/go
           GOOS=$OS GOARCH=$ARCH go build -o "$OUTPUT" -buildmode=c-shared regolib.go
+          rm -f ../bin/librego-*.h
 
       - name: List bin folder
         run: ls -l glitch/rego/rego_python/src/rego_python/bin/
+      
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: librego-${{ matrix.os }}-${{ matrix.arch }}
+          path: glitch/rego/rego_python/src/rego_python/bin/librego-${{ matrix.os }}-${{ matrix.arch }}.*
+          retention-days: 5
