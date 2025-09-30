@@ -1,0 +1,71 @@
+name: rego-python
+
+on:
+  push:
+    paths:
+      - ".github/workflows/rego-python.yml"
+      - "glitch/rego/rego_python/**"
+  workflow_dispatch:
+
+jobs:
+  build-binaries:
+    name: Build Rego Python binaries
+    runs-on: ${{ matrix.os_runner }}
+    strategy:
+      matrix:
+        include:
+          # Linux
+          - os: linux
+            arch: amd64
+            os_runner: ubuntu-latest
+          - os: linux
+            arch: arm64
+            os_runner: ubuntu-24.04-arm
+
+          # macOS
+          - os: darwin
+            arch: amd64
+            os_runner: macos-15-intel
+          - os: darwin
+            arch: arm64
+            os_runner: macos-latest
+
+          # Windows
+          - os: windows
+            arch: amd64
+            os_runner: windows-latest
+          - os: windows
+            arch: arm64
+            os_runner: windows-11-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Build binary
+        shell: bash
+        run: |
+          OS=${{ matrix.os }}
+          ARCH=${{ matrix.arch }}
+
+          # Determine file extension
+          if [ "$OS" = "windows" ]; then
+            EXT="dll"
+          elif [ "$OS" = "darwin" ]; then
+            EXT="dylib"
+          else
+            EXT="so"
+          fi
+
+          OUTPUT="../bin/librego-$OS-$ARCH.$EXT"
+          echo "Building $OUTPUT ..."
+
+          cd glitch/rego/rego_python/src/rego_python/go
+          GOOS=$OS GOARCH=$ARCH go build -o "$OUTPUT" -buildmode=c-shared regolib.go
+
+      - name: List bin folder
+        run: ls -l glitch/rego/rego_python/src/rego_python/bin/
