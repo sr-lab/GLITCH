@@ -73,7 +73,7 @@ jobs:
         run: ls -l glitch/rego/rego_python/src/rego_python/bin/
       
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: librego-${{ matrix.os }}-${{ matrix.arch }}
           path: glitch/rego/rego_python/src/rego_python/bin/librego-${{ matrix.os }}-${{ matrix.arch }}.*
