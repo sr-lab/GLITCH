@@ -7,6 +7,9 @@ on:
       - "glitch/rego/rego_python/**"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-binaries:
     name: Build Rego Python binaries
@@ -122,6 +125,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Extract version from pyproject.toml
         id: get_version
@@ -136,6 +141,8 @@ jobs:
           git config user.email "rego_python@users.noreply.github.com"
           git tag v${{ steps.get_version.outputs.version }}
           git push origin v${{ steps.get_version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download built package and binaries
         uses: actions/download-artifact@v4
