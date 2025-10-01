@@ -139,8 +139,14 @@ jobs:
         run: |
           git config user.name "rego_python-release-bot"
           git config user.email "rego_python@users.noreply.github.com"
-          git tag v${{ steps.get_version.outputs.version }}
-          git push origin v${{ steps.get_version.outputs.version }}
+          TAG=rego_python-v${{ steps.get_version.outputs.version }}
+          git tag $TAG
+          git push origin $TAG
+
+          NON_PREFIXED_TAG=v${{ steps.get_version.outputs.version }}
+          if git rev-parse "$NON_PREFIXED_TAG" >/dev/null 2>&1; then
+            echo "WARNING: Non-prefixed tag $NON_PREFIXED_TAG exists. Consider deleting it to avoid confusion."
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -150,12 +156,25 @@ jobs:
           path: release_assets
           merge-multiple: true
 
+      - name: List downloaded assets
+        run: |
+          echo "Listing contents of release_assets directory:"
+          ls -lR release_assets
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ steps.get_version.outputs.version }}"
+          tag_name: "rego_python-v${{ steps.get_version.outputs.version }}"
           name: "Rego Python v${{ steps.get_version.outputs.version }}"
-          files: release_assets/**
+          files: |
+            release_assets/python-package/*.whl
+            release_assets/python-package/*.tar.gz
+            release_assets/librego-*/*.so
+            release_assets/librego-*/*.dylib
+            release_assets/librego-*/*.dll
+          generate_release_notes: false
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
