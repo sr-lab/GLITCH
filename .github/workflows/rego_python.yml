@@ -167,11 +167,11 @@ jobs:
           tag_name: "rego_python-v${{ steps.get_version.outputs.version }}"
           name: "Rego Python v${{ steps.get_version.outputs.version }}"
           files: |
-            release_assets/python-package/*.whl
-            release_assets/python-package/*.tar.gz
-            release_assets/librego-*/*.so
-            release_assets/librego-*/*.dylib
-            release_assets/librego-*/*.dll
+            release_assets/*.whl
+            release_assets/*.tar.gz
+            release_assets/*.so
+            release_assets/*.dylib
+            release_assets/*.dll
           generate_release_notes: false
           draft: false
           prerelease: false
