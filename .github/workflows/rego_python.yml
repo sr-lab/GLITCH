@@ -92,6 +92,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: glitch/rego/rego_python/src/rego_python/bin
+          merge-multiple: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
