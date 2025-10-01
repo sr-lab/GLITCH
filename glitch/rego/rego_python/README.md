@@ -77,7 +77,7 @@ Executes a Rego policy using the underlying Go library and returns the evaluatio
     The evaluation result, parsed from the JSON response returned by the Go library.
 
 ## Source Code:
-You can view the source code [on GitHub](https://github.com/infragov-project/GLITCH/tree/rego_integration/glitch/).
+You can view the source code [on GitHub](https://github.com/infragov-project/GLITCH/tree/rego_integration/glitch/rego/rego_python).
 
 
 

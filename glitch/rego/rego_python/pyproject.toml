@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Python wrapper for Rego engine"
 authors = [
     {name = "Daniel Carvalho", email = "daniel.m.carvalho2002@gmail.com"},
-    {name = "Rodrigo Coelho", email = ""}
+    {name = "Rodrigo Coelho"}
 ]
 license = {text = "GNU GENERAL PUBLIC LICENSE v3.0"}
 readme = "README.md"
@@ -16,4 +16,6 @@ requires-python = ">=3.12"
 dependencies = []
 
 [tool.setuptools.package-data]
-"rego_python" = ["libs/**/*"]
+"rego_python" = [
+    "bin/**/*"   # include all compiled binaries
+]
