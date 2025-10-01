@@ -46,6 +46,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 'stable'
+          cache-dependency-path: glitch/rego/rego_python/src/rego_python/go/go.sum
 
       - name: Build binary
         shell: bash
