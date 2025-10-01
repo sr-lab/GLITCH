@@ -114,3 +114,41 @@ jobs:
           path: glitch/rego/rego_python/dist/*
           retention-days: 1
 
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-package 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version = ' glitch/rego/rego_python/pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version extracted: $VERSION"
+
+      - name: Create tag for release
+        run: |
+          git config user.name "rego_python-release-bot"
+          git config user.email "rego_python@users.noreply.github.com"
+          git tag v${{ steps.get_version.outputs.version }}
+          git push origin v${{ steps.get_version.outputs.version }}
+
+      - name: Download built package and binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.get_version.outputs.version }}"
+          name: "Rego Python v${{ steps.get_version.outputs.version }}"
+          files: release_assets/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
