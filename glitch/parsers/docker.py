@@ -271,7 +271,7 @@ class ShellCommand:
     args: List[str]
     code: str
     options: Dict[str, Tuple[Union[str, bool, int, float], str]] = field(
-        default_factory=dict
+        default_factory=lambda: {}
     )
     main_arg: Optional[str] = None
     line: int = -1

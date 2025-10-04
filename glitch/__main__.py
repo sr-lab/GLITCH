@@ -231,11 +231,13 @@ def glitch(
             "config", f"Invalid value for 'config': Path '{config}' should be a file."
         )
     elif config == "configs/default.ini":
-        config = resource_filename("glitch", "configs/default.ini")
+        config_path = resource_filename("glitch", "configs/default.ini")
+    else:
+        config_path = config
 
     parser = __get_parser(tech)
     if tech == Tech.terraform:
-        config = resource_filename("glitch", "configs/terraform.ini")
+        config_path = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
 
     if mode == "repr":
@@ -250,7 +252,7 @@ def glitch(
     for r in rules:
         if smell_types == () or r.get_name() in smell_types:
             analysis = r(tech)
-            analysis.config(config)
+            analysis.config(config_path)
             analyses.append(analysis)
 
     errors: List[Error] = []

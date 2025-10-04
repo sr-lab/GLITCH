@@ -91,9 +91,9 @@ class PuppetParser(p.Parser):
                 res = {}
 
                 for key, value in codeelement.value.items():
-                    res[
-                        PuppetParser.__process_codeelement(key, path, code)
-                    ] = PuppetParser.__process_codeelement(value, path, code)
+                    res[PuppetParser.__process_codeelement(key, path, code)] = (
+                        PuppetParser.__process_codeelement(value, path, code)
+                    )
 
                 return res
             elif isinstance(codeelement, puppetmodel.Array):

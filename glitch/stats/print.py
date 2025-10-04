@@ -96,12 +96,14 @@ def print_stats(
         smells_info.append(stats_info[-1])
         table = pd.DataFrame(
             smells_info,
-            columns=[
-                "\\textbf{Smell}",
-                "\\textbf{Occurrences}",
-                "\\textbf{Smell density (Smell/KLoC)}",
-                "\\textbf{Proportion of scripts (%)}",
-            ],
+            columns=pd.Index(
+                [
+                    "\\textbf{Smell}",
+                    "\\textbf{Occurrences}",
+                    "\\textbf{Smell density (Smell/KLoC)}",
+                    "\\textbf{Proportion of scripts (%)}",
+                ]
+            ),
         )
         latex = (  # type: ignore
             table.style.hide(axis="index")  # type: ignore
@@ -114,7 +116,7 @@ def print_stats(
 
         attributes = pd.DataFrame(
             [[total_files, file_stats.loc]],
-            columns=["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"],  # type: ignore
+            columns=pd.Index(["\\textbf{Total IaC files}", "\\textbf{Lines of Code}"]),
         )
         print(
             attributes.style.hide(axis="index")  # type: ignore
