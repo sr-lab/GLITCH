@@ -33,8 +33,10 @@ def run_analyses(
             load_rego_modules_from_folder(f"./glitch/rego/queries/{smell_type}", rego_modules)
         else:
             print(f"Warning: The rego queries for smell type '{smell_type}' are mislabeled or do not exist. Skipping.")
-
+    
     result = run_rego(input_data, data, rego_modules)
+
+    print("RAW REGO RESULT:", result)
 
     if "error" in result:
         print("Error:", result["error"])
@@ -42,23 +44,32 @@ def run_analyses(
 
     errors: List[Error] = []
     
+    flat_values = []
+
     # Parse the Go Rego engine output to a set of errors
+    # It can be a list or a list of lists, so we put everything in a single list
     for entry in result:
-        expressions = entry.get("expressions", [])
-        for expr in expressions:
+        for expr in entry.get("expressions", []):
             values_list = expr.get("value", [])
-            for values in values_list:        # values is itself a list
-                for val in values:            # now val is the dict with 'element', 'path', etc.
-                    if isinstance(val, dict) and "element" in val:
-                        element = element_from_dict(val["element"])
-                        error = Error(
-                            code=val.get("type", ""),
-                            el=element,
-                            path=val.get("path", ""),
-                            repr=repr(element),
-                            opt_msg=val.get("description")
-                        )
-                        errors.append(error)
+            # Normalize nested structure to flat list of dicts
+            for item in values_list:
+                if isinstance(item, list):
+                    flat_values.extend(item)
+                elif isinstance(item, dict):
+                    flat_values.append(item)
+    
+    # Create the rego errors
+    for val in flat_values:
+        if isinstance(val, dict) and "element" in val:
+            element = element_from_dict(val["element"])
+            errors.append(Error(
+                code=val.get("type", ""),
+                el=element,
+                path=val.get("path", ""),
+                repr=repr(element),
+                opt_msg=val.get("description")
+            ))
+            
     return errors
 
 
