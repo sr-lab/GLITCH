@@ -5,6 +5,7 @@ _gather_parent_unit_blocks[ub] {
     ub.ir_type == "UnitBlock"
 }
 
+
 all_atomic_units(node) = units {
     units = {n |
         walk(node, [path, n])
@@ -52,6 +53,9 @@ check_leaf(node, pattern) {
 } else {
     node.ir_type == "MethodCall"
     check_string(node.receiver, pattern)
+} else {
+	node.ir_type == "Boolean"
+    check_boolean(node, pattern)
 }
 
 #else {
@@ -68,6 +72,10 @@ check_string(node, pattern) {
 	# If it is an array or set
     not is_string(pattern)
     contains(node.value, pattern[_])
+}
+
+check_boolean(node, value) {
+	node.value == value
 }
 
 # Implemented as a substitute for VarChecker, checks if there is at least one VariableReference and passes if there isn't
