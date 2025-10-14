@@ -99,7 +99,7 @@ class ChefParser(p.Parser):
                 end_line += ast.args[0].count("\\n")
 
         elif isinstance(ast, (list, ChefParser.Node)):
-            for arg in ast:
+            for arg in ast:  # type: ignore
                 bound = ChefParser._get_content_bounds(arg, source)
                 if bound[0] < start_line:
                     start_line = bound[0]
@@ -378,7 +378,7 @@ class ChefParser(p.Parser):
                 ast: Any,
                 key: Any,
                 current_name: str,
-                value_ast: "ChefParser.Node",
+                value_ast: Any,
             ) -> None:
                 if ChefParser._check_node(
                     value_ast, ["hash"], 1
@@ -629,10 +629,10 @@ class ChefParser(p.Parser):
     @staticmethod
     def __parse_recipe(path: str, file: str) -> UnitBlock:
         with open(os.path.join(path, file)) as f:
-            ripper = resource_filename(
+            ripper_path = resource_filename(
                 "glitch.parsers", "resources/comments.rb.template"
             )
-            ripper = open(ripper, "r")
+            ripper = open(ripper_path, "r")
             ripper_script = Template(ripper.read())
             ripper.close()
             ripper_script = ripper_script.substitute(

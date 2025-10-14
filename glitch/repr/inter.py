@@ -39,7 +39,7 @@ class Block(CodeElement):
 
     @staticmethod
     def __as_dict_statement(
-        stat: Dict[str, Any] | List[Any] | CodeElement | str
+        stat: Dict[str, Any] | List[Any] | CodeElement | str,
     ) -> Any:
         if isinstance(stat, CodeElement):
             return stat.as_dict()
@@ -87,9 +87,9 @@ class ConditionalStatement(Block):
             "condition": self.condition,
             "type": self.type.name,
             "is_default": self.is_default,
-            "else_statement": self.else_statement.as_dict()
-            if self.else_statement
-            else None,
+            "else_statement": (
+                self.else_statement.as_dict() if self.else_statement else None
+            ),
         }
 
 

@@ -119,7 +119,9 @@ class GithubActionsParser(YamlParser):
         return job
 
     def parse_file(self, path: str, type: UnitBlockType) -> Optional[UnitBlock]:
-        schema = resource_filename("glitch.parsers", "resources/github_workflow.json")
+        schema_path = resource_filename(
+            "glitch.parsers", "resources/github_workflow.json"
+        )
 
         with open(path) as f:
             try:
@@ -135,7 +137,7 @@ class GithubActionsParser(YamlParser):
             return None
 
         with open(path) as f:
-            with open(schema) as f_schema:
+            with open(schema_path) as f_schema:
                 schema = json.load(f_schema)
                 yaml = YAML()
                 try:

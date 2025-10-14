@@ -134,9 +134,10 @@ class PatchSolver:
             self.solver.add(self.__funs.mode_fun(StringVal(path)) == StringVal(mode))
             self.solver.add(self.__funs.owner_fun(StringVal(path)) == StringVal(owner))
 
-    def __generate_soft_constraints(
-        self, statement: PStatement, funs: __Funs
-    ) -> Tuple[List[ExprRef], __Funs,]:
+    def __generate_soft_constraints(self, statement: PStatement, funs: __Funs) -> Tuple[
+        List[ExprRef],
+        __Funs,
+    ]:
         # Avoids infinite recursion
         funs = deepcopy(funs)
         # NOTE: For now it doesn't make sense to update the funs for the
