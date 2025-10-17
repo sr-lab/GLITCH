@@ -36,8 +36,6 @@ def run_analyses(
     
     result = run_rego(input_data, data, rego_modules)
 
-    print("RAW REGO RESULT:", result)
-
     if "error" in result:
         print("Error:", result["error"])
         return set()
