@@ -63,6 +63,14 @@ is installed via Poetry. Since Poetry uses virtual environments it does not
 create a binary for GLITCH available in the user's PATH, which is required for 
 the VSCode extension._
 
+### Docker
+
+You can build a docker image running:
+```bash
+docker build -t glitch .
+```
+Please read `usage` > `Docker`
+
 ## Usage
 
 To explore all available options, use the command:
@@ -88,6 +96,18 @@ Alternatively, you can use `poetry shell`:
 ```
 poetry shell
 glitch --help
+```
+
+### Docker
+Please read `install` > `docker` first
+
+Use `docker run glitch [OPTIONS] PATH [OUTPUT]`
+
+Examples:
+
+```bash
+docker run --rm glitch --help
+docker run --rm -v /Users/user/.../project:/glitch:ro glitch --tech terraform .
 ```
 
 ## Tests

@@ -1,0 +1,14 @@
+.git/
+.github/
+# configs/
+# images/
+# scripts/
+# stubs/
+# vscode-extension/
+.gitignore
+# CITATION.cff
+# README.md
+# logo.png
+# poetry.lock
+.dockerignore
+
