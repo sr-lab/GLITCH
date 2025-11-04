@@ -78,8 +78,6 @@ class PatchSolver:
             UNDEF,
             UNSUPPORTED,
             "",
-            "absent",
-            "present",
             "directory",
         ]
         for i in range(len(self.possible_strings)):

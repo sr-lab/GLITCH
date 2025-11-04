@@ -30,7 +30,7 @@ class TestPuppetParser(TestParser):
         assert len(atomic_unit.attributes) == 1
         assert atomic_unit.attributes[0].name == "ensure"
         self._check_value(
-            atomic_unit.attributes[0].value, VariableReference, "absent", 7, 20, 7, 26
+            atomic_unit.attributes[0].value, String, "absent", 7, 20, 7, 26
         )
         assert atomic_unit.attributes[0].line == 7
         assert atomic_unit.attributes[0].end_line == 7
@@ -49,7 +49,7 @@ class TestPuppetParser(TestParser):
         assert atomic_unit.attributes[0].name == "ensure"
         self._check_value(
             atomic_unit.attributes[0].value,
-            VariableReference,
+            String,
             "present",
             11,
             20,
@@ -425,7 +425,7 @@ class TestPuppetParser(TestParser):
         assert unit_block.unit_blocks[1].atomic_units[0].attributes[0].name == "ensure"
         self._check_value(
             unit_block.unit_blocks[1].atomic_units[0].attributes[0].value,
-            VariableReference,
+            String,
             "file",
             15,
             15,
