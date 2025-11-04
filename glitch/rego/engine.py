@@ -82,6 +82,31 @@ def element_from_dict(data: dict) -> CodeElement:
     """
     Recursively builds a CodeElement from a dict like the Rego query output.
     """
+    
+    # In case we just return a key-value pair from an Hash
+    if "key" in data and "value" in data and "ir_type" not in data:
+        key = element_from_dict(data["key"])
+        value = element_from_dict(data["value"])
+
+        # Derive position info from key and value, combining their code
+        info = ElementInfo(
+            line=getattr(key, "line", -1),
+            column=getattr(key, "column", -1),
+            end_line=getattr(value, "end_line", -1),
+            end_column=getattr(value, "end_column", -1),
+            code=f"{key.code}: {value.code}",  # Combined code
+        )
+
+        # Extract the name from the key
+        if isinstance(key, String):
+            name = key.value
+        elif hasattr(key, 'value') and isinstance(key.value, str):
+            name = key.value
+        else:
+            name = str(key.code)  # Fallback to the key's code representation
+        
+        return KeyValue(name, value, info)
+    
     # Step 1: Extract common element info
     info = ElementInfo(
         line=data.get("line", -1),
