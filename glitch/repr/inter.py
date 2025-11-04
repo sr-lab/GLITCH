@@ -125,7 +125,11 @@ class Value(Expr, ABC):
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "value": self.value,
+            "value": (
+                self.value
+                if not isinstance(self.value, CodeElement)
+                else self.value.as_dict()
+            ),
         }
 
 
@@ -393,7 +397,7 @@ class Block(CodeElement):
 
     @staticmethod
     def __as_dict_statement(
-        stat: Dict[str, Any] | List[Any] | CodeElement | str
+        stat: Dict[str, Any] | List[Any] | CodeElement | str,
     ) -> Any:
         if isinstance(stat, CodeElement):
             return stat.as_dict()

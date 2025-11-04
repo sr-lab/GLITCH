@@ -19,6 +19,12 @@ class AddArgs(Value):
     def __init__(self, value: List[Expr], info: ElementInfo) -> None:
         super().__init__(info, value)
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [v.as_dict() for v in self.value],
+        }
+
 
 class ChefParser(p.Parser):
     """
@@ -262,7 +268,7 @@ class ChefParser(p.Parser):
         if bounds[0] == sys.maxsize:
             return res
 
-        for l in range(bounds[0] - 1, bounds[2]):
+        for l in range(bounds[0] - 1, min(bounds[2], len(source))):
             if bounds[0] - 1 == bounds[2] - 1:
                 res += source[l][bounds[1] : bounds[3] + 1]
             elif l == bounds[2] - 1:

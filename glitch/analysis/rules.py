@@ -131,6 +131,9 @@ Error.agglomerate_errors()
 
 class ExprChecker(ABC):
     def check(self, expr: Expr) -> bool:
+        # Import here to avoid circular imports
+        from glitch.parsers.chef import AddArgs
+
         if isinstance(expr, String):
             return self.check_string(expr)
         elif isinstance(expr, Integer):
@@ -159,6 +162,11 @@ class ExprChecker(ABC):
             return self.check_binary_operation(expr)
         elif isinstance(expr, ConditionalStatement):
             return self.check_conditional_statement(expr)
+        elif isinstance(expr, AddArgs):
+            for e in expr.value:
+                if not self.check(e):
+                    return False
+            return True
         else:
             raise NotImplementedError(f"expr type not implemented {type(expr)}")
 
