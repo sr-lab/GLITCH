@@ -184,8 +184,10 @@ def element_from_dict(data: dict) -> CodeElement:
         return cls(info, expr)
 
     elif ir_type == "FunctionCall":
-        args = [element_from_dict(a) for a in data["args"]]
-        return FunctionCall(data["name"], args, info)
+        name = data.get("name", "<unknown>")
+        args_data = data.get("args", [])  # fallback to empty list
+        args = [element_from_dict(a) for a in args_data]
+        return FunctionCall(name, args, info)
 
     elif ir_type == "MethodCall":
         receiver = element_from_dict(data["receiver"])
