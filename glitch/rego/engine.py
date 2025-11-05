@@ -195,8 +195,7 @@ def element_from_dict(data: dict) -> CodeElement:
         return MethodCall(receiver, data["method"], args, info)
 
     elif ir_type == "Comment":
-        # Dont know if Info is needed
-        return Comment(data.get("content", ""))
+        return Comment(data.get("content", ""), info)
     
     elif ir_type == "ConditionalStatement":
         condition = element_from_dict(data["condition"])

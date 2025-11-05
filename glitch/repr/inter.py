@@ -485,8 +485,8 @@ class ConditionalStatement(Block, Expr):
 
 
 class Comment(CodeElement):
-    def __init__(self, content: str) -> None:
-        super().__init__()
+    def __init__(self, content: str, info: ElementInfo | None = None) -> None:
+        super().__init__(info)
         self.content: str = content
 
     def __repr__(self) -> str:
