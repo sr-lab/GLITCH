@@ -16,15 +16,25 @@ check_def_admin_pair(name, value) {
 	glitch_lib.traverse(value, data.security.admin)
 }
 
-check_def_admin(node) = matched_node {
-	node.value.ir_type != "Hash"
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    attr := glitch_lib.all_attributes(parent)
+    variables := glitch_lib.all_variables(parent)
+    all_nodes := attr | variables
+    node := all_nodes[_]
+
+	# We need to use walk since we can have Hashs inside one another
+	walk(node, [_, n])
+    n.value.ir_type != "Hash"
 	check_def_admin_pair(node.name, node.value)
 	matched_node := node
-} else = matched_node {
-	node.value.ir_type == "Hash"
-	current_pair := node.value.value[_]
-	check_def_admin_pair(current_pair.key.value, current_pair.value)
-	matched_node := current_pair
+
+    result := {{
+		"type": "sec_def_admin",
+		"element": matched_node,
+		"path": parent.path,
+        "description": "Admin by default - Developers should always try to give the least privileges possible. Admin privileges may indicate a security problem. (CWE-250)"
+	}}
 }
 
 Glitch_Analysis[result] {
@@ -36,7 +46,10 @@ Glitch_Analysis[result] {
 
 	# We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
-    matched_node := check_def_admin(n)
+    n.value.ir_type == "Hash"
+	current_pair := n.value.value[_]
+	check_def_admin_pair(current_pair.key.value, current_pair.value)
+	matched_node := current_pair
 
     result := {{
 		"type": "sec_def_admin",
