@@ -119,7 +119,7 @@ class TestChefParser(TestParser):
         assert isinstance(ir.variables[2].value, Null)  # FIXME
 
         assert isinstance(ir.variables[3], Variable)
-        assert isinstance(ir.variables[3].value, Null)  # FIXME
+        assert isinstance(ir.variables[3].value, Or)
 
         assert isinstance(ir.variables[4], Variable)
         assert isinstance(ir.variables[4].value, Assign)
@@ -400,13 +400,21 @@ class TestChefParser(TestParser):
             Equal,
             VariableReference("value", ElementInfo(1, 6, 1, 11, "value")),
             Integer(1, ElementInfo(2, 6, 2, 7, "1")),
-            2,  # FIXME
-            6,  # FIXME
-            5,
+            1,
+            6,
+            1,
             11,
         )
         assert isinstance(ir.statements[0].else_statement, ConditionalStatement)
         assert ir.statements[0].else_statement.else_statement is None
+
+        assert len(ir.statements[0].statements) == 1
+        assert isinstance(ir.statements[0].statements[0], String)
+        assert ir.statements[0].statements[0].value == "one"
+
+        assert len(ir.statements[0].else_statement.statements) == 1
+        assert isinstance(ir.statements[0].else_statement.statements[0], String)
+        assert ir.statements[0].else_statement.statements[0].value == "number"
 
         self._check_binary_operation(
             ir.statements[1].condition,
@@ -417,13 +425,21 @@ class TestChefParser(TestParser):
                 Integer(2, ElementInfo(9, 4, 9, 5, "2")),
                 Integer(3, ElementInfo(9, 8, 9, 9, "3")),
             ),
-            9,  # FIXME
-            4,  # FIXME
-            12,
+            8,
+            6,
+            8,
             11,
         )
         assert isinstance(ir.statements[1].else_statement, ConditionalStatement)
         assert ir.statements[1].else_statement.else_statement is None
+
+        assert len(ir.statements[1].statements) == 1
+        assert isinstance(ir.statements[1].statements[0], String)
+        assert ir.statements[1].statements[0].value == "two or three"
+
+        assert len(ir.statements[1].else_statement.statements) == 1
+        assert isinstance(ir.statements[1].else_statement.statements[0], String)
+        assert ir.statements[1].else_statement.statements[0].value == "number"
 
         assert len(ir.variables) == 1
         assert isinstance(ir.variables[0].value, ConditionalStatement)

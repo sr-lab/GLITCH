@@ -985,6 +985,11 @@ class ChefParser(p.Parser):
             self.condition = None
             self.push([self.is_case], ast)
 
+        def get_statements(self, ast: Any, cond: ConditionalStatement) -> None:
+            for arg in ast.args:
+                if ChefParser._check_id(arg, ["stmts_add"]):
+                    ChefParser._transverse_ast(arg.args, cond, self.source)
+
         def is_case(self, ast: Any) -> bool:
             if ChefParser._check_node(ast, ["case"], 2):
                 case_head = ChefParser._get_value(ast.args[0], self.source)
@@ -1004,13 +1009,13 @@ class ChefParser(p.Parser):
             if ChefParser._check_node(ast, ["when", "in"], 3) or ChefParser._check_node(
                 ast, ["when", "in"], 2
             ):
-                info = ChefParser._get_info(ast, self.source)
                 value = ChefParser._get_value(ast.args[0], self.source)
                 assert isinstance(value, Expr)
 
+                equals_info = ElementInfo.from_code_element(self.case_head)
                 if self.condition is None:
                     self.condition = ConditionalStatement(
-                        Equal(info, self.case_head, value),
+                        Equal(equals_info, self.case_head, value),
                         ConditionalStatement.ConditionType.SWITCH,
                     )
                     self.condition.code = ChefParser._get_content(ast, self.source)
@@ -1020,7 +1025,7 @@ class ChefParser(p.Parser):
                     self.current_condition = self.condition
                 elif self.current_condition is not None:
                     self.current_condition.else_statement = ConditionalStatement(
-                        Equal(info, self.case_head, value),
+                        Equal(equals_info, self.case_head, value),
                         ConditionalStatement.ConditionType.SWITCH,
                     )
                     self.current_condition = self.current_condition.else_statement
@@ -1030,6 +1035,8 @@ class ChefParser(p.Parser):
                     self.current_condition.line = ChefParser._get_content_bounds(
                         ast, self.source
                     )[0]
+                if self.current_condition is not None:
+                    self.get_statements(ast, self.current_condition)
                 if len(ast.args) == 3:
                     self.push([self.is_case_condition], ast.args[2])
                 return True
@@ -1046,6 +1053,7 @@ class ChefParser(p.Parser):
                 self.current_condition.else_statement.line = (
                     ChefParser._get_content_bounds(ast, self.source)[0]
                 )
+                self.get_statements(ast, self.current_condition.else_statement)
                 return True
             return False
 
@@ -1058,10 +1066,9 @@ class ChefParser(p.Parser):
 
         def get_statements(self, ast: Any, cond: ConditionalStatement) -> None:
             assert self.condition is not None
-            # Check blocks inside
             for arg in ast.args:
                 if ChefParser._check_id(arg, ["stmts_add"]):
-                    ChefParser._transverse_ast(arg, cond, self.source)
+                    ChefParser._transverse_ast(arg.args, cond, self.source)
 
         def is_if(self, ast: Any) -> bool:
             if ChefParser._check_node(
@@ -1289,6 +1296,18 @@ class ChefParser(p.Parser):
                     else:
                         st.add_statement(checker.unit_block)
                     return
+
+            try:
+                value = ChefParser._get_value(ast, source)
+                if (
+                    value is not None 
+                    and ast.id not in ["stmts_add", "stmts_new"] 
+                    and not isinstance(value, Null)
+                ):
+                    st.add_statement(value)
+                    return
+            except ValueError:
+                pass
 
             for arg in ast.args:
                 if isinstance(arg, (ChefParser.Node, list)):

@@ -7,7 +7,7 @@ module Namespace
 x = 0o640
 end
 
-result = yield(key, val, match) or next
+result = (yield(key, val, match) or next)
 Rubix.connection = ::Chef::RubixConnection::CONNECTIONS[ip] = connection
 @release_ext ||= $2
 fonts_dir = WIN32OLE.new('WScript.Shell').SpecialFolders('Fonts')
