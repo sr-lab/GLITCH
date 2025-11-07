@@ -504,9 +504,9 @@ class TestHierarchicalChef(TestHierarchicalParsers):
                     "code": "default[:zabbix][:database][:password]",
                     "name": "default[:zabbix][:database][:password]",
                     "value": {
-                        "ir_type": "VariableReference",
+                        "ir_type": "Null",
                         "code": "nil",
-                        "value": "nil",
+                        "value": None,
                     },
                 },
                 {

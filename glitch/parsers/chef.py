@@ -541,6 +541,14 @@ class ChefParser(p.Parser):
                 "field",
             ],
         ):
+            if (
+                hasattr(ast, "args")
+                and len(ast.args) > 0
+                and getattr(ast.args[0], "id", None) == "@kw"
+                and ChefParser._get_content(ast.args[0], source) == "nil"
+            ):
+                return Null(info)
+            
             if content.startswith("#{") and content.endswith("}"):
                 content = content[2:-1]
                 info = ElementInfo(
