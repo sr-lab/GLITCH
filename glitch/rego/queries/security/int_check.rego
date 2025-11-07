@@ -2,6 +2,13 @@ package glitch
 
 import data.glitch_lib
 
+attr_has_any_checksum(attr, checksum_values) {
+    check := checksum_values[_]
+    pattern := sprintf("(?i).*%s.*", [check])
+    # We use traverse so it can find all strings and test them inside
+    glitch_lib.traverse(attr, pattern)
+}
+
 check_integrity_check_atomic_unit(node) {
     attributes = glitch_lib.all_attributes(node)
     
@@ -16,10 +23,7 @@ check_integrity_check_atomic_unit(node) {
     
     attributes_without_checksum := {attr |
         attr := attributes[_]
-        check := checksum_values[_]
-        pattern := sprintf("(?i).*%s.*", [check])
-        # We use traverse so it can find all strings and test them inside
-        not glitch_lib.traverse(attr, pattern)
+        not attr_has_any_checksum(attr, checksum_values)
     }
 
     # Trigger integrity check only if ALL attributes lack a checksum keyword
@@ -28,23 +32,14 @@ check_integrity_check_atomic_unit(node) {
 
 check_integrity_check_keyvalues(node) {
     value = data.security.checksum[_]
-
     glitch_lib.contains(node.name, value)
-
-    glitch_lib.traverse(node, "no")
+    false_pattern = "^(?i)(no|false)$"
+    glitch_lib.traverse(node, false_pattern)
 } else {
-	# This case is repeated since for puppet it becames a boolean and ansible a string
-	value = data.security.checksum[_]
-
+    # This case is repeated since for puppet it becames a boolean and ansible a string
+    value = data.security.checksum[_]
     glitch_lib.contains(node.name, value)
-
-	glitch_lib.traverse(node, false)
-} else {
-	value = data.security.checksum[_]
-
-    glitch_lib.contains(node.name, value)
-
-	glitch_lib.traverse(node, "false")
+    glitch_lib.traverse(node, false)
 }
 
 Glitch_Analysis[result] {

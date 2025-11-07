@@ -218,6 +218,7 @@ def element_from_dict(data: dict) -> CodeElement:
     elif ir_type == "AtomicUnit":
         name = element_from_dict(data["name"])
         unit = AtomicUnit(name, data.get("type", "unknown"))
+        unit.set_element_info(info)
         for attr in data.get("attributes", []):
             unit.add_attribute(element_from_dict(attr))
         return unit
