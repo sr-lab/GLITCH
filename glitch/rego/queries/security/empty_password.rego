@@ -16,7 +16,7 @@ checking_value(value) {
 
 	value.value == null
 
-	null_values := ["undef"]
+	null_values := data.security.null_values
 
 	possible_value := null_values[_]
 

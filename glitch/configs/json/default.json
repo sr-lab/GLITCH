@@ -64,6 +64,9 @@
     ],
     "obsolete_commands": [
       "pack"
+    ], 
+    "null_values": [
+      "undef", "nil"
     ]
   },
   "design": {
