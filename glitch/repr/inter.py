@@ -209,6 +209,13 @@ class FunctionCall(Expr):
         super().__init__(info)
         self.name: str = name
         self.args: List[Expr] = args
+    
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "name": self.name,
+            "args": [a.as_dict() for a in self.args],
+        }
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -255,6 +262,12 @@ class UnaryOperation(Expr, ABC):
     def __init__(self, info: ElementInfo, expr: Expr) -> None:
         super().__init__(info)
         self.expr = expr
+        
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "expr": self.expr.as_dict(),
+        }
 
 
 class Not(UnaryOperation):
