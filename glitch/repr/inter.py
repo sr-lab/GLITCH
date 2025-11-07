@@ -459,9 +459,12 @@ class ConditionalStatement(Block, Expr):
         condition: Expr,
         type: "ConditionalStatement.ConditionType",
         is_default: bool = False,
-        is_top: bool = False
+        is_top: bool = False,
+        info: ElementInfo | None = None
     ) -> None:
         Block.__init__(self)
+        if info is not None:
+            Expr.__init__(self, info)
         self.condition: Expr = condition
         self.else_statement: ConditionalStatement | None = None
         self.is_default = is_default

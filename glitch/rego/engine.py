@@ -200,7 +200,7 @@ def element_from_dict(data: dict) -> CodeElement:
     elif ir_type == "ConditionalStatement":
         condition = element_from_dict(data["condition"])
         cond_type = getattr(ConditionalStatement.ConditionType, data["type"])
-        cond = ConditionalStatement(condition, cond_type, data.get("is_default", False))
+        cond = ConditionalStatement(condition, cond_type, data.get("is_default", False), info)
         if data.get("else_statement"):
             cond.else_statement = element_from_dict(data["else_statement"])
         # Inherits from Block, which can have a list of statements
