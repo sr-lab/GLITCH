@@ -711,8 +711,22 @@ class PuppetParser(p.Parser):
 
             return unit_block
         elif isinstance(codeelement, puppetmodel.Chaining):
-            # FIXME: Chaining not yet supported
-            return Null()
+            # FIXME: This is an HACK to temporarily support chaining
+            unit_block = UnitBlock("Chaining", UnitBlockType.block)
+            unit_block.line, unit_block.column = codeelement.line, codeelement.col
+            unit_block.end_line, unit_block.end_column = (
+                codeelement.end_line,
+                codeelement.end_col,
+            )
+            unit_block.code = PuppetParser.__get_code(codeelement, code)
+
+            left = PuppetParser.__process_codeelement(codeelement.op1, path, code)
+            right = PuppetParser.__process_codeelement(codeelement.op2, path, code)
+
+            PuppetParser.__process_unitblock_component(left, unit_block)
+            PuppetParser.__process_unitblock_component(right, unit_block)
+
+            return unit_block
 
         raise ValueError(
             f"Unsupported code element: {codeelement} ({type(codeelement)})"
