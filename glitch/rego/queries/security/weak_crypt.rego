@@ -2,10 +2,14 @@ package glitch
 
 import data.glitch_lib
 
+name_in_whitelist(name) {
+    glitch_lib.contains(name, data.security.weak_crypt_whitelist[_])
+}
+
 check_weak_crypt(value, name) {
     glitch_lib.traverse(value, data.security.weak_crypt)
     not glitch_lib.traverse(value, data.security.weak_crypt_whitelist)
-    not glitch_lib.traverse(name, data.security.weak_crypt_whitelist)
+    not name_in_whitelist(name)
 }
 
 Glitch_Analysis[result] {
