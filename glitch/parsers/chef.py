@@ -704,6 +704,11 @@ class ChefParser(p.Parser):
             self.push([self.is_block_resource, self.is_inline_resource], ast)
             self.atomic_unit = atomic_unit
 
+        def get_statements(self, ast: Any) -> None:
+            for arg in ast.args:
+                if ChefParser._check_id(arg, ["stmts_add"]):
+                    ChefParser._transverse_ast(arg.args, self.atomic_unit, self.source)
+
         def is_block_resource(self, ast: Any) -> bool:
             if (
                 ChefParser._check_node(ast, ["method_add_block"], 2)
@@ -812,12 +817,17 @@ class ChefParser(p.Parser):
             ) and ChefParser._check_id(ast.args[0], ["call"]):
                 self.push([self.is_attribute], ast.args[0].args[0])
             elif (
-                ChefParser._check_id(ast, ["command", "method_add_arg"])
-                and ast.args[1] != []
-            ) or (
                 ChefParser._check_id(ast, ["method_add_block"])
                 and ChefParser._check_id(ast.args[0], ["method_add_arg"])
                 and ChefParser._check_id(ast.args[1], ["brace_block", "do_block"])
+                and len(ast.args[1].args) == 1
+                and ChefParser._check_id(ast.args[1].args[0], ["bodystmt"])
+            ):
+                # ruby_block
+                self.get_statements(ast.args[1].args[0])
+            elif (
+                ChefParser._check_id(ast, ["command", "method_add_arg"])
+                and ast.args[1] != []
             ):
                 value = ChefParser._get_value(ast.args[1], self.source)
                 assert value is not None
@@ -1239,7 +1249,7 @@ class ChefParser(p.Parser):
 
     @staticmethod
     def _transverse_ast(
-        ast: Any, st: UnitBlock | ConditionalStatement, source: List[str]
+        ast: Any, st: UnitBlock | ConditionalStatement | AtomicUnit, source: List[str]
     ) -> None:
         if isinstance(ast, list):
             for arg in ast:  # type: ignore
