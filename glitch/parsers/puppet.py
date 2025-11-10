@@ -288,13 +288,7 @@ class PuppetParser(p.Parser):
                         )
                     else:
                         condition = Or(
-                            ElementInfo(
-                                condition.line,
-                                condition.column,
-                                right.end_line,
-                                right.end_column,
-                                PuppetParser.__get_code(match, code),
-                            ),
+                            ElementInfo.from_code_element(control),
                             condition,
                             Equal(ElementInfo.from_code_element(right), control, right),
                         )
@@ -348,7 +342,7 @@ class PuppetParser(p.Parser):
                     Null(), ConditionalStatement.ConditionType.SWITCH, True
                 )
             else:
-                condition = Equal(ElementInfo.from_code_element(right), control, right)
+                condition = Equal(ElementInfo.from_code_element(control), control, right)
                 conditional_statement = ConditionalStatement(
                     condition,
                     ConditionalStatement.ConditionType.SWITCH,

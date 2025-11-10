@@ -391,7 +391,9 @@ class TestChefParser(TestParser):
         ir = self.__parse("tests/parser/chef/files/case.rb")
         assert len(ir.statements) == 2
         assert isinstance(ir.statements[0], ConditionalStatement)
+        assert ir.statements[0].condition.line == 1
         assert isinstance(ir.statements[1], ConditionalStatement)
+        assert ir.statements[1].condition.line == 8
         assert ir.statements[0].type == ConditionalStatement.ConditionType.SWITCH
         assert ir.statements[1].type == ConditionalStatement.ConditionType.SWITCH
 

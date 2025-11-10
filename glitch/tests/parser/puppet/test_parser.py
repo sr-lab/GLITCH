@@ -297,6 +297,7 @@ class TestPuppetParser(TestParser):
 
         assert isinstance(unit_block.statements[0], ConditionalStatement)
         assert isinstance(unit_block.statements[0].condition, Or)
+        assert unit_block.statements[0].condition.line == 1
 
         assert isinstance(unit_block.statements[0].condition.left, Equal)
         assert isinstance(unit_block.statements[0].condition.left.left, Access)
