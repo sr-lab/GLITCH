@@ -20,6 +20,16 @@ check_pair_hard_password(name, value) {
 	glitch_lib.traverse_var(value)
 
 	value.value != ""
+} else {
+	# Check for sensitive data with secret value assignments
+	sensitive_item := data.security.sensitive_data[_]
+	glitch_lib.contains(lower(name), lower(sensitive_item))
+	
+	secret_value := data.security.secret_value_assign[_]
+	glitch_lib.contains(lower(value.value), lower(secret_value))
+
+	# Exclude password cases (those will be handled by sec_hard_pass)
+	glitch_lib.contains(lower(secret_value), "password")
 }
 
 check_hard_password(node) {

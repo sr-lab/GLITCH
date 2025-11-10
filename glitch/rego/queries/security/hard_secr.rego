@@ -27,6 +27,29 @@ check_pair_hard_secr(name, value) {
     pattern := ".*\\/id_rsa.*"
 
     glitch_lib.traverse(value, pattern)
+} else {
+	# Check for sensitive data with secret value assignments
+	sensitive_item := data.security.sensitive_data[_]
+	glitch_lib.contains(lower(name), lower(sensitive_item))
+	
+	secret_value := data.security.secret_value_assign[_]
+	glitch_lib.contains(lower(value.value), lower(secret_value))
+
+	# Exclude password cases (those will be handled by sec_hard_pass)
+	not glitch_lib.contains(lower(secret_value), "password")
+} else {
+	item := data.security.misc_secrets[_]
+
+    pattern := sprintf(
+    	"([_A-Za-z0-9$-]*[-_]%v([-_].*)?$)|(^{%v}([-_].*)?$)|(\\[\\s*['\"][^'\"]*%v[^'\"]*['\"]\\s*\\]$)",
+    	[item, item, item]
+	)
+
+	regex.match(pattern, name)
+
+	value.value != ""
+
+    glitch_lib.traverse_var(value)
 }
 
 Glitch_Analysis[result] {
