@@ -7,6 +7,19 @@ whitelist_contains(name) {
     whitelist[_] == name
 }
 
+# Flatten variable names by converting brackets and quotes to dots
+flatten_name(name) = flat_name {
+    step1 := replace(name, "['", ".")
+    step2 := replace(step1, "']", "")
+    step3 := replace(step2, "[\"", ".")
+    step4 := replace(step3, "\"]", "")
+    step5 := replace(step4, "[", ".")
+    step6 := replace(step5, "]", "")
+    
+    # Clean up multiple dots
+    step7 := replace(step6, "..", ".")
+    flat_name := trim(step7, ".")
+}
 
 check_pair_hard_secr(name, value) {
 	hardcoded := data.security.secrets
@@ -38,22 +51,22 @@ check_pair_hard_secr(name, value) {
 	# Exclude password cases (those will be handled by sec_hard_pass)
 	not glitch_lib.contains(lower(secret_value), "password")
 } else {
-	item := data.security.misc_secrets[_]
-
+    item := data.security.misc_secrets[_]
+    flat_name := flatten_name(name)
+    
     pattern := sprintf(
-    	"([_A-Za-z0-9$-]*[-_]%v([-_].*)?$)|(^{%v}([-_].*)?$)|(\\[\\s*['\"][^'\"]*%v[^'\"]*['\"]\\s*\\]$)",
-    	[item, item, item]
-	)
+        "([_A-Za-z0-9$-]*[-_]%s([-_].*)?$)|(^%s([-_].*)?$)",
+        [item, item]
+    )
 
-	regex.match(pattern, name)
-
-	value.value != ""
-
+    regex.match(pattern, flat_name)
+    value.value != ""
     glitch_lib.traverse_var(value)
 }
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     attr := glitch_lib.all_attributes(parent)
     variables := glitch_lib.all_variables(parent)
     all_nodes := attr | variables
@@ -75,6 +88,7 @@ Glitch_Analysis[result] {
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     attr := glitch_lib.all_attributes(parent)
     variables := glitch_lib.all_variables(parent)
     all_nodes := attr | variables

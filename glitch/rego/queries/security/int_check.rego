@@ -44,6 +44,7 @@ check_integrity_check_keyvalues(node) {
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
     
@@ -59,6 +60,7 @@ Glitch_Analysis[result] {
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     attr := glitch_lib.all_attributes(parent)
     variables := glitch_lib.all_variables(parent)
     all_nodes := attr | variables

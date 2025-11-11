@@ -24,6 +24,7 @@ check_inv_bind(node) {
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     attr := glitch_lib.all_attributes(parent)
     variables := glitch_lib.all_variables(parent)
     all_nodes := attr | variables

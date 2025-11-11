@@ -17,6 +17,7 @@ check_missing_default(node) {
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     conditions := glitch_lib.all_conditional_statements(parent)
     node := conditions[_]
 

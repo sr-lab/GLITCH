@@ -14,6 +14,7 @@ check_obsolete_command(node) {
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
     atomic_units := glitch_lib.all_atomic_units(parent)
     node := atomic_units[_]
 

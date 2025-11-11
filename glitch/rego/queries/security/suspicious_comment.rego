@@ -17,6 +17,7 @@ check_susp_comment(comment) {
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
+	parent.path != ""
     comment := parent.comments[_]
 
     check_susp_comment(comment)
