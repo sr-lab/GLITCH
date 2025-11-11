@@ -863,8 +863,14 @@ class TestChefParser(TestParser):
         """
         method_add_block
         """
-        # TODO: For now just checks if it does not crash
-        self.__parse("tests/parser/chef/files/method_add_block.rb")
+        ir = self.__parse("tests/parser/chef/files/method_add_block.rb")
+        assert len(ir.variables) == 1
+        assert isinstance(ir.variables[0], Variable)
+        assert isinstance(ir.variables[0].value, MethodCall)
+        assert ir.variables[0].value.method == ""
+        assert len(ir.variables[0].value.args) == 1
+        assert isinstance(ir.variables[0].value.args[0], BlockExpr)
+        assert len(ir.variables[0].value.args[0].statements) == 7
 
     def test_chef_parser_ruby_block(self) -> None:
         """
@@ -876,27 +882,19 @@ class TestChefParser(TestParser):
         assert ir.atomic_units[0].type == "ruby_block"
         assert isinstance(ir.atomic_units[0].name, String)
         assert ir.atomic_units[0].name.value == "zabbix_ensure_super_admin_user_with_api_access"
-        assert len(ir.atomic_units[0].statements) == 2
-        assert isinstance(ir.atomic_units[0].statements[0], Variable)
-        assert ir.atomic_units[0].statements[0].name == "username"
-        assert isinstance(ir.atomic_units[0].statements[0].value, MethodCall)
-        assert ir.atomic_units[0].statements[0].value.method == "username"
-        assert isinstance(ir.atomic_units[0].statements[1], Variable)
-        assert ir.atomic_units[0].statements[1].name == "first_name"
-        self._check_value(
-            ir.atomic_units[0].statements[1].value,
-            String,
-            "Zabbix",
-            4,
-            18,
-            4,
-            26,
-        )
-        assert len(ir.atomic_units[0].attributes) == 1
+        assert len(ir.atomic_units[0].attributes) == 2
         assert isinstance(ir.atomic_units[0].attributes[0], Attribute)
-        assert ir.atomic_units[0].attributes[0].name == "notifies"
+        assert ir.atomic_units[0].attributes[0].name == "block"
+        assert isinstance(ir.atomic_units[0].attributes[0].value, BlockExpr)
+        assert len(ir.atomic_units[0].attributes[0].value.statements) == 2
+        assert isinstance(ir.atomic_units[0].attributes[0].value.statements[0], Variable)
+        assert ir.atomic_units[0].attributes[0].value.statements[0].name == "username"
+        assert isinstance(ir.atomic_units[0].attributes[0].value.statements[0].value, MethodCall)
+        assert ir.atomic_units[0].attributes[0].value.statements[0].value.method == "username"
+        assert isinstance(ir.atomic_units[0].attributes[1], Attribute)
+        assert ir.atomic_units[0].attributes[1].name == "notifies"
         self._check_value(
-            ir.atomic_units[0].attributes[0].value,
+            ir.atomic_units[0].attributes[1].value,
             VariableReference,
             ":restart",
             6,

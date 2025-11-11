@@ -26,6 +26,14 @@ class AddArgs(Value):
         }
 
 
+def set_loc_from_info(code_element: CodeElement, info: ElementInfo) -> None:
+    code_element.line = info.line
+    code_element.column = info.column
+    code_element.end_line = info.end_line
+    code_element.end_column = info.end_column
+    code_element.code = info.code
+
+
 class ChefParser(p.Parser):
     """
     https://kddnewton.com/ripper-docs/events
@@ -442,8 +450,7 @@ class ChefParser(p.Parser):
         ) or ChefParser._check_node(ast, ["regexp_literal"], 2):
             value = ChefParser._get_value(ast.args[0], source)
             assert value is not None
-            value.line, value.column = info.line, info.column
-            value.end_line, value.end_column = info.end_line, info.end_column
+            set_loc_from_info(value, info)
             return value
         elif ChefParser._check_id(ast, ["@int"]):
             if "x" in content:
@@ -647,6 +654,20 @@ class ChefParser(p.Parser):
             assert left is not None
             assert right is not None
             return Assign(info, left, right)
+        elif (
+            ChefParser._check_id(ast, ["method_add_block"])
+            and len(ast.args) == 2
+            and ChefParser._check_id(ast.args[1], ["do_block"])
+        ):
+            receiver = ChefParser._get_value(ast.args[0], source)
+            assert receiver is not None
+            block = ChefParser._get_value(ast.args[1], source)
+            assert isinstance(block, BlockExpr)
+            return MethodCall(receiver, "", [block], info)
+        elif ChefParser._check_id(ast, ["do_block"]):
+            block = BlockExpr(info)
+            ChefParser._transverse_ast(ast.args, block, source)
+            return block
         elif ChefParser._check_id(
             ast,
             [
@@ -654,9 +675,7 @@ class ChefParser(p.Parser):
                 "until_mod",
                 "while_mod",
                 "hshptn",
-                "do_block",
                 "brace_block",
-                "method_add_block",
                 "begin",
                 "yield",
                 "lambda",
@@ -717,10 +736,8 @@ class ChefParser(p.Parser):
             ):
                 self.push([self.is_resource_body], ast.args[1])
                 self.push([self.is_resource_def], ast.args[0])
-                self.atomic_unit.code = ChefParser._get_content(ast, self.source)
-                self.atomic_unit.line = ChefParser._get_content_bounds(
-                    ast, self.source
-                )[0]
+                info = ChefParser._get_info(ast, self.source)
+                set_loc_from_info(self.atomic_unit, info)
                 return True
             return False
 
@@ -738,10 +755,8 @@ class ChefParser(p.Parser):
                     ast.args[1],
                 )
                 self.push([self.is_resource_type], ast.args[0])
-                self.atomic_unit.code = ChefParser._get_content(ast, self.source)
-                self.atomic_unit.line = ChefParser._get_content_bounds(
-                    ast, self.source
-                )[0]
+                info = ChefParser._get_info(ast, self.source)
+                set_loc_from_info(self.atomic_unit, info)
                 return True
             return False
 
@@ -817,16 +832,7 @@ class ChefParser(p.Parser):
             ) and ChefParser._check_id(ast.args[0], ["call"]):
                 self.push([self.is_attribute], ast.args[0].args[0])
             elif (
-                ChefParser._check_id(ast, ["method_add_block"])
-                and ChefParser._check_id(ast.args[0], ["method_add_arg"])
-                and ChefParser._check_id(ast.args[1], ["brace_block", "do_block"])
-                and len(ast.args[1].args) == 1
-                and ChefParser._check_id(ast.args[1].args[0], ["bodystmt"])
-            ):
-                # ruby_block
-                self.get_statements(ast.args[1].args[0])
-            elif (
-                ChefParser._check_id(ast, ["command", "method_add_arg"])
+                ChefParser._check_id(ast, ["command", "method_add_arg", "method_add_block"])
                 and ast.args[1] != []
             ):
                 value = ChefParser._get_value(ast.args[1], self.source)
@@ -982,8 +988,9 @@ class ChefParser(p.Parser):
                 and ast.args[1] is False
             ):
                 d = Dependency([ChefParser._get_content(ast.args[0][0], self.source)])
-                d.line = ChefParser._get_content_bounds(ast, self.source)[0]
-                d.code = self.code
+                info = ChefParser._get_info(ast, self.source)
+                info.code = self.code
+                set_loc_from_info(d, info)
                 self.include = d
                 return True
             return False
@@ -1028,10 +1035,8 @@ class ChefParser(p.Parser):
                         Equal(equals_info, self.case_head, value),
                         ConditionalStatement.ConditionType.SWITCH,
                     )
-                    self.condition.code = ChefParser._get_content(ast, self.source)
-                    self.condition.line = ChefParser._get_content_bounds(
-                        ast, self.source
-                    )[0]
+                    info = ChefParser._get_info(ast, self.source)
+                    set_loc_from_info(self.condition, info)
                     self.current_condition = self.condition
                 elif self.current_condition is not None:
                     self.current_condition.else_statement = ConditionalStatement(
@@ -1039,12 +1044,8 @@ class ChefParser(p.Parser):
                         ConditionalStatement.ConditionType.SWITCH,
                     )
                     self.current_condition = self.current_condition.else_statement
-                    self.current_condition.code = ChefParser._get_content(
-                        ast, self.source
-                    )
-                    self.current_condition.line = ChefParser._get_content_bounds(
-                        ast, self.source
-                    )[0]
+                    info = ChefParser._get_info(ast, self.source)
+                    set_loc_from_info(self.current_condition, info)
                 if self.current_condition is not None:
                     self.get_statements(ast, self.current_condition)
                 if len(ast.args) == 3:
@@ -1057,12 +1058,8 @@ class ChefParser(p.Parser):
                 self.current_condition.else_statement = ConditionalStatement(
                     Null(), ConditionalStatement.ConditionType.SWITCH, is_default=True
                 )
-                self.current_condition.else_statement.code = ChefParser._get_content(
-                    ast, self.source
-                )
-                self.current_condition.else_statement.line = (
-                    ChefParser._get_content_bounds(ast, self.source)[0]
-                )
+                info = ChefParser._get_info(ast, self.source)
+                set_loc_from_info(self.current_condition.else_statement, info)
                 self.get_statements(ast, self.current_condition.else_statement)
                 return True
             return False
@@ -1091,10 +1088,8 @@ class ChefParser(p.Parser):
                 self.condition = ConditionalStatement(
                     condition, ConditionalStatement.ConditionType.IF
                 )
-                self.condition.code = ChefParser._get_content(ast, self.source)
-                self.condition.line = ChefParser._get_content_bounds(ast, self.source)[
-                    0
-                ]
+                info = ChefParser._get_info(ast, self.source)
+                set_loc_from_info(self.condition, info)
                 self.current_condition = self.condition
                 if ChefParser._check_node(ast, ["if", "unless"], 3):
                     self.push([self.is_if_condition], ast.args[2])
@@ -1112,8 +1107,8 @@ class ChefParser(p.Parser):
                 new_condition = ConditionalStatement(
                     condition, ConditionalStatement.ConditionType.IF
                 )
-                new_condition.code = ChefParser._get_content(ast, self.source)
-                new_condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                info = ChefParser._get_info(ast, self.source)
+                set_loc_from_info(new_condition, info)
                 self.get_statements(ast, new_condition)
                 self.current_condition.else_statement = new_condition
                 self.current_condition = new_condition
@@ -1127,8 +1122,8 @@ class ChefParser(p.Parser):
                 new_condition = ConditionalStatement(
                     Null(), ConditionalStatement.ConditionType.IF, is_default=True
                 )
-                new_condition.code = ChefParser._get_content(ast, self.source)
-                new_condition.line = ChefParser._get_content_bounds(ast, self.source)[0]
+                info = ChefParser._get_info(ast, self.source)
+                set_loc_from_info(new_condition, info)
                 self.get_statements(ast, new_condition)
                 self.current_condition.else_statement = new_condition
                 return True
@@ -1249,7 +1244,7 @@ class ChefParser(p.Parser):
 
     @staticmethod
     def _transverse_ast(
-        ast: Any, st: UnitBlock | ConditionalStatement | AtomicUnit, source: List[str]
+        ast: Any, st: UnitBlock | ConditionalStatement | BlockExpr, source: List[str]
     ) -> None:
         if isinstance(ast, list):
             for arg in ast:  # type: ignore
@@ -1364,8 +1359,9 @@ class ChefParser(p.Parser):
 
                     for comment, line in comments:
                         c = Comment(re.sub(r"\\n$", "", comment))
-                        c.code = source[line - 1]
-                        c.line = line
+                        comment_code = source[line - 1]
+                        info = ElementInfo(line, 1, line, len(comment_code), comment_code)
+                        set_loc_from_info(c, info)
                         unit_block.add_comment(c)
                 except:
                     throw_exception(

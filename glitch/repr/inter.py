@@ -221,6 +221,21 @@ class MethodCall(Expr):
         }
 
 
+class BlockExpr(Expr):
+    def __init__(self, info: ElementInfo) -> None:
+        super().__init__(info)
+        self.statements: List[CodeElement] = []
+
+    def add_statement(self, statement: CodeElement) -> None:
+        self.statements.append(statement)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "statements": [s.as_dict() for s in self.statements],
+        }
+
+
 class UnaryOperation(Expr, ABC):
     def __init__(self, info: ElementInfo, expr: Expr) -> None:
         super().__init__(info)
