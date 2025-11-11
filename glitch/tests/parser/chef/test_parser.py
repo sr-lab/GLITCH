@@ -839,15 +839,29 @@ class TestChefParser(TestParser):
         """
         do_block
         """
-        # TODO: For now just checks if it does not crash
-        self.__parse("tests/parser/chef/files/do_block.rb")
+        ir = self.__parse("tests/parser/chef/files/do_block.rb")
+        assert len(ir.atomic_units) == 1
+        assert isinstance(ir.atomic_units[0], AtomicUnit)
+        assert ir.atomic_units[0].type == "describe"
+        assert isinstance(ir.atomic_units[0].name, AddArgs)
+        assert len(ir.atomic_units[0].attributes) == 1
+        assert isinstance(ir.atomic_units[0].attributes[0], Attribute)
+        assert ir.atomic_units[0].attributes[0].name == "let(:random_temp_root)"
+        assert isinstance(ir.atomic_units[0].attributes[0].value, BlockExpr)
 
     def test_chef_parser_brace_block(self) -> None:
         """
         brace_block
         """
-        # TODO: For now just checks if it does not crash
-        self.__parse("tests/parser/chef/files/brace_block.rb")
+        ir = self.__parse("tests/parser/chef/files/brace_block.rb")
+        assert len(ir.atomic_units) == 1
+        assert isinstance(ir.atomic_units[0], AtomicUnit)
+        assert ir.atomic_units[0].type == "describe"
+        assert isinstance(ir.atomic_units[0].name, FunctionCall)
+        assert len(ir.atomic_units[0].attributes) == 1
+        assert isinstance(ir.atomic_units[0].attributes[0], Attribute)
+        assert ir.atomic_units[0].attributes[0].name == "it"
+        assert isinstance(ir.atomic_units[0].attributes[0].value, BlockExpr)
 
     def test_chef_parser_rescue_mod(self) -> None:
         """

@@ -657,14 +657,14 @@ class ChefParser(p.Parser):
         elif (
             ChefParser._check_id(ast, ["method_add_block"])
             and len(ast.args) == 2
-            and ChefParser._check_id(ast.args[1], ["do_block"])
+            and ChefParser._check_id(ast.args[1], ["do_block", "brace_block"])
         ):
             receiver = ChefParser._get_value(ast.args[0], source)
             assert receiver is not None
             block = ChefParser._get_value(ast.args[1], source)
             assert isinstance(block, BlockExpr)
             return MethodCall(receiver, "", [block], info)
-        elif ChefParser._check_id(ast, ["do_block"]):
+        elif ChefParser._check_id(ast, ["do_block", "brace_block"]):
             block = BlockExpr(info)
             ChefParser._transverse_ast(ast.args, block, source)
             return block
@@ -675,7 +675,6 @@ class ChefParser(p.Parser):
                 "until_mod",
                 "while_mod",
                 "hshptn",
-                "brace_block",
                 "begin",
                 "yield",
                 "lambda",
