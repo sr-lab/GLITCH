@@ -263,6 +263,12 @@ class YamlParser(p.Parser, ABC):
                 self.__parse_jinja_node(node.left, base_info),
                 self.__parse_jinja_node(node.right, base_info),
             )
+        elif isinstance(node, jinja2.nodes.Pow):
+            return Power(
+                info,
+                self.__parse_jinja_node(node.left, base_info),
+                self.__parse_jinja_node(node.right, base_info),
+            )
         elif isinstance(node, jinja2.nodes.Mod):
             return Modulo(
                 info,
