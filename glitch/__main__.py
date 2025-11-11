@@ -40,7 +40,6 @@ def __parse_and_check(
     analyses: List[RuleVisitor],
     stats: FileStats,
     rego_engine: bool,
-    rego_library: str,
     config: str,
     smell_types: Tuple[str, ...]
 ) -> Set[Error]:
@@ -62,7 +61,7 @@ def __parse_and_check(
         
         # TODO: Implement capability to select which analysis we want later 
         
-        errors.update(run_analyses(inputRego, config, smell_types, rego_library == "regopy"))
+        errors.update(run_analyses(inputRego, config, smell_types))
 
     return errors
 
@@ -225,12 +224,6 @@ def cli():
     help="Whether to use the Rego engine for the analysis. Defaults to False.",
     default=False
 )
-@click.option(
-    "--rego_library",
-    type=click.Choice(("regopy", "go")),
-    help="The Rego library used by the engine. Defaults to 'regopy'.",
-    default="regopy"
-)
 @click.argument("output", type=click.Path(), required=False)
 def lint(
     tech: str,  # type: ignore
@@ -244,8 +237,7 @@ def lint(
     table_format: str,
     linter: bool,
     n_workers: int,
-    rego_engine: bool,
-    rego_library: str
+    rego_engine: bool
 ):
     tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
@@ -294,7 +286,7 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, rego_library, config, smell_types
+                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, config, smell_types
             )
         )
         future_to_path[futures[-1]] = p

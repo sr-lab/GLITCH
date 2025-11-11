@@ -10,8 +10,7 @@ from glitch.analysis.rules import Error
 def run_analyses(
     input: str, 
     config: str,
-    smell_types: Tuple[str, ...],
-    regopy: bool = True
+    smell_types: Tuple[str, ...]
 ) -> List[Error]:
     input_data = json.loads(input)
 
