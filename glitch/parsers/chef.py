@@ -407,6 +407,7 @@ class ChefParser(p.Parser):
         true_statement = ConditionalStatement(
             predicate,
             ConditionalStatement.ConditionType.IF,
+            is_top=True
         )
         true_statement.add_statement(true_part)
         if len(ast.args) == 3:
@@ -480,7 +481,7 @@ class ChefParser(p.Parser):
             assert isinstance(value, Expr)
             assert isinstance(default, Expr)
             cond = NotEqual(info, value, Null())
-            true = ConditionalStatement(cond, ConditionalStatement.ConditionType.IF)
+            true = ConditionalStatement(cond, ConditionalStatement.ConditionType.IF, is_top=True)
             true.add_statement(value)
             false = ConditionalStatement(
                 Null(), ConditionalStatement.ConditionType.IF, is_default=True
@@ -916,7 +917,7 @@ class ChefParser(p.Parser):
                             Null(),
                         )
                         true = ConditionalStatement(
-                            cond, ConditionalStatement.ConditionType.IF
+                            cond, ConditionalStatement.ConditionType.IF, is_top=True
                         )
                         true.add_statement(value)
                         false = ConditionalStatement(
@@ -1033,6 +1034,7 @@ class ChefParser(p.Parser):
                     self.condition = ConditionalStatement(
                         Equal(equals_info, self.case_head, value),
                         ConditionalStatement.ConditionType.SWITCH,
+                        is_top=True
                     )
                     info = ChefParser._get_info(ast, self.source)
                     set_loc_from_info(self.condition, info)
@@ -1085,7 +1087,7 @@ class ChefParser(p.Parser):
                 if ChefParser._check_id(ast, ["unless"]):
                     condition = Not(ElementInfo.from_code_element(condition), condition)
                 self.condition = ConditionalStatement(
-                    condition, ConditionalStatement.ConditionType.IF
+                    condition, ConditionalStatement.ConditionType.IF, is_top=True
                 )
                 info = ChefParser._get_info(ast, self.source)
                 set_loc_from_info(self.condition, info)

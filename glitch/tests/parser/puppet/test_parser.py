@@ -13,6 +13,7 @@ class TestPuppetParser(TestParser):
         )
         assert len(unit_block.statements) == 1
         assert isinstance(unit_block.statements[0], ConditionalStatement)
+        assert unit_block.statements[0].is_top == True
         self._check_binary_operation(
             unit_block.statements[0].condition,
             Equal,
@@ -271,6 +272,7 @@ class TestPuppetParser(TestParser):
         assert len(unit_block.statements) == 1
 
         assert isinstance(unit_block.statements[0], ConditionalStatement)
+        assert unit_block.statements[0].is_top == True
         assert isinstance(unit_block.statements[0].condition, Not)
         self._check_binary_operation(
             unit_block.statements[0].condition.expr,
@@ -296,6 +298,7 @@ class TestPuppetParser(TestParser):
         assert len(unit_block.statements) == 1
 
         assert isinstance(unit_block.statements[0], ConditionalStatement)
+        assert unit_block.statements[0].is_top == True
         assert isinstance(unit_block.statements[0].condition, Or)
         assert unit_block.statements[0].condition.line == 1
 
@@ -333,6 +336,7 @@ class TestPuppetParser(TestParser):
         assert len(unit_block.variables) == 1
 
         assert isinstance(unit_block.variables[0].value, ConditionalStatement)
+        assert unit_block.variables[0].value.is_top == True
         assert isinstance(unit_block.variables[0].value.condition, Equal)
 
         assert isinstance(

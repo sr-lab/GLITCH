@@ -444,11 +444,13 @@ class ConditionalStatement(Block, Expr):
         condition: Expr,
         type: "ConditionalStatement.ConditionType",
         is_default: bool = False,
+        is_top: bool = False
     ) -> None:
         Block.__init__(self)
         self.condition: Expr = condition
         self.else_statement: ConditionalStatement | None = None
         self.is_default = is_default
+        self.is_top = is_top
         self.type = type
 
     def __repr__(self) -> str:
@@ -460,6 +462,7 @@ class ConditionalStatement(Block, Expr):
             "condition": self.condition.as_dict(),
             "type": self.type.name,
             "is_default": self.is_default,
+            "is_top": self.is_top,
             "else_statement": (
                 self.else_statement.as_dict() if self.else_statement else None
             ),

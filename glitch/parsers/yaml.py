@@ -279,6 +279,7 @@ class YamlParser(p.Parser, ABC):
             c = ConditionalStatement(
                 self.__parse_jinja_node(node.test, base_info),
                 ConditionalStatement.ConditionType.IF,
+                is_top=True
             )
             c.add_statement(self.__parse_jinja_node(node.expr1, base_info))
             if node.expr2 is not None:

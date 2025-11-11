@@ -126,6 +126,7 @@ class TestChefParser(TestParser):
 
         assert isinstance(ir.variables[5], Variable)
         assert isinstance(ir.variables[5].value, ConditionalStatement)
+        assert ir.variables[5].value.is_top == True
 
         assert isinstance(ir.variables[6], Variable)
         assert isinstance(ir.variables[6].value, MethodCall)
@@ -167,6 +168,7 @@ class TestChefParser(TestParser):
 
         assert isinstance(ir.variables[1], Variable)
         assert isinstance(ir.variables[1].value, ConditionalStatement)
+        assert ir.variables[1].value.is_top == True
 
     def test_chef_parser_args_add(self) -> None:
         """
@@ -391,8 +393,10 @@ class TestChefParser(TestParser):
         ir = self.__parse("tests/parser/chef/files/case.rb")
         assert len(ir.statements) == 2
         assert isinstance(ir.statements[0], ConditionalStatement)
+        assert ir.statements[0].is_top == True
         assert ir.statements[0].condition.line == 1
         assert isinstance(ir.statements[1], ConditionalStatement)
+        assert ir.statements[1].is_top == True
         assert ir.statements[1].condition.line == 8
         assert ir.statements[0].type == ConditionalStatement.ConditionType.SWITCH
         assert ir.statements[1].type == ConditionalStatement.ConditionType.SWITCH
@@ -445,6 +449,7 @@ class TestChefParser(TestParser):
 
         assert len(ir.variables) == 1
         assert isinstance(ir.variables[0].value, ConditionalStatement)
+        assert ir.variables[0].value.is_top == True
 
     def test_chef_parser_if(self) -> None:
         """
@@ -455,6 +460,7 @@ class TestChefParser(TestParser):
         assert len(ir.statements) == 1
 
         assert isinstance(ir.statements[0], ConditionalStatement)
+        assert ir.statements[0].is_top == True
         assert ir.statements[0].type == ConditionalStatement.ConditionType.IF
         assert isinstance(ir.statements[0].condition, VariableReference)
         assert len(ir.statements[0].statements) == 3
@@ -469,6 +475,7 @@ class TestChefParser(TestParser):
 
         assert isinstance(ir.statements[0].statements[2], Variable)
         assert isinstance(ir.statements[0].statements[2].value, ConditionalStatement)
+        assert ir.statements[0].statements[2].value.is_top == True
         assert (
             ir.statements[0].statements[2].value.type
             == ConditionalStatement.ConditionType.IF
@@ -646,6 +653,7 @@ class TestChefParser(TestParser):
         ir = self.__parse("tests/parser/chef/files/unless.rb")
         assert len(ir.statements) == 1
         assert isinstance(ir.statements[0], ConditionalStatement)
+        assert ir.statements[0].is_top == True
         assert ir.statements[0].type == ConditionalStatement.ConditionType.IF
         assert isinstance(ir.statements[0].condition, Not)
         assert isinstance(ir.statements[0].condition.expr, VariableReference)
@@ -872,6 +880,7 @@ class TestChefParser(TestParser):
         assert isinstance(ir.variables[0], Variable)
         assert ir.variables[0].name == "cassandra_config"
         assert isinstance(ir.variables[0].value, ConditionalStatement)
+        assert ir.variables[0].value.is_top == True
 
     def test_chef_parser_method_add_block(self) -> None:
         """

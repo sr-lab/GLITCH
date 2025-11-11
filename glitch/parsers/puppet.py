@@ -321,6 +321,7 @@ class PuppetParser(p.Parser):
 
         for i in range(1, len(conditional_statements)):
             conditional_statements[i - 1].else_statement = conditional_statements[i]
+        conditional_statements[0].is_top = True
 
         return conditional_statements[0]
 
@@ -365,6 +366,7 @@ class PuppetParser(p.Parser):
 
         for i in range(1, len(conditional_statements)):
             conditional_statements[i - 1].else_statement = conditional_statements[i]
+        conditional_statements[0].is_top = True
 
         return conditional_statements[0]
 
@@ -623,13 +625,16 @@ class PuppetParser(p.Parser):
 
             return FunctionCall(name, args, PuppetParser.__get_info(codeelement, code))
         elif isinstance(codeelement, puppetmodel.If):
-            return PuppetParser.__process_conditional(codeelement, path, code)
+            conditional = PuppetParser.__process_conditional(codeelement, path, code)
+            conditional.is_top = True
+            return conditional
         elif isinstance(codeelement, puppetmodel.Unless):
             conditional = PuppetParser.__process_conditional(codeelement, path, code)
             conditional.condition = Not(
                 ElementInfo.from_code_element(conditional.condition),
                 conditional.condition,
             )
+            conditional.is_top = True
             return conditional
         elif isinstance(
             codeelement, (puppetmodel.Include, puppetmodel.Require, puppetmodel.Contain)
