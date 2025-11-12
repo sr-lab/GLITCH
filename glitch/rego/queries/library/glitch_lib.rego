@@ -17,6 +17,8 @@ all_attributes(node) = attrs {
     attrs = {n |
         walk(node, [path, n])
         n.ir_type == "Attribute"
+        # We only want KeyValues inside it, not itself
+        n.value.ir_type != "BlockExpr"
     }
 }
 
@@ -24,6 +26,8 @@ all_variables(node) = vars {
     vars = {n |
         walk(node, [path, n])
         n.ir_type == "Variable"
+        # We only want KeyValues inside it, not itself
+        n.value.ir_type != "BlockExpr"
     }
 }
 
