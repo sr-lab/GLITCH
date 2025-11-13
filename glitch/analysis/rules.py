@@ -88,7 +88,15 @@ class Error:
         self.opt_msg = opt_msg
 
         if isinstance(self.el, CodeElement):
-            self.line = self.el.line
+            if self.code == "sec_no_default_switch" and type(self.el) is ConditionalStatement:
+                # Special case: use line number of condition
+                # TODO: improve this hack for edge cases on parsing errors
+                # self.line = self.el.condition.line
+                # In the ideal case, we would use the line of the condition but this can break in some cases
+                # Temporary fix: use line of case - 1
+                self.line = self.el.line - 1
+            else:
+                self.line = self.el.line
         else:
             self.line = -1
 

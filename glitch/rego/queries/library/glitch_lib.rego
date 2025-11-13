@@ -31,17 +31,11 @@ all_variables(node) = vars {
     }
 }
 
-path_contains_else(path) {
-  some i
-  path[i] == "else_statement"
-}
-
 # This allows us to stop at the first level of conditional statement
 all_conditional_statements(node) = conditions {
     conditions = {n |
         walk(node, [path, n])
         n.ir_type == "ConditionalStatement"
-		not path_contains_else(path)
     }
 }
 

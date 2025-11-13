@@ -2,6 +2,11 @@ package glitch
 
 import data.glitch_lib
 
+path_contains_statements(path) {
+  some i
+  path[i] == "statements"
+}
+
 has_default_case(node) {
     some path, value
     walk(node, [path, value])
@@ -9,6 +14,7 @@ has_default_case(node) {
     last := path[count(path) - 1]
     last == "is_default"
     value == true
+    not path_contains_statements(path)
 }
 
 check_missing_default(node) {
@@ -21,6 +27,7 @@ Glitch_Analysis[result] {
     conditions := glitch_lib.all_conditional_statements(parent)
     node := conditions[_]
 
+    node.is_top == true
 	node.type == "SWITCH"
 	
     check_missing_default(node)
