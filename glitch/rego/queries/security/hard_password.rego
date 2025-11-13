@@ -20,11 +20,15 @@ check_pair_hard_password(name, value) {
 	glitch_lib.traverse_var(value)
 
 	#value.value != ""
+
+	# value.ir_type == "Null"
 } else {
 	# Check for sensitive data with secret value assignments
 	sensitive_item := data.security.sensitive_data[_]
 	glitch_lib.contains(lower(name), lower(sensitive_item))
-	
+
+	# value.ir_type == "Null"
+
 	secret_value := data.security.secret_value_assign[_]
 	glitch_lib.contains(lower(value.value), lower(secret_value))
 

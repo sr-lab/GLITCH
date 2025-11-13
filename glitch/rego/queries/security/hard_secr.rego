@@ -31,6 +31,8 @@ check_pair_hard_secr(name, value) {
 
 	not whitelist_contains(lower(name))	
 
+    value.ir_type != "Null"
+
 	glitch_lib.traverse_var(value)
 } else {
     item := lower(data.security.ssh_dirs[_])
@@ -39,17 +41,22 @@ check_pair_hard_secr(name, value) {
 
     pattern := ".*\\/id_rsa.*"
 
+    value.ir_type != "Null"
+
     glitch_lib.traverse(value, pattern)
 } else {
 	# Check for sensitive data with secret value assignments
 	sensitive_item := data.security.sensitive_data[_]
 	glitch_lib.contains(lower(name), lower(sensitive_item))
 	
+    value.ir_type != "Null"
+
 	secret_value := data.security.secret_value_assign[_]
 	glitch_lib.contains(lower(value.value), lower(secret_value))
 
 	# Exclude password cases (those will be handled by sec_hard_pass)
 	not glitch_lib.contains(lower(secret_value), "password")
+
 } else {
     item := data.security.misc_secrets[_]
     flat_name := flatten_name(name)
@@ -61,6 +68,7 @@ check_pair_hard_secr(name, value) {
 
     regex.match(pattern, flat_name)
     value.value != ""
+    value.ir_type != "Null"
     glitch_lib.traverse_var(value)
 }
 
