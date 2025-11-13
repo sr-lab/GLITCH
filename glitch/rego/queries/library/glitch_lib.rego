@@ -90,3 +90,8 @@ has_variable_reference(node) {
 contains(str, substr) {
     regex.match(sprintf("(?i).*%s.*", [substr]), str)
 }
+
+is_ir_type_in(value, allowed) {
+    t := allowed[_]
+    value.ir_type == t
+}

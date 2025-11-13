@@ -21,15 +21,6 @@ check_pair_hard_users(name, value) {
 	glitch_lib.traverse_var(value)
 }
 
-check_hard_users(node) {
-	node.value.ir_type != "Hash"
-	check_pair_hard_users(node.name, node.value)
-} else {
-	node.value.ir_type == "Hash"
-	current_pair := node.value.value[_]
-	check_pair_hard_users(current_pair.key.value, current_pair.value)
-}
-
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
 	parent.path != ""
@@ -40,7 +31,7 @@ Glitch_Analysis[result] {
 
 	# We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
-	n.value.ir_type != "Hash"
+	glitch_lib.is_ir_type_in(node.value, ["String", "Null", "Array"])
 	check_pair_hard_users(node.name, node.value)
 	matched_node := node
 	
@@ -51,7 +42,6 @@ Glitch_Analysis[result] {
         "description": "Hard-coded user - Developers should not reveal sensitive information in the source code. (CWE-798)"
 	}}
 }
-
 
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
@@ -65,6 +55,7 @@ Glitch_Analysis[result] {
 	walk(node, [_, n])
 	n.value.ir_type == "Hash"
 	current_pair := n.value.value[_]
+	glitch_lib.is_ir_type_in(current_pair.value, ["String", "Null", "Array"])
 	check_pair_hard_users(current_pair.key.value, current_pair.value)
 	matched_node := current_pair
 	
