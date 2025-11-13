@@ -950,11 +950,38 @@ class TestChefParser(TestParser):
         assert len(ir.variables) == 1
         assert isinstance(ir.variables[0], Variable)
 
+    def test_chef_parser_apache_module_case(self) -> None:
+        """
+        apache_module resource with case statement inside
+        """
+        ir = self.__parse("tests/parser/chef/files/apache_module_case.rb")
+        assert len(ir.atomic_units) == 1
+        assert isinstance(ir.atomic_units[0], AtomicUnit)
+        assert ir.atomic_units[0].type == "apache_module"
+        assert isinstance(ir.atomic_units[0].name, String)
+        assert ir.atomic_units[0].name.value == "php5"
+        assert len(ir.atomic_units[0].statements) == 1
+        assert isinstance(ir.atomic_units[0].statements[0], ConditionalStatement)
+        assert ir.atomic_units[0].statements[0].type == ConditionalStatement.ConditionType.SWITCH
+        assert ir.atomic_units[0].statements[0].is_top == True
+        
+        case_stmt = ir.atomic_units[0].statements[0]
+        assert isinstance(case_stmt.condition, Equal)
+        assert isinstance(case_stmt.condition.left, Access)
+        assert isinstance(case_stmt.condition.left.left, VariableReference)
+        assert case_stmt.condition.left.left.value == "node"
+        assert isinstance(case_stmt.condition.left.right, String)
+        assert case_stmt.condition.left.right.value == "platform_family"
+        
+        assert isinstance(case_stmt.condition.right, AddArgs)
+        assert len(case_stmt.statements) == 2
+        assert isinstance(case_stmt.statements[0], Attribute)
+        assert isinstance(case_stmt.statements[1], Attribute)
+
 
 # TODO:
 # block_var
 # blockarg
-# bodystmt
 # break
 # aryptn
 # class
