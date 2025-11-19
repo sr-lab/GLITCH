@@ -10,7 +10,7 @@ from glitch.analysis.rules import Error
 def run_analyses(
     input: str, 
     config: str,
-    smell_types: Tuple[str, ...]
+    rego_modules: Dict[str, str],
 ) -> List[Error]:
     input_data = json.loads(input)
 
@@ -18,19 +18,6 @@ def run_analyses(
     if config and os.path.exists(config):
         with open(config) as f:
             data = json.load(f)
-
-    rego_modules: Dict[str, str] = {}
-
-    if not os.path.exists("./glitch/rego/queries/library"):
-        raise FileNotFoundError("The rego query library does not exist.")
-    
-    load_rego_modules_from_folder("./glitch/rego/queries/library", rego_modules)
-    
-    for smell_type in smell_types:
-        if os.path.exists(f"./glitch/rego/queries/{smell_type}"):
-            load_rego_modules_from_folder(f"./glitch/rego/queries/{smell_type}", rego_modules)
-        else:
-            print(f"Warning: The rego queries for smell type '{smell_type}' are mislabeled or do not exist. Skipping.")
     
     result = run_rego(input_data, data, rego_modules)
 

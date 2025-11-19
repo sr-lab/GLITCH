@@ -39,30 +39,25 @@ def __parse_and_check(
     parser: Parser,
     analyses: List[RuleVisitor],
     stats: FileStats,
-    rego_engine: bool,
-    config: str,
     config_rego: str,
-    smell_types: Tuple[str, ...]
+    rego_modules: Dict[str,str]
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
     # Avoids problems with multiple threads (and possibly multiple files)
     # sharing the same object
     
-    if not rego_engine:
-        analyses = deepcopy(analyses)
-
-        if inter != None:
-            for analysis in analyses:
-                errors.update(analysis.check(inter))
-            stats.compute(inter)
-    else:
+    analyses = deepcopy(analyses)
+    if inter != None:
+        for analysis in analyses:
+            errors.update(analysis.check(inter))
+    
         # TODO: transform indent=None once it is working properly
         inputRego = json.dumps(inter.as_dict(), indent=2)
         
-        # TODO: Implement capability to select which analysis we want later 
+        errors.update(run_analyses(inputRego, config_rego, rego_modules))
         
-        errors.update(run_analyses(inputRego, config_rego, smell_types))
+        stats.compute(inter)
 
     return errors
 
@@ -260,12 +255,6 @@ def cli():
     help="Number of parallel workers to use. Defaults to 1.",
     default=1,
 )
-@click.option(
-    "--rego_engine",
-    type=bool,
-    help="Whether to use the Rego engine for the analysis. Defaults to False.",
-    default=False
-)
 @click.argument("output", type=click.Path(), required=False)
 def lint(
     tech: str,  # type: ignore
@@ -279,8 +268,7 @@ def lint(
     output: Optional[str],
     table_format: str,
     linter: bool,
-    n_workers: int,
-    rego_engine: bool
+    n_workers: int
 ):
     tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
@@ -340,7 +328,7 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, config, config_rego, smell_types
+                __parse_and_check, type, p, module, parser, analyses, file_stats, config_rego, rego_modules
             )
         )
         future_to_path[futures[-1]] = p
