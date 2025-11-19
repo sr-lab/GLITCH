@@ -1,7 +1,7 @@
 import json
 import os
 
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Any, Optional
 from glitch.rego.rego_python.src.rego_python import run_rego
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error
@@ -14,13 +14,12 @@ def run_analyses(
 ) -> List[Error]:
     input_data = json.loads(input)
 
-    data: dict[str, str] = {}
+    data: Dict[str, Any] = {}
     if config and os.path.exists(config):
         with open(config) as f:
             data = json.load(f)
 
-    rego_modules: dict[str, str] = {}
-
+    rego_modules: Dict[str, str] = {}
 
     if not os.path.exists("./glitch/rego/queries/library"):
         raise FileNotFoundError("The rego query library does not exist.")
@@ -37,11 +36,11 @@ def run_analyses(
 
     if "error" in result:
         print("Error:", result["error"])
-        return set()
+        return []
 
     errors: List[Error] = []
     
-    flat_values = []
+    flat_values: List[Dict[str, Any]] = []
 
     # Parse the Go Rego engine output to a set of errors
     # It can be a list or a list of lists, so we put everything in a single list
@@ -51,13 +50,13 @@ def run_analyses(
             # Normalize nested structure to flat list of dicts
             for item in values_list:
                 if isinstance(item, list):
-                    flat_values.extend(item)
+                    flat_values.extend(item) # type: ignore
                 elif isinstance(item, dict):
-                    flat_values.append(item)
+                    flat_values.append(item) # type: ignore
     
     # Create the rego errors
     for val in flat_values:
-        if isinstance(val, dict) and "element" in val:
+        if "element" in val:
             element = element_from_dict(val["element"])
             errors.append(Error(
                 code=val.get("type", ""),
@@ -75,34 +74,38 @@ def load_rego_from_path(file_path: str, result: dict[str, str]) -> None:
     with open(file_path, 'r') as f:
         result[key] = f.read()
 
-def element_from_dict(data: dict) -> CodeElement:
+def element_from_dict(data: Dict[str, Any]) -> CodeElement:
     """
     Recursively builds a CodeElement from a dict like the Rego query output.
     """
     
     # In case we just return a key-value pair from an Hash
     if "key" in data and "value" in data and "ir_type" not in data:
-        key = element_from_dict(data["key"])
-        value = element_from_dict(data["value"])
+        key_elem = element_from_dict(data["key"])
+        value_elem = element_from_dict(data["value"])
 
+        assert isinstance(value_elem, Expr), "Value in Key Value Hash mapping is not an Expr"
+        
         # Derive position info from key and value, combining their code
         info = ElementInfo(
-            line=getattr(key, "line", -1),
-            column=getattr(key, "column", -1),
-            end_line=getattr(value, "end_line", -1),
-            end_column=getattr(value, "end_column", -1),
-            code=f"{key.code}: {value.code}",  # Combined code
+            line=getattr(key_elem, "line", -1),
+            column=getattr(key_elem, "column", -1),
+            end_line=getattr(value_elem, "end_line", -1),
+            end_column=getattr(value_elem, "end_column", -1),
+            code=f"{key_elem.code}: {value_elem.code}",  # Combined code
         )
 
         # Extract the name from the key
-        if isinstance(key, String):
-            name = key.value
-        elif hasattr(key, 'value') and isinstance(key.value, str):
-            name = key.value
+        if isinstance(key_elem, String):
+            name = key_elem.value
         else:
-            name = str(key.code)  # Fallback to the key's code representation
+            name = getattr(key_elem, "value", None)
+            if isinstance(name, str):
+                pass
+            else:
+                name = str(getattr(key_elem, "code", key_elem))
         
-        return KeyValue(name, value, info)
+        return KeyValue(name, value_elem, info)
     
     # Step 1: Extract common element info
     info = ElementInfo(
@@ -113,7 +116,7 @@ def element_from_dict(data: dict) -> CodeElement:
         code=data.get("code", ""),
     )
 
-    ir_type = data.get("ir_type")
+    ir_type: Optional[str] = data.get("ir_type")
 
     # Step 2: Handle by type
     if ir_type == "String":
@@ -135,32 +138,42 @@ def element_from_dict(data: dict) -> CodeElement:
         return Null(info)
 
     elif ir_type == "Array":
-        values = [element_from_dict(v) for v in data["value"]]
+        values_data = data.get("value", [])
+        values: List[Expr] = []
+        for v in values_data:
+            elem = element_from_dict(v)
+            assert isinstance(elem, Expr), "Element in Array is not an Expr"
+            values.append(elem)
         return Array(values, info)
 
     elif ir_type == "Hash":
         # Hash is stored as dict[Expr, Expr]
-        value = {}
+        hash_value: Dict[Expr, Expr] = {}
         for pair in data["value"]:
             key = element_from_dict(pair["key"])
             val = element_from_dict(pair["value"])
-            value[key] = val
-        return Hash(value, info)
+            assert isinstance(key, Expr), "Key in Hash Mapping is not an Expr"
+            assert isinstance(val, Expr), "Value in Hash Mapping is not an Expr"
+            hash_value[key] = val
+        return Hash(hash_value, info)
 
     elif ir_type == "VariableReference":
         return VariableReference(data["value"], info)
 
     elif ir_type == "Attribute":
-        value = element_from_dict(data["value"])
-        return Attribute(data["name"], value, info)
+        value_elem = element_from_dict(data["value"])
+        assert isinstance(value_elem, Expr), "value in Attribute is not an Expr"
+        return Attribute(data["name"], value_elem, info)
 
     elif ir_type == "Variable":
-        value = element_from_dict(data["value"])
-        return Variable(data["name"], value, info)
+        value_elem = element_from_dict(data["value"])
+        assert isinstance(value_elem, Expr), "value in Variable is not an Expr"
+        return Variable(data["name"], value_elem, info)
 
     elif ir_type == "KeyValue":
-        value = element_from_dict(data["value"])
-        return KeyValue(data["name"], value, info)
+        value_elem = element_from_dict(data["value"])
+        assert isinstance(value_elem, Expr), "value in KeyValue is not an Expr"
+        return KeyValue(data["name"], value_elem, info)
 
     # Expressions and binary/unary operations
     elif ir_type in {
@@ -170,36 +183,68 @@ def element_from_dict(data: dict) -> CodeElement:
         "Power", "RightShift", "LeftShift", "Access",
         "BitwiseAnd", "BitwiseOr", "BitwiseXor", "Assign",
     }:
-        left = element_from_dict(data["left"])
-        right = element_from_dict(data["right"])
-        cls = globals()[ir_type]  # lookup class by name
-        return cls(info, left, right)
+        left_elem = element_from_dict(data["left"])
+        right_elem = element_from_dict(data["right"])
+        
+        assert isinstance(left_elem, Expr), "left_elem in BinaryRelation is not an Expr"
+        assert isinstance(right_elem, Expr), "left_elem in BinaryRelation is not an Expr"
+        
+        binary_op_classes = {
+            "Or": Or, "And": And, "Sum": Sum, "Equal": Equal, "NotEqual": NotEqual,
+            "LessThan": LessThan, "LessThanOrEqual": LessThanOrEqual,
+            "GreaterThan": GreaterThan, "GreaterThanOrEqual": GreaterThanOrEqual,
+            "In": In, "Subtract": Subtract, "Multiply": Multiply, "Divide": Divide,
+            "Modulo": Modulo, "Power": Power, "RightShift": RightShift,
+            "LeftShift": LeftShift, "Access": Access, "BitwiseAnd": BitwiseAnd,
+            "BitwiseOr": BitwiseOr, "BitwiseXor": BitwiseXor, "Assign": Assign,
+        }
+        cls = binary_op_classes[ir_type]
+        return cls(info, left_elem, right_elem)
 
     elif ir_type in {"Not", "Minus"}:
-        expr = element_from_dict(data["expr"])
-        cls = globals()[ir_type]
-        return cls(info, expr)
+        expr_elem = element_from_dict(data["expr"])
+        
+        assert isinstance(expr_elem, Expr), "expr_elem in UnaryRelation is not an Expr"
+        
+        unary_op_classes = {"Not": Not, "Minus": Minus}
+        cls = unary_op_classes[ir_type]
+        return cls(info, expr_elem)
 
     elif ir_type == "FunctionCall":
         name = data.get("name", "<unknown>")
-        args_data = data.get("args", [])  # fallback to empty list
-        args = [element_from_dict(a) for a in args_data]
+        args_data = data.get("args", [])
+        args: List[Expr] = []
+        for a in args_data:
+            arg_elem = element_from_dict(a)
+            assert isinstance(arg_elem, Expr), "arg_elem in FunctionCall is not an Expr"
         return FunctionCall(name, args, info)
 
     elif ir_type == "MethodCall":
-        receiver = element_from_dict(data["receiver"])
-        args = [element_from_dict(a) for a in data["args"]]
-        return MethodCall(receiver, data["method"], args, info)
-
+        receiver_elem = element_from_dict(data["receiver"])
+        assert isinstance(receiver_elem, Expr), "receiver_elem in MethodCall is not an Expr"
+        
+        args_data = data.get("args", [])
+        args: List[Expr] = []
+        for a in args_data:
+            arg_elem = element_from_dict(a)
+            assert isinstance(arg_elem, Expr), "arg_elem in MethodCall is not an Expr"
+        return MethodCall(receiver_elem, data["method"], args, info)
+        
     elif ir_type == "Comment":
         return Comment(data.get("content", ""), info)
     
     elif ir_type == "ConditionalStatement":
         condition = element_from_dict(data["condition"])
+        assert isinstance(condition, Expr), "condition in ConditionalStatement is not an Expr"
         cond_type = getattr(ConditionalStatement.ConditionType, data["type"])
         cond = ConditionalStatement(condition, cond_type, data.get("is_default", False), data.get("is_top", False), info)
-        if data.get("else_statement"):
-            cond.else_statement = element_from_dict(data["else_statement"])
+        
+        else_stmt_data = data.get("else_statement")
+        if else_stmt_data:
+            else_elem = element_from_dict(else_stmt_data)
+            assert isinstance(else_elem, ConditionalStatement), "else_elem in ConditionalStatement is not an ConditionalStatement"
+            cond.else_statement = else_elem
+            
         # Inherits from Block, which can have a list of statements
         for s in data.get("statements", []):
             cond.add_statement(element_from_dict(s))
@@ -214,26 +259,47 @@ def element_from_dict(data: dict) -> CodeElement:
 
     elif ir_type == "AtomicUnit":
         name = element_from_dict(data["name"])
+        assert isinstance(name, Expr), "name in AtomicUnit is not an Expr"
         unit = AtomicUnit(name, data.get("type", "unknown"))
         unit.set_element_info(info)
         for attr in data.get("attributes", []):
-            unit.add_attribute(element_from_dict(attr))
+            attr_elem = element_from_dict(attr)
+            assert isinstance(attr_elem, Attribute), "attr_elem in AtomicUnit is not an Attribute"
+            unit.add_attribute(attr_elem)
         return unit
 
     elif ir_type == "UnitBlock":
-        unit = UnitBlock(data.get("name"), data.get("type", "unknown"))
-        for attr in data.get("attributes", []):
-            unit.add_attribute(element_from_dict(attr))
-        for c in data.get("comments", []):
-            unit.add_comment(element_from_dict(c))
-        for v in data.get("variables", []):
-            unit.add_variable(element_from_dict(v))
-        for au in data.get("atomic_units", []):
-            unit.add_atomic_unit(element_from_dict(au))
-        for ub in data.get("unit_blocks", []):
-            unit.add_unit_block(element_from_dict(ub))
-        for d in data.get("dependencies", []):
-            unit.add_dependency(element_from_dict(d))
+        unit = UnitBlock(data.get("name", ""), data.get("type", "unknown"))            
+        for attr_data in data.get("attributes", []):
+            attr_elem = element_from_dict(attr_data)
+            assert isinstance(attr_elem, Attribute), "attr_elem in UnitBlock is not an Attribute"
+            unit.add_attribute(attr_elem)
+    
+        for comment_data in data.get("comments", []):
+            comment_elem = element_from_dict(comment_data)
+            assert isinstance(comment_elem, Comment), "comment_elem in UnitBlock is not an Comment"
+            unit.add_comment(comment_elem)
+        
+        for var_data in data.get("variables", []):
+            var_elem = element_from_dict(var_data)
+            assert isinstance(var_elem, Variable), "var_elem in UnitBlock is not an Variable"
+            unit.add_variable(var_elem)
+        
+        for au_data in data.get("atomic_units", []):
+            au_elem = element_from_dict(au_data)
+            assert isinstance(au_elem, AtomicUnit), "au_data in UnitBlock is not an AtomicUnit"
+            unit.add_atomic_unit(au_elem)
+        
+        for ub_data in data.get("unit_blocks", []):
+            ub_elem = element_from_dict(ub_data)
+            assert isinstance(ub_elem, UnitBlock), "ub_elem in UnitBlock is not an UnitBlock"
+            unit.add_unit_block(ub_elem)
+        
+        for dep_data in data.get("dependencies", []):
+            dep_elem = element_from_dict(dep_data)
+            assert isinstance(dep_elem, Dependency), "dep_data in UnitBlock is not an Dependency"
+            unit.add_dependency(dep_elem)
+        
         unit.path = data.get("path", "")
         return unit
     
