@@ -87,7 +87,7 @@ def __filter_analysis(
                 load_rego_from_path(f"./glitch/rego/queries/{smell_type}/{smell}.rego", rego_modules)
             else:
                 fallback.add(smell)
-        
+    
         if len(fallback) > 0:
             match smell_type:
                 case "design":
