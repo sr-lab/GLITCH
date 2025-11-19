@@ -41,6 +41,7 @@ def __parse_and_check(
     stats: FileStats,
     rego_engine: bool,
     config: str,
+    config_rego: str,
     smell_types: Tuple[str, ...]
 ) -> Set[Error]:
     errors: Set[Error] = set()
@@ -61,7 +62,7 @@ def __parse_and_check(
         
         # TODO: Implement capability to select which analysis we want later 
         
-        errors.update(run_analyses(inputRego, config, smell_types))
+        errors.update(run_analyses(inputRego, config_rego, smell_types))
 
     return errors
 
@@ -183,6 +184,12 @@ def cli():
     help="The path for a config file. Otherwise the default config is used.",
 )
 @click.option(
+    "--config_rego",
+    type=click.Path(),
+    help="The path for a config file to use in Rego. Otherwise the default config is used.",
+    default="configs/default.json"
+)
+@click.option(
     "--folder-strategy",
     type=click.Choice(["project", "module", "dataset", "include-all"]),
     default="project",
@@ -231,6 +238,7 @@ def lint(
     path: str,
     folder_strategy: str,
     config: str,
+    config_rego: str,
     csv: bool,
     smell_types: Tuple[str, ...],
     output: Optional[str],
@@ -243,7 +251,7 @@ def lint(
     type = UnitBlockType(type)
     module = folder_strategy == "module"
 
-    if (config != "configs/default.ini" or config != "configs/json/default.json") and not os.path.exists(config):
+    if config != "configs/default.ini" and not os.path.exists(config):
         raise click.BadOptionUsage(
             "config", f"Invalid value for 'config': Path '{config}' does not exist."
         )
@@ -259,9 +267,16 @@ def lint(
         config = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
 
-    if config == "configs/json/default.json":
-        print("Using default JSON config for Rego engine.")
-        config = resource_filename("glitch", "configs/json/default.json")
+    if config_rego != "configs/default.json" and not os.path.exists(config_rego):
+        raise click.BadOptionUsage(
+            "config_rego", f"Invalid value for 'config': Path '{config_rego}' does not exist."
+        )
+    elif os.path.isdir(config_rego):
+        raise click.BadOptionUsage(
+            "config_rego", f"Invalid value for 'config_rego': Path '{config_rego}' should be a file."
+        )
+    elif config_rego == "configs/default.json":
+        config_rego = resource_filename("glitch", "configs/default.json")
     
     if smell_types == ():
         smell_types = get_smell_types()
@@ -286,7 +301,7 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, config, smell_types
+                __parse_and_check, type, p, module, parser, analyses, file_stats, rego_engine, config, config_rego, smell_types
             )
         )
         future_to_path[futures[-1]] = p
