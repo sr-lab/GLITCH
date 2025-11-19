@@ -70,12 +70,10 @@ def run_analyses(
     return errors
 
 
-def load_rego_modules_from_folder(folder_path: str, result: dict[str, str]) -> None:
-    for filename in os.listdir(folder_path):
-        if filename.endswith('.rego'):
-            file_path = os.path.join(folder_path, filename)
-            with open(file_path, 'r') as f:
-                result[filename] = f.read()
+def load_rego_from_path(file_path: str, result: dict[str, str]) -> None:
+    key: str = os.path.split(file_path)[-1]
+    with open(file_path, 'r') as f:
+        result[key] = f.read()
 
 def element_from_dict(data: dict) -> CodeElement:
     """

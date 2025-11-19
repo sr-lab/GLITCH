@@ -23,7 +23,7 @@ from glitch.repair.interactive.main import run_infrafix
 from pkg_resources import resource_filename
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
-from glitch.rego.engine import run_analyses
+from glitch.rego.engine import load_rego_from_path, run_analyses
 
 
 # NOTE: These are necessary in order for python to load the visitors.
@@ -66,6 +66,41 @@ def __parse_and_check(
 
     return errors
 
+def __filter_analysis(
+    smell_types: Tuple[str, ...],
+    config: str,
+    tech: Tech
+) -> Tuple[Dict[str,str], List[RuleVisitor]]:
+    rego_modules: Dict[str,str] = {}
+    python_analyses: List[RuleVisitor] = []
+
+    if not os.path.exists("./glitch/rego/queries/library/glitch_lib.rego"):
+        raise FileNotFoundError("The rego query library does not exist.")
+    load_rego_from_path("./glitch/rego/queries/library/glitch_lib.rego", rego_modules)
+
+    for smell_type in smell_types:
+        smells: List[str] = get_smells([smell_type], tech)
+        fallback: Set[str] = set()
+
+        for smell in smells:
+            if os.path.exists(f"./glitch/rego/queries/{smell_type}/{smell}.rego"):
+                load_rego_from_path(f"./glitch/rego/queries/{smell_type}/{smell}.rego", rego_modules)
+            else:
+                fallback.add(smell)
+
+        if len(fallback) > 0:
+            match smell_type:
+                case "design":
+                    visitor = DesignVisitor(tech, fallback)
+                case "security":
+                    visitor = SecurityVisitor(tech, fallback)
+                case _:
+                    raise ValueError(f"Invalid smell type: {smell_type}")
+
+            visitor.config(config)
+            python_analyses.append(visitor)
+
+    return rego_modules, python_analyses
 
 def __get_tech(tech: str) -> Tech:
     for t in Tech:
@@ -281,14 +316,18 @@ def lint(
     if smell_types == ():
         smell_types = get_smell_types()
 
-    analyses: List[RuleVisitor] = []
-    rules = RuleVisitor.__subclasses__()
-    for r in rules:
-        if smell_types == () or r.get_name() in smell_types:
-            analysis = r(tech)
-            if not rego_engine: # This is needed since we are trying to pass a json config file, and the parser for config breaks with it
-                analysis.config(config)
-            analyses.append(analysis)
+    temp = __filter_analysis(smell_types, config, tech)
+    rego_modules: Dict[str,str] = temp[0] # type: ignore
+    analyses: List[RuleVisitor] = temp[1]
+
+    # analyses: List[RuleVisitor] = []
+    # rules = RuleVisitor.__subclasses__()
+    # for r in rules:
+    #     if smell_types == () or r.get_name() in smell_types:
+    #         analysis = r(tech)
+    #         if not rego_engine: # This is needed since we are trying to pass a json config file, and the parser for config breaks with it
+    #             analysis.config(config)
+    #         analyses.append(analysis)
 
     errors: List[Error] = []
     paths: Set[str]

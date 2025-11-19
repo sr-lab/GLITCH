@@ -35,7 +35,7 @@ class SecurityVisitor(RuleVisitor):
                 return [Error("sec_non_official_image", element, file, repr(element))]
             return []
 
-    def __init__(self, tech: Tech) -> None:
+    def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
 
         self.checkers: List[SecuritySmellChecker] = []

@@ -8,9 +8,8 @@ from glitch.repr.inter import *
 from typing import List
 from glitch.analysis.design.smell_checker import DesignSmellChecker
 
-
 class DesignVisitor(RuleVisitor):
-    def __init__(self, tech: Tech) -> None:
+    def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
 
         self.checkers: List[DesignSmellChecker] = []
