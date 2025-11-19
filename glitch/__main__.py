@@ -286,7 +286,7 @@ def lint(
         config = resource_filename("glitch", "configs/default.ini")
 
     parser = __get_parser(tech)
-    if tech == Tech.terraform and not rego_engine:
+    if tech == Tech.terraform:
         config = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
 
@@ -307,15 +307,6 @@ def lint(
     temp = __filter_analysis(smell_types, config, tech)
     rego_modules: Dict[str,str] = temp[0] # type: ignore
     analyses: List[RuleVisitor] = temp[1]
-
-    # analyses: List[RuleVisitor] = []
-    # rules = RuleVisitor.__subclasses__()
-    # for r in rules:
-    #     if smell_types == () or r.get_name() in smell_types:
-    #         analysis = r(tech)
-    #         if not rego_engine: # This is needed since we are trying to pass a json config file, and the parser for config breaks with it
-    #             analysis.config(config)
-    #         analyses.append(analysis)
 
     errors: List[Error] = []
     paths: Set[str]
