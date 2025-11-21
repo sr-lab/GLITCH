@@ -1,32 +1,16 @@
-import unittest
-
-from glitch.analysis.design.visitor import DesignVisitor
+from glitch.tests.design.design_helper import BaseSecurityTest
 from glitch.parsers.docker import DockerParser
 from glitch.tech import Tech
 
-
-class TestDesign(unittest.TestCase):
-    def __help_test(self, path, n_errors: int, codes, lines) -> None:
-        parser = DockerParser()
-        inter = parser.parse(path, "script", False)
-        analysis = DesignVisitor(Tech.docker)
-        analysis.config("configs/default.ini")
-        errors = list(
-            filter(
-                lambda e: e.code.startswith("design_")
-                or e.code.startswith("implementation_"),
-                set(analysis.check(inter)),
-            )
-        )
-        errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))
-        self.assertEqual(len(errors), n_errors)
-        for i in range(n_errors):
-            self.assertEqual(errors[i].code, codes[i])
-            self.assertEqual(errors[i].line, lines[i])
+class TestDesign(BaseSecurityTest):
+    PARSER_CLASS = DockerParser
+    TECH = Tech.docker
 
     def test_docker_long_statement(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/docker/files/long_statement.Dockerfile",
+            "script",
+            "configs/default.ini",
             1,
             ["implementation_long_statement"],
             [4],
@@ -36,8 +20,10 @@ class TestDesign(unittest.TestCase):
         # TODO: Fix smell, due to docker parsing method the attributes are not
         # detected in differents lines, making it impossible to trigger alignment
         pass
-        # self.__help_test(
+        # self._help_test(
         #     "tests/design/docker/files/improper_alignment.Dockerfile",
+        #     "script",
+        #     "configs/default.ini",
         #     1,
         #     [
         #         "implementation_improper_alignment"
@@ -45,8 +31,10 @@ class TestDesign(unittest.TestCase):
         # )
 
     def test_docker_duplicate_block(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/docker/files/duplicate_block.Dockerfile",
+            "script",
+            "configs/default.ini",
             2,
             [
                 "design_duplicate_block",
@@ -56,8 +44,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_docker_avoid_comments(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/docker/files/avoid_comments.Dockerfile",
+            "script",
+            "configs/default.ini",
             1,
             [
                 "design_avoid_comments",
@@ -66,8 +56,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_docker_too_many_variables(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/docker/files/too_many_variables.Dockerfile",
+            "script",
+            "configs/default.ini",
             1,
             [
                 "implementation_too_many_variables",

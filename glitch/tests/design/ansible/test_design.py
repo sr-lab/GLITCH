@@ -1,33 +1,17 @@
-import unittest
-
-from glitch.analysis.design.visitor import DesignVisitor
+from glitch.tests.design.design_helper import BaseSecurityTest
 from glitch.parsers.ansible import AnsibleParser
 from glitch.tech import Tech
 
 
-class TestDesign(unittest.TestCase):
-    def __help_test(self, path, type, n_errors: int, codes, lines) -> None:
-        parser = AnsibleParser()
-        inter = parser.parse(path, type, False)
-        analysis = DesignVisitor(Tech.ansible)
-        analysis.config("tests/design/ansible/design_ansible.ini")
-        errors = list(
-            filter(
-                lambda e: e.code.startswith("design_")
-                or e.code.startswith("implementation_"),
-                set(analysis.check(inter)),
-            )
-        )
-        errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))
-        self.assertEqual(len(errors), n_errors)
-        for i in range(n_errors):
-            self.assertEqual(errors[i].code, codes[i])
-            self.assertEqual(errors[i].line, lines[i])
-
+class TestDesign(BaseSecurityTest):
+    PARSER_CLASS = AnsibleParser
+    TECH = Tech.ansible
+    
     def test_ansible_long_statement(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/ansible/files/long_statement.yml",
             "tasks",
+            "tests/design/ansible/design_ansible.ini",
             1,
             ["implementation_long_statement"],
             [16],
@@ -35,9 +19,10 @@ class TestDesign(unittest.TestCase):
 
     # Tabs
     def test_ansible_improper_alignment(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/ansible/files/improper_alignment.yml",
             "tasks",
+            "tests/design/ansible/design_ansible.ini",
             4,
             [
                 "design_multifaceted_abstraction",
@@ -49,9 +34,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_ansible_duplicate_block(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/ansible/files/duplicate_block.yml",
             "tasks",
+            "tests/design/ansible/design_ansible.ini",
             4,
             [
                 "design_duplicate_block",
@@ -63,9 +49,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_ansible_avoid_comments(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/ansible/files/avoid_comments.yml",
             "tasks",
+            "tests/design/ansible/design_ansible.ini",
             1,
             [
                 "design_avoid_comments",
@@ -74,9 +61,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_ansible_long_resource(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/ansible/files/long_resource.yml",
             "tasks",
+            "tests/design/ansible/design_ansible.ini",
             2,
             [
                 "design_long_resource",
@@ -86,9 +74,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_ansible_multifaceted_abstraction(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/ansible/files/multifaceted_abstraction.yml",
             "tasks",
+            "tests/design/ansible/design_ansible.ini",
             1,
             [
                 "design_multifaceted_abstraction",
@@ -97,9 +86,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_ansible_too_many_variables(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/ansible/files/too_many_variables.yml",
             "script",
+            "tests/design/ansible/design_ansible.ini",
             1,
             [
                 "implementation_too_many_variables",

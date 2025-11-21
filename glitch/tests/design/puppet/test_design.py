@@ -1,48 +1,36 @@
-import unittest
-
-from glitch.analysis.design.visitor import DesignVisitor
+from glitch.tests.design.design_helper import BaseSecurityTest
 from glitch.parsers.puppet import PuppetParser
 from glitch.tech import Tech
 
-
-class TestDesign(unittest.TestCase):
-    def __help_test(self, path, n_errors: int, codes, lines) -> None:
-        parser = PuppetParser()
-        inter = parser.parse(path, "script", False)
-        analysis = DesignVisitor(Tech.puppet)
-        analysis.config("tests/design/puppet/design_puppet.ini")
-        errors = list(
-            filter(
-                lambda e: e.code.startswith("design_")
-                or e.code.startswith("implementation_"),
-                set(analysis.check(inter)),
-            )
-        )
-        errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))
-        self.assertEqual(len(errors), n_errors)
-        for i in range(n_errors):
-            self.assertEqual(errors[i].code, codes[i])
-            self.assertEqual(errors[i].line, lines[i])
+class TestDesign(BaseSecurityTest):
+    PARSER_CLASS = PuppetParser
+    TECH = Tech.puppet
 
     def test_puppet_long_statement(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/long_statement.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             1,
             ["implementation_long_statement"],
             [6],
         )
 
     def test_puppet_improper_alignment(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/improper_alignment.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             1,
             ["implementation_improper_alignment"],
             [1],
         )
 
     def test_puppet_duplicate_block(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/duplicate_block.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             2,
             [
                 "design_duplicate_block",
@@ -52,8 +40,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_puppet_avoid_comments(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/avoid_comments.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             1,
             [
                 "design_avoid_comments",
@@ -62,8 +52,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_puppet_long_resource(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/long_resource.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             1,
             [
                 "design_long_resource",
@@ -72,16 +64,20 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_puppet_multifaceted_abstraction(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/multifaceted_abstraction.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             2,
             ["design_multifaceted_abstraction", "implementation_long_statement"],
             [1, 2],
         )
 
     def test_puppet_unguarded_variable(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/unguarded_variable.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             1,
             [
                 "implementation_unguarded_variable",
@@ -90,8 +86,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_puppet_misplaced_attribute(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/misplaced_attribute.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             1,
             [
                 "design_misplaced_attribute",
@@ -100,8 +98,10 @@ class TestDesign(unittest.TestCase):
         )
 
     def test_puppet_too_many_variables(self) -> None:
-        self.__help_test(
+        self._help_test(
             "tests/design/puppet/files/too_many_variables.pp",
+            "script",
+            "tests/design/puppet/design_puppet.ini",
             1,
             [
                 "implementation_too_many_variables",
