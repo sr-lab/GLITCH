@@ -57,7 +57,6 @@ class BaseSecurityTest(unittest.TestCase):
         errors = [e for e in errors if e["code"].startswith("sec_")] # type: ignore
 
         errors = sorted(errors, key=lambda e: (e["path"] or "", e["line"], e["code"] or ""))
-        print(errors)
         self.assertEqual(len(errors), n_errors)
         for i in range(n_errors):
             self.assertEqual(errors[i]["code"], codes[i])

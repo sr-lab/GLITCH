@@ -1,9 +1,7 @@
-from tests.design.design_helper import BaseSecurityTest
-from glitch.parsers.chef import ChefParser
+from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
 
-class TestDesign(BaseSecurityTest):
-    PARSER_CLASS = ChefParser
+class TestDesign(BaseDesignTest):
     TECH = Tech.chef
 
     def test_chef_long_statement(self) -> None:

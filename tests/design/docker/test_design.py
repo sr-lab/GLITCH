@@ -1,9 +1,7 @@
-from tests.design.design_helper import BaseSecurityTest
-from glitch.parsers.docker import DockerParser
+from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
 
-class TestDesign(BaseSecurityTest):
-    PARSER_CLASS = DockerParser
+class TestDesign(BaseDesignTest):
     TECH = Tech.docker
 
     def test_docker_long_statement(self) -> None:

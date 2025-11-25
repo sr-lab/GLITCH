@@ -1,10 +1,8 @@
-from tests.design.design_helper import BaseSecurityTest
-from glitch.parsers.ansible import AnsibleParser
+from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
 
 
-class TestDesign(BaseSecurityTest):
-    PARSER_CLASS = AnsibleParser
+class TestDesign(BaseDesignTest):
     TECH = Tech.ansible
     
     def test_ansible_long_statement(self) -> None:

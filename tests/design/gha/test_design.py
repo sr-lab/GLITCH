@@ -1,10 +1,8 @@
-from tests.design.design_helper import BaseSecurityTest
-from glitch.parsers.gha import GithubActionsParser
+from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
 
 
-class TestDesign(BaseSecurityTest):
-    PARSER_CLASS = GithubActionsParser
+class TestDesign(BaseDesignTest):
     TECH = Tech.gha
 
     # NOTE: This test also verifies if the paths of errors in inner Unit Blocks

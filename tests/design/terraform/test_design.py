@@ -1,10 +1,8 @@
-from tests.design.design_helper import BaseSecurityTest
-from glitch.parsers.terraform import TerraformParser
+from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
 
 
-class TestDesign(BaseSecurityTest):
-    PARSER_CLASS = TerraformParser
+class TestDesign(BaseDesignTest):
     TECH = Tech.terraform
 
     def test_terraform_long_statement(self) -> None:

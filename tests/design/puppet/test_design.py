@@ -1,9 +1,7 @@
-from tests.design.design_helper import BaseSecurityTest
-from glitch.parsers.puppet import PuppetParser
+from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
 
-class TestDesign(BaseSecurityTest):
-    PARSER_CLASS = PuppetParser
+class TestDesign(BaseDesignTest):
     TECH = Tech.puppet
 
     def test_puppet_long_statement(self) -> None:

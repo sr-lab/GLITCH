@@ -1,38 +1,68 @@
 import unittest
 
-from glitch.analysis.design.visitor import DesignVisitor
+from glitch.__main__ import lint
+import csv
+import os
+from typing import List, Dict, Union
+from click.testing import CliRunner
 from glitch.tech import Tech
 
-class BaseSecurityTest(unittest.TestCase):
-
-    PARSER_CLASS = None   # subclass must override
+class BaseDesignTest(unittest.TestCase):
     TECH = None           # subclass must override
 
     def setUp(self) -> None:
         """Skip tests if this is the base class being run directly"""
-        if self.PARSER_CLASS is None or self.TECH is None:
+        if self.TECH is None:
             self.skipTest("BaseSecurityTest is abstract and should not be run directly")
 
+    def read_lint_csv(self, path: str) -> List[Dict[str, Union[str, int, None]]]:
+        """Read the CSV created by lint and return errors as a list of dicts."""
+        errors: List[Dict[str, Union[str, int, None]]] = []
+
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"CSV file not found: {path}")
+
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                errors.append({
+                    "code": row.get("ERROR"),           
+                    "line": int(row.get("LINE", 0)),   
+                    "path": row.get("PATH")           
+                })
+
+        os.remove(path)
+        return errors
+
     def _help_test(self, path: str, type: str, config: str, n_errors: int, codes: list[str], lines: list[int]) -> None:
-        assert self.PARSER_CLASS is not None, "Subclasses must define PARSER_CLASS"
         assert self.TECH is not None, "Subclasses must define TECH"
 
-        parser = self.PARSER_CLASS()
-        inter = parser.parse(path, type, False)
-        analysis = DesignVisitor(self.TECH)
-        analysis.config(config)
-
-        errors = list(
-            filter(
-                lambda e: e.code.startswith("design_")
-                or e.code.startswith("implementation_"),
-                set(analysis.check(inter)),
-            )
+        output_path = "tests/design/dump.csv"
+        runner = CliRunner()
+        result = runner.invoke(
+            lint,
+            [   
+                "--tech", self.TECH.value[0],
+                "--type", type,
+                "--config", config,
+                "--csv",
+                "--smell-types", "design",
+                path,
+                output_path,
+            ]
         )
-        errors = sorted(errors, key=lambda e: (e.path, e.line, e.code))
+        if result.exception:
+            raise result.exception
+
+        errors = self.read_lint_csv(output_path)
+        
+        errors = [e for e in errors if e["code"].startswith("design_") or e["code"].startswith("implementation_")] # type: ignore
+
+        errors = sorted(errors, key=lambda e: (e["path"] or "", e["line"], e["code"] or ""))
+        
         self.assertEqual(len(errors), n_errors)
         for i in range(n_errors):
             if self.TECH == Tech.gha:
-                self.assertEqual(errors[i].path, path)
-            self.assertEqual(errors[i].code, codes[i])
-            self.assertEqual(errors[i].line, lines[i])
+                self.assertEqual(errors[i]["path"], path)
+            self.assertEqual(errors[i]["code"], codes[i])
+            self.assertEqual(errors[i]["line"], lines[i])
