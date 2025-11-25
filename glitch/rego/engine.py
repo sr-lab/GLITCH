@@ -19,10 +19,18 @@ def run_analyses(
         with open(config) as f:
             data = json.load(f)
     
+    if not rego_modules:
+        # No modules to run, return empty errors
+        return []
+    
     result = run_rego(input_data, data, rego_modules)
 
-    if "error" in result:
-        print("Error:", result["error"])
+    if result is None:
+        # Nothing to process
+        return []
+
+    if isinstance(result, dict) and "error" in result:
+        print("Error:", result["error"]) # type: ignore
         return []
 
     errors: List[Error] = []
