@@ -1,4 +1,4 @@
-from glitch.tests.repair.interactive.delta_p.delta_p_puppet_scripts import *
+from tests.repair.interactive.delta_p.delta_p_puppet_scripts import *
 
 
 def test_delta_p_to_filesystems() -> None:

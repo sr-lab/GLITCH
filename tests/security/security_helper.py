@@ -39,8 +39,7 @@ class BaseSecurityTest(unittest.TestCase):
         assert self.PARSER_CLASS is not None, "Subclasses must define PARSER_CLASS"
         assert self.TECH is not None, "Subclasses must define TECH"
         
-        output_path = "glitch/tests/security/dump.csv"
-        path = "glitch/" + path
+        output_path = "tests/security/dump.csv"
         runner = CliRunner()
         result = runner.invoke(
             lint,

@@ -1,6 +1,6 @@
 from glitch.parsers.puppet import PuppetParser
 from glitch.repr.inter import *
-from glitch.tests.parser.test_parser import TestParser
+from tests.parser.test_parser import TestParser
 
 
 class TestPuppetParser(TestParser):
