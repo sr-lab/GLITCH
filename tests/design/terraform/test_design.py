@@ -1,4 +1,4 @@
-from glitch.tests.design.design_helper import BaseSecurityTest
+from tests.design.design_helper import BaseSecurityTest
 from glitch.parsers.terraform import TerraformParser
 from glitch.tech import Tech
 

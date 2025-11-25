@@ -1,4 +1,4 @@
-from glitch.tests.security.security_helper import BaseSecurityTest
+from tests.security.security_helper import BaseSecurityTest
 from glitch.parsers.ansible import AnsibleParser
 from glitch.tech import Tech
 

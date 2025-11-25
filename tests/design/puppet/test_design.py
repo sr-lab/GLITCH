@@ -1,4 +1,4 @@
-from glitch.tests.design.design_helper import BaseSecurityTest
+from design.design_helper import BaseSecurityTest
 from glitch.parsers.puppet import PuppetParser
 from glitch.tech import Tech
 
