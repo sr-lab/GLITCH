@@ -139,9 +139,6 @@ Error.agglomerate_errors()
 
 class ExprChecker(ABC):
     def check(self, expr: Expr) -> bool:
-        # Import here to avoid circular imports
-        from glitch.parsers.chef import AddArgs
-
         if isinstance(expr, String):
             return self.check_string(expr)
         elif isinstance(expr, Integer):

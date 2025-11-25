@@ -1,4 +1,4 @@
-from glitch.parsers.chef import ChefParser, AddArgs
+from glitch.parsers.chef import ChefParser
 from glitch.repr.inter import *
 from tests.parser.test_parser import TestParser
 

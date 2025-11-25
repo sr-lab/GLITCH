@@ -257,6 +257,15 @@ class BlockExpr(Expr):
             "statements": [s.as_dict() for s in self.statements],
         }
 
+class AddArgs(Value):
+    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [v.as_dict() for v in self.value],
+        }
 
 class UnaryOperation(Expr, ABC):
     def __init__(self, info: ElementInfo, expr: Expr) -> None:

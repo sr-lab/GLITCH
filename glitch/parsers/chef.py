@@ -14,18 +14,6 @@ from glitch.exceptions import EXCEPTIONS, throw_exception
 
 ChefValue = Tuple[str, str] | str | int | bool | List["ChefValue"]
 
-
-class AddArgs(Value):
-    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
-        super().__init__(info, value)
-
-    def as_dict(self) -> Dict[str, Any]:
-        return {
-            **super().as_dict(),
-            "value": [v.as_dict() for v in self.value],
-        }
-
-
 def set_loc_from_info(code_element: CodeElement, info: ElementInfo) -> None:
     code_element.line = info.line
     code_element.column = info.column
