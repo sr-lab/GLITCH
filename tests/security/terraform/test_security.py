@@ -1,9 +1,7 @@
 from tests.security.security_helper import BaseSecurityTest
-from glitch.parsers.terraform import TerraformParser
 from glitch.tech import Tech
 
 class TestSecurity(BaseSecurityTest):
-    PARSER_CLASS = TerraformParser
     TECH = Tech.terraform
 
     # testing previous implemented code smells

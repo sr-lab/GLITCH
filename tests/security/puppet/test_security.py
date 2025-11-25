@@ -1,9 +1,7 @@
 from tests.security.security_helper import BaseSecurityTest
-from glitch.parsers.puppet import PuppetParser
 from glitch.tech import Tech
 
 class TestSecurity(BaseSecurityTest):
-    PARSER_CLASS = PuppetParser
     TECH = Tech.puppet
 
     def test_puppet_http(self) -> None:

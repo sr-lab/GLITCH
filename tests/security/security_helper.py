@@ -7,13 +7,11 @@ from typing import List, Dict, Union
 from click.testing import CliRunner
 
 class BaseSecurityTest(unittest.TestCase):
-
-    PARSER_CLASS = None   # subclass must override
     TECH = None           # subclass must override
 
     def setUp(self) -> None:
         """Skip tests if this is the base class being run directly"""
-        if self.PARSER_CLASS is None or self.TECH is None:
+        if self.TECH is None:
             self.skipTest("BaseSecurityTest is abstract and should not be run directly")
 
     def read_lint_csv(self, path: str) -> List[Dict[str, Union[str, int, None]]]:
@@ -36,7 +34,6 @@ class BaseSecurityTest(unittest.TestCase):
         return errors
     
     def _help_test(self, path: str, type: str, n_errors: int, codes: list[str], lines: list[int]) -> None:
-        assert self.PARSER_CLASS is not None, "Subclasses must define PARSER_CLASS"
         assert self.TECH is not None, "Subclasses must define TECH"
         
         output_path = "tests/security/dump.csv"

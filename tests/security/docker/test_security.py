@@ -1,12 +1,10 @@
 import os
 
 from tests.security.security_helper import BaseSecurityTest
-from glitch.parsers.docker import DockerParser
 from glitch.tech import Tech
 
 
 class TestSecurity(BaseSecurityTest):
-    PARSER_CLASS = DockerParser
     TECH = Tech.docker
 
     def tearDown(self) -> None:
