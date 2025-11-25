@@ -27,7 +27,7 @@ class BaseSecurityTest(unittest.TestCase):
             reader = csv.DictReader(f)
             for row in reader:
                 errors.append({
-                    "code": row.get("CODE"),           
+                    "code": row.get("ERROR"),           
                     "line": int(row.get("LINE", 0)),   
                     "path": row.get("PATH")           
                 })
@@ -55,7 +55,8 @@ class BaseSecurityTest(unittest.TestCase):
         if result.exception:
             raise result.exception
 
-        errors = self.read_lint_csv("glitch/tests/security/dump.csv")
+        errors = self.read_lint_csv(output_path)
+        
         errors = [e for e in errors if e["code"].startswith("sec_")] # type: ignore
 
         errors = sorted(errors, key=lambda e: (e["path"] or "", e["line"], e["code"] or ""))
@@ -64,4 +65,3 @@ class BaseSecurityTest(unittest.TestCase):
         for i in range(n_errors):
             self.assertEqual(errors[i]["code"], codes[i])
             self.assertEqual(errors[i]["line"], lines[i])
-        
