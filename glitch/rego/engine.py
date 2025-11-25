@@ -237,6 +237,15 @@ def element_from_dict(data: Dict[str, Any]) -> CodeElement:
             stmt_elem = element_from_dict(s)
             block.add_statement(stmt_elem)
         return block
+    
+    elif ir_type == "AddArgs":
+        value = data.get("value", [])
+        args: List[Expr] = []
+        for v in value:
+            arg_elem = element_from_dict(v)
+            assert isinstance(arg_elem, Expr), f"arg_elem in AddArgs {arg_elem.__class__.__name__} is not an Expr"
+            args.append(arg_elem)
+        return AddArgs(args, info)
 
     elif ir_type == "Comment":
         return Comment(data.get("content", ""), info)
