@@ -114,7 +114,6 @@ def __print_errors(errors: Set[Error], f: TextIO, linter: bool, csv: bool) -> No
         for error in errors_sorted:
             print(Error.ALL_ERRORS[error.code] + "," + error.to_csv(), file=f)
     elif csv:
-        print("PATH,LINE,ERROR,CODE,DESCRIPTION", file=f)
         for error in errors_sorted:
             print(error.to_csv(), file=f)
     else:
@@ -326,6 +325,8 @@ def lint(
         future_to_path[futures[-1]] = p
 
     f = sys.stdout if output is None else open(output, "w")
+    if csv:
+        print("PATH,LINE,ERROR,CODE,DESCRIPTION", file=f)
     for future in tqdm.tqdm(as_completed(futures), total=len(futures), desc=title):
         try:
             new_errors = future.result()
