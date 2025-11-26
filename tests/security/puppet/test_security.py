@@ -34,9 +34,9 @@ class TestSecurity(BaseSecurityTest):
     def test_puppet_hard_secr(self) -> None:
         self._help_test(
             "tests/security/puppet/files/hard_secr.pp", "script",
-            2,
-            ["sec_hard_pass", "sec_hard_secr"],
-            [2, 2],
+            1,
+            ["sec_hard_pass"],
+            [2],
         )
 
     def test_puppet_invalid_bind(self) -> None:

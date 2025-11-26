@@ -5,7 +5,7 @@
     method: POST
     body:
       user: test
-      password: 123
+      password: "abc123"
     body_format: json
     validate_certs: false
   register: login_data

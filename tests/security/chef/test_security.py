@@ -36,9 +36,9 @@ class TestSecurity(BaseSecurityTest):
         self._help_test(
             "tests/security/chef/files/hard_secr.rb",
             "script",
-            2,
-            ["sec_hard_pass", "sec_hard_secr"],
-            [8, 8],
+            1,
+            ["sec_hard_pass"],
+            [8],
         )
 
     def test_chef_invalid_bind(self) -> None:

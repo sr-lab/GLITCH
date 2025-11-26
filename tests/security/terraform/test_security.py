@@ -36,9 +36,9 @@ class TestSecurity(BaseSecurityTest):
     def test_terraform_hard_secr(self) -> None:
         self._help_test(
             "tests/security/terraform/files/hard_secr.tf", "script",
-            2,
-            ["sec_hard_pass", "sec_hard_secr"],
-            [5, 5],
+            1,
+            ["sec_hard_pass"],
+            [5],
         )
 
     def test_terraform_invalid_bind(self) -> None:

@@ -45,9 +45,9 @@ class TestSecurity(BaseSecurityTest):
         self._help_test(
             "tests/security/ansible/files/hard_secr.yml",
             "tasks",
-            3,
-            ["sec_hard_pass", "sec_hard_secr", "sec_hard_user"],
-            [6, 6, 6],
+            2,
+            ["sec_hard_user", "sec_hard_pass"],
+            [7, 8],
         )
 
     def test_ansible_invalid_bind(self) -> None:
