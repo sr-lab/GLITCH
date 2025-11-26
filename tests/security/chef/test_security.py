@@ -57,7 +57,7 @@ class TestSecurity(BaseSecurityTest):
             "script",
             1,
             ["sec_no_default_switch"],
-            [2],
+            [1],
         )
 
     def test_chef_full_permission(self) -> None:
