@@ -354,6 +354,7 @@ class SecurityVisitor(RuleVisitor):
 
     def check_comment(self, c: Comment, file: str) -> List[Error]:
         errors: List[Error] = []
+        """
         lines = c.content.split("\n")
         stop = False
         for word in SecurityVisitor.WRONG_WORDS:
@@ -365,6 +366,7 @@ class SecurityVisitor(RuleVisitor):
                     stop = True
             if stop:
                 break
+        """
         return errors
 
     def check_condition(self, c: ConditionalStatement, file: str) -> List[Error]:
