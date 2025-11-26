@@ -29,7 +29,7 @@ class TestSecurity(BaseSecurityTest):
             "tasks",
             1,
             ["sec_empty_pass"],
-            [6],
+            [8],
         )
 
     def test_ansible_weak_crypt(self) -> None:
