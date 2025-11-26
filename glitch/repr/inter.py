@@ -562,7 +562,14 @@ class AtomicUnit(Block):
         self.attributes.append(a)
 
     def __repr__(self) -> str:
-        return f"{self.name} {self.type}"
+        if isinstance(self.name, String):
+            name_str = self.name.value
+        elif hasattr(self.name, 'code'):
+            name_str = self.name.code
+        else:
+            name_str = str(self.name)
+        
+        return f"{name_str} {self.type}"
 
     def as_dict(self) -> Dict[str, Any]:
         return {
