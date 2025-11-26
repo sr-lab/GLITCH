@@ -19,15 +19,12 @@ check_pair_hard_password(name, value) {
 
 	glitch_lib.traverse_var(value)
 
-	#value.value != ""
-
-	# value.ir_type == "Null"
+	value.value != ""
 } else {
 	# Check for sensitive data with secret value assignments
 	sensitive_item := data.security.sensitive_data[_]
 	glitch_lib.contains(lower(name), lower(sensitive_item))
 
-	# value.ir_type == "Null"
 
 	secret_value := data.security.secret_value_assign[_]
 	glitch_lib.contains(lower(value.value), lower(secret_value))
@@ -46,7 +43,7 @@ Glitch_Analysis[result] {
 
 	# We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
-	glitch_lib.is_ir_type_in(node.value, ["String", "Null", "Array"])
+	glitch_lib.is_ir_type_in(node.value, ["String", "Array"])
 	check_pair_hard_password(node.name, node.value)
 	matched_node := node
 	
@@ -70,7 +67,7 @@ Glitch_Analysis[result] {
 	walk(node, [_, n])
 	n.value.ir_type == "Hash"
 	current_pair := n.value.value[_]
-	glitch_lib.is_ir_type_in(current_pair.value, ["String", "Null", "Array"])
+	glitch_lib.is_ir_type_in(current_pair.value, ["String", "Array"])
 	check_pair_hard_password(current_pair.key.value, current_pair.value)
 	matched_node := current_pair
 	
