@@ -54,7 +54,7 @@ class TestSecurity(BaseSecurityTest):
             "tests/security/puppet/files/missing_default.pp", "script",
             2,
             ["sec_no_default_switch", "sec_no_default_switch"],
-            [2, 7],
+            [1, 6],
         )
 
     def test_puppet_full_perm(self) -> None:
