@@ -54,6 +54,9 @@ check_leaf(node, pattern) {
 } else {
 	node.ir_type == "Boolean"
     check_boolean(node, pattern)
+} else {
+    node.ir_type == "VariableReference"
+    check_string(node, pattern)
 }
 
 #else {
