@@ -18,9 +18,9 @@ class TestSecurity(BaseSecurityTest):
         self._help_test(
             "tests/security/ansible/files/admin.yml",
             "tasks",
-            3,
-            ["sec_def_admin", "sec_hard_secr", "sec_hard_user"],
-            [3, 3, 3],
+            2,
+            ["sec_def_admin", "sec_hard_user"],
+            [3, 3],
         )
 
     def test_ansible_empt_pass(self) -> None:

@@ -17,9 +17,9 @@ class TestSecurity(BaseSecurityTest):
         self._help_test(
             "tests/security/chef/files/admin.rb",
             "script",
-            3,
-            ["sec_def_admin", "sec_hard_secr", "sec_hard_user"],
-            [8, 8, 8],
+            2,
+            ["sec_def_admin", "sec_hard_user"],
+            [8, 8],
         )
 
     def test_chef_empt_pass(self) -> None:

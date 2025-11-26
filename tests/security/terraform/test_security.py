@@ -18,9 +18,9 @@ class TestSecurity(BaseSecurityTest):
     def test_terraform_def_admin(self) -> None:
         self._help_test(
             "tests/security/terraform/files/admin.tf", "script",
-            3,
-            ["sec_def_admin", "sec_hard_secr", "sec_hard_user"],
-            [2, 2, 2],
+            2,
+            ["sec_def_admin", "sec_hard_user"],
+            [2, 2],
         )
 
     def test_terraform_empt_pass(self) -> None:

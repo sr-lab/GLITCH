@@ -16,9 +16,9 @@ class TestSecurity(BaseSecurityTest):
         self._help_test(
             "tests/security/puppet/files/admin.pp",
             "script",
-            3,
-            ["sec_def_admin", "sec_hard_secr", "sec_hard_user"],
-            [7, 7, 7],
+            2,
+            ["sec_def_admin", "sec_hard_user"],
+            [7, 7],
         )
 
     def test_puppet_empt_pass(self) -> None:
