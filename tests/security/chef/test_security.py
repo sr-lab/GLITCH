@@ -43,7 +43,7 @@ class TestSecurity(BaseSecurityTest):
 
     def test_chef_invalid_bind(self) -> None:
         self._help_test(
-            "tests/security/chef/files/inv_bind.rb", "script", 1, ["sec_invalid_bind"], [1]
+            "tests/security/chef/files/inv_bind.rb", "script", 1, ["sec_invalid_bind"], [7]
         )
 
     def test_chef_int_check(self) -> None:

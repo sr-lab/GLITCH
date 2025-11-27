@@ -56,7 +56,7 @@ class TestSecurity(BaseSecurityTest):
             "tasks",
             1,
             ["sec_invalid_bind"],
-            [5],
+            [7],
         )
 
     def test_ansible_int_check(self) -> None:
