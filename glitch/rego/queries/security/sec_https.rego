@@ -4,11 +4,23 @@ import data.glitch_lib
 
 url_regex := "^(http:\\/\\/www\\.|https:\\/\\/www\\.|http:\\/\\/|https:\\/\\/)?(?:[a-zA-Z0-9]+([_\\-\\.][a-zA-Z0-9]+)*\\.[a-zA-Z]{2,}|(?:[0-9]{1,3}\\.){3}[0-9]{1,3})(:[0-9]{1,5})?(\\/.*)?$"
 
+normalize_url(url) = out {
+    # Remove backslash line breaks - use replace instead of regex.replace
+    no_breaks := replace(url, "\\\n", "")
+    
+    # Remove internal quotes
+    no_quotes := replace(no_breaks, "'", "")
+    no_quotes2 := replace(no_quotes, "\"", "")
+    
+    # Collapse whitespace
+    out := replace(no_quotes2, " ", "")
+}
 # In this case, I am assuming that link strings are either in a Sum node or String node
 check_http_without_tls(node) {
     node.ir_type == "Sum"
-	url_is_http(node.code)
-	not url_is_whitelisted(node.code)
+    url := lower(normalize_url(node.code))
+	url_is_http(url)
+	not url_is_whitelisted(url)
 } else {
     node.ir_type == "String"
 	url_is_http(node.value)
