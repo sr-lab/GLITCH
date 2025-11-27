@@ -28,7 +28,7 @@ Glitch_Analysis[result] {
     node := conditions[_]
 
     node.is_top == true
-	node.type == "SWITCH"
+	  node.type == "SWITCH"
 	
     check_missing_default(node)
 

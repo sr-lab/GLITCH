@@ -112,8 +112,8 @@ Glitch_Analysis[result] {
 
 	# We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
-	n.value.ir_type == "Hash"
-	current_pair := n.value.value[_]
+	n.ir_type == "Hash"
+	current_pair := n.value[_]
     glitch_lib.is_ir_type_in(current_pair.value, ["String", "Null", "Array"])
 	check_pair_hard_secr(current_pair.key.value, current_pair.value)
 	matched_node := current_pair

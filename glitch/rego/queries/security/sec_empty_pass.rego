@@ -68,8 +68,8 @@ Glitch_Analysis[result] {
     node := all_nodes[_]
 
 	walk(node, [_, n])
-	n.value.ir_type == "Hash"
-	current_pair := n.value.value[_]
+	n.ir_type == "Hash"
+	current_pair := n.value[_]
 	check_pair_empty_password(current_pair.key.value, current_pair.value)
 	matched_node := current_pair
 	

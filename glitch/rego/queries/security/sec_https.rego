@@ -95,8 +95,8 @@ Glitch_Analysis[result] {
 
     # We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
-    n.value.ir_type == "Hash"
-    current_pair := n.value.value[_]
+    n.ir_type == "Hash"
+    current_pair := n.value[_]
     check_http_without_tls(current_pair.value)
     matched_node := current_pair
 
