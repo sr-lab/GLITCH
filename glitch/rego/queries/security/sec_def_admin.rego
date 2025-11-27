@@ -25,8 +25,7 @@ Glitch_Analysis[result] {
     node := all_nodes[_]
 
 	# We need to use walk since we can have Hashs inside one another
-	walk(node, [_, n])
-    n.value.ir_type != "Hash"
+	glitch_lib.is_ir_type_in(node.value, ["String"])
 	check_def_admin_pair(node.name, node.value)
 	matched_node := node
 
@@ -50,6 +49,7 @@ Glitch_Analysis[result] {
 	walk(node, [_, n])
     n.ir_type == "Hash"
 	current_pair := n.value[_]
+	glitch_lib.is_ir_type_in(current_pair.value, ["String"])
 	check_def_admin_pair(current_pair.key.value, current_pair.value)
 	matched_node := current_pair
 
