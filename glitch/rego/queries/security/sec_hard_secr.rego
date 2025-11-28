@@ -27,7 +27,7 @@ check_pair_hard_secr(name, value) {
 	item := hardcoded[_]
 	hard_coded_pattern := sprintf("[_A-Za-z0-9$/\\.\\[\\]-]*%s\\b", [item])
 	
-	regex.match(hard_coded_pattern, name)
+	regex.match(hard_coded_pattern, lower(name))
 
 	not whitelist_contains(lower(name))	
 
@@ -37,7 +37,7 @@ check_pair_hard_secr(name, value) {
 } else {
     item := lower(data.security.ssh_dirs[_])
 
-    glitch_lib.contains(name, item)
+    glitch_lib.contains(lower(name), item)
 
     pattern := ".*\\/id_rsa.*"
 

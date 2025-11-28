@@ -14,7 +14,7 @@ check_pair_hard_users(name, value) {
 	item := hardcoded[_]
 	hard_coded_pattern := sprintf("[_A-Za-z0-9$/\\.\\[\\]-]*%s\\b", [item])
 	
-	regex.match(hard_coded_pattern, name)
+	regex.match(hard_coded_pattern, lower(name))
 
 	not whitelist_contains(lower(name))	
 
