@@ -57,6 +57,9 @@ check_leaf(node, pattern) {
 } else {
     node.ir_type == "VariableReference"
     check_string(node, pattern)
+} else {
+    node.ir_type == "FunctionCall"
+    check_function_call(node, pattern)
 }
 
 #else {
@@ -77,6 +80,17 @@ check_string(node, pattern) {
 
 check_boolean(node, value) {
 	node.value == value
+}
+
+# We are simply checking the name of the function called
+check_function_call(node, pattern) {
+	# If it is a string, 
+    is_string(pattern)
+    regex.match(pattern, node.name)
+} else {
+	# If it is an array or set
+    not is_string(pattern)
+    contains(node.name, pattern[_])
 }
 
 # Implemented as a substitute for VarChecker, checks if there is at least one VariableReference and passes if there isn't
