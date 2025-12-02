@@ -182,6 +182,8 @@ class PuppetParser(p.Parser):
             )
         elif isinstance(codeelement.value, float):
             return Float(codeelement.value, PuppetParser.__get_info(codeelement, code))
+        elif codeelement.value is None:
+            return Undef(info=PuppetParser.__get_info(codeelement, code))
         else:
             return Null(info=PuppetParser.__get_info(codeelement, code))
 
@@ -562,7 +564,7 @@ class PuppetParser(p.Parser):
                 )
                 assert isinstance(value, Expr)
             else:
-                value = Null()
+                value = Undef()
 
             name = (
                 codeelement.name[1:]

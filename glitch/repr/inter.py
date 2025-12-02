@@ -166,6 +166,14 @@ class Null(Value):
         super().__init__(info, None)
 
 
+class Undef(Value):
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is None:
+            # Let's hope there are no files with 2**32 lines lol
+            info = ElementInfo(2**32, 2**32, 2**32, 2**32, "")
+        super().__init__(info, None)    
+
+
 class Hash(Value):
     def __init__(self, value: Dict[Expr, Expr], info: ElementInfo) -> None:
         super().__init__(info, value)

@@ -146,6 +146,8 @@ class ExprChecker(ABC):
             return self.check_boolean(expr)
         elif isinstance(expr, Null):
             return self.check_null(expr)
+        elif isinstance(expr, Undef):
+            return self.check_undef(expr)
         elif isinstance(expr, Hash):
             return self.check_hash(expr)
         elif isinstance(expr, Array):
@@ -210,6 +212,9 @@ class ExprChecker(ABC):
         return False
 
     def check_conditional_statement(self, expr: ConditionalStatement) -> bool:
+        return False
+
+    def check_undef(self, expr: Undef) -> bool:
         return False
 
 

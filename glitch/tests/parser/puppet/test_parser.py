@@ -221,7 +221,7 @@ class TestPuppetParser(TestParser):
         self._check_value(unit_block.variables[4].value, Boolean, True, 5, 6, 5, 10)
 
         assert unit_block.variables[5].name == "h"
-        self._check_value(unit_block.variables[5].value, Null, None, 6, 6, 6, 11)
+        self._check_value(unit_block.variables[5].value, Undef, None, 6, 6, 6, 11)
 
         assert unit_block.variables[6].name == "a"
         assert isinstance(unit_block.variables[6].value, Array)
