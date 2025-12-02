@@ -96,7 +96,7 @@ To use Rego, you need the appropriate binary for your environment and architectu
 
 You can find these binaries in the Rego Python release.
 
-Or, you can compile your own binary, but this requires to have go installed. To do that, run the following commands on the root:
+Or, you can compile your own binary, but this requires to have ```go``` installed. To do that, run the following commands on the root:
 
 ```
 OS={Operating System}
