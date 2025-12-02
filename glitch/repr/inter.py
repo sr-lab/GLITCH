@@ -202,6 +202,13 @@ class FunctionCall(Expr):
         self.name: str = name
         self.args: List[Expr] = args
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "name": self.name,
+            "args": [a.as_dict() for a in self.args],
+        }
+
 
 class MethodCall(Expr):
     def __init__(

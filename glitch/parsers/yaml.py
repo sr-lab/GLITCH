@@ -161,19 +161,22 @@ class YamlParser(p.Parser, ABC):
         info = deepcopy(base_info)
         code = base_info.code.split("\n")
 
-        info.line = base_info.line + node.lineno - 1
-        info.end_line = base_info.line + (node.end_lineno - node.lineno)
-        code = code[node.lineno - 1 : node.end_lineno]
+        # The lineno and col of the filter start
+        # in the | so we ignore them
+        if not isinstance(node, jinja2.nodes.Filter):
+            info.line = base_info.line + node.lineno - 1
+            info.end_line = base_info.line + (node.end_lineno - node.lineno)
+            code = code[node.lineno - 1 : node.end_lineno]
 
-        info.column = base_info.column + node.col
-        if info.line == info.end_line:
-            info.end_column = base_info.column + node.end_col
-        else:
-            info.end_column = node.end_col + 1
+            info.column = base_info.column + node.col
+            if info.line == info.end_line:
+                info.end_column = base_info.column + node.end_col
+            else:
+                info.end_column = node.end_col + 1
 
-        code[0] = code[0][node.col :]
-        code[-1] = code[-1][: node.end_col]
-        info.code = "\n".join(code)
+            code[-1] = code[-1][: node.end_col]
+            code[0] = code[0][node.col :]
+            info.code = "\n".join(code)
 
         if isinstance(node, jinja2.nodes.TemplateData):
             return String(node.data, info)
@@ -202,7 +205,11 @@ class YamlParser(p.Parser, ABC):
                 return Null()
         elif isinstance(node, jinja2.nodes.Filter):
             assert node.node is not None
-            return self.__parse_jinja_node(node.node, base_info)
+            args: List[Expr] = []
+            args.append(self.__parse_jinja_node(node.node, base_info))
+            for arg in node.args:
+                args.append(self.__parse_jinja_node(arg, base_info))
+            return FunctionCall("filter|" + node.name, args, info)
         elif isinstance(node, jinja2.nodes.List):
             return Array([self.__parse_jinja_node(n, base_info) for n in node.items], base_info)  # type: ignore
         elif isinstance(node, jinja2.nodes.Add):
@@ -214,6 +221,7 @@ class YamlParser(p.Parser, ABC):
         elif isinstance(node, jinja2.nodes.Getattr):
             attr_info = deepcopy(info)
             attr_info.column = info.end_column - len(node.attr)
+            attr_info.code = attr_info.code[-len(node.attr):]
             return Access(
                 info,
                 self.__parse_jinja_node(node.node, base_info),

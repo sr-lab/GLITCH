@@ -369,12 +369,12 @@ class TestAnsibleParser(TestParser):
         assert ir.variables[0].name == "with_filter"
         self._check_value(
             ir.variables[0].value,
-            VariableReference,
-            "var",
+            FunctionCall,
+            "filter|upper",
             2,
-            18,
+            14,
             2,
-            21,
+            33,
         )
 
         assert ir.variables[1].name == "with_string"
@@ -455,3 +455,65 @@ class TestAnsibleParser(TestParser):
         assert ir is not None
         assert len(ir.atomic_units) == 1
         assert ir.atomic_units[0].type == "command"
+
+    def test_ansible_parser_restore_service_set_fact(self) -> None:
+        """
+        Tests set_fact with variable reference and hash filter
+        """
+        p = AnsibleParser()
+        ir = p.parse_file(
+            "tests/parser/ansible/files/restore_service_set_fact.yml",
+            UnitBlockType.tasks,
+        )
+        assert ir is not None
+
+        assert isinstance(ir, UnitBlock)
+        assert ir.type == UnitBlockType.tasks
+        assert len(ir.atomic_units) == 1
+
+        assert isinstance(ir.atomic_units[0], AtomicUnit)
+        self._check_value(
+            ir.atomic_units[0].name, String, "Restore Service | Set variables", 2, 9, 2, 40
+        )
+        assert ir.atomic_units[0].type == "set_fact"
+        assert len(ir.atomic_units[0].attributes) == 1
+
+        assert ir.atomic_units[0].attributes[0].name == "restore_service_username"
+        assert isinstance(ir.atomic_units[0].attributes[0].value, FunctionCall)
+        assert ir.atomic_units[0].attributes[0].value.name == "filter|hash"
+        assert len(ir.atomic_units[0].attributes[0].value.args) == 2
+        assert ir.atomic_units[0].attributes[0].value.code == "\"{{ restore_service.user | hash('sha1') }}\""
+
+        assert isinstance(ir.atomic_units[0].attributes[0].value.args[0], Access)
+        assert ir.atomic_units[0].attributes[0].value.args[0].code == "restore_service.user"
+        self._check_value(
+            ir.atomic_units[0].attributes[0].value.args[0].left,
+            VariableReference,
+            "restore_service",
+            4,
+            35,
+            4,
+            50,
+        )
+        assert ir.atomic_units[0].attributes[0].value.args[0].left.code == "restore_service"
+        self._check_value(
+            ir.atomic_units[0].attributes[0].value.args[0].right,
+            String,
+            "user",
+            4,
+            51,
+            4,
+            55,
+        )
+        assert ir.atomic_units[0].attributes[0].value.args[0].right.code == "user"
+
+        self._check_value(
+            ir.atomic_units[0].attributes[0].value.args[1],
+            String,
+            "sha1",
+            4,
+            63,
+            4,
+            69,
+        )
+        assert ir.atomic_units[0].attributes[0].value.args[1].code == "\'sha1\'"
