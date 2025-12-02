@@ -517,3 +517,52 @@ class TestAnsibleParser(TestParser):
             69,
         )
         assert ir.atomic_units[0].attributes[0].value.args[1].code == "\'sha1\'"
+
+    def test_ansible_parser_valid_vars_list_with_variable_reference(self) -> None:
+        """
+        Tests list with hash containing variable reference with access
+        """
+        p = AnsibleParser()
+        ir = p.parse_file(
+            "tests/parser/ansible/files/valid_vars_list_with_variable_reference.yml",
+            UnitBlockType.vars,
+        )
+        assert ir is not None
+
+        assert isinstance(ir, UnitBlock)
+        assert ir.type == UnitBlockType.vars
+        assert len(ir.variables) == 1
+
+        assert ir.variables[0].name == "postgresql_users"
+        assert isinstance(ir.variables[0].value, Array)
+        assert len(ir.variables[0].value.value) == 1
+
+        assert isinstance(ir.variables[0].value.value[0], Hash)
+        assert len(ir.variables[0].value.value[0].value) == 1
+        assert (
+            String("user", ElementInfo(2, 3, 2, 7, "user"))
+            in ir.variables[0].value.value[0].value
+        )
+
+        user_value = ir.variables[0].value.value[0].value[
+            String("user", ElementInfo(2, 3, 2, 7, "user"))
+        ]
+        assert isinstance(user_value, Access)
+        self._check_value(
+            user_value.left,
+            VariableReference,
+            "idr_omero_readonly_database",
+            2,
+            12,
+            2,
+            39
+        )
+        self._check_value(
+            user_value.right,
+            String,
+            "user",
+            2,
+            40,
+            2,
+            44,
+        )

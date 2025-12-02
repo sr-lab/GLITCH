@@ -405,25 +405,30 @@ class YamlParser(p.Parser, ABC):
         )
         v: Any = value.value
 
-        if isinstance(v, bool) and value.tag.endswith("bool"):
+        if value.tag.endswith("bool"):
             return Boolean(bool(v), info)
-        elif isinstance(v, str) and value.tag.endswith("int"):
+        elif value.tag.endswith("int"):
             return Integer(int(v), info)
-        elif isinstance(v, str) and value.tag.endswith("float"):
+        elif value.tag.endswith("float"):
             return Float(float(v), info)
-        elif isinstance(v, str):
+        elif value.tag.endswith("str"):
             content = self.__get_content(info, code)
             return self.__parse_string("".join(content), info)
-        elif v is None:
+        elif v is None or value.tag.endswith("null"):
             return Null(info)
         elif isinstance(value, MappingNode) and isinstance(v, list):
-            return Hash(
-                {
-                    self.get_value(key, code): self.get_value(val, code)  # type: ignore
-                    for key, val in v  # type: ignore
-                },
-                info,
-            )
+            content = self.__get_content(info, code)
+            # Required for Jinja2 expressions not wrapped in quotes
+            if content.startswith("{{") and content.endswith("}}"):
+                return self.__parse_string("".join(content), info)
+            else:
+                return Hash(
+                    {
+                        self.get_value(key, code): self.get_value(val, code)  # type: ignore
+                        for key, val in v  # type: ignore
+                    },
+                    info,
+                )
         elif isinstance(v, list):
             return Array([self.get_value(val, code) for val in v], info)  # type: ignore
         elif isinstance(v, dict):
@@ -435,4 +440,4 @@ class YamlParser(p.Parser, ABC):
                 info,
             )
         else:
-            raise ValueError(f"Unknown value type: {type(v)}")
+            raise ValueError(f"Unknown value type with tag {value.tag}: {type(v)}")
