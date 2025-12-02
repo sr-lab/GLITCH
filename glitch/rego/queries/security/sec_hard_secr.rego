@@ -31,8 +31,6 @@ check_pair_hard_secr(name, value) {
 
 	not whitelist_contains(lower(name))	
 
-    value.ir_type != "Null"
-
 	glitch_lib.traverse_var(value)
 } else {
     item := lower(data.security.ssh_dirs[_])
@@ -41,15 +39,11 @@ check_pair_hard_secr(name, value) {
 
     pattern := ".*\\/id_rsa.*"
 
-    value.ir_type != "Null"
-
     glitch_lib.traverse(value, pattern)
 } else {
 	# Check for sensitive data with secret value assignments
 	sensitive_item := data.security.sensitive_data[_]
 	glitch_lib.contains(lower(name), lower(sensitive_item))
-	
-    value.ir_type != "Null"
 
 	secret_value := data.security.secret_value_assign[_]
 	glitch_lib.contains(lower(value.value), lower(secret_value))
@@ -68,16 +62,7 @@ check_pair_hard_secr(name, value) {
 
     regex.match(pattern, flat_name)
     value.value != ""
-    value.ir_type != "Null"
     glitch_lib.traverse_var(value)
-}
-
-is_string_or_null(value) {
-    value.ir_type == "String"
-}
-
-is_string_or_null(value) {
-    value.ir_type == "Null"
 }
 
 Glitch_Analysis[result] {
@@ -90,7 +75,7 @@ Glitch_Analysis[result] {
 
 	# We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
-    glitch_lib.is_ir_type_in(node.value, ["String", "Null", "Array"])
+    glitch_lib.is_ir_type_in(node.value, ["String", "Array"])
 	check_pair_hard_secr(node.name, node.value)
 	matched_node := node
 	
@@ -114,7 +99,7 @@ Glitch_Analysis[result] {
 	walk(node, [_, n])
 	n.ir_type == "Hash"
 	current_pair := n.value[_]
-    glitch_lib.is_ir_type_in(current_pair.value, ["String", "Null", "Array"])
+    glitch_lib.is_ir_type_in(current_pair.value, ["String", "Array"])
 	check_pair_hard_secr(current_pair.key.value, current_pair.value)
 	matched_node := current_pair
 	
