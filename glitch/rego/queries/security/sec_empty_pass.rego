@@ -21,7 +21,15 @@ checking_value(value) {
 	possible_value := null_values[_]
 
 	glitch_lib.contains(value.code, possible_value)
-}
+} else {
+	value.ir_type == "Undef"
+
+	value.value == null
+
+	null_values := data.security.null_values
+
+	glitch_lib.contains(value.code, "undef")
+} 
 
 check_pair_empty_password(name, value) {
 	hardcoded := data.security.passwords

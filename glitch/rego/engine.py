@@ -131,6 +131,9 @@ def element_from_dict(data: Dict[str, Any]) -> CodeElement:
 
     elif ir_type == "Null":
         return Null(info)
+    
+    elif ir_type == "Undef":
+        return Undef(info)
 
     elif ir_type == "Array":
         values_data = data.get("value", [])
