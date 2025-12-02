@@ -406,6 +406,12 @@ class YamlParser(p.Parser, ABC):
         v: Any = value.value
 
         if value.tag.endswith("bool"):
+            if isinstance(v, str):
+                v_lower = v.lower()
+                if v_lower in ["true", "yes", "on", "y"]:
+                    return Boolean(True, info)
+                elif v_lower in ["false", "no", "off", "n"]:
+                    return Boolean(False, info)
             return Boolean(bool(v), info)
         elif value.tag.endswith("int"):
             return Integer(int(v), info)
