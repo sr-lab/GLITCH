@@ -62,12 +62,6 @@ check_leaf(node, pattern) {
     check_function_call(node, pattern)
 }
 
-#else {
-    # Add other leaf types here if needed
-    # node.ir_type == "Integer"
-    # check_integer(node, pattern)
-#}
-
 check_string(node, pattern) {
 	# If it is a string, 
     is_string(pattern)

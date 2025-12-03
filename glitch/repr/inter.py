@@ -257,6 +257,7 @@ class BlockExpr(Expr):
             "statements": [s.as_dict() for s in self.statements],
         }
 
+# This is only used in Chef, and should be removed soon
 class AddArgs(Value):
     def __init__(self, value: List[Expr], info: ElementInfo) -> None:
         super().__init__(info, value)

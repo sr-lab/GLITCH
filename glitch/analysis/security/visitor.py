@@ -354,19 +354,6 @@ class SecurityVisitor(RuleVisitor):
 
     def check_comment(self, c: Comment, file: str) -> List[Error]:
         errors: List[Error] = []
-        """
-        lines = c.content.split("\n")
-        stop = False
-        for word in SecurityVisitor.WRONG_WORDS:
-            for line in lines:
-                tokenizer = WordPunctTokenizer()
-                tokens = tokenizer.tokenize(line.lower())  # type: ignore
-                if word in tokens:
-                    errors.append(Error("sec_susp_comm", c, file, line))
-                    stop = True
-            if stop:
-                break
-        """
         return errors
 
     def check_condition(self, c: ConditionalStatement, file: str) -> List[Error]:

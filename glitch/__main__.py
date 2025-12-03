@@ -52,7 +52,6 @@ def __parse_and_check(
         for analysis in analyses:
             errors.update(analysis.check(inter))
     
-        # TODO: transform indent=None once it is working properly
         inputRego = json.dumps(inter.as_dict(), indent=2)
         
         errors.update(run_analyses(inputRego, config_rego, rego_modules))

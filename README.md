@@ -58,6 +58,32 @@ To install GLITCH using Poetry, run:
 poetry install
 ```
 
+### Rego
+
+To do all checks, you need to use Rego. For that, you need the appropriate binary for your environment and architecture.
+
+You can find these binaries in the Rego Python release.
+
+Or, you can compile your own binary, but this requires to have ```go``` installed. To do that, run the following commands on the root folder:
+
+```
+OS={Operating System}
+ARCH=${{ Architecture }}
+# Determine file extension
+if [ "$OS" = "windows" ]; then
+  EXT="dll"
+elif [ "$OS" = "darwin" ]; then
+  EXT="dylib"
+else
+  EXT="so"
+fi
+
+OUTPUT="../bin/librego-$OS-$ARCH.$EXT"
+
+cd glitch/rego/rego_python/src/rego_python/go
+GOOS=$OS GOARCH=$ARCH go build -o "$OUTPUT" -buildmode=c-shared regolib.go
+```
+
 **WARNING**: _For now, the GLITCH VSCode extension does not function if GLITCH 
 is installed via Poetry. Since Poetry uses virtual environments it does not 
 create a binary for GLITCH available in the user's PATH, which is required for 
@@ -90,37 +116,11 @@ poetry shell
 glitch lint --help
 ```
 
-### Rego
-
-To use Rego, you need the appropriate binary for your environment and architecture.
-
-You can find these binaries in the Rego Python release.
-
-Or, you can compile your own binary, but this requires to have ```go``` installed. To do that, run the following commands on the root:
-
-```
-OS={Operating System}
-ARCH=${{ Architecture }}
-# Determine file extension
-if [ "$OS" = "windows" ]; then
-  EXT="dll"
-elif [ "$OS" = "darwin" ]; then
-  EXT="dylib"
-else
-  EXT="so"
-fi
-
-OUTPUT="../bin/librego-$OS-$ARCH.$EXT"
-
-cd glitch/rego/rego_python/src/rego_python/go
-GOOS=$OS GOARCH=$ARCH go build -o "$OUTPUT" -buildmode=c-shared regolib.go
-```
-
 ## Tests
 
-To run the tests for GLITCH go to the folder ```glitch``` and run:
+To run the tests for GLITCH run the following command:
 ```
-python -m unittest discover tests
+poetry run pytest -s
 ```
 
 ## Configs
