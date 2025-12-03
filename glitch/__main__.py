@@ -6,7 +6,7 @@ import click, os, sys
 from pathlib import Path
 from typing import Tuple, List, Set, Optional, TextIO, Dict, Any
 from glitch.analysis.rules import Error, RuleVisitor
-from glitch.helpers import get_smell_types, get_smells
+from glitch.helpers import get_smell_types, get_smells, ini_to_json_dict
 from glitch.parsers.docker import DockerParser
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
@@ -213,12 +213,6 @@ def cli():
     help="The path for a config file. Otherwise the default config is used.",
 )
 @click.option(
-    "--config_rego",
-    type=click.Path(),
-    help="The path for a config file to use in Rego. Otherwise the default config is used.",
-    default="configs/default.json"
-)
-@click.option(
     "--folder-strategy",
     type=click.Choice(["project", "module", "dataset", "include-all"]),
     default="project",
@@ -261,7 +255,6 @@ def lint(
     path: str,
     folder_strategy: str,
     config: str,
-    config_rego: str,
     csv: bool,
     smell_types: Tuple[str, ...],
     output: Optional[str],
@@ -288,21 +281,12 @@ def lint(
     if tech == Tech.terraform:
         config = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
-
-    if config_rego != "configs/default.json" and not os.path.exists(config_rego):
-        raise click.BadOptionUsage(
-            "config_rego", f"Invalid value for 'config': Path '{config_rego}' does not exist."
-        )
-    elif os.path.isdir(config_rego):
-        raise click.BadOptionUsage(
-            "config_rego", f"Invalid value for 'config_rego': Path '{config_rego}' should be a file."
-        )
-    elif config_rego == "configs/default.json":
-        config_rego = resource_filename("glitch", "configs/default.json")
     
     if smell_types == ():
         smell_types = get_smell_types()
 
+    config_rego = ini_to_json_dict(config)
+    
     temp = __filter_analysis(smell_types, config, tech)
     rego_modules: Dict[str,str] = temp[0] # type: ignore
     analyses: List[RuleVisitor] = temp[1]

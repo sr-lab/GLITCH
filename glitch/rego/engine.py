@@ -9,15 +9,15 @@ from glitch.analysis.rules import Error
 
 def run_analyses(
     input: str, 
-    config: str,
+    config: Dict[str, Dict[str, List[str]]],
     rego_modules: Dict[str, str],
 ) -> List[Error]:
     input_data = json.loads(input)
 
-    data: Dict[str, Any] = {}
-    if config and os.path.exists(config):
-        with open(config) as f:
-            data = json.load(f)
+    data: Dict[str, Any] = config
+    #if config and os.path.exists(config):
+    #    with open(config) as f:
+    #        data = json.load(f)
     
     if not rego_modules:
         # No modules to run, return empty errors
