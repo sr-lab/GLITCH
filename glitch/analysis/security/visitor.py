@@ -37,6 +37,58 @@ class SecurityVisitor(RuleVisitor):
 
     def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
+        
+        from glitch.analysis.security.admin_by_default import AdminByDefault
+        from glitch.analysis.security.hard_secr import HardcodedSecret
+        from glitch.analysis.security.invalid_bind import InvalidBind
+
+        SECURITY_CHECKER_ERRORS: Dict[Type[SecuritySmellChecker], List[str]] = {
+            AdminByDefault: ["sec_def_admin"],
+            HardcodedSecret: ["sec_hard_secr", "sec_hard_pass", "sec_empty_pass", "sec_hard_user"],
+            InvalidBind: ["sec_invalid_bind"]
+        }
+
+        from glitch.analysis.terraform.access_control import TerraformAccessControl
+        from glitch.analysis.terraform.attached_resource import TerraformAttachedResource
+        from glitch.analysis.terraform.authentication import TerraformAuthentication
+        from glitch.analysis.terraform.dns_policy import TerraformDnsWithoutDnssec
+        from glitch.analysis.terraform.firewall_misconfig import TerraformFirewallMisconfig
+        from glitch.analysis.terraform.integrity_policy import TerraformIntegrityPolicy
+        from glitch.analysis.terraform.key_management import TerraformKeyManagement
+        from glitch.analysis.terraform.logging import TerraformLogging
+        from glitch.analysis.terraform.missing_encryption import TerraformMissingEncryption
+        from glitch.analysis.terraform.naming import TerraformNaming
+        from glitch.analysis.terraform.network_policy import TerraformNetworkSecurityRules
+        from glitch.analysis.terraform.permission_iam_policies import TerraformPermissionIAMPolicies
+        from glitch.analysis.terraform.public_ip import TerraformPublicIp
+        from glitch.analysis.terraform.replication import TerraformReplication
+        from glitch.analysis.terraform.sensitive_iam_action import TerraformSensitiveIAMAction
+        from glitch.analysis.terraform.ssl_tls_policy import TerraformSslTlsPolicy
+        from glitch.analysis.terraform.threats_detection import TerraformThreatsDetection
+        from glitch.analysis.terraform.versioning import TerraformVersioning
+        from glitch.analysis.terraform.weak_password_key_policy import TerraformWeakPasswordKeyPolicy
+
+        TERRAFORM_CHECKER_ERRORS: Dict[Type[TerraformSmellChecker], str] = {
+            TerraformAccessControl: "sec_insecure_access_control",
+            TerraformAttachedResource: "sec_attached_resource",
+            TerraformAuthentication: "sec_authentication",
+            TerraformDnsWithoutDnssec: "sec_dnssec",
+            TerraformFirewallMisconfig: "sec_firewall_misconfig",
+            TerraformIntegrityPolicy: "sec_integrity_policy",
+            TerraformKeyManagement: "sec_key_management",
+            TerraformLogging: "sec_logging",
+            TerraformMissingEncryption: "sec_missing_encryption",
+            TerraformNaming: "sec_naming",
+            TerraformNetworkSecurityRules: "sec_network_security_rules",
+            TerraformPermissionIAMPolicies: "sec_permission_iam_policies",
+            TerraformPublicIp: "sec_public_ip",
+            TerraformReplication: "sec_replication",
+            TerraformSensitiveIAMAction: "sec_sensitive_iam_action",
+            TerraformSslTlsPolicy: "sec_ssl_tls_policy",
+            TerraformThreatsDetection: "sec_threats_detection_alerts",
+            TerraformVersioning: "sec_versioning",
+            TerraformWeakPasswordKeyPolicy: "sec_weak_password_key_policy"
+        }
 
         self.checkers: List[SmellChecker] = []
 
@@ -494,55 +546,3 @@ class SecurityVisitor(RuleVisitor):
 # Imports all the classes defined in the __init__.py file
 from glitch.analysis.terraform import *
 from glitch.analysis.security import *
-
-from glitch.analysis.security.admin_by_default import AdminByDefault
-from glitch.analysis.security.hard_secr import HardcodedSecret
-from glitch.analysis.security.invalid_bind import InvalidBind
-
-SECURITY_CHECKER_ERRORS: Dict[Type[SecuritySmellChecker], List[str]] = {
-    AdminByDefault: ["sec_def_admin"],
-    HardcodedSecret: ["sec_hard_secr", "sec_hard_pass", "sec_empty_pass", "sec_hard_user"],
-    InvalidBind: ["sec_invalid_bind"]
-}
-
-from glitch.analysis.terraform.access_control import TerraformAccessControl
-from glitch.analysis.terraform.attached_resource import TerraformAttachedResource
-from glitch.analysis.terraform.authentication import TerraformAuthentication
-from glitch.analysis.terraform.dns_policy import TerraformDnsWithoutDnssec
-from glitch.analysis.terraform.firewall_misconfig import TerraformFirewallMisconfig
-from glitch.analysis.terraform.integrity_policy import TerraformIntegrityPolicy
-from glitch.analysis.terraform.key_management import TerraformKeyManagement
-from glitch.analysis.terraform.logging import TerraformLogging
-from glitch.analysis.terraform.missing_encryption import TerraformMissingEncryption
-from glitch.analysis.terraform.naming import TerraformNaming
-from glitch.analysis.terraform.network_policy import TerraformNetworkSecurityRules
-from glitch.analysis.terraform.permission_iam_policies import TerraformPermissionIAMPolicies
-from glitch.analysis.terraform.public_ip import TerraformPublicIp
-from glitch.analysis.terraform.replication import TerraformReplication
-from glitch.analysis.terraform.sensitive_iam_action import TerraformSensitiveIAMAction
-from glitch.analysis.terraform.ssl_tls_policy import TerraformSslTlsPolicy
-from glitch.analysis.terraform.threats_detection import TerraformThreatsDetection
-from glitch.analysis.terraform.versioning import TerraformVersioning
-from glitch.analysis.terraform.weak_password_key_policy import TerraformWeakPasswordKeyPolicy
-
-TERRAFORM_CHECKER_ERRORS: Dict[Type[TerraformSmellChecker], str] = {
-    TerraformAccessControl: "sec_insecure_access_control",
-    TerraformAttachedResource: "sec_attached_resource",
-    TerraformAuthentication: "sec_authentication",
-    TerraformDnsWithoutDnssec: "sec_dnssec",
-    TerraformFirewallMisconfig: "sec_firewall_misconfig",
-    TerraformIntegrityPolicy: "sec_integrity_policy",
-    TerraformKeyManagement: "sec_key_management",
-    TerraformLogging: "sec_logging",
-    TerraformMissingEncryption: "sec_missing_encryption",
-    TerraformNaming: "sec_naming",
-    TerraformNetworkSecurityRules: "sec_network_security_rules",
-    TerraformPermissionIAMPolicies: "sec_permission_iam_policies",
-    TerraformPublicIp: "sec_public_ip",
-    TerraformReplication: "sec_replication",
-    TerraformSensitiveIAMAction: "sec_sensitive_iam_action",
-    TerraformSslTlsPolicy: "sec_ssl_tls_policy",
-    TerraformThreatsDetection: "sec_threats_detection_alerts",
-    TerraformVersioning: "sec_versioning",
-    TerraformWeakPasswordKeyPolicy: "sec_weak_password_key_policy"
-}

@@ -11,6 +11,31 @@ from glitch.analysis.design.smell_checker import DesignSmellChecker
 class DesignVisitor(RuleVisitor):
     def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
+        
+        from glitch.analysis.design.unguarded_variable import UnguardedVariable
+        from glitch.analysis.design.duplicate_block import DuplicateBlock
+        from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
+        from glitch.analysis.design.improper_alignment import ImproperAlignmentTabs, ImproperAlignment, PuppetImproperAlignment
+        from glitch.analysis.design.long_resource import LongResource
+        from glitch.analysis.design.long_statement import LongStatement
+        from glitch.analysis.design.misplaced_attribute import ChefMisplacedAttribute, PuppetMisplacedAttribute
+        from glitch.analysis.design.multifaceted_abstraction import MultifacetedAbstraction
+        from glitch.analysis.design.too_many_variables import TooManyVariables
+
+        DESIGN_CHECKER_ERRORS: Dict[Type[DesignSmellChecker], str] = {
+            UnguardedVariable: "implementation_unguarded_variable",
+            DuplicateBlock: "design_duplicate_block",
+            ImperativeAbstraction: "design_imperative_abstraction",
+            ImproperAlignmentTabs: "implementation_improper_alignment",
+            ImproperAlignment: "implementation_improper_alignment",
+            PuppetImproperAlignment: "implementation_improper_alignment",
+            LongResource: "design_long_resource",
+            LongStatement: "implementation_long_statement",
+            ChefMisplacedAttribute: "design_misplaced_attribute",
+            PuppetMisplacedAttribute: "design_misplaced_attribute",
+            MultifacetedAbstraction: "design_multifaceted_abstraction",
+            TooManyVariables: "implementation_too_many_variables"
+        }
 
         self.checkers: List[DesignSmellChecker] = []
         for child in DesignSmellChecker.__subclasses__():
@@ -149,28 +174,3 @@ class DesignVisitor(RuleVisitor):
 # NOTE: in the end of the file to avoid circular import
 # Imports all the classes defined in the __init__.py file
 from glitch.analysis.design import *
-
-from glitch.analysis.design.unguarded_variable import UnguardedVariable
-from glitch.analysis.design.duplicate_block import DuplicateBlock
-from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
-from glitch.analysis.design.improper_alignment import ImproperAlignmentTabs, ImproperAlignment, PuppetImproperAlignment
-from glitch.analysis.design.long_resource import LongResource
-from glitch.analysis.design.long_statement import LongStatement
-from glitch.analysis.design.misplaced_attribute import ChefMisplacedAttribute, PuppetMisplacedAttribute
-from glitch.analysis.design.multifaceted_abstraction import MultifacetedAbstraction
-from glitch.analysis.design.too_many_variables import TooManyVariables
-
-DESIGN_CHECKER_ERRORS: Dict[Type[DesignSmellChecker], str] = {
-    UnguardedVariable: "implementation_unguarded_variable",
-    DuplicateBlock: "design_duplicate_block",
-    ImperativeAbstraction: "design_imperative_abstraction",
-    ImproperAlignmentTabs: "implementation_improper_alignment",
-    ImproperAlignment: "implementation_improper_alignment",
-    PuppetImproperAlignment: "implementation_improper_alignment",
-    LongResource: "design_long_resource",
-    LongStatement: "implementation_long_statement",
-    ChefMisplacedAttribute: "design_misplaced_attribute",
-    PuppetMisplacedAttribute: "design_misplaced_attribute",
-    MultifacetedAbstraction: "design_multifaceted_abstraction",
-    TooManyVariables: "implementation_too_many_variables"
-}
