@@ -4,7 +4,7 @@ from glitch.analysis.design.smell_checker import DesignSmellChecker
 from glitch.repr.inter import *
 
 
-class UnguardedVariable(DesignSmellChecker):
+class DuplicateBlock(DesignSmellChecker):
     def __get_line(self, i: int, lines: List[Tuple[int, int]]):
         for j, line in lines:
             if i < j:

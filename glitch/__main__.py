@@ -6,7 +6,7 @@ import click, os, sys
 from pathlib import Path
 from typing import Tuple, List, Set, Optional, TextIO, Dict, Any
 from glitch.analysis.rules import Error, RuleVisitor
-from glitch.helpers import get_smell_types, get_smells
+from glitch.helpers import get_smell_types, get_smells, ini_to_json_dict
 from glitch.parsers.docker import DockerParser
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
@@ -23,6 +23,7 @@ from glitch.repair.interactive.main import run_infrafix
 from pkg_resources import resource_filename
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
+from glitch.rego.engine import load_rego_from_path, run_analyses
 
 
 # NOTE: These are necessary in order for python to load the visitors.
@@ -38,20 +39,62 @@ def __parse_and_check(
     parser: Parser,
     analyses: List[RuleVisitor],
     stats: FileStats,
+    config_rego: str,
+    rego_modules: Dict[str,str]
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
     # Avoids problems with multiple threads (and possibly multiple files)
     # sharing the same object
+    
     analyses = deepcopy(analyses)
-
     if inter != None:
         for analysis in analyses:
             errors.update(analysis.check(inter))
+    
+        inputRego = json.dumps(inter.as_dict(), indent=2)
+        
+        errors.update(run_analyses(inputRego, config_rego, rego_modules))
+        
         stats.compute(inter)
 
     return errors
 
+def __filter_analysis(
+    smell_types: Tuple[str, ...],
+    config: str,
+    tech: Tech
+) -> Tuple[Dict[str,str], List[RuleVisitor]]:
+    rego_modules: Dict[str,str] = {}
+    python_analyses: List[RuleVisitor] = []
+
+    if not os.path.exists("./glitch/rego/queries/library/glitch_lib.rego"):
+        raise FileNotFoundError("The rego query library does not exist.")
+    load_rego_from_path("./glitch/rego/queries/library/glitch_lib.rego", rego_modules)
+
+    for smell_type in smell_types:
+        smells: List[str] = get_smells([smell_type], tech)
+        fallback: Set[str] = set()
+
+        for smell in smells:
+            if os.path.exists(f"./glitch/rego/queries/{smell_type}/{smell}.rego"):
+                load_rego_from_path(f"./glitch/rego/queries/{smell_type}/{smell}.rego", rego_modules)
+            else:
+                fallback.add(smell)
+    
+        if len(fallback) > 0:
+            match smell_type:
+                case "design":
+                    visitor = DesignVisitor(tech, fallback)
+                case "security":
+                    visitor = SecurityVisitor(tech, fallback)
+                case _:
+                    raise ValueError(f"Invalid smell type: {smell_type}")
+
+            visitor.config(config)
+            python_analyses.append(visitor)
+
+    return rego_modules, python_analyses
 
 def __get_tech(tech: str) -> Tech:
     for t in Tech:
@@ -217,7 +260,7 @@ def lint(
     output: Optional[str],
     table_format: str,
     linter: bool,
-    n_workers: int,
+    n_workers: int
 ):
     tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
@@ -238,17 +281,15 @@ def lint(
     if tech == Tech.terraform:
         config = resource_filename("glitch", "configs/terraform.ini")
     file_stats = FileStats()
-
+    
     if smell_types == ():
         smell_types = get_smell_types()
 
-    analyses: List[RuleVisitor] = []
-    rules = RuleVisitor.__subclasses__()
-    for r in rules:
-        if smell_types == () or r.get_name() in smell_types:
-            analysis = r(tech)
-            analysis.config(config)
-            analyses.append(analysis)
+    config_rego = ini_to_json_dict(config)
+    
+    temp = __filter_analysis(smell_types, config, tech)
+    rego_modules: Dict[str,str] = temp[0] # type: ignore
+    analyses: List[RuleVisitor] = temp[1]
 
     errors: List[Error] = []
     paths: Set[str]
@@ -261,12 +302,14 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats
+                __parse_and_check, type, p, module, parser, analyses, file_stats, config_rego, rego_modules
             )
         )
         future_to_path[futures[-1]] = p
 
     f = sys.stdout if output is None else open(output, "w")
+    if csv:
+        print("PATH,LINE,ERROR,CODE,DESCRIPTION", file=f)
     for future in tqdm.tqdm(as_completed(futures), total=len(futures), desc=title):
         try:
             new_errors = future.result()

@@ -1,7 +1,7 @@
-from typing import List, Tuple, Iterable
+from typing import List, Tuple, Iterable, Dict
 from glitch.tech import Tech
 from glitch.analysis.rules import Error
-
+import configparser
 
 def get_smell_types() -> Tuple[str, ...]:
     """Get list of smell types.
@@ -113,3 +113,38 @@ def compute_LPS_array(pat: str, M: int, lps: List[int]) -> None:
             else:
                 lps[i] = 0
                 i += 1
+
+def ini_to_json_dict(config_path: str) -> Dict[str, Dict[str, List[str]]]:
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    result: Dict[str, Dict[str, List[str]]] = {}
+
+    for section in config.sections():
+        section_data = {}
+
+        for key, value in config.items(section):
+            parsed = value.strip()
+
+            # Case: empty list
+            if parsed == "":
+                section_data[key] = []
+                continue
+
+            # Case: list inside brackets: ["a", "b"]
+            if parsed.startswith("[") and parsed.endswith("]"):
+                inner = parsed[1:-1].strip()
+                if inner == "":
+                    section_data[key] = []
+                else:
+                    section_data[key] = [
+                        item.strip().strip('"').strip("'")
+                        for item in inner.split(",")
+                    ]
+            else:
+                # Case: plain value, keep as string
+                section_data[key] = parsed
+
+        result[section] = section_data
+
+    return result

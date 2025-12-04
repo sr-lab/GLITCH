@@ -5,16 +5,45 @@ from cmath import inf
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.tech import Tech
 from glitch.repr.inter import *
-from typing import List
+from typing import List, Type
 from glitch.analysis.design.smell_checker import DesignSmellChecker
 
-
 class DesignVisitor(RuleVisitor):
-    def __init__(self, tech: Tech) -> None:
+    def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
+        
+        from glitch.analysis.design.unguarded_variable import UnguardedVariable
+        from glitch.analysis.design.duplicate_block import DuplicateBlock
+        from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
+        from glitch.analysis.design.improper_alignment import ImproperAlignmentTabs, ImproperAlignment, PuppetImproperAlignment
+        from glitch.analysis.design.long_resource import LongResource
+        from glitch.analysis.design.long_statement import LongStatement
+        from glitch.analysis.design.misplaced_attribute import ChefMisplacedAttribute, PuppetMisplacedAttribute
+        from glitch.analysis.design.multifaceted_abstraction import MultifacetedAbstraction
+        from glitch.analysis.design.too_many_variables import TooManyVariables
+
+        DESIGN_CHECKER_ERRORS: Dict[Type[DesignSmellChecker], str] = {
+            UnguardedVariable: "implementation_unguarded_variable",
+            DuplicateBlock: "design_duplicate_block",
+            ImperativeAbstraction: "design_imperative_abstraction",
+            ImproperAlignmentTabs: "implementation_improper_alignment",
+            ImproperAlignment: "implementation_improper_alignment",
+            PuppetImproperAlignment: "implementation_improper_alignment",
+            LongResource: "design_long_resource",
+            LongStatement: "implementation_long_statement",
+            ChefMisplacedAttribute: "design_misplaced_attribute",
+            PuppetMisplacedAttribute: "design_misplaced_attribute",
+            MultifacetedAbstraction: "design_multifaceted_abstraction",
+            TooManyVariables: "implementation_too_many_variables"
+        }
 
         self.checkers: List[DesignSmellChecker] = []
         for child in DesignSmellChecker.__subclasses__():
+            error_name = DESIGN_CHECKER_ERRORS.get(child)
+
+            if error_name is not None and error_name not in fallback:
+                continue
+            
             if (child.tech() is None and tech not in child.ignore_techs()) or (
                 child.tech() is not None and child.tech() == tech
             ):

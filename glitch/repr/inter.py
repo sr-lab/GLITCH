@@ -209,6 +209,13 @@ class FunctionCall(Expr):
         super().__init__(info)
         self.name: str = name
         self.args: List[Expr] = args
+    
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "name": self.name,
+            "args": [a.as_dict() for a in self.args],
+        }
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -250,11 +257,27 @@ class BlockExpr(Expr):
             "statements": [s.as_dict() for s in self.statements],
         }
 
+# This is only used in Chef, and should be removed soon
+class AddArgs(Value):
+    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [v.as_dict() for v in self.value],
+        }
 
 class UnaryOperation(Expr, ABC):
     def __init__(self, info: ElementInfo, expr: Expr) -> None:
         super().__init__(info)
         self.expr = expr
+        
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "expr": self.expr.as_dict(),
+        }
 
 
 class Not(UnaryOperation):
@@ -459,9 +482,12 @@ class ConditionalStatement(Block, Expr):
         condition: Expr,
         type: "ConditionalStatement.ConditionType",
         is_default: bool = False,
-        is_top: bool = False
+        is_top: bool = False,
+        info: ElementInfo | None = None
     ) -> None:
         Block.__init__(self)
+        if info is not None:
+            Expr.__init__(self, info)
         self.condition: Expr = condition
         self.else_statement: ConditionalStatement | None = None
         self.is_default = is_default
@@ -485,8 +511,8 @@ class ConditionalStatement(Block, Expr):
 
 
 class Comment(CodeElement):
-    def __init__(self, content: str) -> None:
-        super().__init__()
+    def __init__(self, content: str, info: ElementInfo | None = None) -> None:
+        super().__init__(info)
         self.content: str = content
 
     def __repr__(self) -> str:
@@ -537,7 +563,14 @@ class AtomicUnit(Block):
         self.attributes.append(a)
 
     def __repr__(self) -> str:
-        return f"{self.name} {self.type}"
+        if isinstance(self.name, String):
+            name_str = self.name.value
+        elif hasattr(self.name, 'code'):
+            name_str = self.name.code
+        else:
+            name_str = str(self.name)
+        
+        return f"{name_str} {self.type}"
 
     def as_dict(self) -> Dict[str, Any]:
         return {
