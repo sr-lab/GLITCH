@@ -4,7 +4,7 @@ from re import Pattern
 from typing import Optional, List, Callable
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error, SmellChecker
-from glitch.analysis.expr_checkers.string_checker import StringChecker
+from glitch.analysis.checkers.string_checker import StringChecker
 
 
 class TerraformSmellChecker(SmellChecker):

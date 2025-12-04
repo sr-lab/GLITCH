@@ -3,6 +3,8 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import List, Union, Dict, Any, ClassVar
 
+UNDEFINED_POSITION = -33550336
+
 
 @dataclass
 class ElementInfo:
@@ -45,10 +47,10 @@ class CodeElement(ABC):
             self.end_column: int = info.end_column
             self.code: str = info.code
         else:
-            self.line: int = -33550336
-            self.column: int = -33550336
-            self.end_line: int = -33550336
-            self.end_column: int = -33550336
+            self.line: int = UNDEFINED_POSITION
+            self.column: int = UNDEFINED_POSITION
+            self.end_line: int = UNDEFINED_POSITION
+            self.end_column: int = UNDEFINED_POSITION
             self.code: str = ""
 
     def __hash__(self) -> int:
@@ -209,13 +211,6 @@ class FunctionCall(Expr):
         super().__init__(info)
         self.name: str = name
         self.args: List[Expr] = args
-    
-    def as_dict(self) -> Dict[str, Any]:
-        return {
-            **super().as_dict(),
-            "name": self.name,
-            "args": [a.as_dict() for a in self.args],
-        }
 
     def as_dict(self) -> Dict[str, Any]:
         return {

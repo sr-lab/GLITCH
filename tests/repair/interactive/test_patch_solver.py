@@ -2394,7 +2394,7 @@ end
         result = """
 app_dir = '/var/www/customers/public_html'
 file "#{app_dir}/index.html" do
-  owner   "test"
+  owner   'test'
   group   lazy { default_apache_group }
 end
 """

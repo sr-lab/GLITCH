@@ -3,8 +3,8 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
-from glitch.analysis.expr_checkers.var_checker import VariableChecker
-from glitch.analysis.expr_checkers.string_checker import StringChecker
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.analysis.checkers.string_checker import StringChecker
 
 
 class TerraformVersioning(TerraformSmellChecker):

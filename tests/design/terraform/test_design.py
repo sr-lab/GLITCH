@@ -1,5 +1,6 @@
 from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
+from glitch.repr.inter import UNDEFINED_POSITION
 
 
 class TestDesign(BaseDesignTest):
@@ -60,5 +61,5 @@ class TestDesign(BaseDesignTest):
             [
                 "implementation_too_many_variables",
             ],
-            [-1],
+            [UNDEFINED_POSITION],
         )

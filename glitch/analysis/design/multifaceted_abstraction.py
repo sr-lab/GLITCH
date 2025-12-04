@@ -3,7 +3,7 @@ from glitch.analysis.rules import Error
 from glitch.analysis.design.smell_checker import DesignSmellChecker
 from glitch.analysis.design.visitor import DesignVisitor
 from glitch.repr.inter import *
-from glitch.analysis.expr_checkers.string_checker import StringChecker
+from glitch.analysis.checkers.string_checker import StringChecker
 
 
 class MultifacetedAbstraction(DesignSmellChecker):

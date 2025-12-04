@@ -1,4 +1,4 @@
-from glitch.analysis.expr_checkers.transverse_checker import TransverseChecker
+from glitch.analysis.checkers.transverse_checker import TransverseChecker
 from typing import Callable
 
 from glitch.repr.inter import String

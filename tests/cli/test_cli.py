@@ -63,23 +63,23 @@ def test_cli_lint():
 
         assert len(rows) == 3
         assert rows[0] == [
-            "tests/cli/resources/chef_project/test.rb",
-            "8",
-            "sec_def_admin",
-            "user 'root'",
-            "-",
+            "PATH",
+            "LINE",
+            "ERROR",
+            "CODE",
+            "DESCRIPTION",
         ]
         assert rows[1] == [
             "tests/cli/resources/chef_project/test.rb",
             "8",
-            "sec_hard_secr",
+            "sec_def_admin",
             "user 'root'",
-            "-",
+            "Admin by default - Developers should always try to give the least privileges possible. Admin privileges may indicate a security problem. (CWE-250)",
         ]
         assert rows[2] == [
             "tests/cli/resources/chef_project/test.rb",
             "8",
             "sec_hard_user",
             "user 'root'",
-            "-",
+            "Hard-coded user - Developers should not reveal sensitive information in the source code. (CWE-798)",
         ]

@@ -3,7 +3,7 @@ from glitch.analysis.rules import Error
 from glitch.analysis.security.smell_checker import SecuritySmellChecker
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.repr.inter import *
-from glitch.analysis.expr_checkers.string_checker import StringChecker
+from glitch.analysis.checkers.string_checker import StringChecker
 from typing import List
 
 

@@ -39,8 +39,8 @@ class TestGithubActionsParser(TestParser):
         assert isinstance(push, Hash)
         assert push.line == 4
         assert push.column == 5
-        assert push.end_line == 6
-        assert push.end_column == 3
+        assert push.end_line == 5
+        assert push.end_column == 13
         assert len(push.value) == 1
 
         assert String("branches", ElementInfo(4, 5, 4, 13, "branches")) in push.value
@@ -59,8 +59,8 @@ class TestGithubActionsParser(TestParser):
         assert isinstance(pull, Hash)
         assert pull.line == 7
         assert pull.column == 5
-        assert pull.end_line == 10
-        assert pull.end_column == 1
+        assert pull.end_line == 8
+        assert pull.end_column == 13
         assert len(pull.value) == 1
 
         assert String("branches", ElementInfo(7, 5, 7, 13, "branches")) in pull.value

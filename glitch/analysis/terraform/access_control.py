@@ -3,7 +3,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
-from glitch.analysis.expr_checkers.string_checker import StringChecker
+from glitch.analysis.checkers.string_checker import StringChecker
 from glitch.repr.inter import *
 
 

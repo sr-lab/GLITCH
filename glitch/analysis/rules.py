@@ -2,6 +2,7 @@ from typing import Dict, Optional, Union, List, Any
 from abc import ABC, abstractmethod
 from glitch.tech import Tech
 from glitch.repr.inter import *
+from glitch.repr.inter import UNDEFINED_POSITION
 
 ErrorValue = Dict[Tech | str, Dict[str, str] | str]
 ErrorDict = Dict[str, ErrorValue]
@@ -111,11 +112,17 @@ class Error:
         with open(self.path) as f:
             line = (
                 f.readlines()[self.line - 1].strip()
-                if self.line != -1
+                if self.line != UNDEFINED_POSITION
                 else self.repr.split("\n")[0]
             )
             if self.opt_msg:
                 line += f"\n-> {self.opt_msg}"
+                
+            if self.line == UNDEFINED_POSITION:
+                return (
+                    f"{self.path}\nIssue: {Error.ALL_ERRORS[self.code]}\n"
+                    + f"{line}\n"
+                )
             return (
                 f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n"
                 + f"{line}\n"
@@ -137,45 +144,57 @@ class Error:
 Error.agglomerate_errors()
 
 
-class ExprChecker(ABC):
-    def check(self, expr: Expr) -> bool:
-        if isinstance(expr, String):
-            return self.check_string(expr)
-        elif isinstance(expr, Integer):
-            return self.check_integer(expr)
-        elif isinstance(expr, Float):
-            return self.check_float(expr)
-        elif isinstance(expr, Complex):
-            return self.check_complex(expr)
-        elif isinstance(expr, Boolean):
-            return self.check_boolean(expr)
-        elif isinstance(expr, Null):
-            return self.check_null(expr)
-        elif isinstance(expr, Undef):
-            return self.check_undef(expr)
-        elif isinstance(expr, Hash):
-            return self.check_hash(expr)
-        elif isinstance(expr, Array):
-            return self.check_array(expr)
-        elif isinstance(expr, VariableReference):
-            return self.check_var_reference(expr)
-        elif isinstance(expr, FunctionCall):
-            return self.check_function_call(expr)
-        elif isinstance(expr, MethodCall):
-            return self.check_method_call(expr)
-        elif isinstance(expr, UnaryOperation):
-            return self.check_unary_operation(expr)
-        elif isinstance(expr, BinaryOperation):
-            return self.check_binary_operation(expr)
-        elif isinstance(expr, ConditionalStatement):
-            return self.check_conditional_statement(expr)
-        elif isinstance(expr, AddArgs):
-            for e in expr.value:
+class Checker(ABC):
+    def check(self, element: CodeElement) -> bool:
+        if isinstance(element, String):
+            return self.check_string(element)
+        elif isinstance(element, Integer):
+            return self.check_integer(element)
+        elif isinstance(element, Float):
+            return self.check_float(element)
+        elif isinstance(element, Complex):
+            return self.check_complex(element)
+        elif isinstance(element, Boolean):
+            return self.check_boolean(element)
+        elif isinstance(element, Null):
+            return self.check_null(element)
+        elif isinstance(element, Undef):
+            return self.check_undef(element)
+        elif isinstance(element, Hash):
+            return self.check_hash(element)
+        elif isinstance(element, Array):
+            return self.check_array(element)
+        elif isinstance(element, VariableReference):
+            return self.check_var_reference(element)
+        elif isinstance(element, FunctionCall):
+            return self.check_function_call(element)
+        elif isinstance(element, MethodCall):
+            return self.check_method_call(element)
+        elif isinstance(element, UnaryOperation):
+            return self.check_unary_operation(element)
+        elif isinstance(element, BinaryOperation):
+            return self.check_binary_operation(element)
+        elif isinstance(element, ConditionalStatement):
+            return self.check_conditional_statement(element)
+        elif isinstance(element, BlockExpr):
+            return self.check_blockexpr(element)
+        elif isinstance(element, AddArgs):
+            for e in element.value:
                 if not self.check(e):
                     return False
             return True
+        elif isinstance(element, KeyValue):
+            return self.check_keyvalue(element)
+        elif isinstance(element, Block):
+            return self.check_block(element)
+        elif isinstance(element, AtomicUnit):
+            return self.check_atomicunit(element)
+        elif isinstance(element, Comment):
+            return self.check_comment(element)
+        elif isinstance(element, Dependency):
+            return self.check_dependency(element)
         else:
-            raise NotImplementedError(f"expr type not implemented {type(expr)}")
+            return False
 
     def check_string(self, expr: String) -> bool:
         return False
@@ -219,7 +238,25 @@ class ExprChecker(ABC):
     def check_conditional_statement(self, expr: ConditionalStatement) -> bool:
         return False
 
+    def check_blockexpr(self, element: BlockExpr) -> bool:
+        return False
+
     def check_undef(self, expr: Undef) -> bool:
+        return False
+
+    def check_keyvalue(self, element: KeyValue) -> bool:
+        return False
+
+    def check_block(self, element: Block) -> bool:
+        return False
+
+    def check_atomicunit(self, element: AtomicUnit) -> bool:
+        return False
+
+    def check_comment(self, element: Comment) -> bool:
+        return False
+
+    def check_dependency(self, element: Dependency) -> bool:
         return False
 
 
