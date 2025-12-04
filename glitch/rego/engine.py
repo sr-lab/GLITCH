@@ -15,9 +15,6 @@ def run_analyses(
     input_data = json.loads(input)
 
     data: Dict[str, Any] = config
-    #if config and os.path.exists(config):
-    #    with open(config) as f:
-    #        data = json.load(f)
     
     if not rego_modules:
         # No modules to run, return empty errors
