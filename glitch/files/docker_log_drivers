@@ -1,0 +1,10 @@
+elastic/elastic-logging-plugin
+logzio/logzio-logging-plugin
+grafana/loki-docker-driver
+sumologic/docker-logging-driver
+syslog
+gelf
+fluentd
+awslogs
+splunk
+gcplogs

@@ -13,3 +13,5 @@ class Tech(Enum):
     terraform = "terraform", ["tf"]
     docker = "docker", ["Dockerfile"]
     gha = "github-actions", ["yml", "yaml"]
+    swarm = "swarm", ["yml", "yaml"]
+    nomad = "nomad", ["hcl", "nomad", "job"]
