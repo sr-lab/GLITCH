@@ -22,19 +22,6 @@ class SecurityVisitor(RuleVisitor):
         def check(self, element: CodeElement, file: str) -> List[Error]:
             return []
 
-    class DockerNonOfficialImageSmell(SmellChecker):
-        def check(self, element: CodeElement, file: str) -> List[Error]:
-            if (
-                not isinstance(element, UnitBlock)
-                or element.name is None
-                or "Dockerfile" in element.name
-            ):
-                return []
-            image = element.name.split(":")
-            if image[0] not in SecurityVisitor.DOCKER_OFFICIAL_IMAGES:
-                return [Error("sec_non_official_image", element, file, repr(element))]
-            return []
-
     def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
         
@@ -109,10 +96,7 @@ class SecurityVisitor(RuleVisitor):
                 
                 self.checkers.append(child())
 
-        if tech == Tech.docker and "sec_non_official_image" in fallback:
-            self.non_off_img = SecurityVisitor.DockerNonOfficialImageSmell()
-        else:
-            self.non_off_img = SecurityVisitor.NonOfficialImageSmell()
+        self.non_off_img = SecurityVisitor.NonOfficialImageSmell()
 
     @staticmethod
     def get_name() -> str:
@@ -232,9 +216,6 @@ class SecurityVisitor(RuleVisitor):
             config["security"]["ip_binding_commands"]
         )
         SecurityVisitor.OBSOLETE_COMMANDS = self._load_data_file("obsolete_commands")
-        SecurityVisitor.DOCKER_OFFICIAL_IMAGES = self._load_data_file(
-            "official_docker_images"
-        )
 
     @staticmethod
     def _load_data_file(file: str) -> List[str]:
@@ -430,7 +411,7 @@ class SecurityVisitor(RuleVisitor):
     def check_unitblock(self, u: UnitBlock, file: str) -> List[Error]:
         errors = super().check_unitblock(u, file)
 
-        # Missing integrity check changed to unit block since in Docker the integrity check is not an attribute of the
+        # Missing integrity check changed to unit block since the integrity check is not an attribute of the
         # atomic unit but can be done on another atomic unit inside the same unit block.
         missing_integrity_checks = {}
         for au in u.atomic_units:

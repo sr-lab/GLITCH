@@ -12,8 +12,6 @@ EXCEPTIONS = {
     "CHEF_COULD_NOT_PARSE": "Chef - Could not parse file: {}",
     "GHA_COULD_NOT_PARSE": "Github Actions Workflow - Could not parse file: {}",
     "PUPPET_COULD_NOT_PARSE": "Puppet - Could not parse file: {}",
-    "DOCKER_NOT_IMPLEMENTED": "Docker - Could not parse: {}",
-    "DOCKER_UNKNOW_ERROR": "Docker - Unknown Error: {}",
     "SHELL_COULD_NOT_PARSE": "Shell Command - Could not parse: {}",
     "TERRAFORM_COULD_NOT_PARSE": "Terraform - Could not parse file: {}",
 }

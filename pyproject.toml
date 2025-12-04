@@ -15,7 +15,6 @@ prettytable = "3.6.0"
 pandas = "1.5.3"
 configparser = "5.3.0"
 Jinja2 = { git = "https://github.com/Nfsaavedra/jinja", branch = "tok_loc" }
-dockerfile-parse = "2.0.0"
 bashlex = "0.18"
 requests = "^2.31.0"
 z3-solver = "^4.12.4.0"

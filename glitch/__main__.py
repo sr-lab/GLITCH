@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Tuple, List, Set, Optional, TextIO, Dict, Any
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.helpers import get_smell_types, get_smells, ini_to_json_dict
-from glitch.parsers.docker import DockerParser
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
 from glitch.tech import Tech
@@ -127,8 +126,6 @@ def __get_parser(tech: Tech) -> Parser:
         return ChefParser()
     elif tech == Tech.puppet:
         return PuppetParser()
-    elif tech == Tech.docker:
-        return DockerParser()
     elif tech == Tech.terraform:
         return TerraformParser()
     elif tech == Tech.gha:
