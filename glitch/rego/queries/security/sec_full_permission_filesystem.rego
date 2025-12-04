@@ -12,7 +12,12 @@ check_permission(value) {
     value.value == 777
 }
 
-check_full_permission(node) {
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    atomic_units := glitch_lib.all_atomic_units(parent)
+    node := atomic_units[_]
+
     node.type == data.security.file_commands[_]
 
     attrs := glitch_lib.all_attributes(node)
@@ -20,20 +25,10 @@ check_full_permission(node) {
 
     attr.name == mode_set[_]
     check_permission(attr.value)
-}
-
-
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
-    parent.path != ""
-    atomic_units := glitch_lib.all_atomic_units(parent)
-    node := atomic_units[_]
-
-    check_full_permission(node)
 
     result := {{
 		"type": "sec_full_permission_filesystem",
-		"element": node,
+		"element": attr,
 		"path": parent.path,
         "description": "Full permission to the filesystem - Files should not have full permissions to every user. (CWE-732)"
 	}}
