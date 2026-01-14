@@ -17,7 +17,6 @@ class DesignVisitor(RuleVisitor):
         from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
         from glitch.analysis.design.improper_alignment import ImproperAlignmentTabs, ImproperAlignment, PuppetImproperAlignment
         from glitch.analysis.design.long_statement import LongStatement
-        from glitch.analysis.design.multifaceted_abstraction import MultifacetedAbstraction
         from glitch.analysis.design.too_many_variables import TooManyVariables
 
         DESIGN_CHECKER_ERRORS: Dict[Type[DesignSmellChecker], str] = {
@@ -28,7 +27,6 @@ class DesignVisitor(RuleVisitor):
             ImproperAlignment: "implementation_improper_alignment",
             PuppetImproperAlignment: "implementation_improper_alignment",
             LongStatement: "implementation_long_statement",
-            MultifacetedAbstraction: "design_multifaceted_abstraction",
             TooManyVariables: "implementation_too_many_variables"
         }
 
