@@ -16,7 +16,6 @@ class DesignVisitor(RuleVisitor):
         from glitch.analysis.design.duplicate_block import DuplicateBlock
         from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
         from glitch.analysis.design.improper_alignment import ImproperAlignmentTabs, ImproperAlignment, PuppetImproperAlignment
-        from glitch.analysis.design.long_resource import LongResource
         from glitch.analysis.design.long_statement import LongStatement
         from glitch.analysis.design.misplaced_attribute import ChefMisplacedAttribute, PuppetMisplacedAttribute
         from glitch.analysis.design.multifaceted_abstraction import MultifacetedAbstraction
@@ -29,7 +28,6 @@ class DesignVisitor(RuleVisitor):
             ImproperAlignmentTabs: "implementation_improper_alignment",
             ImproperAlignment: "implementation_improper_alignment",
             PuppetImproperAlignment: "implementation_improper_alignment",
-            LongResource: "design_long_resource",
             LongStatement: "implementation_long_statement",
             ChefMisplacedAttribute: "design_misplaced_attribute",
             PuppetMisplacedAttribute: "design_misplaced_attribute",
