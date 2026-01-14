@@ -636,7 +636,7 @@ class UnitBlock(Block):
         self.attributes.append(a)
 
     def as_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             **super().as_dict(),
             "dependencies": [d.as_dict() for d in self.dependencies],
             "comments": [c.as_dict() for c in self.comments],
@@ -649,6 +649,17 @@ class UnitBlock(Block):
             "type": self.type,
         }
 
+        lines = -1
+        if self.path != "":
+            with open(self.path, "r") as f:
+                try:
+                    lines = sum(1 for _ in f)
+                except Exception:
+                    pass
+        if lines != -1:
+            result["lines"] = lines
+
+        return result
 
 class File:
     def __init__(self, name: str) -> None:
