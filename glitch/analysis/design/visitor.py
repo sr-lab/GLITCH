@@ -95,12 +95,6 @@ class DesignVisitor(RuleVisitor):
         else:
             self.code_lines = []
 
-        self.first_non_comm_line = inf
-        for i, line in enumerate(self.code_lines):
-            if not line.startswith(self.comment):
-                self.first_non_comm_line = i + 1
-                break
-
         self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
             self.variables_names.append(attr.name)
@@ -165,10 +159,7 @@ class DesignVisitor(RuleVisitor):
         return []
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
-        errors: List[Error] = []
-        if c.line >= self.first_non_comm_line:
-            errors.append(Error("design_avoid_comments", c, file, repr(c)))
-        return errors
+        return []
 
 
 # NOTE: in the end of the file to avoid circular import
