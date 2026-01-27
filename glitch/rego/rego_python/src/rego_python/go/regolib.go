@@ -1,11 +1,15 @@
 package main
 
+/*
+#include <stdlib.h>
+*/
 import "C"
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"unsafe"
 
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage/inmem"
@@ -58,6 +62,11 @@ func RunRego(inputJSON *C.char, dataJSON *C.char, modulesJSON *C.char) *C.char {
 	}
 
 	return C.CString(string(out))
+}
+
+//export FreeCString
+func FreeCString(str *C.char) {
+    C.free(unsafe.Pointer(str))
 }
 
 func main() {}
