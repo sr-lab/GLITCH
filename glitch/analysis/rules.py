@@ -101,9 +101,9 @@ class Error:
     def to_csv(self) -> str:
         repr = self.repr.split("\n")[0].strip()
         if self.opt_msg:
-            return f"{self.path},{self.line},{self.code},{repr},{self.opt_msg}"
+            return f"{self.path},{self.line},{self.code},{self.opt_msg},{repr}"
         else:
-            return f"{self.path},{self.line},{self.code},{repr},-"
+            return f"{self.path},{self.line},{self.code},-,{repr}"
 
     def __repr__(self) -> str:
         with open(self.path) as f:
