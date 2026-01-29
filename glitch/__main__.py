@@ -306,7 +306,7 @@ def lint(
 
     f = sys.stdout if output is None else open(output, "w")
     if csv:
-        print("PATH,LINE,ERROR,CODE,DESCRIPTION", file=f)
+        print("PATH,LINE,ERROR,DESCRIPTION,CODE", file=f)
     for future in tqdm.tqdm(as_completed(futures), total=len(futures), desc=title):
         try:
             new_errors = future.result()
