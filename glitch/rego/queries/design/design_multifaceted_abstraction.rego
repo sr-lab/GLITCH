@@ -7,7 +7,7 @@ checker(node) {
 }
 checker(node) {
     attr := node.attributes[_]
-    regex.match("(&&|;|\\|)", attr.value)
+    regex.match("(&&|;|\\|)", attr.value.value)
 }
 checker(node) {
     attr := node.attributes[_]

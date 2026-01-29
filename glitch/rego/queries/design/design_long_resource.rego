@@ -2,8 +2,6 @@ package glitch
 
 import data.glitch_lib
 
-# Some changes were made to the data config to make the tests pass
-
 Glitch_Analysis[result] {
     parent := glitch_lib._gather_parent_unit_blocks[_]
     parent.path != ""
@@ -11,12 +9,12 @@ Glitch_Analysis[result] {
     node := atomic_units[_]
     node.type == data.design.exec_atomic_units[_]
 
-    lines := {
+    lines := [
         line |
         attr := node.attributes[_]
         line := split(attr.code, "\n")[_]
         not regex.match("^\\s*$", line)
-    }
+    ]
 
     count(lines) > 7
 
