@@ -39,6 +39,14 @@ all_conditional_statements(node) = conditions {
     }
 }
 
+count_nodes_with_irtype(root, t) = n {
+    n = count({
+        v |
+        [_, v] := walk(root)
+        v.ir_type == t
+    })
+}
+
 traverse(node, pattern) {
     # Use walk to safely traverse all nodes
     walk(node, [path, n])

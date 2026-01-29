@@ -1,7 +1,6 @@
 import ctypes
 import json
 import platform
-import os
 from pathlib import Path
 
 def _get_lib_path():
@@ -37,7 +36,10 @@ def _get_lib_path():
 lib = ctypes.CDLL(str(_get_lib_path()))
 
 lib.RunRego.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-lib.RunRego.restype = ctypes.c_char_p
+lib.RunRego.restype = ctypes.c_void_p
+
+lib.FreeCString.argtypes = [ctypes.c_void_p]
+lib.FreeCString.restype = None
 
 def run_rego(input_data: dict[str, str], data: dict[str, str], rego_modules: dict[str, str]):
     input_str = json.dumps(input_data)
@@ -51,4 +53,6 @@ def run_rego(input_data: dict[str, str], data: dict[str, str], rego_modules: dic
     )
     
     result_json = ctypes.string_at(result_ptr).decode('utf-8')
+    lib.FreeCString(result_ptr)
+
     return json.loads(result_json)

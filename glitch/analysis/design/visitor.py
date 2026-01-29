@@ -16,11 +16,7 @@ class DesignVisitor(RuleVisitor):
         from glitch.analysis.design.duplicate_block import DuplicateBlock
         from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
         from glitch.analysis.design.improper_alignment import ImproperAlignmentTabs, ImproperAlignment, PuppetImproperAlignment
-        from glitch.analysis.design.long_resource import LongResource
         from glitch.analysis.design.long_statement import LongStatement
-        from glitch.analysis.design.misplaced_attribute import ChefMisplacedAttribute, PuppetMisplacedAttribute
-        from glitch.analysis.design.multifaceted_abstraction import MultifacetedAbstraction
-        from glitch.analysis.design.too_many_variables import TooManyVariables
 
         DESIGN_CHECKER_ERRORS: Dict[Type[DesignSmellChecker], str] = {
             UnguardedVariable: "implementation_unguarded_variable",
@@ -29,12 +25,7 @@ class DesignVisitor(RuleVisitor):
             ImproperAlignmentTabs: "implementation_improper_alignment",
             ImproperAlignment: "implementation_improper_alignment",
             PuppetImproperAlignment: "implementation_improper_alignment",
-            LongResource: "design_long_resource",
             LongStatement: "implementation_long_statement",
-            ChefMisplacedAttribute: "design_misplaced_attribute",
-            PuppetMisplacedAttribute: "design_misplaced_attribute",
-            MultifacetedAbstraction: "design_multifaceted_abstraction",
-            TooManyVariables: "implementation_too_many_variables"
         }
 
         self.checkers: List[DesignSmellChecker] = []
@@ -94,12 +85,6 @@ class DesignVisitor(RuleVisitor):
                     return []
         else:
             self.code_lines = []
-
-        self.first_non_comm_line = inf
-        for i, line in enumerate(self.code_lines):
-            if not line.startswith(self.comment):
-                self.first_non_comm_line = i + 1
-                break
 
         self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
@@ -165,10 +150,7 @@ class DesignVisitor(RuleVisitor):
         return []
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
-        errors: List[Error] = []
-        if c.line >= self.first_non_comm_line:
-            errors.append(Error("design_avoid_comments", c, file, repr(c)))
-        return errors
+        return []
 
 
 # NOTE: in the end of the file to avoid circular import
