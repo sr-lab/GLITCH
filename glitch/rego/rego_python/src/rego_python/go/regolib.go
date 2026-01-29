@@ -42,6 +42,7 @@ func RunRego(inputJSON *C.char, dataJSON *C.char, modulesJSON *C.char) *C.char {
     regoArgs = append(regoArgs, rego.Query("data.glitch.Glitch_Analysis"))
     regoArgs = append(regoArgs, rego.Input(inputVal))
     regoArgs = append(regoArgs, rego.Store(store))
+	regoArgs = append(regoArgs, rego.Strict(true))
 
     for name, code := range moduleMap {
         regoArgs = append(regoArgs, rego.Module(name, code))
@@ -54,6 +55,10 @@ func RunRego(inputJSON *C.char, dataJSON *C.char, modulesJSON *C.char) *C.char {
 
 	if err != nil {
 		return C.CString(fmt.Sprintf(`{"error": "rego evaluation failed: %s"}`, err))
+	}
+
+	if len(results) == 0 {
+		return C.CString(`{"error":"query returned undefined"}`)
 	}
 
 	out, err := json.Marshal(results)

@@ -1,67 +1,68 @@
 package glitch
 
+import rego.v1
+
 import data.glitch_lib
 
-whitelist_contains(name) {
-    whitelist := array.concat(data.security.secrets_white_list, data.security.profile)
-    whitelist[_] == name
+whitelist_contains(name) if {
+	whitelist := array.concat(data.security.secrets_white_list, data.security.profile)
+	whitelist[_] == name
 }
 
-check_pair_hard_password(name, value) {
+check_pair_hard_password(name, value) if {
 	hardcoded := data.security.passwords
 
 	item := hardcoded[_]
 	hard_coded_pattern := sprintf("[_A-Za-z0-9$/\\.\\[\\]-]*%s\\b", [item])
-	
+
 	regex.match(hard_coded_pattern, lower(name))
 
-	not whitelist_contains(lower(name))	
+	not whitelist_contains(lower(name))
 
 	glitch_lib.traverse_var(value)
 
 	value.value != ""
-} else {
+} else if {
 	# Check for sensitive data with secret value assignments
 	sensitive_item := data.security.sensitive_data[_]
-	glitch_lib.contains(lower(name), lower(sensitive_item))
-
+	glitch_lib.has_substring(lower(name), lower(sensitive_item))
 
 	secret_value := data.security.secret_value_assign[_]
-	glitch_lib.contains(lower(value.value), lower(secret_value))
+	glitch_lib.has_substring(lower(value.value), lower(secret_value))
 
 	# Exclude password cases (those will be handled by sec_hard_pass)
-	glitch_lib.contains(lower(secret_value), "password")
+	glitch_lib.has_substring(lower(secret_value), "password")
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
+Glitch_Analysis contains result if {
+	parent := glitch_lib._gather_parent_unit_blocks[_]
 	parent.path != ""
-    attr := glitch_lib.all_attributes(parent)
-    variables := glitch_lib.all_variables(parent)
-    all_nodes := attr | variables
-    node := all_nodes[_]
+	attr := glitch_lib.all_attributes(parent)
+	variables := glitch_lib.all_variables(parent)
+	all_nodes := attr | variables
+	node := all_nodes[_]
 
 	# We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
 	glitch_lib.is_ir_type_in(node.value, ["String", "Array"])
 	check_pair_hard_password(node.name, node.value)
 	matched_node := node
-	
-    result := {{
+
+	result := {
 		"type": "sec_hard_pass",
 		"element": matched_node,
 		"path": parent.path,
-        "description": "Hard-coded password - Developers should not reveal sensitive information in the source code. (CWE-259)"
-	}}
+		"description": "Hard-coded password - Developers should not reveal sensitive information in the source code. (CWE-259)",
+	}
 }
 
-Glitch_Analysis[result] {
-    parent := glitch_lib._gather_parent_unit_blocks[_]
+Glitch_Analysis contains result if {
+	parent := glitch_lib._gather_parent_unit_blocks[_]
 	parent.path != ""
-    attr := glitch_lib.all_attributes(parent)
-    variables := glitch_lib.all_variables(parent)
-    all_nodes := attr | variables
-    node := all_nodes[_]
+	attr := glitch_lib.all_attributes(parent)
+	variables := glitch_lib.all_variables(parent)
+	all_nodes := attr | variables
+	node := all_nodes[_]
 
 	# We need to use walk since we can have Hashs inside one another
 	walk(node, [_, n])
@@ -70,11 +71,11 @@ Glitch_Analysis[result] {
 	glitch_lib.is_ir_type_in(current_pair.value, ["String", "Array"])
 	check_pair_hard_password(current_pair.key.value, current_pair.value)
 	matched_node := current_pair
-	
-    result := {{
+
+	result := {
 		"type": "sec_hard_pass",
 		"element": matched_node,
 		"path": parent.path,
-        "description": "Hard-coded password - Developers should not reveal sensitive information in the source code. (CWE-259)"
-	}}
+		"description": "Hard-coded password - Developers should not reveal sensitive information in the source code. (CWE-259)",
+	}
 }
