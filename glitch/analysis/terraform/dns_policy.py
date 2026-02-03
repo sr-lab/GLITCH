@@ -3,7 +3,7 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, String
 
 
 class TerraformDnsWithoutDnssec(TerraformSmellChecker):
@@ -20,8 +20,8 @@ class TerraformDnsWithoutDnssec(TerraformSmellChecker):
                 and atomic_unit.type in config["au_type"]
                 and parent_name in config["parents"]
                 and not VariableChecker().check(attribute.value)
-                and isinstance(attribute.value, str)
-                and attribute.value.lower() not in config["values"]
+                and isinstance(attribute.value, String)
+                and attribute.value.value.lower() not in config["values"]
                 and config["values"] != [""]
             ):
                 return [Error("sec_dnssec", attribute, file, repr(attribute))]
