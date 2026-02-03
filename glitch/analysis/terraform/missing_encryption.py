@@ -3,6 +3,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.repr.inter import *
 
 
@@ -33,7 +34,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                     ]
                 elif (
                     "any_not_empty" not in config["values"]
-                    and not attribute.has_variable
+                    and not VariableChecker().check(attribute.value)
                     and isinstance(attribute.value, str)
                     and attribute.value.lower() not in config["values"]
                 ):
@@ -122,7 +123,7 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                             break
                         i += 1
                         resources = self.check_required_attribute(
-                            element.attributes, ["encryption_config"], f"resources[{i}]"
+                            element, ["encryption_config"], f"resources[{i}]"
                         )
                     if not valid:
                         errors.append(Error("sec_missing_encryption", a, file, repr(a)))  # type: ignore
@@ -154,14 +155,14 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                         )
                     )
             elif element.type == "resource.aws_ecs_task_definition":
-                volume = self.check_required_attribute(element.attributes, [], "volume")
-                if isinstance(volume, KeyValue):
+                volume = self.check_required_attribute(element, [], "volume")
+                if isinstance(volume, UnitBlock):
                     efs_volume_config = self.check_required_attribute(
-                        volume.keyvalues, [], "efs_volume_configuration"
+                        volume, [], "efs_volume_configuration"
                     )
-                    if isinstance(efs_volume_config, KeyValue):
+                    if isinstance(efs_volume_config, UnitBlock):
                         transit_encryption = self.check_required_attribute(
-                            efs_volume_config.keyvalues, [], "transit_encryption"
+                            efs_volume_config, [], "transit_encryption"
                         )
                         if not transit_encryption:
                             errors.append(

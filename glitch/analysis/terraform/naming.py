@@ -3,7 +3,8 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, Hash, UnitBlock
 
 
 class TerraformNaming(TerraformSmellChecker):
@@ -38,7 +39,7 @@ class TerraformNaming(TerraformSmellChecker):
                     return [Error("sec_naming", attribute, file, repr(attribute))]
                 elif (
                     "any_not_empty" not in config["values"]
-                    and not attribute.has_variable
+                    and not VariableChecker().check(attribute.value)
                     and isinstance(attribute.value, str)
                     and attribute.value.lower() not in config["values"]
                 ):
@@ -51,13 +52,13 @@ class TerraformNaming(TerraformSmellChecker):
         if isinstance(element, AtomicUnit):
             if element.type == "resource.aws_security_group":
                 ingress = self.check_required_attribute(
-                    element.attributes, [""], "ingress"
+                    element, [""], "ingress"
                 )
                 egress = self.check_required_attribute(
-                    element.attributes, [""], "egress"
+                    element, [""], "egress"
                 )
-                if isinstance(ingress, KeyValue) and not self.check_required_attribute(
-                    ingress.keyvalues, [""], "description"
+                if isinstance(ingress, UnitBlock) and not self.check_required_attribute(
+                    ingress, [""], "description"
                 ):
                     errors.append(
                         Error(
@@ -68,8 +69,8 @@ class TerraformNaming(TerraformSmellChecker):
                             f"Suggestion: check for a required attribute with name 'ingress.description'.",
                         )
                     )
-                if isinstance(egress, KeyValue) and not self.check_required_attribute(
-                    egress.keyvalues, [""], "description"
+                if isinstance(egress, UnitBlock) and not self.check_required_attribute(
+                    egress, [""], "description"
                 ):
                     errors.append(
                         Error(
@@ -82,13 +83,10 @@ class TerraformNaming(TerraformSmellChecker):
                     )
             elif element.type == "resource.google_container_cluster":
                 resource_labels = self.check_required_attribute(
-                    element.attributes, [""], "resource_labels", None
+                    element, [""], "resource_labels", None
                 )
-                if (
-                    isinstance(resource_labels, KeyValue)
-                    and resource_labels.value is None
-                ):
-                    if resource_labels.keyvalues == []:
+                if isinstance(resource_labels, Attribute):
+                    if isinstance(resource_labels.value, Hash) and len(resource_labels.value.value) == 0:
                         errors.append(
                             Error(
                                 "sec_naming",
@@ -98,7 +96,7 @@ class TerraformNaming(TerraformSmellChecker):
                                 f"Suggestion: check empty 'resource_labels'.",
                             )
                         )
-                else:
+                elif resource_labels is None:
                     errors.append(
                         Error(
                             "sec_naming",
@@ -114,7 +112,7 @@ class TerraformNaming(TerraformSmellChecker):
                     config["required"] == "yes"
                     and element.type in config["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                 ):
                     errors.append(

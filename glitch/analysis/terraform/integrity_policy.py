@@ -2,6 +2,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 
@@ -18,7 +19,7 @@ class TerraformIntegrityPolicy(TerraformSmellChecker):
                 attribute.name == policy["attribute"]
                 and atomic_unit.type in policy["au_type"]
                 and parent_name in policy["parents"]
-                and not attribute.has_variable
+                and not VariableChecker().check(attribute.value)
                 and isinstance(attribute.value, str)
                 and attribute.value.lower() not in policy["values"]
             ):
@@ -34,7 +35,7 @@ class TerraformIntegrityPolicy(TerraformSmellChecker):
                     policy["required"] == "yes"
                     and element.type in policy["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, policy["parents"], policy["attribute"]
+                        element, policy["parents"], policy["attribute"]
                     )
                 ):
                     errors.append(

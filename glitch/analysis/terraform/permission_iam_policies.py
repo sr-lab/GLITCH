@@ -3,6 +3,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 
@@ -37,7 +38,7 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
             ):
                 if (
                     config["logic"] == "equal"
-                    and not attribute.has_variable
+                    and not VariableChecker().check(attribute.value)
                     and isinstance(attribute.value, str)
                     and attribute.value.lower() not in config["values"]
                 ) or (
@@ -67,7 +68,7 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
                 )
                 if assoc_au is not None:
                     a = self.check_required_attribute(
-                        assoc_au.attributes, [""], "user", None, pattern
+                        assoc_au, [""], "user", None, pattern
                     )
                     errors.append(
                         Error("sec_permission_iam_policies", a, file, repr(a))

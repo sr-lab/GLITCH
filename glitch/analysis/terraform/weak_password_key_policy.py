@@ -2,6 +2,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
 
 
@@ -36,7 +37,7 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                         ]
                     elif (
                         "any_not_empty" not in policy["values"]
-                        and not attribute.has_variable
+                        and not VariableChecker().check(attribute.value)
                         and isinstance(attribute.value, str)
                         and attribute.value.lower() not in policy["values"]
                     ):
@@ -95,7 +96,7 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                     policy["required"] == "yes"
                     and element.type in policy["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, policy["parents"], policy["attribute"]
+                        element, policy["parents"], policy["attribute"]
                     )
                 ):
                     errors.append(

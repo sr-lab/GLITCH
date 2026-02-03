@@ -4,7 +4,8 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, UnitBlock
 
 
 class TerraformLogging(TerraformSmellChecker):
@@ -18,7 +19,7 @@ class TerraformLogging(TerraformSmellChecker):
     ) -> List[Error]:
         errors: List[Error] = []
         attribute = self.check_required_attribute(
-            element.attributes, [""], f"{attribute_name}[0]"
+            element, [""], f"{attribute_name}[0]"
         )
 
         if all:
@@ -68,7 +69,7 @@ class TerraformLogging(TerraformSmellChecker):
         errors: List[Error] = []
 
         container_access_type = self.check_required_attribute(
-            element.attributes, [""], "container_access_type"
+            element, [""], "container_access_type"
         )
         if (
             container_access_type
@@ -90,7 +91,7 @@ class TerraformLogging(TerraformSmellChecker):
             )
 
         storage_account_name = self.check_required_attribute(
-            element.attributes, [""], "storage_account_name"
+            element, [""], "storage_account_name"
         )
         if not (
             storage_account_name is not None
@@ -150,7 +151,7 @@ class TerraformLogging(TerraformSmellChecker):
             return errors
 
         blob_container_names = self.check_required_attribute(
-            assoc_au.attributes, [""], "blob_container_names[0]"
+            assoc_au, [""], "blob_container_names[0]"
         )
         if blob_container_names is None:
             errors.append(
@@ -263,7 +264,7 @@ class TerraformLogging(TerraformSmellChecker):
                     return [Error("sec_logging", attribute, file, repr(attribute))]
                 elif (
                     "any_not_empty" not in config["values"]
-                    and not attribute.has_variable
+                    and not VariableChecker().check(attribute.value)
                     and isinstance(attribute.value, str)
                     and attribute.value.lower() not in config["values"]
                 ):
@@ -292,19 +293,19 @@ class TerraformLogging(TerraformSmellChecker):
                 )
             elif element.type == "resource.aws_msk_cluster":
                 broker_logs = self.check_required_attribute(
-                    element.attributes, ["logging_info"], "broker_logs"
+                    element, ["logging_info"], "broker_logs"
                 )
-                if isinstance(broker_logs, KeyValue):
+                if isinstance(broker_logs, UnitBlock):
                     active = False
                     logs_type = ["cloudwatch_logs", "firehose", "s3"]
                     a_list: List[KeyValue] = []
                     for type in logs_type:
                         log = self.check_required_attribute(
-                            broker_logs.keyvalues, [""], type
+                            broker_logs, [""], type
                         )
-                        if isinstance(log, KeyValue):
+                        if isinstance(log, UnitBlock):
                             enabled = self.check_required_attribute(
-                                log.keyvalues, [""], "enabled"
+                                log, [""], "enabled"
                             )
                             if (
                                 isinstance(enabled, KeyValue)
@@ -399,8 +400,8 @@ class TerraformLogging(TerraformSmellChecker):
                         )
                     )
             elif element.type == "resource.azurerm_postgresql_configuration":
-                name = self.check_required_attribute(element.attributes, [""], "name")
-                value = self.check_required_attribute(element.attributes, [""], "value")
+                name = self.check_required_attribute(element, [""], "name")
+                value = self.check_required_attribute(element, [""], "value")
                 if (
                     isinstance(name, KeyValue)
                     and isinstance(name.value, str)
@@ -438,11 +439,11 @@ class TerraformLogging(TerraformSmellChecker):
                 errors += self.__check_azurerm_storage_container(element, file)
             elif element.type == "resource.aws_ecs_cluster":
                 name = self.check_required_attribute(
-                    element.attributes, ["setting"], "name", "containerinsights"
+                    element, ["setting"], "name", "containerinsights"
                 )
                 if name is not None:
                     enabled = self.check_required_attribute(
-                        element.attributes, ["setting"], "value"
+                        element, ["setting"], "value"
                     )
                     if isinstance(enabled, KeyValue):
                         if (

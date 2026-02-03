@@ -85,8 +85,6 @@ class TerraformAccessControl(TerraformSmellChecker):
                 if (
                     isinstance(http_method, KeyValue)
                     and isinstance(authorization, KeyValue)
-                    and http_method.value is not None
-                    and authorization.value is not None
                 ):
                     if get_checker.check(http_method.value) and none_checker.check(
                         authorization.value
@@ -96,7 +94,6 @@ class TerraformAccessControl(TerraformSmellChecker):
                         )
                         if (
                             isinstance(api_key_required, KeyValue)
-                            and api_key_required.value is not None
                             and f"{api_key_required.value}".lower() != "true"
                         ):
                             errors.append(

@@ -2,7 +2,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, CodeElement, KeyValue, Attribute
+from glitch.repr.inter import AtomicUnit, CodeElement, KeyValue, Attribute, String
 
 
 class TerraformAttachedResource(TerraformSmellChecker):
@@ -15,25 +15,22 @@ class TerraformAttachedResource(TerraformSmellChecker):
                 attributes: List[KeyValue] | List[Attribute], resource_types: List[str]
             ) -> bool:
                 for a in attributes:
-                    if a.value != None:
+                    if isinstance(a.value, String):
+                        value_str = a.value.value
                         for resource_type in resource_types:
-                            if f"{a.value}".lower().startswith(
+                            if value_str.lower().startswith(
                                 "${" + f"{resource_type}."
-                            ) or f"{a.value}".lower().startswith(f"{resource_type}."):
-                                resource_name = a.value.lower().split(".")[1]
+                            ) or value_str.lower().startswith(f"{resource_type}."):
+                                resource_name = value_str.lower().split(".")[1]
                                 if self.get_au(
                                     file, resource_name, f"resource.{resource_type}"
                                 ):
                                     return True
-                    elif a.value == None:
-                        attached = check_attached_resource(a.keyvalues, resource_types)
-                        if attached:
-                            return True
                 return False
 
             if element.type == "resource.aws_route53_record":
                 type_A = self.check_required_attribute(
-                    element.attributes, [""], "type", "a"
+                    element, [""], "type", "a"
                 )
                 if type_A and not check_attached_resource(
                     element.attributes, SecurityVisitor.POSSIBLE_ATTACHED_RESOURCES

@@ -108,7 +108,7 @@ class TerraformSmellChecker(SmellChecker):
 
     def check_required_attribute(
         self,
-        atomic_unit: AtomicUnit,
+        atomic_unit: AtomicUnit | UnitBlock,
         parents: List[str] | List[List[str]],
         name: str,
         value: Optional[str] = None,
@@ -231,14 +231,17 @@ class TerraformSmellChecker(SmellChecker):
         name: str,
         check: Callable[[KeyValue], bool],
     ):
+        fake_au = AtomicUnit(Null(), "")
+        fake_au.attributes = list(attributes)  # type: ignore
+
         i = 0
-        attribute = self.check_required_attribute(attributes, [""], f"{name}[{i}]")
+        attribute = self.check_required_attribute(fake_au, [""], f"{name}[{i}]")
 
         while isinstance(attribute, KeyValue):
             if check(attribute):
                 return True, attribute
             i += 1
-            attribute = self.check_required_attribute(attributes, [""], f"{name}[{i}]")
+            attribute = self.check_required_attribute(fake_au, [""], f"{name}[{i}]")
 
         return False, None
 

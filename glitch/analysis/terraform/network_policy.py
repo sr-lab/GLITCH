@@ -24,7 +24,6 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                 and atomic_unit.type in rule["au_type"]
                 and parent_name in rule["parents"]
                 and not var_checker.check(attribute.value)
-                and attribute.value is not None
                 and string_checker.check(attribute.value)
                 and rule["values"] != [""]
             ):

@@ -3,6 +3,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 
@@ -31,7 +32,7 @@ class TerraformKeyManagement(TerraformSmellChecker):
                     ]
                 elif (
                     "any_not_empty" not in config["values"]
-                    and not attribute.has_variable
+                    and not VariableChecker().check(attribute.value)
                     and isinstance(attribute.value, str)
                     and attribute.value.lower() not in config["values"]
                 ):

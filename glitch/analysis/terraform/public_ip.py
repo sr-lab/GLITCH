@@ -2,6 +2,8 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.analysis.checkers.string_checker import StringChecker
 from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 
@@ -14,13 +16,13 @@ class TerraformPublicIp(TerraformSmellChecker):
         file: str,
     ) -> List[Error]:
         for config in SecurityVisitor.PUBLIC_IP_CONFIGS:
+            string_checker = StringChecker(lambda x: x.lower() not in config["values"])
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
                 and parent_name in config["parents"]
-                and not attribute.has_variable
-                and attribute.value is not None
-                and attribute.value.lower() not in config["values"]
+                and not VariableChecker().check(attribute.value)
+                and string_checker.check(attribute.value)
                 and config["values"] != [""]
             ):
                 return [Error("sec_public_ip", attribute, file, repr(attribute))]
@@ -35,7 +37,7 @@ class TerraformPublicIp(TerraformSmellChecker):
                     config["required"] == "yes"
                     and element.type in config["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                 ):
                     errors.append(
@@ -52,7 +54,7 @@ class TerraformPublicIp(TerraformSmellChecker):
                     and element.type in config["au_type"]
                 ):
                     a = self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                     if a is not None:
                         errors.append(Error("sec_public_ip", a, file, repr(a)))

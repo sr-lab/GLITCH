@@ -3,6 +3,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
 
 
@@ -39,7 +40,7 @@ class TerraformAuthentication(TerraformSmellChecker):
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
                 and parent_name in config["parents"]
-                and not attribute.has_variable
+                and not VariableChecker().check(attribute.value)
                 and isinstance(attribute.value, str)
                 and attribute.value.lower() not in config["values"]
                 and config["values"] != [""]
@@ -82,7 +83,7 @@ class TerraformAuthentication(TerraformSmellChecker):
                     config["required"] == "yes"
                     and element.type in config["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                 ):
                     errors.append(

@@ -2,6 +2,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
 
 
@@ -35,7 +36,7 @@ class TerraformThreatsDetection(TerraformSmellChecker):
                     ]
                 elif (
                     "any_not_empty" not in config["values"]
-                    and not attribute.has_variable
+                    and not VariableChecker().check(attribute.value)
                     and isinstance(attribute.value, str)
                     and attribute.value.lower() not in config["values"]
                 ):
@@ -58,7 +59,7 @@ class TerraformThreatsDetection(TerraformSmellChecker):
                     config["required"] == "yes"
                     and element.type in config["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                 ):
                     errors.append(
@@ -75,7 +76,7 @@ class TerraformThreatsDetection(TerraformSmellChecker):
                     and element.type in config["au_type"]
                 ):
                     a = self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                     if a is not None:
                         errors.append(
