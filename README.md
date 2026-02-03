@@ -60,15 +60,37 @@ poetry install
 
 ### Rego
 
-To do all checks, you need to use Rego. For that, you need the appropriate binary for your environment and architecture.
+Some smell checks (design and security) are implemented in [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/). To use these checks, you need the appropriate Rego binary for your platform.
 
-You can find these binaries in the Rego Python release.
+#### Option 1: Download Pre-built Binary (Recommended)
 
-Or, you can compile your own binary, but this requires to have ```go``` installed. To do that, run the following commands on the root folder:
+Download the binary for your platform from the [Rego Python release](https://github.com/sr-lab/GLITCH/releases).
 
+Available binaries:
+| Platform | Architecture | Binary Name |
+|----------|--------------|-------------|
+| Linux | x86_64/amd64 | `librego-linux-amd64.so` |
+| Linux | arm64 | `librego-linux-arm64.so` |
+| macOS | Intel (x86_64) | `librego-darwin-amd64.dylib` |
+| macOS | Apple Silicon | `librego-darwin-arm64.dylib` |
+| Windows | x86_64/amd64 | `librego-windows-amd64.dll` |
+
+After downloading, place the binary in:
 ```
-OS={Operating System}
-ARCH=${{ Architecture }}
+glitch/rego/rego_python/src/rego_python/bin/
+```
+
+#### Option 2: Build from Source
+
+If you need a binary not listed above or prefer to build from source, you need [Go](https://go.dev/doc/install) installed.
+
+```bash
+cd glitch/rego/rego_python/src/rego_python/go
+
+# Set your target OS and architecture
+OS=linux      # Options: linux, darwin, windows
+ARCH=amd64    # Options: amd64, arm64
+
 # Determine file extension
 if [ "$OS" = "windows" ]; then
   EXT="dll"
@@ -78,10 +100,14 @@ else
   EXT="so"
 fi
 
-OUTPUT="../bin/librego-$OS-$ARCH.$EXT"
+GOOS=$OS GOARCH=$ARCH go build -o "../bin/librego-$OS-$ARCH.$EXT" -buildmode=c-shared regolib.go
+```
 
-cd glitch/rego/rego_python/src/rego_python/go
-GOOS=$OS GOARCH=$ARCH go build -o "$OUTPUT" -buildmode=c-shared regolib.go
+#### Verifying Rego is Working
+
+To verify the Rego binary is correctly installed, run:
+```bash
+python -c "from glitch.rego.rego_python.src.rego_python import run_rego; print('Rego is working!')"
 ```
 
 **WARNING**: _For now, the GLITCH VSCode extension does not function if GLITCH 

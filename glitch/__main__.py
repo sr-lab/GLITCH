@@ -23,6 +23,7 @@ from pkg_resources import resource_filename
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from glitch.rego.engine import load_rego_from_path, run_analyses
+from glitch.rego.rego_python.src.rego_python import is_rego_available, get_rego_error
 
 
 # NOTE: These are necessary in order for python to load the visitors.
@@ -262,6 +263,11 @@ def lint(
     tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
     module = folder_strategy == "module"
+
+    if not is_rego_available():
+        click.echo(f"Error: Rego library is not available. {get_rego_error()}", err=True)
+        click.echo("Please build or install the Rego library. See README for instructions.", err=True)
+        sys.exit(1)
 
     if config != "configs/default.ini" and not os.path.exists(config):
         raise click.BadOptionUsage(
