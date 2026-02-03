@@ -2,7 +2,7 @@ from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
+from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement, Boolean
 from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.analysis.checkers.string_checker import StringChecker
 
@@ -24,10 +24,11 @@ class TerraformVersioning(TerraformSmellChecker):
                 and parent_name in config["parents"]
                 and config["values"] != [""]
                 and not var_checker.check(attribute.value)
-                and isinstance(attribute.value, str)
-                and string_checker.check(attribute.value)
             ):
-                return [Error("sec_versioning", attribute, file, repr(attribute))]
+                if isinstance(attribute.value, Boolean) and str(attribute.value.value).lower() not in config["values"]:
+                    return [Error("sec_versioning", attribute, file, repr(attribute))]
+                elif isinstance(attribute.value, str) and string_checker.check(attribute.value):
+                    return [Error("sec_versioning", attribute, file, repr(attribute))]
 
         return []
 
