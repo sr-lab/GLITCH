@@ -8,6 +8,19 @@ from glitch.analysis.checkers.string_checker import StringChecker
 
 
 class TerraformSmellChecker(SmellChecker):
+    def _parent_matches(self, parent_name: str, config_parents: list[list[str] | str]) -> bool:
+        if not config_parents and not parent_name:
+            return True
+        if not config_parents:
+            return False
+        for p in config_parents:
+            if isinstance(p, list):
+                if len(p) == 1 and p[0] == parent_name:
+                    return True
+            elif p == parent_name:
+                return True
+        return False
+
     def get_au(
         self,
         file: str,
@@ -281,6 +294,9 @@ class TerraformSmellChecker(SmellChecker):
                     and statement.type == UnitBlockType.block
                 ):
                     errors += self.__check_attribute(statement, atomic_unit, element.name, file)  # type: ignore
+            for ub in element.unit_blocks:
+                if ub.type == UnitBlockType.block:
+                    errors += self.__check_attribute(ub, atomic_unit, element.name, file)  # type: ignore
         return errors
 
     def _check_attributes(self, element: AtomicUnit, file: str) -> List[Error]:

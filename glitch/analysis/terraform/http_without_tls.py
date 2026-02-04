@@ -7,19 +7,6 @@ from glitch.repr.inter import AtomicUnit, Attribute, Boolean, CodeElement, KeyVa
 
 
 class TerraformHttpWithoutTls(TerraformSmellChecker):
-    def _parent_matches(self, parent_name: str, config_parents: list[list[str] | str]) -> bool:
-        if not config_parents and not parent_name:
-            return True
-        if not config_parents:
-            return False
-        for p in config_parents:
-            if isinstance(p, list):
-                if len(p) == 1 and p[0] == parent_name:
-                    return True
-            elif p == parent_name:
-                return True
-        return False
-
     def _check_attribute(
         self,
         attribute: Attribute | KeyValue,
