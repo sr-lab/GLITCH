@@ -234,12 +234,14 @@ class TerraformSmellChecker(SmellChecker):
                     )
                     # But value is not correct
                     if value is None:
+                        value_attr = self.check_required_attribute(fake_au, [flag.name], "value")
+                        error_element = value_attr if value_attr is not None else flag
                         errors.append(
                             Error(
                                 smell,
-                                flag,
+                                error_element,
                                 file,
-                                repr(flag),
+                                repr(error_element),
                                 f"Suggestion: check for a required attribute with name 'value'.",
                             )
                         )
