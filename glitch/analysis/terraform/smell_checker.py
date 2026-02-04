@@ -105,19 +105,24 @@ class TerraformSmellChecker(SmellChecker):
                     if len(parents) == 1 and key_name == name:
                         elem_info = ElementInfo(k.line, k.column, k.end_line, k.end_column, k.code)
                         res.append(KeyValue(key_name, v, elem_info))
-        elif (
-            isinstance(element, UnitBlock)
-            and element.type == UnitBlockType.block
-            and len(parents) > 0
-        ):
-            matched = element.name == parents[0]
-            next_parents = parents[1:] if matched else parents
-            if matched:
+        elif isinstance(element, UnitBlock) and element.type == UnitBlockType.block:
+            if len(parents) > 0:
+                matched = element.name == parents[0]
+                next_parents = parents[1:] if matched else parents
+                if matched:
+                    for attribute in element.attributes:
+                        res.extend(self.get_attributes(attribute, next_parents, name))
+                for ub in element.statements + element.unit_blocks:
+                    if isinstance(ub, UnitBlock):
+                        res.extend(self.get_attributes(ub, next_parents, name))
+            elif element.name == name:
+                res.append(element)
+            else:
                 for attribute in element.attributes:
-                    res.extend(self.get_attributes(attribute, next_parents, name))
-            for ub in element.statements + element.unit_blocks:
-                if isinstance(ub, UnitBlock):
-                    res.extend(self.get_attributes(ub, next_parents, name))
+                    res.extend(self.get_attributes(attribute, parents, name))
+                for ub in element.statements + element.unit_blocks:
+                    if isinstance(ub, UnitBlock):
+                        res.extend(self.get_attributes(ub, parents, name))
         elif len(parents) == 0 and element.name == name:
             res.append(element)
 

@@ -4,7 +4,7 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, Hash, UnitBlock
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, Hash, String, UnitBlock
 
 
 class TerraformNaming(TerraformSmellChecker):
@@ -16,11 +16,11 @@ class TerraformNaming(TerraformSmellChecker):
         file: str,
     ) -> List[Error]:
         if attribute.name == "name" and atomic_unit.type in [
-            "resource.azurerm_storage_account"
+            "azurerm_storage_account"
         ]:
             pattern = r"^[a-z0-9]{3,24}$"
-            if isinstance(attribute.value, str) and not re.match(
-                pattern, attribute.value
+            if isinstance(attribute.value, String) and not re.match(
+                pattern, attribute.value.value
             ):
                 return [Error("sec_naming", attribute, file, repr(attribute))]
 
@@ -28,20 +28,16 @@ class TerraformNaming(TerraformSmellChecker):
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
-                and parent_name in config["parents"]
-                and config["values"] != [""]
+                and self._parent_matches(parent_name, config["parents"])
+                and config["values"] != []
+                and isinstance(attribute.value, String)
             ):
-                if (
-                    "any_not_empty" in config["values"]
-                    and isinstance(attribute.value, str)
-                    and attribute.value.lower() == ""
-                ):
+                if "any_not_empty" in config["values"] and attribute.value.value == "":
                     return [Error("sec_naming", attribute, file, repr(attribute))]
                 elif (
                     "any_not_empty" not in config["values"]
                     and not VariableChecker().check(attribute.value)
-                    and isinstance(attribute.value, str)
-                    and attribute.value.lower() not in config["values"]
+                    and attribute.value.value.lower() not in config["values"]
                 ):
                     return [Error("sec_naming", attribute, file, repr(attribute))]
 
@@ -50,15 +46,11 @@ class TerraformNaming(TerraformSmellChecker):
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
-            if element.type == "resource.aws_security_group":
-                ingress = self.check_required_attribute(
-                    element, [""], "ingress"
-                )
-                egress = self.check_required_attribute(
-                    element, [""], "egress"
-                )
+            if element.type == "aws_security_group":
+                ingress = self.check_required_attribute(element, [], "ingress")
+                egress = self.check_required_attribute(element, [], "egress")
                 if isinstance(ingress, UnitBlock) and not self.check_required_attribute(
-                    ingress, [""], "description"
+                    ingress, [], "description"
                 ):
                     errors.append(
                         Error(
@@ -70,7 +62,7 @@ class TerraformNaming(TerraformSmellChecker):
                         )
                     )
                 if isinstance(egress, UnitBlock) and not self.check_required_attribute(
-                    egress, [""], "description"
+                    egress, [], "description"
                 ):
                     errors.append(
                         Error(
@@ -81,9 +73,9 @@ class TerraformNaming(TerraformSmellChecker):
                             f"Suggestion: check for a required attribute with name 'egress.description'.",
                         )
                     )
-            elif element.type == "resource.google_container_cluster":
+            elif element.type == "google_container_cluster":
                 resource_labels = self.check_required_attribute(
-                    element, [""], "resource_labels", None
+                    element, [], "resource_labels", None
                 )
                 if isinstance(resource_labels, Attribute):
                     if isinstance(resource_labels.value, Hash) and len(resource_labels.value.value) == 0:
@@ -121,7 +113,7 @@ class TerraformNaming(TerraformSmellChecker):
                             element,
                             file,
                             repr(element),
-                            f"Suggestion: check for a required attribute with name '{config['msg']}'.",
+                            f"Suggestion: check for a required attribute with name '{config.get('msg', config['attribute'])}'.",
                         )
                     )
 
