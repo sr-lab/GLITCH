@@ -28,7 +28,15 @@ class TerraformSmellChecker(SmellChecker):
                     return au
         elif isinstance(c, UnitBlock):
             for au in c.atomic_units:
-                if au.type == type and au.name == name:
+                if isinstance(au.name, String):
+                    au_name = au.name.value
+                else:
+                    au_name = au.name
+                if au.type == type and au_name == name:
+                    return au
+                if type.startswith("resource.") and au.type == type[9:] and au_name == name:
+                    return au
+                if type.startswith("data.") and au.type == type and au_name == name:
                     return au
         return None
 

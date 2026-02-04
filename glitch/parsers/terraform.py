@@ -256,6 +256,22 @@ class GLITCHTransformer(Transformer):
                 else:
                     au.add_statement(arg)
             return au
+        elif args[0].value == "data":
+            au = AtomicUnit(
+                String(
+                    args[2].value[1:-1],  # Remove quotes
+                    self.__get_element_info(args[2]),
+                ),
+                f"data.{args[1].value[1:-1]}",
+            )
+            au.attributes = []
+            au.set_element_info(self.__get_element_info(meta))
+            for arg in args[-1]:
+                if isinstance(arg, Attribute):
+                    au.attributes.append(arg)
+                else:
+                    au.add_statement(arg)
+            return au
         else:
             ub = UnitBlock(args[0].value, UnitBlockType.block)
             for arg in args[-1]:

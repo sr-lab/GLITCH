@@ -29,6 +29,7 @@ class SecurityVisitor(RuleVisitor):
         from glitch.analysis.terraform.authentication import TerraformAuthentication
         from glitch.analysis.terraform.dns_policy import TerraformDnsWithoutDnssec
         from glitch.analysis.terraform.firewall_misconfig import TerraformFirewallMisconfig
+        from glitch.analysis.terraform.http_without_tls import TerraformHttpWithoutTls
         from glitch.analysis.terraform.integrity_policy import TerraformIntegrityPolicy
         from glitch.analysis.terraform.key_management import TerraformKeyManagement
         from glitch.analysis.terraform.logging import TerraformLogging
@@ -50,6 +51,7 @@ class SecurityVisitor(RuleVisitor):
             TerraformAuthentication: "sec_authentication",
             TerraformDnsWithoutDnssec: "sec_dnssec",
             TerraformFirewallMisconfig: "sec_firewall_misconfig",
+            TerraformHttpWithoutTls: "sec_https",
             TerraformIntegrityPolicy: "sec_integrity_policy",
             TerraformKeyManagement: "sec_key_management",
             TerraformLogging: "sec_logging",
@@ -76,11 +78,19 @@ class SecurityVisitor(RuleVisitor):
             
             self.checkers.append(child())
 
-        if tech == Tech.terraform: 
+        if tech == Tech.terraform:
+            # Some Terraform checkers handle Terraform-specific patterns that complement
+            # generic Rego checks for the same smell code. These should always run.
+            ALWAYS_RUN_CHECKERS = {TerraformHttpWithoutTls}
+            
             for child in TerraformSmellChecker.__subclasses__():
                 error_name = TERRAFORM_CHECKER_ERRORS.get(child)
 
-                if error_name is not None and error_name not in fallback:
+                if error_name is None:
+                    continue
+                
+                # Run if: smell is in fallback (no Rego) OR checker is in always-run list
+                if error_name not in fallback and child not in ALWAYS_RUN_CHECKERS:
                     continue
                 
                 self.checkers.append(child())
