@@ -61,7 +61,7 @@ class TerraformFirewallMisconfig(TerraformSmellChecker):
                             element,
                             file,
                             repr(element),
-                            f"Suggestion: check for a required attribute with name '{config['msg']}'.",
+                            f"Suggestion: check for a required attribute with name '{config.get('msg', config['attribute'])}'.",
                         )
                     )
 

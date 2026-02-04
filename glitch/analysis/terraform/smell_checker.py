@@ -90,29 +90,34 @@ class TerraformSmellChecker(SmellChecker):
         element: AtomicUnit | Attribute | UnitBlock,
         parents: List[str],
         name: str,
-    ) -> List[Attribute | UnitBlock]:
-        res: List[Attribute | UnitBlock] = []
+    ) -> List[Attribute | UnitBlock | KeyValue]:
+        res: List[Attribute | UnitBlock | KeyValue] = []
         if isinstance(element, AtomicUnit):
             for attr in element.attributes:
-                elems = self.get_attributes(attr, parents, name)
-                res.extend(elems)
+                res.extend(self.get_attributes(attr, parents, name))
             for ub in element.statements:
                 if isinstance(ub, UnitBlock):
-                    elems = self.get_attributes(ub, parents, name)
-                    res.extend(elems)
+                    res.extend(self.get_attributes(ub, parents, name))
+        elif isinstance(element, Attribute) and len(parents) > 0 and element.name == parents[0]:
+            if isinstance(element.value, Hash):
+                for k, v in element.value.value.items():
+                    key_name = k.value if isinstance(k, VariableReference) else str(k)
+                    if len(parents) == 1 and key_name == name:
+                        elem_info = ElementInfo(k.line, k.column, k.end_line, k.end_column, k.code)
+                        res.append(KeyValue(key_name, v, elem_info))
         elif (
             isinstance(element, UnitBlock)
             and element.type == UnitBlockType.block
             and len(parents) > 0
-            and element.name == parents[0]
         ):
-            for attribute in element.attributes:
-                elems = self.get_attributes(attribute, parents[1:], name)
-                res.extend(elems)
+            matched = element.name == parents[0]
+            next_parents = parents[1:] if matched else parents
+            if matched:
+                for attribute in element.attributes:
+                    res.extend(self.get_attributes(attribute, next_parents, name))
             for ub in element.statements + element.unit_blocks:
                 if isinstance(ub, UnitBlock):
-                    elems = self.get_attributes(ub, parents[1:], name)
-                    res.extend(elems)
+                    res.extend(self.get_attributes(ub, next_parents, name))
         elif len(parents) == 0 and element.name == name:
             res.append(element)
 
@@ -123,7 +128,7 @@ class TerraformSmellChecker(SmellChecker):
         element: AtomicUnit | Attribute | UnitBlock,
         parents: List[str],
         name: str,
-    ) -> Attribute | UnitBlock | None:
+    ) -> Attribute | UnitBlock | KeyValue | None:
         attributes = self.get_attributes(element, parents, name)
         return attributes[0] if len(attributes) > 0 else None
 
@@ -134,7 +139,7 @@ class TerraformSmellChecker(SmellChecker):
         name: str,
         value: Optional[str] = None,
         pattern: Optional[Pattern[str]] = None,
-    ) -> Optional[Attribute | UnitBlock]:
+    ) -> Attribute | UnitBlock | KeyValue | None:
         element = None
         # In the case we have a list, we consider that one of the
         # parents list must be satisfied. This is particularly useful
@@ -285,6 +290,12 @@ class TerraformSmellChecker(SmellChecker):
         errors: List[Error] = []
         if isinstance(element, Attribute):
             errors += self._check_attribute(element, atomic_unit, parent_name, file)
+            if isinstance(element.value, Hash):
+                for k, v in element.value.value.items():
+                    key_name = k.value if isinstance(k, VariableReference) else str(k)
+                    elem_info = ElementInfo(k.line, k.column, k.end_line, k.end_column, k.code)
+                    hash_attr = KeyValue(key_name, v, elem_info)
+                    errors += self._check_attribute(hash_attr, atomic_unit, element.name, file)
         elif element.type == UnitBlockType.block:
             for attr in element.attributes:
                 errors += self._check_attribute(attr, atomic_unit, element.name, file)  # type: ignore
