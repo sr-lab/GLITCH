@@ -2,7 +2,7 @@ import json
 from typing import Any, List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.repr.inter import AtomicUnit, CodeElement, KeyValue, UnitBlock
+from glitch.repr.inter import Array, AtomicUnit, CodeElement, KeyValue, String, UnitBlock
 
 
 class TerraformSensitiveIAMAction(TerraformSmellChecker):
@@ -24,41 +24,34 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
             statements = self.get_attributes(element, [], "statement")
             for statement in statements:
                 if isinstance(statement, UnitBlock):
-                    allow = self.check_required_attribute(
-                        statement, [""], "effect"
-                    )
-                    if (
-                        isinstance(allow, KeyValue)
-                        and isinstance(allow.value, str)
-                        and allow.value.lower() == "allow"
-                    ) or (not allow):
-                        sensitive_action, action = self.iterate_required_attributes(
-                            statement.attributes,
-                            "actions",
-                            lambda x: isinstance(x.value, str) and "*" in x.value.lower(),
-                        )
-                        if sensitive_action:
-                            errors.append(
-                                Error(
-                                    "sec_sensitive_iam_action", action, file, repr(action)
-                                )
-                            )
+                    effect_value = None
+                    for attr in statement.attributes:
+                        if attr.name == "effect":
+                            if isinstance(attr.value, String):
+                                effect_value = attr.value.value.lower()
+                            elif isinstance(attr.value, str):
+                                effect_value = attr.value.lower()
+                            break
+                    
+                    if effect_value == "allow" or effect_value is None:
+                        for attr in statement.attributes:
+                            if attr.name == "actions" and isinstance(attr.value, Array):
+                                for item in attr.value.value:
+                                    item_val = item.value if isinstance(item, String) else item
+                                    if isinstance(item_val, str) and "*" in item_val:
+                                        errors.append(
+                                            Error("sec_sensitive_iam_action", attr, file, repr(attr))
+                                        )
+                                        break
 
-                        wildcarded_resource, resource = self.iterate_required_attributes(
-                            statement.attributes,
-                            "resources",
-                            lambda x: isinstance(x.value, str)
-                            and ((x.value.lower() in ["*"]) or (":*" in x.value.lower())),
-                        )
-                        if wildcarded_resource:
-                            errors.append(
-                                Error(
-                                    "sec_sensitive_iam_action",
-                                    resource,
-                                    file,
-                                    repr(resource),
-                                )
-                            )
+                            if attr.name == "resources" and isinstance(attr.value, Array):
+                                for item in attr.value.value:
+                                    item_val = item.value if isinstance(item, String) else item
+                                    if isinstance(item_val, str) and (item_val == "*" or ":*" in item_val):
+                                        errors.append(
+                                            Error("sec_sensitive_iam_action", attr, file, repr(attr))
+                                        )
+                                        break
         elif element.type in [
             "resource.aws_iam_role_policy",
             "resource.aws_iam_policy",
