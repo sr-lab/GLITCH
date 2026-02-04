@@ -124,7 +124,7 @@ class TestSecurity(BaseSecurityTest):
             "script",
             3,
             ["sec_access_control", "sec_access_control", "sec_access_control"],
-            [1, 50, 95],
+            [1, 50, 97],
         )
         self._help_test(
             "tests/security/terraform/files/insecure-access-control/data-factory-public-access.tf",

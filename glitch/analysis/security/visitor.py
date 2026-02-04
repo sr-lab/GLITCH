@@ -46,7 +46,7 @@ class SecurityVisitor(RuleVisitor):
         from glitch.analysis.terraform.weak_password_key_policy import TerraformWeakPasswordKeyPolicy
 
         TERRAFORM_CHECKER_ERRORS: Dict[Type[TerraformSmellChecker], str] = {
-            TerraformAccessControl: "sec_insecure_access_control",
+            TerraformAccessControl: "sec_access_control",
             TerraformAttachedResource: "sec_attached_resource",
             TerraformAuthentication: "sec_authentication",
             TerraformDnsWithoutDnssec: "sec_dnssec",

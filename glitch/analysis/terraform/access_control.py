@@ -48,24 +48,26 @@ class TerraformAccessControl(TerraformSmellChecker):
         ):
             return [Error("sec_access_control", attribute, file, repr(attribute))]
         elif (
-            (
-                re.search(r"members\[\d+\]", attribute.name)
-                and atomic_unit.type == "google_storage_bucket_iam_binding"
-            )
-            or (
-                attribute.name == "member"
-                and atomic_unit.type == "google_storage_bucket_iam_member"
-            )
-        ) and (
-            attribute.value == "allusers" or attribute.value == "allauthenticatedusers"
+            attribute.name == "member"
+            and atomic_unit.type == "google_storage_bucket_iam_member"
         ):
-            return [Error("sec_access_control", attribute, file, repr(attribute))]
+            value_str = attribute.value.value.lower() if isinstance(attribute.value, String) else str(attribute.value).lower()
+            if value_str in ["allusers", "allauthenticatedusers"]:
+                return [Error("sec_access_control", attribute, file, repr(attribute))]
+        elif (
+            attribute.name == "members"
+            and atomic_unit.type == "google_storage_bucket_iam_binding"
+            and isinstance(attribute.value, Array)
+        ):
+            for item in attribute.value.value:
+                if isinstance(item, String) and item.value.lower() in ["allusers", "allauthenticatedusers"]:
+                    return [Error("sec_access_control", attribute, file, repr(attribute))]
         elif (
             attribute.name == "email"
             and parent_name == "service_account"
             and atomic_unit.type == "google_compute_instance"
-            and isinstance(attribute.value, str)
-            and re.search(r".-compute@developer.gserviceaccount.com", attribute.value)
+            and isinstance(attribute.value, String)
+            and re.search(r".-compute@developer.gserviceaccount.com", attribute.value.value)
         ):
             return [Error("sec_access_control", attribute, file, repr(attribute))]
 
@@ -83,8 +85,8 @@ class TerraformAccessControl(TerraformSmellChecker):
                     element, [], "authorization"
                 )
                 if (
-                    isinstance(http_method, KeyValue)
-                    and isinstance(authorization, KeyValue)
+                    isinstance(http_method, (KeyValue, Attribute))
+                    and isinstance(authorization, (KeyValue, Attribute))
                 ):
                     if get_checker.check(http_method.value) and none_checker.check(
                         authorization.value
@@ -92,18 +94,22 @@ class TerraformAccessControl(TerraformSmellChecker):
                         api_key_required = self.check_required_attribute(
                             element, [], "api_key_required"
                         )
-                        if (
-                            isinstance(api_key_required, KeyValue)
-                            and f"{api_key_required.value}".lower() != "true"
-                        ):
-                            errors.append(
-                                Error(
-                                    "sec_access_control",
-                                    api_key_required,
-                                    file,
-                                    repr(api_key_required),
+                        if isinstance(api_key_required, (KeyValue, Attribute)):
+                            value = api_key_required.value
+                            is_true = False
+                            if isinstance(value, Boolean):
+                                is_true = value.value
+                            elif isinstance(value, String):
+                                is_true = value.value.lower() == "true"
+                            if not is_true:
+                                errors.append(
+                                    Error(
+                                        "sec_access_control",
+                                        api_key_required,
+                                        file,
+                                        repr(api_key_required),
+                                    )
                                 )
-                            )
                         elif not api_key_required:
                             errors.append(
                                 Error(
@@ -126,10 +132,10 @@ class TerraformAccessControl(TerraformSmellChecker):
                     )
             elif element.type == "github_repository":
                 visibility = self.check_required_attribute(element, [], "visibility")
-                if isinstance(visibility, KeyValue) and isinstance(
-                    visibility.value, str
+                if isinstance(visibility, (KeyValue, Attribute)) and isinstance(
+                    visibility.value, String
                 ):
-                    if visibility.value.lower() not in ["private", "internal"]:
+                    if visibility.value.value.lower() not in ["private", "internal"]:
                         errors.append(
                             Error(
                                 "sec_access_control", visibility, file, repr(visibility)
@@ -137,13 +143,22 @@ class TerraformAccessControl(TerraformSmellChecker):
                         )
                 else:
                     private = self.check_required_attribute(element, [], "private")
-                    if isinstance(private, KeyValue) and isinstance(private.value, str):
-                        if f"{private.value}".lower() != "true":
-                            errors.append(
-                                Error(
-                                    "sec_access_control", private, file, repr(private)
+                    if isinstance(private, (KeyValue, Attribute)):
+                        value = private.value
+                        if isinstance(value, String):
+                            if value.value.lower() != "true":
+                                errors.append(
+                                    Error(
+                                        "sec_access_control", private, file, repr(private)
+                                    )
                                 )
-                            )
+                        elif isinstance(value, Boolean):
+                            if not value.value:
+                                errors.append(
+                                    Error(
+                                        "sec_access_control", private, file, repr(private)
+                                    )
+                                )
                     else:
                         errors.append(
                             Error(
