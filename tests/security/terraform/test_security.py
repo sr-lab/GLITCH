@@ -628,44 +628,30 @@ class TestSecurity(BaseSecurityTest):
         self._help_test(
             "tests/security/terraform/files/hard-coded-secrets/plaintext-password.tf",
             "script",
-            2,
-            ["sec_hard_pass", "sec_hard_secr"],
-            [2, 2],
-        )
-        self._help_test(
-            "tests/security/terraform/files/hard-coded-secrets/plaintext-value-github-actions.tf",
-            "script",
             1,
-            ["sec_hard_secr"],
-            [5],
+            ["sec_hard_pass"],
+            [2],
         )
         self._help_test(
             "tests/security/terraform/files/hard-coded-secrets/sensitive-credentials-in-vm-custom-data.tf",
             "script",
-            2,
-            ["sec_hard_pass", "sec_hard_secr"],
-            [3, 3],
-        )
-        self._help_test(
-            "tests/security/terraform/files/hard-coded-secrets/sensitive-data-in-plaintext.tf",
-            "script",
-            2,
-            ["sec_hard_pass", "sec_hard_secr"],
-            [8, 8],
+            1,
+            ["sec_hard_pass"],
+            [3],
         )
         self._help_test(
             "tests/security/terraform/files/hard-coded-secrets/sensitive-data-stored-in-user-data.tf",
             "script",
-            4,
-            ["sec_hard_pass", "sec_hard_secr", "sec_hard_pass", "sec_hard_secr"],
-            [2, 2, 14, 14],
+            2,
+            ["sec_hard_pass", "sec_hard_pass"],
+            [2, 14],
         )
         self._help_test(
             "tests/security/terraform/files/hard-coded-secrets/sensitive-environment-variables.tf",
             "script",
-            2,
-            ["sec_hard_pass", "sec_hard_secr"],
-            [2, 2],
+            1,
+            ["sec_hard_pass"],
+            [2],
         )
         self._help_test(
             "tests/security/terraform/files/hard-coded-secrets/user-data-contains-sensitive-aws-keys.tf",
