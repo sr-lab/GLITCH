@@ -2,7 +2,7 @@ resource "aws_iam_group" "support" {
   name =  "support"
 }
 
-resource aws_iam_group_policy mfa {
+resource "aws_iam_group_policy" "mfa" {
   group = aws_iam_group.support.name
   policy = <<EOF
 {
@@ -28,7 +28,7 @@ resource "aws_iam_group" "support2" {
   name =  "support2"
 }
 
-resource aws_iam_group_policy mfa2 {
+resource "aws_iam_group_policy" "mfa2" {
   group = aws_iam_group.support2.name
   policy = <<EOF
 {
