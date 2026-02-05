@@ -221,7 +221,7 @@ class YamlParser(p.Parser, ABC):
         elif isinstance(node, jinja2.nodes.Getattr):
             attr_info = deepcopy(info)
             attr_info.column = info.end_column - len(node.attr)
-            attr_info.code = attr_info.code[-len(node.attr):]
+            attr_info.code = attr_info.code[-len(node.attr) :]
             return Access(
                 info,
                 self.__parse_jinja_node(node.node, base_info),
@@ -287,7 +287,7 @@ class YamlParser(p.Parser, ABC):
             c = ConditionalStatement(
                 self.__parse_jinja_node(node.test, base_info),
                 ConditionalStatement.ConditionType.IF,
-                is_top=True
+                is_top=True,
             )
             c.add_statement(self.__parse_jinja_node(node.expr1, base_info))
             if node.expr2 is not None:

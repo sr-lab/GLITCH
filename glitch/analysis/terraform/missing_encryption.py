@@ -50,9 +50,14 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                 value_str = attribute.value.value.lower()
                 for config in SecurityVisitor.ENCRYPT_CONFIG:
                     if atomic_unit.type in config["au_type"]:
-                        expr = config["keyword"].lower() + "\\s*" + config["value"].lower()
+                        expr = (
+                            config["keyword"].lower() + "\\s*" + config["value"].lower()
+                        )
                         pattern = re.compile(rf"{expr}")
-                        if not re.search(pattern, value_str) and config["required"] == "yes":
+                        if (
+                            not re.search(pattern, value_str)
+                            and config["required"] == "yes"
+                        ):
                             return [
                                 Error(
                                     "sec_missing_encryption",
@@ -61,7 +66,10 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                                     repr(attribute),
                                 )
                             ]
-                        elif re.search(pattern, value_str) and config["required"] == "must_not_exist":
+                        elif (
+                            re.search(pattern, value_str)
+                            and config["required"] == "must_not_exist"
+                        ):
                             return [
                                 Error(
                                     "sec_missing_encryption",
@@ -103,13 +111,22 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                 resources = self.check_required_attribute(
                     element, ["encryption_config"], "resources"
                 )
-                if isinstance(resources, Attribute) and isinstance(resources.value, Array):
+                if isinstance(resources, Attribute) and isinstance(
+                    resources.value, Array
+                ):
                     has_secrets = any(
                         isinstance(v, String) and v.value.lower() == "secrets"
                         for v in resources.value.value
                     )
                     if not has_secrets:
-                        errors.append(Error("sec_missing_encryption", resources, file, repr(resources)))
+                        errors.append(
+                            Error(
+                                "sec_missing_encryption",
+                                resources,
+                                file,
+                                repr(resources),
+                            )
+                        )
                 elif resources is None:
                     errors.append(
                         Error(
@@ -124,9 +141,13 @@ class TerraformMissingEncryption(TerraformSmellChecker):
                 "aws_instance",
                 "aws_launch_configuration",
             ]:
-                ebs_block_device = self.check_required_attribute(element, [], "ebs_block_device")
+                ebs_block_device = self.check_required_attribute(
+                    element, [], "ebs_block_device"
+                )
                 if isinstance(ebs_block_device, UnitBlock):
-                    encrypted = self.check_required_attribute(ebs_block_device, [], "encrypted")
+                    encrypted = self.check_required_attribute(
+                        ebs_block_device, [], "encrypted"
+                    )
                     if encrypted is None:
                         errors.append(
                             Error(

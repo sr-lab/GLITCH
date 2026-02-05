@@ -51,7 +51,11 @@ class TerraformAccessControl(TerraformSmellChecker):
             attribute.name == "member"
             and atomic_unit.type == "google_storage_bucket_iam_member"
         ):
-            value_str = attribute.value.value.lower() if isinstance(attribute.value, String) else str(attribute.value).lower()
+            value_str = (
+                attribute.value.value.lower()
+                if isinstance(attribute.value, String)
+                else str(attribute.value).lower()
+            )
             if value_str in ["allusers", "allauthenticatedusers"]:
                 return [Error("sec_access_control", attribute, file, repr(attribute))]
         elif (
@@ -60,14 +64,21 @@ class TerraformAccessControl(TerraformSmellChecker):
             and isinstance(attribute.value, Array)
         ):
             for item in attribute.value.value:
-                if isinstance(item, String) and item.value.lower() in ["allusers", "allauthenticatedusers"]:
-                    return [Error("sec_access_control", attribute, file, repr(attribute))]
+                if isinstance(item, String) and item.value.lower() in [
+                    "allusers",
+                    "allauthenticatedusers",
+                ]:
+                    return [
+                        Error("sec_access_control", attribute, file, repr(attribute))
+                    ]
         elif (
             attribute.name == "email"
             and parent_name == "service_account"
             and atomic_unit.type == "google_compute_instance"
             and isinstance(attribute.value, String)
-            and re.search(r".-compute@developer.gserviceaccount.com", attribute.value.value)
+            and re.search(
+                r".-compute@developer.gserviceaccount.com", attribute.value.value
+            )
         ):
             return [Error("sec_access_control", attribute, file, repr(attribute))]
 
@@ -84,9 +95,8 @@ class TerraformAccessControl(TerraformSmellChecker):
                 authorization = self.check_required_attribute(
                     element, [], "authorization"
                 )
-                if (
-                    isinstance(http_method, (KeyValue, Attribute))
-                    and isinstance(authorization, (KeyValue, Attribute))
+                if isinstance(http_method, (KeyValue, Attribute)) and isinstance(
+                    authorization, (KeyValue, Attribute)
                 ):
                     if get_checker.check(http_method.value) and none_checker.check(
                         authorization.value
@@ -149,14 +159,20 @@ class TerraformAccessControl(TerraformSmellChecker):
                             if value.value.lower() != "true":
                                 errors.append(
                                     Error(
-                                        "sec_access_control", private, file, repr(private)
+                                        "sec_access_control",
+                                        private,
+                                        file,
+                                        repr(private),
                                     )
                                 )
                         elif isinstance(value, Boolean):
                             if not value.value:
                                 errors.append(
                                     Error(
-                                        "sec_access_control", private, file, repr(private)
+                                        "sec_access_control",
+                                        private,
+                                        file,
+                                        repr(private),
                                     )
                                 )
                     else:

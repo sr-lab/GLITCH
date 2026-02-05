@@ -3,6 +3,7 @@ from glitch.tech import Tech
 from glitch.analysis.rules import Error
 import configparser
 
+
 def get_smell_types() -> Tuple[str, ...]:
     """Get list of smell types.
 
@@ -114,6 +115,7 @@ def compute_LPS_array(pat: str, M: int, lps: List[int]) -> None:
                 lps[i] = 0
                 i += 1
 
+
 def ini_to_json_dict(config_path: str) -> Dict[str, Dict[str, List[str]]]:
     config = configparser.ConfigParser()
     config.read(config_path)
@@ -138,8 +140,7 @@ def ini_to_json_dict(config_path: str) -> Dict[str, Dict[str, List[str]]]:
                     section_data[key] = []
                 else:
                     section_data[key] = [
-                        item.strip().strip('"').strip("'")
-                        for item in inner.split(",")
+                        item.strip().strip('"').strip("'") for item in inner.split(",")
                     ]
             else:
                 # Case: plain value, keep as string

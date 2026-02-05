@@ -3,7 +3,14 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, Boolean, CodeElement, KeyValue, String
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    Boolean,
+    CodeElement,
+    KeyValue,
+    String,
+)
 
 
 class TerraformHttpWithoutTls(TerraformSmellChecker):
@@ -21,11 +28,20 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
                 and self._parent_matches(parent_name, config["parents"])
                 and not VariableChecker().check(attribute.value)
             ):
-                if isinstance(attribute.value, Boolean) and str(attribute.value.value).lower() not in config["values"]:
+                if (
+                    isinstance(attribute.value, Boolean)
+                    and str(attribute.value.value).lower() not in config["values"]
+                ):
                     return [Error("sec_https", attribute, file, repr(attribute))]
-                elif isinstance(attribute.value, String) and attribute.value.value.lower() not in config["values"]:
+                elif (
+                    isinstance(attribute.value, String)
+                    and attribute.value.value.lower() not in config["values"]
+                ):
                     return [Error("sec_https", attribute, file, repr(attribute))]
-                elif isinstance(attribute.value, str) and attribute.value.lower() not in config["values"]:
+                elif (
+                    isinstance(attribute.value, str)
+                    and attribute.value.lower() not in config["values"]
+                ):
                     return [Error("sec_https", attribute, file, repr(attribute))]
 
         return []
@@ -37,7 +53,7 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
                 url = self.check_required_attribute(element, [], "url")
                 if (
                     isinstance(url, KeyValue)
-                    and hasattr(url.value, 'code')
+                    and hasattr(url.value, "code")
                     and "${" in url.value.code
                 ):
                     url_code = url.value.code

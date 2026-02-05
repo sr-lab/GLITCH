@@ -14,36 +14,51 @@ from glitch.analysis.security.smell_checker import SecuritySmellChecker
 
 
 class SecurityVisitor(RuleVisitor):
-
     class NonOfficialImageSmell(SmellChecker):
         def check(self, element: CodeElement, file: str) -> List[Error]:
             return []
 
     def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
-        
+
         SECURITY_CHECKER_ERRORS: Dict[Type[SecuritySmellChecker], List[str]] = {}
 
         from glitch.analysis.terraform.access_control import TerraformAccessControl
-        from glitch.analysis.terraform.attached_resource import TerraformAttachedResource
+        from glitch.analysis.terraform.attached_resource import (
+            TerraformAttachedResource,
+        )
         from glitch.analysis.terraform.authentication import TerraformAuthentication
         from glitch.analysis.terraform.dns_policy import TerraformDnsWithoutDnssec
-        from glitch.analysis.terraform.firewall_misconfig import TerraformFirewallMisconfig
+        from glitch.analysis.terraform.firewall_misconfig import (
+            TerraformFirewallMisconfig,
+        )
         from glitch.analysis.terraform.http_without_tls import TerraformHttpWithoutTls
         from glitch.analysis.terraform.integrity_policy import TerraformIntegrityPolicy
         from glitch.analysis.terraform.key_management import TerraformKeyManagement
         from glitch.analysis.terraform.logging import TerraformLogging
-        from glitch.analysis.terraform.missing_encryption import TerraformMissingEncryption
+        from glitch.analysis.terraform.missing_encryption import (
+            TerraformMissingEncryption,
+        )
         from glitch.analysis.terraform.naming import TerraformNaming
-        from glitch.analysis.terraform.network_policy import TerraformNetworkSecurityRules
-        from glitch.analysis.terraform.permission_iam_policies import TerraformPermissionIAMPolicies
+        from glitch.analysis.terraform.network_policy import (
+            TerraformNetworkSecurityRules,
+        )
+        from glitch.analysis.terraform.permission_iam_policies import (
+            TerraformPermissionIAMPolicies,
+        )
         from glitch.analysis.terraform.public_ip import TerraformPublicIp
         from glitch.analysis.terraform.replication import TerraformReplication
-        from glitch.analysis.terraform.sensitive_iam_action import TerraformSensitiveIAMAction
+        from glitch.analysis.terraform.sensitive_iam_action import (
+            TerraformSensitiveIAMAction,
+        )
         from glitch.analysis.terraform.ssl_tls_policy import TerraformSslTlsPolicy
-        from glitch.analysis.terraform.threats_detection import TerraformThreatsDetection
+        from glitch.analysis.terraform.threats_detection import (
+            TerraformThreatsDetection,
+        )
         from glitch.analysis.terraform.versioning import TerraformVersioning
-        from glitch.analysis.terraform.weak_password_key_policy import TerraformWeakPasswordKeyPolicy
+        from glitch.analysis.terraform.weak_password_key_policy import (
+            TerraformWeakPasswordKeyPolicy,
+        )
 
         TERRAFORM_CHECKER_ERRORS: Dict[Type[TerraformSmellChecker], str] = {
             TerraformAccessControl: "sec_access_control",
@@ -65,7 +80,7 @@ class SecurityVisitor(RuleVisitor):
             TerraformSslTlsPolicy: "sec_ssl_tls_policy",
             TerraformThreatsDetection: "sec_threats_detection_alerts",
             TerraformVersioning: "sec_versioning",
-            TerraformWeakPasswordKeyPolicy: "sec_weak_password_key_policy"
+            TerraformWeakPasswordKeyPolicy: "sec_weak_password_key_policy",
         }
 
         self.checkers: List[SmellChecker] = []
@@ -75,24 +90,24 @@ class SecurityVisitor(RuleVisitor):
 
             if not any(name in fallback for name in error_name):
                 continue
-            
+
             self.checkers.append(child())
 
         if tech == Tech.terraform:
             # Some Terraform checkers handle Terraform-specific patterns that complement
             # generic Rego checks for the same smell code. These should always run.
             ALWAYS_RUN_CHECKERS = {TerraformHttpWithoutTls}
-            
+
             for child in TerraformSmellChecker.__subclasses__():
                 error_name = TERRAFORM_CHECKER_ERRORS.get(child)
 
                 if error_name is None:
                     continue
-                
+
                 # Run if: smell is in fallback (no Rego) OR checker is in always-run list
                 if error_name not in fallback and child not in ALWAYS_RUN_CHECKERS:
                     continue
-                
+
                 self.checkers.append(child())
 
         self.non_off_img = SecurityVisitor.NonOfficialImageSmell()
@@ -264,6 +279,7 @@ class SecurityVisitor(RuleVisitor):
         errors += self.non_off_img.check(u, file)
 
         return errors
+
 
 # NOTE: in the end of the file to avoid circular import
 # Imports all the classes defined in the __init__.py file

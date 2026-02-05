@@ -52,8 +52,10 @@ class TransverseChecker(Checker, ABC):
         return self.check(expr.left) or self.check(expr.right)
 
     def check_conditional_statement(self, expr: ConditionalStatement) -> bool:
-        return self.check_block(expr) or self.check(expr.condition) or (
-            expr.else_statement is not None and self.check(expr.else_statement)
+        return (
+            self.check_block(expr)
+            or self.check(expr.condition)
+            or (expr.else_statement is not None and self.check(expr.else_statement))
         )
 
     def check_blockexpr(self, element: BlockExpr) -> bool:

@@ -2,7 +2,14 @@ import json
 from typing import Any, List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.repr.inter import Array, AtomicUnit, CodeElement, KeyValue, String, UnitBlock
+from glitch.repr.inter import (
+    Array,
+    AtomicUnit,
+    CodeElement,
+    KeyValue,
+    String,
+    UnitBlock,
+)
 
 
 class TerraformSensitiveIAMAction(TerraformSmellChecker):
@@ -32,24 +39,42 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
                             elif isinstance(attr.value, str):
                                 effect_value = attr.value.lower()
                             break
-                    
+
                     if effect_value == "allow" or effect_value is None:
                         for attr in statement.attributes:
                             if attr.name == "actions" and isinstance(attr.value, Array):
                                 for item in attr.value.value:
-                                    item_val = item.value if isinstance(item, String) else item
+                                    item_val = (
+                                        item.value if isinstance(item, String) else item
+                                    )
                                     if isinstance(item_val, str) and "*" in item_val:
                                         errors.append(
-                                            Error("sec_sensitive_iam_action", attr, file, repr(attr))
+                                            Error(
+                                                "sec_sensitive_iam_action",
+                                                attr,
+                                                file,
+                                                repr(attr),
+                                            )
                                         )
                                         break
 
-                            if attr.name == "resources" and isinstance(attr.value, Array):
+                            if attr.name == "resources" and isinstance(
+                                attr.value, Array
+                            ):
                                 for item in attr.value.value:
-                                    item_val = item.value if isinstance(item, String) else item
-                                    if isinstance(item_val, str) and (item_val == "*" or ":*" in item_val):
+                                    item_val = (
+                                        item.value if isinstance(item, String) else item
+                                    )
+                                    if isinstance(item_val, str) and (
+                                        item_val == "*" or ":*" in item_val
+                                    ):
                                         errors.append(
-                                            Error("sec_sensitive_iam_action", attr, file, repr(attr))
+                                            Error(
+                                                "sec_sensitive_iam_action",
+                                                attr,
+                                                file,
+                                                repr(attr),
+                                            )
                                         )
                                         break
         elif element.type in [

@@ -4,7 +4,14 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, String, Boolean
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    CodeElement,
+    KeyValue,
+    String,
+    Boolean,
+)
 
 
 class TerraformAuthentication(TerraformSmellChecker):
@@ -50,13 +57,15 @@ class TerraformAuthentication(TerraformSmellChecker):
                     value_str = attribute.value.value
                 elif isinstance(attribute.value, Boolean):
                     value_str = "true" if attribute.value.value else "false"
-                
+
                 if (
                     value_str is not None
                     and not VariableChecker().check(attribute.value)
                     and value_str.lower() not in config["values"]
                 ):
-                    return [Error("sec_authentication", attribute, file, repr(attribute))]
+                    return [
+                        Error("sec_authentication", attribute, file, repr(attribute))
+                    ]
 
         return []
 
@@ -73,7 +82,11 @@ class TerraformAuthentication(TerraformSmellChecker):
                     "off",
                 )
             elif element.type == "aws_iam_group":
-                name_str = element.name.value if isinstance(element.name, String) else str(element.name)
+                name_str = (
+                    element.name.value
+                    if isinstance(element.name, String)
+                    else str(element.name)
+                )
                 expr = "(\\$\\{)?aws_iam_group\\." + f"{name_str}\\."
                 pattern = re.compile(rf"{expr}")
                 if not self.get_associated_au(
@@ -96,7 +109,8 @@ class TerraformAuthentication(TerraformSmellChecker):
                     and element.type in config["au_type"]
                     and self.check_required_attribute(
                         element, config["parents"], config["attribute"]
-                    ) is None
+                    )
+                    is None
                 ):
                     msg = config.get("msg")
                     if msg is None:

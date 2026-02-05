@@ -318,7 +318,9 @@ class TestPuppetParser(TestParser):
         assert isinstance(unit_block.statements[0].else_statement.condition, Null)
         assert len(unit_block.statements[0].else_statement.statements) == 1
         # FIXME: This is an HACK to temporarily support chaining
-        assert isinstance(unit_block.statements[0].else_statement.statements[0], UnitBlock)
+        assert isinstance(
+            unit_block.statements[0].else_statement.statements[0], UnitBlock
+        )
 
     def test_puppet_parser_selector(self) -> None:
         """

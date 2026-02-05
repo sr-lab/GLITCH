@@ -86,7 +86,10 @@ class Error:
         self.opt_msg = opt_msg
 
         if isinstance(self.el, CodeElement):
-            if self.code == "sec_no_default_switch" and type(self.el) is ConditionalStatement:
+            if (
+                self.code == "sec_no_default_switch"
+                and type(self.el) is ConditionalStatement
+            ):
                 # Special case: use line number of condition
                 # TODO: improve this hack for edge cases on parsing errors
                 # self.line = self.el.condition.line
@@ -114,11 +117,10 @@ class Error:
             )
             if self.opt_msg:
                 line += f"\n-> {self.opt_msg}"
-                
+
             if self.line == UNDEFINED_POSITION:
                 return (
-                    f"{self.path}\nIssue: {Error.ALL_ERRORS[self.code]}\n"
-                    + f"{line}\n"
+                    f"{self.path}\nIssue: {Error.ALL_ERRORS[self.code]}\n" + f"{line}\n"
                 )
             return (
                 f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n"

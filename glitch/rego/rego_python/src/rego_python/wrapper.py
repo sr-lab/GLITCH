@@ -8,9 +8,10 @@ _rego_available: bool = False
 _rego_error: Optional[str] = None
 _lib: Any = None
 
+
 def _get_lib_path():
-    system = platform.system().lower()      # 'windows', 'linux', 'darwin'
-    machine = platform.machine().lower()    # 'x86_64', 'amd64', 'arm64', 'aarch64', etc.
+    system = platform.system().lower()  # 'windows', 'linux', 'darwin'
+    machine = platform.machine().lower()  # 'x86_64', 'amd64', 'arm64', 'aarch64', etc.
 
     base = Path(__file__).parent / "bin"
 
@@ -68,21 +69,23 @@ def get_rego_error() -> Optional[str]:
     return _rego_error
 
 
-def run_rego(input_data: dict[str, str], data: dict[str, str], rego_modules: dict[str, str]):
+def run_rego(
+    input_data: dict[str, str], data: dict[str, str], rego_modules: dict[str, str]
+):
     if _lib is None:
         raise RuntimeError(f"Rego library is not available: {_rego_error}")
-    
+
     input_str = json.dumps(input_data)
     data_str = json.dumps(data)
     rego_modules_str = json.dumps(rego_modules)
 
     result_ptr = _lib.RunRego(
-        input_str.encode('utf-8'),
-        data_str.encode('utf-8'),
-        rego_modules_str.encode('utf-8'),
+        input_str.encode("utf-8"),
+        data_str.encode("utf-8"),
+        rego_modules_str.encode("utf-8"),
     )
-    
-    result_json = ctypes.string_at(result_ptr).decode('utf-8')
+
+    result_json = ctypes.string_at(result_ptr).decode("utf-8")
     _lib.FreeCString(result_ptr)
 
     return json.loads(result_json)

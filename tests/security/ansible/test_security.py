@@ -1,6 +1,7 @@
 from tests.security.security_helper import BaseSecurityTest
 from glitch.tech import Tech
 
+
 class TestSecurity(BaseSecurityTest):
     TECH = Tech.ansible
 

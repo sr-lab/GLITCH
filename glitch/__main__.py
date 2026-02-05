@@ -44,32 +44,31 @@ def __parse_and_check(
     analyses: List[RuleVisitor],
     stats: FileStats,
     config_rego: Dict[str, Dict[str, List[str]]],
-    rego_modules: Dict[str, str]
+    rego_modules: Dict[str, str],
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
     # Avoids problems with multiple threads (and possibly multiple files)
     # sharing the same object
-    
+
     analyses = deepcopy(analyses)
     if inter != None:
         for analysis in analyses:
             errors.update(analysis.check(inter))
-    
+
         inputRego = json.dumps(inter.as_dict(), indent=2)
-        
+
         errors.update(run_analyses(inputRego, config_rego, rego_modules))
-        
+
         stats.compute(inter)
 
     return errors
 
+
 def __filter_analysis(
-    smell_types: Tuple[str, ...],
-    config: str,
-    tech: Tech
-) -> Tuple[Dict[str,str], List[RuleVisitor]]:
-    rego_modules: Dict[str,str] = {}
+    smell_types: Tuple[str, ...], config: str, tech: Tech
+) -> Tuple[Dict[str, str], List[RuleVisitor]]:
+    rego_modules: Dict[str, str] = {}
     python_analyses: List[RuleVisitor] = []
 
     rego_lib_path = __get_resource_path("rego/queries/library/glitch_lib.rego")
@@ -87,7 +86,7 @@ def __filter_analysis(
                 load_rego_from_path(rego_path, rego_modules)
             else:
                 fallback.add(smell)
-    
+
         if len(fallback) > 0:
             match smell_type:
                 case "design":
@@ -101,6 +100,7 @@ def __filter_analysis(
             python_analyses.append(visitor)
 
     return rego_modules, python_analyses
+
 
 def __get_tech(tech: str) -> Tech:
     for t in Tech:
@@ -264,15 +264,20 @@ def lint(
     output: Optional[str],
     table_format: str,
     linter: bool,
-    n_workers: int
+    n_workers: int,
 ):
     tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
     module = folder_strategy == "module"
 
     if not is_rego_available():
-        click.echo(f"Error: Rego library is not available. {get_rego_error()}", err=True)
-        click.echo("Please build or install the Rego library. See README for instructions.", err=True)
+        click.echo(
+            f"Error: Rego library is not available. {get_rego_error()}", err=True
+        )
+        click.echo(
+            "Please build or install the Rego library. See README for instructions.",
+            err=True,
+        )
         sys.exit(1)
 
     if config != "configs/default.ini" and not os.path.exists(config):
@@ -290,12 +295,12 @@ def lint(
     if tech == Tech.terraform:
         config = __get_resource_path("configs/terraform.ini")
     file_stats = FileStats()
-    
+
     if smell_types == ():
         smell_types = get_smell_types()
 
     config_rego = ini_to_json_dict(config)
-    
+
     rego_modules, analyses = __filter_analysis(smell_types, config, tech)
 
     errors: List[Error] = []
@@ -309,7 +314,15 @@ def lint(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats, config_rego, rego_modules
+                __parse_and_check,
+                type,
+                p,
+                module,
+                parser,
+                analyses,
+                file_stats,
+                config_rego,
+                rego_modules,
             )
         )
         future_to_path[futures[-1]] = p

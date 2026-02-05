@@ -17,9 +17,8 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
         file: str,
     ) -> List[Error]:
         if (
-            (attribute.name == "member" or attribute.name.split("[")[0] == "members")
-            and atomic_unit.type in SecurityVisitor.GOOGLE_IAM_MEMBER
-        ):
+            attribute.name == "member" or attribute.name.split("[")[0] == "members"
+        ) and atomic_unit.type in SecurityVisitor.GOOGLE_IAM_MEMBER:
             iam_checker = StringChecker(
                 lambda x: bool(
                     re.search(r".-compute@developer.gserviceaccount.com", x)
@@ -29,7 +28,9 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
             )
             if iam_checker.check(attribute.value):
                 return [
-                    Error("sec_permission_iam_policies", attribute, file, repr(attribute))
+                    Error(
+                        "sec_permission_iam_policies", attribute, file, repr(attribute)
+                    )
                 ]
 
         for config in SecurityVisitor.PERMISSION_IAM_POLICIES:
@@ -40,16 +41,32 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
                 and config["values"] != [""]
             ):
                 if config["logic"] == "equal":
-                    checker = StringChecker(lambda x, c=config: x.lower() not in c["values"])
-                    if not VariableChecker().check(attribute.value) and checker.check(attribute.value):
+                    checker = StringChecker(
+                        lambda x, c=config: x.lower() not in c["values"]
+                    )
+                    if not VariableChecker().check(attribute.value) and checker.check(
+                        attribute.value
+                    ):
                         return [
-                            Error("sec_permission_iam_policies", attribute, file, repr(attribute))
+                            Error(
+                                "sec_permission_iam_policies",
+                                attribute,
+                                file,
+                                repr(attribute),
+                            )
                         ]
                 elif config["logic"] == "diff":
-                    checker = StringChecker(lambda x, c=config: x.lower() in c["values"])
+                    checker = StringChecker(
+                        lambda x, c=config: x.lower() in c["values"]
+                    )
                     if checker.check(attribute.value):
                         return [
-                            Error("sec_permission_iam_policies", attribute, file, repr(attribute))
+                            Error(
+                                "sec_permission_iam_policies",
+                                attribute,
+                                file,
+                                repr(attribute),
+                            )
                         ]
 
         return []
@@ -58,7 +75,11 @@ class TerraformPermissionIAMPolicies(TerraformSmellChecker):
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             if element.type == "aws_iam_user":
-                name = element.name.value if isinstance(element.name, String) else element.name
+                name = (
+                    element.name.value
+                    if isinstance(element.name, String)
+                    else element.name
+                )
                 expr = f"aws_iam_user\\.{name}\\."
                 pattern = re.compile(expr)
                 assoc_au = self.get_associated_au(

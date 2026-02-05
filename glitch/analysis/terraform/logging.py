@@ -5,7 +5,17 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import Array, AtomicUnit, Attribute, Boolean, CodeElement, Integer, KeyValue, String, UnitBlock
+from glitch.repr.inter import (
+    Array,
+    AtomicUnit,
+    Attribute,
+    Boolean,
+    CodeElement,
+    Integer,
+    KeyValue,
+    String,
+    UnitBlock,
+)
 
 
 class TerraformLogging(TerraformSmellChecker):
@@ -32,7 +42,9 @@ class TerraformLogging(TerraformSmellChecker):
             )
             return errors
 
-        if not isinstance(attribute, Attribute) or not isinstance(attribute.value, Array):
+        if not isinstance(attribute, Attribute) or not isinstance(
+            attribute.value, Array
+        ):
             return errors
 
         array_values = [
@@ -87,7 +99,9 @@ class TerraformLogging(TerraformSmellChecker):
             element, [], "storage_account_name"
         )
         storage_name_value = None
-        if storage_account_name is not None and isinstance(storage_account_name, Attribute):
+        if storage_account_name is not None and isinstance(
+            storage_account_name, Attribute
+        ):
             if isinstance(storage_account_name.value, String):
                 storage_name_value = storage_account_name.value.value.lower()
             elif hasattr(storage_account_name.value, "code"):
@@ -112,7 +126,11 @@ class TerraformLogging(TerraformSmellChecker):
             )
             return errors
 
-        name = storage_name_value.split(".")[1] if storage_name_value.startswith("${") else storage_name_value.split(".")[0]
+        name = (
+            storage_name_value.split(".")[1]
+            if storage_name_value.startswith("${")
+            else storage_name_value.split(".")[0]
+        )
         if storage_name_value.startswith("azurerm_storage_account."):
             name = storage_name_value.split(".")[1]
         storage_account_au = self.get_au(file, name, "azurerm_storage_account")
@@ -166,7 +184,9 @@ class TerraformLogging(TerraformSmellChecker):
             )
             return errors
 
-        if isinstance(blob_container_names, Attribute) and isinstance(blob_container_names.value, Array):
+        if isinstance(blob_container_names, Attribute) and isinstance(
+            blob_container_names.value, Array
+        ):
             has_valid_name = False
             for item in blob_container_names.value.value:
                 if isinstance(item, String) and item.value.strip():
@@ -201,8 +221,14 @@ class TerraformLogging(TerraformSmellChecker):
             elif hasattr(attribute.value, "code"):
                 value_str = attribute.value.code
 
-            if value_str and re.match(r"^(\$\{)?aws_cloudwatch_log_group\..", value_str):
-                aws_cloudwatch_log_group_name = value_str.split(".")[1] if value_str.startswith("$") else value_str.split(".")[0]
+            if value_str and re.match(
+                r"^(\$\{)?aws_cloudwatch_log_group\..", value_str
+            ):
+                aws_cloudwatch_log_group_name = (
+                    value_str.split(".")[1]
+                    if value_str.startswith("$")
+                    else value_str.split(".")[0]
+                )
                 if value_str.startswith("aws_cloudwatch_log_group."):
                     aws_cloudwatch_log_group_name = value_str.split(".")[1]
                 if not self.get_au(
@@ -223,26 +249,22 @@ class TerraformLogging(TerraformSmellChecker):
             else:
                 return [Error("sec_logging", attribute, file, repr(attribute))]
         elif (
-            (
-                attribute.name == "retention_in_days"
-                and parent_name == ""
-                and atomic_unit.type
-                in [
-                    "azurerm_mssql_database_extended_auditing_policy",
-                    "azurerm_mssql_server_extended_auditing_policy",
-                ]
-            )
-            or (
-                attribute.name == "days"
-                and parent_name == "retention_policy"
-                and atomic_unit.type == "azurerm_network_watcher_flow_log"
-            )
+            attribute.name == "retention_in_days"
+            and parent_name == ""
+            and atomic_unit.type
+            in [
+                "azurerm_mssql_database_extended_auditing_policy",
+                "azurerm_mssql_server_extended_auditing_policy",
+            ]
+        ) or (
+            attribute.name == "days"
+            and parent_name == "retention_policy"
+            and atomic_unit.type == "azurerm_network_watcher_flow_log"
         ):
             if isinstance(attribute.value, Integer) and attribute.value.value < 90:
                 return [Error("sec_logging", attribute, file, repr(attribute))]
             elif isinstance(attribute.value, String) and (
-                not attribute.value.value.isnumeric()
-                or int(attribute.value.value) < 90
+                not attribute.value.value.isnumeric() or int(attribute.value.value) < 90
             ):
                 return [Error("sec_logging", attribute, file, repr(attribute))]
         elif (
@@ -315,7 +337,11 @@ class TerraformLogging(TerraformSmellChecker):
                         if isinstance(log, UnitBlock):
                             enabled = self.check_required_attribute(log, [], "enabled")
                             if isinstance(enabled, (Attribute, KeyValue)):
-                                enabled_val = str(enabled.value.value).lower() if isinstance(enabled.value, Boolean) else str(enabled.value).lower()
+                                enabled_val = (
+                                    str(enabled.value.value).lower()
+                                    if isinstance(enabled.value, Boolean)
+                                    else str(enabled.value).lower()
+                                )
                                 if enabled_val == "true":
                                     active = True
                                 else:
@@ -361,7 +387,11 @@ class TerraformLogging(TerraformSmellChecker):
                     )
                 )
             elif element.type == "azurerm_mssql_server":
-                name = element.name.value if isinstance(element.name, String) else str(element.name)
+                name = (
+                    element.name.value
+                    if isinstance(element.name, String)
+                    else str(element.name)
+                )
                 expr = "(\\$\\{)?azurerm_mssql_server\\." + f"{name}\\."
                 pattern = re.compile(rf"{expr}")
                 assoc_au = self.get_associated_au(
@@ -383,7 +413,11 @@ class TerraformLogging(TerraformSmellChecker):
                         )
                     )
             elif element.type == "azurerm_mssql_database":
-                name = element.name.value if isinstance(element.name, String) else str(element.name)
+                name = (
+                    element.name.value
+                    if isinstance(element.name, String)
+                    else str(element.name)
+                )
                 expr = "(\\$\\{)?azurerm_mssql_database\\." + f"{name}\\."
                 pattern = re.compile(rf"{expr}")
                 assoc_au = self.get_associated_au(
@@ -416,7 +450,9 @@ class TerraformLogging(TerraformSmellChecker):
                     and isinstance(value_attr.value, String)
                     and value_attr.value.value.lower() != "on"
                 ):
-                    errors.append(Error("sec_logging", value_attr, file, repr(value_attr)))
+                    errors.append(
+                        Error("sec_logging", value_attr, file, repr(value_attr))
+                    )
             elif element.type == "azurerm_monitor_log_profile":
                 errors.extend(
                     self.__check_log_attribute(
@@ -451,7 +487,10 @@ class TerraformLogging(TerraformSmellChecker):
                         element, ["setting"], "value"
                     )
                     if isinstance(enabled, (Attribute, KeyValue)):
-                        if isinstance(enabled.value, String) and enabled.value.value.lower() != "enabled":
+                        if (
+                            isinstance(enabled.value, String)
+                            and enabled.value.value.lower() != "enabled"
+                        ):
                             errors.append(
                                 Error("sec_logging", enabled, file, repr(enabled))
                             )
@@ -476,7 +515,11 @@ class TerraformLogging(TerraformSmellChecker):
                         )
                     )
             elif element.type == "aws_vpc":
-                name = element.name.value if isinstance(element.name, String) else str(element.name)
+                name = (
+                    element.name.value
+                    if isinstance(element.name, String)
+                    else str(element.name)
+                )
                 expr = "(\\$\\{)?aws_vpc\\." + f"{name}\\."
                 pattern = re.compile(rf"{expr}")
                 assoc_au = self.get_associated_au(
@@ -514,10 +557,16 @@ class TerraformLogging(TerraformSmellChecker):
                         and config["attribute"] == "logging"
                         and len(parents) == 1
                     ):
-                        first_parent = self.check_required_attribute(element, [], parents[0])
+                        first_parent = self.check_required_attribute(
+                            element, [], parents[0]
+                        )
                         if first_parent is None:
                             continue
-                    if has_dynamic_block and config["values"] == [] and len(parents) == 0:
+                    if (
+                        has_dynamic_block
+                        and config["values"] == []
+                        and len(parents) == 0
+                    ):
                         continue
                     errors.append(
                         Error(

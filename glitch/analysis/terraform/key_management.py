@@ -4,7 +4,14 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, String, Boolean
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    CodeElement,
+    KeyValue,
+    String,
+    Boolean,
+)
 
 
 class TerraformKeyManagement(TerraformSmellChecker):
@@ -51,7 +58,9 @@ class TerraformKeyManagement(TerraformSmellChecker):
         ):
             expr1 = r"\d+\.\d{0,9}s"
             expr2 = r"\d+s"
-            value_str = attribute.value.value if isinstance(attribute.value, String) else None
+            value_str = (
+                attribute.value.value if isinstance(attribute.value, String) else None
+            )
             if value_str is not None and (
                 re.search(expr1, value_str) or re.search(expr2, value_str)
             ):
@@ -79,7 +88,11 @@ class TerraformKeyManagement(TerraformSmellChecker):
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             if element.type == "azurerm_storage_account":
-                name_str = element.name.value if isinstance(element.name, String) else str(element.name)
+                name_str = (
+                    element.name.value
+                    if isinstance(element.name, String)
+                    else str(element.name)
+                )
                 expr = "(\\$\\{)?azurerm_storage_account\\." + f"{name_str}\\."
                 pattern = re.compile(rf"{expr}")
                 if not self.get_associated_au(
@@ -100,12 +113,14 @@ class TerraformKeyManagement(TerraformSmellChecker):
                         )
                     )
             for config in SecurityVisitor.KEY_MANAGEMENT:
-                if (
-                    config["required"] == "yes"
-                    and element.type in config["au_type"]
-                ):
+                if config["required"] == "yes" and element.type in config["au_type"]:
                     attr_name = config["attribute"]
-                    if self.check_required_attribute(element, config["parents"], attr_name) is None:
+                    if (
+                        self.check_required_attribute(
+                            element, config["parents"], attr_name
+                        )
+                        is None
+                    ):
                         errors.append(
                             Error(
                                 "sec_key_management",

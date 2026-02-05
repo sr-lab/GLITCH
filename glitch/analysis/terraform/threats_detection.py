@@ -3,7 +3,14 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement, String, Boolean
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    KeyValue,
+    CodeElement,
+    String,
+    Boolean,
+)
 
 
 class TerraformThreatsDetection(TerraformSmellChecker):
@@ -26,7 +33,7 @@ class TerraformThreatsDetection(TerraformSmellChecker):
                     value_str = attribute.value.value.lower()
                 elif isinstance(attribute.value, Boolean):
                     value_str = "true" if attribute.value.value else "false"
-                
+
                 if (
                     "any_not_empty" in config["values"]
                     and value_str is not None
@@ -61,12 +68,14 @@ class TerraformThreatsDetection(TerraformSmellChecker):
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             for config in SecurityVisitor.MISSING_THREATS_DETECTION_ALERTS:
-                if (
-                    config["required"] == "yes"
-                    and element.type in config["au_type"]
-                ):
+                if config["required"] == "yes" and element.type in config["au_type"]:
                     attr_name = config["attribute"]
-                    if self.check_required_attribute(element, config["parents"], attr_name) is None:
+                    if (
+                        self.check_required_attribute(
+                            element, config["parents"], attr_name
+                        )
+                        is None
+                    ):
                         msg = config.get("msg", attr_name)
                         errors.append(
                             Error(
@@ -82,7 +91,9 @@ class TerraformThreatsDetection(TerraformSmellChecker):
                     and element.type in config["au_type"]
                 ):
                     attr_name = config["attribute"]
-                    a = self.check_required_attribute(element, config["parents"], attr_name)
+                    a = self.check_required_attribute(
+                        element, config["parents"], attr_name
+                    )
                     if a is not None:
                         errors.append(
                             Error("sec_threats_detection_alerts", a, file, repr(a))

@@ -25,9 +25,14 @@ class TerraformVersioning(TerraformSmellChecker):
                 and config["values"] != [""]
                 and not var_checker.check(attribute.value)
             ):
-                if isinstance(attribute.value, Boolean) and str(attribute.value.value).lower() not in config["values"]:
+                if (
+                    isinstance(attribute.value, Boolean)
+                    and str(attribute.value.value).lower() not in config["values"]
+                ):
                     return [Error("sec_versioning", attribute, file, repr(attribute))]
-                elif isinstance(attribute.value, str) and string_checker.check(attribute.value):
+                elif isinstance(attribute.value, str) and string_checker.check(
+                    attribute.value
+                ):
                     return [Error("sec_versioning", attribute, file, repr(attribute))]
 
         return []

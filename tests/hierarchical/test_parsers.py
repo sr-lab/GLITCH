@@ -188,7 +188,7 @@ class TestHierarchicalAnsible(TestHierarchicalParsers):
                         },
                         "right": {
                             "ir_type": "VariableReference",
-                            "code": 'factorial_value',
+                            "code": "factorial_value",
                             "value": "factorial_value",
                         },
                         "type": "sum",

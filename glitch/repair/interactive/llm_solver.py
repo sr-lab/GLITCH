@@ -1,24 +1,22 @@
-from ollama import chat # type: ignore
+from ollama import chat  # type: ignore
 from ollama import ChatResponse
 from glitch.repair.interactive.system import SystemState
 from glitch.tech import Tech
 
+
 class PatchSolver:
-    def __init__(
-        self,
-        script: str,
-        filesystem: SystemState,
-        tech: Tech
-    ) -> None:
+    def __init__(self, script: str, filesystem: SystemState, tech: Tech) -> None:
         self.script = script
         self.filesystem = filesystem
         self.tech = tech
 
     def solve(self) -> str | None:
-        response: ChatResponse = chat(model='deepseek-r1:8b', messages=[
-            {
-                'role': 'user',
-                'content': f'''
+        response: ChatResponse = chat(
+            model="deepseek-r1:8b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""
 Consider the following Chef code snippet:
 {self.script}
 
@@ -38,7 +36,8 @@ Your response SHOULD ONLY INCLUDE the fixed code snippet in the following format
 <fixed code snippet>
 === END SOLUTION ===
 DO NOT INCLUDE ANYTHING ELSE IN YOUR RESPONSE.
-''',
-            },
-        ])
+""",
+                },
+            ],
+        )
         return response.message.content

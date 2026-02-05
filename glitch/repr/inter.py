@@ -173,7 +173,7 @@ class Undef(Value):
         if info is None:
             # Let's hope there are no files with 2**32 lines lol
             info = ElementInfo(2**32, 2**32, 2**32, 2**32, "")
-        super().__init__(info, None)    
+        super().__init__(info, None)
 
 
 class Hash(Value):
@@ -252,6 +252,7 @@ class BlockExpr(Expr):
             "statements": [s.as_dict() for s in self.statements],
         }
 
+
 # This is only used in Chef, and should be removed soon
 class AddArgs(Value):
     def __init__(self, value: List[Expr], info: ElementInfo) -> None:
@@ -263,11 +264,12 @@ class AddArgs(Value):
             "value": [v.as_dict() for v in self.value],
         }
 
+
 class UnaryOperation(Expr, ABC):
     def __init__(self, info: ElementInfo, expr: Expr) -> None:
         super().__init__(info)
         self.expr = expr
-        
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
@@ -478,7 +480,7 @@ class ConditionalStatement(Block, Expr):
         type: "ConditionalStatement.ConditionType",
         is_default: bool = False,
         is_top: bool = False,
-        info: ElementInfo | None = None
+        info: ElementInfo | None = None,
     ) -> None:
         Block.__init__(self)
         if info is not None:
@@ -560,11 +562,11 @@ class AtomicUnit(Block):
     def __repr__(self) -> str:
         if isinstance(self.name, String):
             name_str = self.name.value
-        elif hasattr(self.name, 'code'):
+        elif hasattr(self.name, "code"):
             name_str = self.name.code
         else:
             name_str = str(self.name)
-        
+
         return f"{name_str} {self.type}"
 
     def as_dict(self) -> Dict[str, Any]:
@@ -660,6 +662,7 @@ class UnitBlock(Block):
             result["lines"] = lines
 
         return result
+
 
 class File:
     def __init__(self, name: str) -> None:

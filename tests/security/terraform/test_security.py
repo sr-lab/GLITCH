@@ -1,6 +1,7 @@
 from tests.security.security_helper import BaseSecurityTest
 from glitch.tech import Tech
 
+
 class TestSecurity(BaseSecurityTest):
     TECH = Tech.terraform
 
@@ -12,12 +13,17 @@ class TestSecurity(BaseSecurityTest):
 
     def test_terraform_susp_comment(self) -> None:
         self._help_test(
-            "tests/security/terraform/files/susp.tf", "script", 1, ["sec_susp_comm"], [8]
+            "tests/security/terraform/files/susp.tf",
+            "script",
+            1,
+            ["sec_susp_comm"],
+            [8],
         )
 
     def test_terraform_def_admin(self) -> None:
         self._help_test(
-            "tests/security/terraform/files/admin.tf", "script",
+            "tests/security/terraform/files/admin.tf",
+            "script",
             2,
             ["sec_def_admin", "sec_hard_user"],
             [2, 2],
@@ -25,17 +31,26 @@ class TestSecurity(BaseSecurityTest):
 
     def test_terraform_empt_pass(self) -> None:
         self._help_test(
-            "tests/security/terraform/files/empty.tf", "script", 1, ["sec_empty_pass"], [5]
+            "tests/security/terraform/files/empty.tf",
+            "script",
+            1,
+            ["sec_empty_pass"],
+            [5],
         )
 
     def test_terraform_weak_crypt(self) -> None:
         self._help_test(
-            "tests/security/terraform/files/weak_crypt.tf", "script", 1, ["sec_weak_crypt"], [4]
+            "tests/security/terraform/files/weak_crypt.tf",
+            "script",
+            1,
+            ["sec_weak_crypt"],
+            [4],
         )
 
     def test_terraform_hard_secr(self) -> None:
         self._help_test(
-            "tests/security/terraform/files/hard_secr.tf", "script",
+            "tests/security/terraform/files/hard_secr.tf",
+            "script",
             1,
             ["sec_hard_pass"],
             [5],
@@ -43,7 +58,11 @@ class TestSecurity(BaseSecurityTest):
 
     def test_terraform_invalid_bind(self) -> None:
         self._help_test(
-            "tests/security/terraform/files/inv_bind.tf", "script", 1, ["sec_invalid_bind"], [19]
+            "tests/security/terraform/files/inv_bind.tf",
+            "script",
+            1,
+            ["sec_invalid_bind"],
+            [19],
         )
 
     # testing new implemented code smells, or previous ones with new rules for Terraform

@@ -473,7 +473,13 @@ class TestAnsibleParser(TestParser):
 
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         self._check_value(
-            ir.atomic_units[0].name, String, "Restore Service | Set variables", 2, 9, 2, 40
+            ir.atomic_units[0].name,
+            String,
+            "Restore Service | Set variables",
+            2,
+            9,
+            2,
+            40,
         )
         assert ir.atomic_units[0].type == "set_fact"
         assert len(ir.atomic_units[0].attributes) == 1
@@ -482,10 +488,16 @@ class TestAnsibleParser(TestParser):
         assert isinstance(ir.atomic_units[0].attributes[0].value, FunctionCall)
         assert ir.atomic_units[0].attributes[0].value.name == "filter|hash"
         assert len(ir.atomic_units[0].attributes[0].value.args) == 2
-        assert ir.atomic_units[0].attributes[0].value.code == "\"{{ restore_service.user | hash('sha1') }}\""
+        assert (
+            ir.atomic_units[0].attributes[0].value.code
+            == "\"{{ restore_service.user | hash('sha1') }}\""
+        )
 
         assert isinstance(ir.atomic_units[0].attributes[0].value.args[0], Access)
-        assert ir.atomic_units[0].attributes[0].value.args[0].code == "restore_service.user"
+        assert (
+            ir.atomic_units[0].attributes[0].value.args[0].code
+            == "restore_service.user"
+        )
         self._check_value(
             ir.atomic_units[0].attributes[0].value.args[0].left,
             VariableReference,
@@ -495,7 +507,10 @@ class TestAnsibleParser(TestParser):
             4,
             50,
         )
-        assert ir.atomic_units[0].attributes[0].value.args[0].left.code == "restore_service"
+        assert (
+            ir.atomic_units[0].attributes[0].value.args[0].left.code
+            == "restore_service"
+        )
         self._check_value(
             ir.atomic_units[0].attributes[0].value.args[0].right,
             String,
@@ -516,7 +531,7 @@ class TestAnsibleParser(TestParser):
             4,
             69,
         )
-        assert ir.atomic_units[0].attributes[0].value.args[1].code == "\'sha1\'"
+        assert ir.atomic_units[0].attributes[0].value.args[1].code == "'sha1'"
 
     def test_ansible_parser_valid_vars_list_with_variable_reference(self) -> None:
         """
@@ -544,9 +559,11 @@ class TestAnsibleParser(TestParser):
             in ir.variables[0].value.value[0].value
         )
 
-        user_value = ir.variables[0].value.value[0].value[
-            String("user", ElementInfo(2, 3, 2, 7, "user"))
-        ]
+        user_value = (
+            ir.variables[0]
+            .value.value[0]
+            .value[String("user", ElementInfo(2, 3, 2, 7, "user"))]
+        )
         assert isinstance(user_value, Access)
         self._check_value(
             user_value.left,
@@ -555,7 +572,7 @@ class TestAnsibleParser(TestParser):
             2,
             12,
             2,
-            39
+            39,
         )
         self._check_value(
             user_value.right,

@@ -4,7 +4,15 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, Hash, String, UnitBlock
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    CodeElement,
+    KeyValue,
+    Hash,
+    String,
+    UnitBlock,
+)
 
 
 class TerraformNaming(TerraformSmellChecker):
@@ -15,9 +23,7 @@ class TerraformNaming(TerraformSmellChecker):
         parent_name: str,
         file: str,
     ) -> List[Error]:
-        if attribute.name == "name" and atomic_unit.type in [
-            "azurerm_storage_account"
-        ]:
+        if attribute.name == "name" and atomic_unit.type in ["azurerm_storage_account"]:
             pattern = r"^[a-z0-9]{3,24}$"
             if isinstance(attribute.value, String) and not re.match(
                 pattern, attribute.value.value
@@ -78,7 +84,10 @@ class TerraformNaming(TerraformSmellChecker):
                     element, [], "resource_labels", None
                 )
                 if isinstance(resource_labels, Attribute):
-                    if isinstance(resource_labels.value, Hash) and len(resource_labels.value.value) == 0:
+                    if (
+                        isinstance(resource_labels.value, Hash)
+                        and len(resource_labels.value.value) == 0
+                    ):
                         errors.append(
                             Error(
                                 "sec_naming",

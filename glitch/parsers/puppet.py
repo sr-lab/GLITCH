@@ -345,7 +345,9 @@ class PuppetParser(p.Parser):
                     Null(), ConditionalStatement.ConditionType.SWITCH, True
                 )
             else:
-                condition = Equal(ElementInfo.from_code_element(control), control, right)
+                condition = Equal(
+                    ElementInfo.from_code_element(control), control, right
+                )
                 conditional_statement = ConditionalStatement(
                     condition,
                     ConditionalStatement.ConditionType.SWITCH,
@@ -489,8 +491,13 @@ class PuppetParser(p.Parser):
             value = PuppetParser.__process_codeelement(codeelement.value, path, code)
             assert isinstance(value, Expr)
             # This allows to have strings without the quotes in the attributes
-            if isinstance(codeelement.value, puppetmodel.Id) and not codeelement.value.value.startswith("$"):
-                value = String(codeelement.value.value, PuppetParser.__get_info(codeelement.value, code))
+            if isinstance(
+                codeelement.value, puppetmodel.Id
+            ) and not codeelement.value.value.startswith("$"):
+                value = String(
+                    codeelement.value.value,
+                    PuppetParser.__get_info(codeelement.value, code),
+                )
 
             attribute = Attribute(
                 name, value, PuppetParser.__get_info(codeelement, code)

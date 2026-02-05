@@ -8,10 +8,14 @@ class TestSecurity(BaseSecurityTest):
     TECH = Tech.chef
 
     def test_chef_http(self) -> None:
-        self._help_test("tests/security/chef/files/http.rb", "script", 1, ["sec_https"], [3])
+        self._help_test(
+            "tests/security/chef/files/http.rb", "script", 1, ["sec_https"], [3]
+        )
 
     def test_chef_susp_comment(self) -> None:
-        self._help_test("tests/security/chef/files/susp.rb", "script", 1, ["sec_susp_comm"], [1])
+        self._help_test(
+            "tests/security/chef/files/susp.rb", "script", 1, ["sec_susp_comm"], [1]
+        )
 
     def test_chef_def_admin(self) -> None:
         self._help_test(
@@ -29,7 +33,11 @@ class TestSecurity(BaseSecurityTest):
 
     def test_chef_weak_crypt(self) -> None:
         self._help_test(
-            "tests/security/chef/files/weak_crypt.rb", "script", 1, ["sec_weak_crypt"], [4]
+            "tests/security/chef/files/weak_crypt.rb",
+            "script",
+            1,
+            ["sec_weak_crypt"],
+            [4],
         )
 
     def test_chef_hard_secr(self) -> None:
@@ -43,12 +51,20 @@ class TestSecurity(BaseSecurityTest):
 
     def test_chef_invalid_bind(self) -> None:
         self._help_test(
-            "tests/security/chef/files/inv_bind.rb", "script", 1, ["sec_invalid_bind"], [7]
+            "tests/security/chef/files/inv_bind.rb",
+            "script",
+            1,
+            ["sec_invalid_bind"],
+            [7],
         )
 
     def test_chef_int_check(self) -> None:
         self._help_test(
-            "tests/security/chef/files/int_check.rb", "script", 1, ["sec_no_int_check"], [1]
+            "tests/security/chef/files/int_check.rb",
+            "script",
+            1,
+            ["sec_no_int_check"],
+            [1],
         )
 
     def test_chef_missing_default(self) -> None:
@@ -71,5 +87,9 @@ class TestSecurity(BaseSecurityTest):
 
     def test_chef_obs_command(self) -> None:
         self._help_test(
-            "tests/security/chef/files/obs_command.rb", "script", 1, ["sec_obsolete_command"], [2]
+            "tests/security/chef/files/obs_command.rb",
+            "script",
+            1,
+            ["sec_obsolete_command"],
+            [2],
         )

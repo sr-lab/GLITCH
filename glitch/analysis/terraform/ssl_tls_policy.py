@@ -3,7 +3,15 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, Boolean, KeyValue, CodeElement, String, Value
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    Boolean,
+    KeyValue,
+    CodeElement,
+    String,
+    Value,
+)
 
 
 class TerraformSslTlsPolicy(TerraformSmellChecker):
@@ -21,12 +29,27 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                 and self._parent_matches(parent_name, policy["parents"])
                 and not VariableChecker().check(attribute.value)
             ):
-                if isinstance(attribute.value, Boolean) and str(attribute.value.value).lower() not in policy["values"]:
-                    return [Error("sec_ssl_tls_policy", attribute, file, repr(attribute))]
-                elif isinstance(attribute.value, String) and attribute.value.value.lower() not in policy["values"]:
-                    return [Error("sec_ssl_tls_policy", attribute, file, repr(attribute))]
-                elif isinstance(attribute.value, str) and attribute.value.lower() not in policy["values"]:
-                    return [Error("sec_ssl_tls_policy", attribute, file, repr(attribute))]
+                if (
+                    isinstance(attribute.value, Boolean)
+                    and str(attribute.value.value).lower() not in policy["values"]
+                ):
+                    return [
+                        Error("sec_ssl_tls_policy", attribute, file, repr(attribute))
+                    ]
+                elif (
+                    isinstance(attribute.value, String)
+                    and attribute.value.value.lower() not in policy["values"]
+                ):
+                    return [
+                        Error("sec_ssl_tls_policy", attribute, file, repr(attribute))
+                    ]
+                elif (
+                    isinstance(attribute.value, str)
+                    and attribute.value.lower() not in policy["values"]
+                ):
+                    return [
+                        Error("sec_ssl_tls_policy", attribute, file, repr(attribute))
+                    ]
 
         return []
 
@@ -37,9 +60,7 @@ class TerraformSslTlsPolicy(TerraformSmellChecker):
                 "aws_alb_listener",
                 "aws_lb_listener",
             ]:
-                protocol = self.check_required_attribute(
-                    element, [], "protocol"
-                )
+                protocol = self.check_required_attribute(element, [], "protocol")
                 if (
                     isinstance(protocol, KeyValue)
                     and isinstance(protocol.value, Value)

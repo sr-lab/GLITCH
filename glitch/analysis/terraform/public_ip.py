@@ -4,7 +4,14 @@ from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
 from glitch.analysis.checkers.string_checker import StringChecker
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, Boolean, String
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    CodeElement,
+    KeyValue,
+    Boolean,
+    String,
+)
 
 
 class TerraformPublicIp(TerraformSmellChecker):
@@ -19,13 +26,22 @@ class TerraformPublicIp(TerraformSmellChecker):
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
-                and (parent_name in config["parents"] or (not config["parents"] and not parent_name))
+                and (
+                    parent_name in config["parents"]
+                    or (not config["parents"] and not parent_name)
+                )
                 and not VariableChecker().check(attribute.value)
                 and config["values"] != [""]
             ):
-                if isinstance(attribute.value, Boolean) and str(attribute.value.value).lower() not in config["values"]:
+                if (
+                    isinstance(attribute.value, Boolean)
+                    and str(attribute.value.value).lower() not in config["values"]
+                ):
                     return [Error("sec_public_ip", attribute, file, repr(attribute))]
-                elif isinstance(attribute.value, String) and attribute.value.value.lower() not in config["values"]:
+                elif (
+                    isinstance(attribute.value, String)
+                    and attribute.value.value.lower() not in config["values"]
+                ):
                     return [Error("sec_public_ip", attribute, file, repr(attribute))]
 
         return []

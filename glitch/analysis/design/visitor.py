@@ -8,14 +8,19 @@ from glitch.repr.inter import *
 from typing import List, Type
 from glitch.analysis.design.smell_checker import DesignSmellChecker
 
+
 class DesignVisitor(RuleVisitor):
     def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
-        
+
         from glitch.analysis.design.unguarded_variable import UnguardedVariable
         from glitch.analysis.design.duplicate_block import DuplicateBlock
         from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
-        from glitch.analysis.design.improper_alignment import ImproperAlignmentTabs, ImproperAlignment, PuppetImproperAlignment
+        from glitch.analysis.design.improper_alignment import (
+            ImproperAlignmentTabs,
+            ImproperAlignment,
+            PuppetImproperAlignment,
+        )
         from glitch.analysis.design.long_statement import LongStatement
 
         DESIGN_CHECKER_ERRORS: Dict[Type[DesignSmellChecker], str] = {
@@ -34,7 +39,7 @@ class DesignVisitor(RuleVisitor):
 
             if error_name is not None and error_name not in fallback:
                 continue
-            
+
             if (child.tech() is None and tech not in child.ignore_techs()) or (
                 child.tech() is not None and child.tech() == tech
             ):

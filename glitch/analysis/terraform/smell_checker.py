@@ -8,7 +8,9 @@ from glitch.analysis.checkers.string_checker import StringChecker
 
 
 class TerraformSmellChecker(SmellChecker):
-    def _parent_matches(self, parent_name: str, config_parents: list[list[str] | str]) -> bool:
+    def _parent_matches(
+        self, parent_name: str, config_parents: list[list[str] | str]
+    ) -> bool:
         if not config_parents and not parent_name:
             return True
         if not config_parents:
@@ -47,7 +49,11 @@ class TerraformSmellChecker(SmellChecker):
                     au_name = au.name
                 if au.type == type and au_name == name:
                     return au
-                if type.startswith("resource.") and au.type == type[9:] and au_name == name:
+                if (
+                    type.startswith("resource.")
+                    and au.type == type[9:]
+                    and au_name == name
+                ):
                     return au
                 if type.startswith("data.") and au.type == type and au_name == name:
                     return au
@@ -98,12 +104,18 @@ class TerraformSmellChecker(SmellChecker):
             for ub in element.statements:
                 if isinstance(ub, UnitBlock):
                     res.extend(self.get_attributes(ub, parents, name))
-        elif isinstance(element, Attribute) and len(parents) > 0 and element.name == parents[0]:
+        elif (
+            isinstance(element, Attribute)
+            and len(parents) > 0
+            and element.name == parents[0]
+        ):
             if isinstance(element.value, Hash):
                 for k, v in element.value.value.items():
                     key_name = k.value if isinstance(k, VariableReference) else str(k)
                     if len(parents) == 1 and key_name == name:
-                        elem_info = ElementInfo(k.line, k.column, k.end_line, k.end_column, k.code)
+                        elem_info = ElementInfo(
+                            k.line, k.column, k.end_line, k.end_column, k.code
+                        )
                         res.append(KeyValue(key_name, v, elem_info))
         elif isinstance(element, UnitBlock) and element.type == UnitBlockType.block:
             if len(parents) > 0:
@@ -247,7 +259,9 @@ class TerraformSmellChecker(SmellChecker):
                     )
                     # But value is not correct
                     if value is None:
-                        value_attr = self.check_required_attribute(fake_au, [flag.name], "value")
+                        value_attr = self.check_required_attribute(
+                            fake_au, [flag.name], "value"
+                        )
                         error_element = value_attr if value_attr is not None else flag
                         errors.append(
                             Error(
@@ -313,9 +327,13 @@ class TerraformSmellChecker(SmellChecker):
             if isinstance(element.value, Hash):
                 for k, v in element.value.value.items():
                     key_name = k.value if isinstance(k, VariableReference) else str(k)
-                    elem_info = ElementInfo(k.line, k.column, k.end_line, k.end_column, k.code)
+                    elem_info = ElementInfo(
+                        k.line, k.column, k.end_line, k.end_column, k.code
+                    )
                     hash_attr = KeyValue(key_name, v, elem_info)
-                    errors += self._check_attribute(hash_attr, atomic_unit, element.name, file)
+                    errors += self._check_attribute(
+                        hash_attr, atomic_unit, element.name, file
+                    )
         elif element.type == UnitBlockType.block:
             for attr in element.attributes:
                 errors += self._check_attribute(attr, atomic_unit, element.name, file)  # type: ignore

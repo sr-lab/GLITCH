@@ -1,11 +1,14 @@
 from tests.security.security_helper import BaseSecurityTest
 from glitch.tech import Tech
 
+
 class TestSecurity(BaseSecurityTest):
     TECH = Tech.puppet
 
     def test_puppet_http(self) -> None:
-        self._help_test("tests/security/puppet/files/http.pp", "script", 1, ["sec_https"], [2])
+        self._help_test(
+            "tests/security/puppet/files/http.pp", "script", 1, ["sec_https"], [2]
+        )
 
     def test_puppet_susp_comment(self) -> None:
         self._help_test(
@@ -28,12 +31,17 @@ class TestSecurity(BaseSecurityTest):
 
     def test_puppet_weak_crypt(self) -> None:
         self._help_test(
-            "tests/security/puppet/files/weak_crypt.pp", "script", 1, ["sec_weak_crypt"], [12]
+            "tests/security/puppet/files/weak_crypt.pp",
+            "script",
+            1,
+            ["sec_weak_crypt"],
+            [12],
         )
 
     def test_puppet_hard_secr(self) -> None:
         self._help_test(
-            "tests/security/puppet/files/hard_secr.pp", "script",
+            "tests/security/puppet/files/hard_secr.pp",
+            "script",
             1,
             ["sec_hard_pass"],
             [2],
@@ -41,17 +49,26 @@ class TestSecurity(BaseSecurityTest):
 
     def test_puppet_invalid_bind(self) -> None:
         self._help_test(
-            "tests/security/puppet/files/inv_bind.pp", "script", 1, ["sec_invalid_bind"], [12]
+            "tests/security/puppet/files/inv_bind.pp",
+            "script",
+            1,
+            ["sec_invalid_bind"],
+            [12],
         )
 
     def test_puppet_int_check(self) -> None:
         self._help_test(
-            "tests/security/puppet/files/int_check.pp", "script", 1, ["sec_no_int_check"], [5]
+            "tests/security/puppet/files/int_check.pp",
+            "script",
+            1,
+            ["sec_no_int_check"],
+            [5],
         )
 
     def test_puppet_missing_default(self) -> None:
         self._help_test(
-            "tests/security/puppet/files/missing_default.pp", "script",
+            "tests/security/puppet/files/missing_default.pp",
+            "script",
             2,
             ["sec_no_default_switch", "sec_no_default_switch"],
             [1, 6],

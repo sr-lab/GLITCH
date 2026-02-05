@@ -904,16 +904,26 @@ class TestChefParser(TestParser):
         assert isinstance(ir.atomic_units[0], AtomicUnit)
         assert ir.atomic_units[0].type == "ruby_block"
         assert isinstance(ir.atomic_units[0].name, String)
-        assert ir.atomic_units[0].name.value == "zabbix_ensure_super_admin_user_with_api_access"
+        assert (
+            ir.atomic_units[0].name.value
+            == "zabbix_ensure_super_admin_user_with_api_access"
+        )
         assert len(ir.atomic_units[0].attributes) == 2
         assert isinstance(ir.atomic_units[0].attributes[0], Attribute)
         assert ir.atomic_units[0].attributes[0].name == "block"
         assert isinstance(ir.atomic_units[0].attributes[0].value, BlockExpr)
         assert len(ir.atomic_units[0].attributes[0].value.statements) == 2
-        assert isinstance(ir.atomic_units[0].attributes[0].value.statements[0], Variable)
+        assert isinstance(
+            ir.atomic_units[0].attributes[0].value.statements[0], Variable
+        )
         assert ir.atomic_units[0].attributes[0].value.statements[0].name == "username"
-        assert isinstance(ir.atomic_units[0].attributes[0].value.statements[0].value, MethodCall)
-        assert ir.atomic_units[0].attributes[0].value.statements[0].value.method == "username"
+        assert isinstance(
+            ir.atomic_units[0].attributes[0].value.statements[0].value, MethodCall
+        )
+        assert (
+            ir.atomic_units[0].attributes[0].value.statements[0].value.method
+            == "username"
+        )
         assert isinstance(ir.atomic_units[0].attributes[1], Attribute)
         assert ir.atomic_units[0].attributes[1].name == "notifies"
         self._check_value(
@@ -962,9 +972,12 @@ class TestChefParser(TestParser):
         assert ir.atomic_units[0].name.value == "php5"
         assert len(ir.atomic_units[0].statements) == 1
         assert isinstance(ir.atomic_units[0].statements[0], ConditionalStatement)
-        assert ir.atomic_units[0].statements[0].type == ConditionalStatement.ConditionType.SWITCH
+        assert (
+            ir.atomic_units[0].statements[0].type
+            == ConditionalStatement.ConditionType.SWITCH
+        )
         assert ir.atomic_units[0].statements[0].is_top == True
-        
+
         case_stmt = ir.atomic_units[0].statements[0]
         assert isinstance(case_stmt.condition, Equal)
         assert isinstance(case_stmt.condition.left, Access)
@@ -972,7 +985,7 @@ class TestChefParser(TestParser):
         assert case_stmt.condition.left.left.value == "node"
         assert isinstance(case_stmt.condition.left.right, String)
         assert case_stmt.condition.left.right.value == "platform_family"
-        
+
         assert isinstance(case_stmt.condition.right, AddArgs)
         assert len(case_stmt.statements) == 2
         assert isinstance(case_stmt.statements[0], Attribute)

@@ -14,6 +14,7 @@ from glitch.exceptions import EXCEPTIONS, throw_exception
 
 ChefValue = Tuple[str, str] | str | int | bool | List["ChefValue"]
 
+
 def set_loc_from_info(code_element: CodeElement, info: ElementInfo) -> None:
     code_element.line = info.line
     code_element.column = info.column
@@ -392,9 +393,7 @@ class ChefParser(p.Parser):
         true_part = self._get_value(ast.args[1], source)
         assert true_part is not None
         true_statement = ConditionalStatement(
-            predicate,
-            ConditionalStatement.ConditionType.IF,
-            is_top=True
+            predicate, ConditionalStatement.ConditionType.IF, is_top=True
         )
         true_statement.add_statement(true_part)
         if len(ast.args) == 3:
@@ -467,7 +466,9 @@ class ChefParser(p.Parser):
             assert isinstance(value, Expr)
             assert isinstance(default, Expr)
             cond = NotEqual(info, value, Null())
-            true = ConditionalStatement(cond, ConditionalStatement.ConditionType.IF, is_top=True)
+            true = ConditionalStatement(
+                cond, ConditionalStatement.ConditionType.IF, is_top=True
+            )
             true.add_statement(value)
             false = ConditionalStatement(
                 Null(), ConditionalStatement.ConditionType.IF, is_default=True
@@ -507,9 +508,7 @@ class ChefParser(p.Parser):
             elif len(ast.args) == 1 and ChefParser._check_node(
                 ast.args[0], ["assoclist_from_args"], 1
             ):
-                return Hash(self.__parse_assoc_hash(
-                    ast.args[0], source
-                ), info)
+                return Hash(self.__parse_assoc_hash(ast.args[0], source), info)
         elif ChefParser._check_id(
             ast,
             [
@@ -536,7 +535,7 @@ class ChefParser(p.Parser):
                 and ChefParser._get_content(ast.args[0], source) == "nil"
             ):
                 return Null(info)
-            
+
             if content.startswith("#{") and content.endswith("}"):
                 content = content[2:-1]
                 info = ElementInfo(
@@ -711,7 +710,11 @@ class ChefParser(p.Parser):
 
     class ResourceChecker(Checker):
         def __init__(
-            self, atomic_unit: AtomicUnit, source: List[str], ast: Any, parser: "ChefParser"
+            self,
+            atomic_unit: AtomicUnit,
+            source: List[str],
+            ast: Any,
+            parser: "ChefParser",
         ) -> None:
             super().__init__(source, parser)
             self.push([self.is_block_resource, self.is_inline_resource], ast)
@@ -828,7 +831,9 @@ class ChefParser(p.Parser):
             ) and ChefParser._check_id(ast.args[0], ["call"]):
                 self.push([self.is_attribute], ast.args[0].args[0])
             elif (
-                ChefParser._check_id(ast, ["command", "method_add_arg", "method_add_block"])
+                ChefParser._check_id(
+                    ast, ["command", "method_add_arg", "method_add_block"]
+                )
                 and ast.args[1] != []
             ):
                 value = self.parser._get_value(ast.args[1], self.source)
@@ -1032,7 +1037,7 @@ class ChefParser(p.Parser):
                     self.condition = ConditionalStatement(
                         Equal(equals_info, self.case_head, value),
                         ConditionalStatement.ConditionType.SWITCH,
-                        is_top=True
+                        is_top=True,
                     )
                     info = ChefParser._get_info(ast, self.source)
                     set_loc_from_info(self.condition, info)
@@ -1242,7 +1247,9 @@ class ChefParser(p.Parser):
         return ChefParser.Node(l[0][1], args)  # type: ignore
 
     def _transverse_ast(
-        self, ast: Any, st: UnitBlock | ConditionalStatement | BlockExpr | AtomicUnit, 
+        self,
+        ast: Any,
+        st: UnitBlock | ConditionalStatement | BlockExpr | AtomicUnit,
         source: List[str],
     ) -> None:
         if isinstance(ast, list):
@@ -1273,7 +1280,7 @@ class ChefParser(p.Parser):
                 else:
                     st.add_statement(resource_checker.atomic_unit.attributes[-1])
                 return
-                
+
             variable_checker = ChefParser.VariableChecker(source, ast, self)
             if variable_checker.check_all():
                 for variable in variable_checker.variables:
@@ -1318,8 +1325,8 @@ class ChefParser(p.Parser):
             try:
                 value = self._get_value(ast, source)
                 if (
-                    value is not None 
-                    and ast.id not in ["stmts_add", "stmts_new"] 
+                    value is not None
+                    and ast.id not in ["stmts_add", "stmts_new"]
                     and not isinstance(value, Null)
                 ):
                     st.add_statement(value)
@@ -1372,7 +1379,9 @@ class ChefParser(p.Parser):
                     for comment, line in comments:
                         c = Comment(re.sub(r"\\n$", "", comment))
                         comment_code = source[line - 1]
-                        info = ElementInfo(line, 1, line, len(comment_code), comment_code)
+                        info = ElementInfo(
+                            line, 1, line, len(comment_code), comment_code
+                        )
                         set_loc_from_info(c, info)
                         unit_block.add_comment(c)
                 except:

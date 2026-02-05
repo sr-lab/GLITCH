@@ -2,6 +2,7 @@ from tests.design.design_helper import BaseDesignTest
 from glitch.tech import Tech
 from glitch.repr.inter import UNDEFINED_POSITION
 
+
 class TestDesign(BaseDesignTest):
     TECH = Tech.puppet
 

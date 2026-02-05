@@ -5,7 +5,7 @@ from glitch.repr.inter import UNDEFINED_POSITION
 
 class TestDesign(BaseDesignTest):
     TECH = Tech.ansible
-    
+
     def test_ansible_long_statement(self) -> None:
         self._help_test(
             "tests/design/ansible/files/long_statement.yml",
