@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'vscode-extension/glitch/package.json'
+      - nuno/test/workflow
   workflow_dispatch:
 
 jobs:
@@ -20,30 +19,32 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
       - name: Check if version changed
         id: version-check
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          git checkout HEAD~1 -- package.json 2>/dev/null || true
-          PREVIOUS_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
-          git checkout HEAD -- package.json
+          npm install -g @vscode/vsce
           
-          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "previous=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHER=$(node -p "require('./package.json').publisher")
+          NAME=$(node -p "require('./package.json').name")
           
-          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+          MARKETPLACE_VERSION=$(vsce show "${PUBLISHER}.${NAME}" --json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).versions[0].version" 2>/dev/null || echo "0.0.0")
+          
+          echo "local=$LOCAL_VERSION" >> $GITHUB_OUTPUT
+          echo "marketplace=$MARKETPLACE_VERSION" >> $GITHUB_OUTPUT
+          
+          if [ "$LOCAL_VERSION" != "$MARKETPLACE_VERSION" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+            echo "Local version ($LOCAL_VERSION) differs from marketplace ($MARKETPLACE_VERSION)"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "Version unchanged ($CURRENT_VERSION)"
+            echo "Version unchanged ($LOCAL_VERSION)"
           fi
-
-      - name: Setup Node.js
-        if: steps.version-check.outputs.changed == 'true'
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
 
       - name: Install dependencies
         if: steps.version-check.outputs.changed == 'true'
