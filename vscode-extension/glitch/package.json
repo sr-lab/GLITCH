@@ -17,29 +17,35 @@
     "Linters"
   ],
   "keywords": [
-    "puppet", "ansible", "chef", "IaC", "infrastruture"
+    "puppet", "ansible", "chef", "terraform", "IaC", "infrastructure"
   ],
   "activationEvents": [
     "onLanguage:ruby",
-	  "onLanguage:puppet",
-	  "onLanguage:yaml"
+    "onLanguage:puppet",
+    "onLanguage:yaml",
+    "onLanguage:terraform"
   ],
   "contributes": {
     "languages": [
       {
         "id": "puppet",
-        "extensions": [ ".pp"],
+        "extensions": [".pp"],
         "aliases": ["Puppet"]
       },
       {
         "id": "yaml",
-        "extensions": [ ".yaml", ".yml"],
+        "extensions": [".yaml", ".yml"],
         "aliases": ["YAML"]
       },
       {
         "id": "ruby",
-        "extensions": [ ".rb"],
+        "extensions": [".rb"],
         "aliases": ["Ruby"]
+      },
+      {
+        "id": "terraform",
+        "extensions": [".tf"],
+        "aliases": ["Terraform", "HCL"]
       }
     ],
     "configuration": {
@@ -60,11 +66,11 @@
           "default": "",
           "description": "Choose the technology to which you will apply GLITCH. The value should be a valid string for the command line tool's tech option. If you do not define the value, the extension will use the default for the file extension of the current file."
         },
-        "glitch.smells": {
+        "glitch.smellTypes": {
           "type": "array",
-          "items" : {"type": "string"},
+          "items": {"type": "string"},
           "default": [],
-          "description": "Select a subset of the type of smells to analyze. The values should be contained in the possible choices for the smells option of the command-line tool. If you do not define any value, it will default to run every analyses."
+          "description": "Select a subset of smell types to analyze (e.g., 'design', 'security'). If empty, all analyses run."
         }
       }
     }

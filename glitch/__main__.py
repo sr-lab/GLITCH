@@ -68,17 +68,19 @@ def __filter_analysis(
     rego_modules: Dict[str,str] = {}
     python_analyses: List[RuleVisitor] = []
 
-    if not os.path.exists("./glitch/rego/queries/library/glitch_lib.rego"):
+    rego_lib_path = resource_filename("glitch", "rego/queries/library/glitch_lib.rego")
+    if not os.path.exists(rego_lib_path):
         raise FileNotFoundError("The rego query library does not exist.")
-    load_rego_from_path("./glitch/rego/queries/library/glitch_lib.rego", rego_modules)
+    load_rego_from_path(rego_lib_path, rego_modules)
 
     for smell_type in smell_types:
         smells: List[str] = get_smells([smell_type], tech)
         fallback: Set[str] = set()
 
         for smell in smells:
-            if os.path.exists(f"./glitch/rego/queries/{smell_type}/{smell}.rego"):
-                load_rego_from_path(f"./glitch/rego/queries/{smell_type}/{smell}.rego", rego_modules)
+            rego_path = resource_filename("glitch", f"rego/queries/{smell_type}/{smell}.rego")
+            if os.path.exists(rego_path):
+                load_rego_from_path(rego_path, rego_modules)
             else:
                 fallback.add(smell)
     
