@@ -4,7 +4,7 @@ from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, String, Boolean, Array
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, String, Boolean
 
 
 class TerraformKeyManagement(TerraformSmellChecker):
@@ -105,21 +105,7 @@ class TerraformKeyManagement(TerraformSmellChecker):
                     and element.type in config["au_type"]
                 ):
                     attr_name = config["attribute"]
-                    is_missing = False
-                    if attr_name.endswith("[0]"):
-                        base_attr_name = attr_name[:-3]
-                        a = self.check_required_attribute(
-                            element, config["parents"], base_attr_name
-                        )
-                        if a is None or not isinstance(a, Attribute) or not isinstance(a.value, Array) or len(a.value.value) == 0:
-                            is_missing = True
-                    else:
-                        if self.check_required_attribute(
-                            element, config["parents"], attr_name
-                        ) is None:
-                            is_missing = True
-                    
-                    if is_missing:
+                    if self.check_required_attribute(element, config["parents"], attr_name) is None:
                         errors.append(
                             Error(
                                 "sec_key_management",

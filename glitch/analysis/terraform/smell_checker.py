@@ -145,6 +145,19 @@ class TerraformSmellChecker(SmellChecker):
         value: Optional[str] = None,
         pattern: Optional[Pattern[str]] = None,
     ) -> Attribute | UnitBlock | KeyValue | None:
+        # Handle [0] suffix - check if array attribute has at least one element
+        if name.endswith("[0]"):
+            base_name = name[:-3]
+            element = self.check_required_attribute(atomic_unit, parents, base_name)
+            if (
+                element is not None
+                and isinstance(element, Attribute)
+                and isinstance(element.value, Array)
+                and len(element.value.value) > 0
+            ):
+                return element
+            return None
+
         element = None
         # In the case we have a list, we consider that one of the
         # parents list must be satisfied. This is particularly useful
