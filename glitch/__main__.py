@@ -19,7 +19,7 @@ from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
 from glitch.exceptions import throw_exception
 from glitch.repair.interactive.main import run_infrafix
-from pkg_resources import resource_filename
+from importlib.resources import files
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from glitch.rego.engine import load_rego_from_path, run_analyses
@@ -32,6 +32,10 @@ from glitch.analysis.design.visitor import DesignVisitor  # type: ignore
 from glitch.analysis.security.visitor import SecurityVisitor  # type: ignore
 
 
+def __get_resource_path(resource: str) -> str:
+    return str(files("glitch").joinpath(resource))
+
+
 def __parse_and_check(
     type: UnitBlockType,
     path: str,
@@ -39,8 +43,8 @@ def __parse_and_check(
     parser: Parser,
     analyses: List[RuleVisitor],
     stats: FileStats,
-    config_rego: str,
-    rego_modules: Dict[str,str]
+    config_rego: Dict[str, Dict[str, List[str]]],
+    rego_modules: Dict[str, str]
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
@@ -68,7 +72,7 @@ def __filter_analysis(
     rego_modules: Dict[str,str] = {}
     python_analyses: List[RuleVisitor] = []
 
-    rego_lib_path = resource_filename("glitch", "rego/queries/library/glitch_lib.rego")
+    rego_lib_path = __get_resource_path("rego/queries/library/glitch_lib.rego")
     if not os.path.exists(rego_lib_path):
         raise FileNotFoundError("The rego query library does not exist.")
     load_rego_from_path(rego_lib_path, rego_modules)
@@ -78,7 +82,7 @@ def __filter_analysis(
         fallback: Set[str] = set()
 
         for smell in smells:
-            rego_path = resource_filename("glitch", f"rego/queries/{smell_type}/{smell}.rego")
+            rego_path = __get_resource_path(f"rego/queries/{smell_type}/{smell}.rego")
             if os.path.exists(rego_path):
                 load_rego_from_path(rego_path, rego_modules)
             else:
@@ -280,11 +284,11 @@ def lint(
             "config", f"Invalid value for 'config': Path '{config}' should be a file."
         )
     elif config == "configs/default.ini":
-        config = resource_filename("glitch", "configs/default.ini")
+        config = __get_resource_path("configs/default.ini")
 
     parser = __get_parser(tech)
     if tech == Tech.terraform:
-        config = resource_filename("glitch", "configs/terraform.ini")
+        config = __get_resource_path("configs/terraform.ini")
     file_stats = FileStats()
     
     if smell_types == ():
@@ -292,9 +296,7 @@ def lint(
 
     config_rego = ini_to_json_dict(config)
     
-    temp = __filter_analysis(smell_types, config, tech)
-    rego_modules: Dict[str,str] = temp[0] # type: ignore
-    analyses: List[RuleVisitor] = temp[1]
+    rego_modules, analyses = __filter_analysis(smell_types, config, tech)
 
     errors: List[Error] = []
     paths: Set[str]
