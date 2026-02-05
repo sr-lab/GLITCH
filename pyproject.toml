@@ -26,6 +26,7 @@ puppetparser = "0.2.14"
 python-hcl2 = {git = "https://github.com/Nfsaavedra/python-hcl2.git", rev = "feature/hcl2-reverse-transformer"}
 typing-extensions = "^4.12.2"
 pyright = "1.1.408"
+black = "25.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"

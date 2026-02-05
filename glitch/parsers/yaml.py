@@ -259,9 +259,9 @@ class YamlParser(p.Parser, ABC):
         elif isinstance(node, jinja2.nodes.Dict):
             value: Dict[Expr, Expr] = {}
             for item in node.items:
-                value[
-                    self.__parse_jinja_node(item.key, base_info)
-                ] = self.__parse_jinja_node(item.value, base_info)
+                value[self.__parse_jinja_node(item.key, base_info)] = (
+                    self.__parse_jinja_node(item.value, base_info)
+                )
             return Hash(value, info)
         elif isinstance(node, jinja2.nodes.Not):
             return Not(info, self.__parse_jinja_node(node.node, base_info))

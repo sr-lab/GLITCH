@@ -223,7 +223,10 @@ class PatchSolver:
         self,
         statement: PStatement | PExpr,
         funs: Dict[str, Callable[[ExprRef], ExprRef]],
-    ) -> Tuple[List[ExprRef], Dict[str, Callable[[ExprRef], ExprRef]],]:
+    ) -> Tuple[
+        List[ExprRef],
+        Dict[str, Callable[[ExprRef], ExprRef]],
+    ]:
         # Avoids infinite recursion
         previous_funs = deepcopy(funs)
         funs = deepcopy(funs)

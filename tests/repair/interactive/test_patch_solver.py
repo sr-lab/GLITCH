@@ -142,9 +142,9 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
 
     def test_patch_solver_puppet_remove_content(self) -> None:
         filesystem = SystemState()
-        filesystem.state[
-            "/var/www/customers/public_html/index.php"
-        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"] = (
+            get_default_file_state()
+        )
         filesystem.state["/var/www/customers/public_html/index.php"].attrs[
             "state"
         ] = "present"
@@ -231,9 +231,9 @@ class TestPatchSolverPuppetScript1(TestPatchSolver):
 
     def test_patch_solver_puppet_delete_file(self) -> None:
         filesystem = SystemState()
-        filesystem.state[
-            "/var/www/customers/public_html/index.php"
-        ] = get_nil_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"] = (
+            get_nil_file_state()
+        )
 
         assert self.statement is not None
         solver = PatchSolver(self.statement, filesystem)
@@ -1183,9 +1183,9 @@ class TestPatchSolverAnsibleScript1(TestPatchSolver):
 
     def test_patch_solver_ansible_mode(self) -> None:
         filesystem = SystemState()
-        filesystem.state[
-            "/var/www/customers/public_html/index.php"
-        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"] = (
+            get_default_file_state()
+        )
         filesystem.state["/var/www/customers/public_html/index.php"].attrs[
             "mode"
         ] = "0777"
@@ -1236,9 +1236,9 @@ class TestPatchSolverAnsibleScript2(TestPatchSolver):
 
     def test_patch_solver_ansible_owner(self) -> None:
         filesystem = SystemState()
-        filesystem.state[
-            "/var/www/customers/public_html/index.php"
-        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"] = (
+            get_default_file_state()
+        )
         filesystem.state["/var/www/customers/public_html/index.php"].attrs[
             "mode"
         ] = "0755"
@@ -2086,9 +2086,9 @@ end
 
     def test_patch_solver_chef_minimize(self) -> None:
         filesystem = SystemState()
-        filesystem.state[
-            "/var/www/customers/public_html/index.php"
-        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.php"] = (
+            get_default_file_state()
+        )
         filesystem.state["/var/www/customers/public_html/index.php"].attrs[
             "mode"
         ] = "0755"
@@ -2118,9 +2118,9 @@ end
             self.statement, ["/var/www/customers/public_html/index.php"]
         )
         minimized_filesystem = SystemState()
-        minimized_filesystem.state[
-            "/var/www/customers/public_html/index.php"
-        ] = get_default_file_state()
+        minimized_filesystem.state["/var/www/customers/public_html/index.php"] = (
+            get_default_file_state()
+        )
         minimized_filesystem.state["/var/www/customers/public_html/index.php"].attrs[
             "mode"
         ] = "0755"
@@ -2373,9 +2373,9 @@ end
 
     def test_patch_solver_chef_non_string(self) -> None:
         filesystem = SystemState()
-        filesystem.state[
-            "/var/www/customers/public_html/index.html"
-        ] = get_default_file_state()
+        filesystem.state["/var/www/customers/public_html/index.html"] = (
+            get_default_file_state()
+        )
         filesystem.state["/var/www/customers/public_html/index.html"].attrs[
             "state"
         ] = UNDEF

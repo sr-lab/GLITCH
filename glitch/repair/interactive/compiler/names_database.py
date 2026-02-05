@@ -203,9 +203,19 @@ class NamesDatabase:
 
         if v is not None:
             match v, name, au_type, tech:
-                case "present" | "directory" | "absent", "state", "file" | "user", Tech.puppet:
+                case (
+                    "present" | "directory" | "absent",
+                    "state",
+                    "file" | "user",
+                    Tech.puppet,
+                ):
                     pass
-                case "latest" | "present" | "absent" | "purged" | "disabled", "state", "package", Tech.puppet:
+                case (
+                    "latest" | "present" | "absent" | "purged" | "disabled",
+                    "state",
+                    "package",
+                    Tech.puppet,
+                ):
                     pass
                 case "installed", "state", "package", Tech.puppet:
                     v = "present"
@@ -227,7 +237,12 @@ class NamesDatabase:
                     v = "present"
                 case ":create" | ":nothing", "state", "file" | "user", Tech.chef:
                     v = "present"
-                case ":touch" | ":nothing" | ":create_if_missing", "state", "file", Tech.chef:
+                case (
+                    ":touch" | ":nothing" | ":create_if_missing",
+                    "state",
+                    "file",
+                    Tech.chef,
+                ):
                     v = "present"
                 case ":upgrade", "state", "package", Tech.chef:
                     v = "latest"
