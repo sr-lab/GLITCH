@@ -1,3 +1,4 @@
+import getpass
 import os
 import pytest
 import shutil
@@ -76,18 +77,18 @@ def test_get_file_system_state(setup_file_system, teardown_file_system) -> None:
     assert dir1 in fs_state.state
     assert fs_state.state[dir1].attrs["state"] == "directory"
     assert fs_state.state[dir1].attrs["mode"] == "0775"
-    assert fs_state.state[dir1].attrs["owner"] == os.getlogin()
+    assert fs_state.state[dir1].attrs["owner"] == getpass.getuser()
 
     assert file2 in fs_state.state
     assert fs_state.state[file2].attrs["state"] == "present"
     assert fs_state.state[file2].attrs["mode"] == "0664"
-    assert fs_state.state[file2].attrs["owner"] == os.getlogin()
+    assert fs_state.state[file2].attrs["owner"] == getpass.getuser()
     assert fs_state.state[file2].attrs["content"] == ""
 
     assert file3 in fs_state.state
     assert fs_state.state[file3].attrs["state"] == "present"
     assert fs_state.state[file3].attrs["mode"] == "0664"
-    assert fs_state.state[file3].attrs["owner"] == os.getlogin()
+    assert fs_state.state[file3].attrs["owner"] == getpass.getuser()
     assert fs_state.state[file3].attrs["content"] == ""
 
     assert file4 in fs_state.state
