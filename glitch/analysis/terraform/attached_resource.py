@@ -7,7 +7,6 @@ from glitch.repr.inter import (
     CodeElement,
     KeyValue,
     Attribute,
-    String,
     UnitBlock,
     Array,
 )

@@ -1,7 +1,7 @@
 import json
 import os
 
-from typing import Tuple, List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 from glitch.rego.rego_python.src.rego_python import run_rego
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error
@@ -36,6 +36,7 @@ def run_analyses(
 
     # Parse the Go Rego engine output to a set of errors
     # It can be a list or a list of lists, so we put everything in a single list
+    result = cast(List[Dict[str, Any]], result)
     for entry in result:
         for expr in entry.get("expressions", []):
             values_list = expr.get("value", [])

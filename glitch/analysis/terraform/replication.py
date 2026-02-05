@@ -5,7 +5,6 @@ from glitch.analysis.rules import Error
 from glitch.analysis.security.visitor import SecurityVisitor
 from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, String
 from glitch.analysis.checkers.var_checker import VariableChecker
-from glitch.analysis.checkers.string_checker import StringChecker
 
 
 class TerraformReplication(TerraformSmellChecker):
@@ -18,7 +17,6 @@ class TerraformReplication(TerraformSmellChecker):
     ) -> List[Error]:
         var_checker = VariableChecker()
         for config in SecurityVisitor.REPLICATION:
-            string_checker = StringChecker(lambda x: x.lower() not in config["values"])
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]

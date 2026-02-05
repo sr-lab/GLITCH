@@ -1,9 +1,10 @@
 # pyright: reportUnusedFunction=false, reportUnusedVariable=false
 from ply.lex import lex, LexToken
 from ply.yacc import yacc, YaccProduction
+from typing import Tuple, List
 
 
-def parser_yacc(script_ast: str):
+def parser_yacc(script_ast: str) -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
     tokens = (
         "LPAREN",
         "RPAREN",

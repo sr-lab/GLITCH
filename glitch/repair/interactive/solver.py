@@ -440,7 +440,7 @@ class PatchSolver:
 
             elif char == ")":
                 stack.pop()
-                if inside_assert and not stack:
+                if inside_assert and not stack and start_index is not None:
                     assert_content = smtlib_code[start_index + 7 : i].strip()
                     random_name = generate_random_name()
                     names_to_assertions[random_name] = assert_content

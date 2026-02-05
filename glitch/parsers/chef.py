@@ -5,7 +5,7 @@ import tempfile
 import glitch.parsers.parser as p
 
 from string import Template
-from pkg_resources import resource_filename
+from importlib.resources import files
 from typing import Any, List, Tuple, Callable
 from glitch.repr.inter import *
 from glitch.parsers.ripper_parser import parser_yacc
@@ -1340,12 +1340,8 @@ class ChefParser(p.Parser):
 
     def __parse_recipe(self, path: str, file: str) -> UnitBlock | None:
         with open(os.path.join(path, file)) as f:
-            ripper = resource_filename(
-                "glitch.parsers", "resources/comments.rb.template"
-            )
-            ripper = open(ripper, "r")
-            ripper_script = Template(ripper.read())
-            ripper.close()
+            ripper_content = files("glitch.parsers").joinpath("resources/comments.rb.template").read_text()
+            ripper_script = Template(ripper_content)
             ripper_script = ripper_script.substitute(
                 {"path": '"' + os.path.join(path, file) + '"'}
             )
@@ -1373,8 +1369,7 @@ class ChefParser(p.Parser):
                     script_ast = p.read()
                     p.close()
                     comments, _ = parser_yacc(script_ast)
-                    if comments is not None:
-                        comments.reverse()
+                    comments.reverse()
 
                     for comment, line in comments:
                         c = Comment(re.sub(r"\\n$", "", comment))
@@ -1400,7 +1395,7 @@ class ChefParser(p.Parser):
                 script_ast = p.read()
                 p.close()
                 _, program = parser_yacc(script_ast)
-                ast = ChefParser.__create_ast(program)
+                ast = ChefParser.__create_ast(program)  # type: ignore
                 self._transverse_ast(ast, unit_block, source)
             except:
                 throw_exception(

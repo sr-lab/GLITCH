@@ -1,4 +1,4 @@
 from glitch.repair.interactive.delta_p import *
 
-UNDEF = "glitch-undef"
+UNDEF = "glitch-undef"  # type: ignore
 UNSUPPORTED = "glitch-unsupported"
