@@ -128,40 +128,48 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract version from pyproject.toml
+      - name: Extract version and check if tag exists
         id: get_version
         run: |
           VERSION=$(grep '^version = ' glitch/rego/rego_python/pyproject.toml | sed -E 's/version = "(.*)"/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version extracted: $VERSION"
 
+          TAG=rego_python-v$VERSION
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping release"
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG does not exist, will create release"
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create tag for release
+        if: steps.get_version.outputs.tag_exists == 'false'
         run: |
           git config user.name "rego_python-release-bot"
           git config user.email "rego_python@users.noreply.github.com"
           TAG=rego_python-v${{ steps.get_version.outputs.version }}
           git tag $TAG
           git push origin $TAG
-
-          NON_PREFIXED_TAG=v${{ steps.get_version.outputs.version }}
-          if git rev-parse "$NON_PREFIXED_TAG" >/dev/null 2>&1; then
-            echo "WARNING: Non-prefixed tag $NON_PREFIXED_TAG exists. Consider deleting it to avoid confusion."
-          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download built package and binaries
+        if: steps.get_version.outputs.tag_exists == 'false'
         uses: actions/download-artifact@v4
         with:
           path: release_assets
           merge-multiple: true
 
       - name: List downloaded assets
+        if: steps.get_version.outputs.tag_exists == 'false'
         run: |
           echo "Listing contents of release_assets directory:"
           ls -lR release_assets
 
       - name: Create GitHub Release
+        if: steps.get_version.outputs.tag_exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "rego_python-v${{ steps.get_version.outputs.version }}"
