@@ -1340,7 +1340,11 @@ class ChefParser(p.Parser):
 
     def __parse_recipe(self, path: str, file: str) -> UnitBlock | None:
         with open(os.path.join(path, file)) as f:
-            ripper_content = files("glitch.parsers").joinpath("resources/comments.rb.template").read_text()
+            ripper_content = (
+                files("glitch.parsers")
+                .joinpath("resources/comments.rb.template")
+                .read_text()
+            )
             ripper_script = Template(ripper_content)
             ripper_script = ripper_script.substitute(
                 {"path": '"' + os.path.join(path, file) + '"'}

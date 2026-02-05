@@ -125,7 +125,11 @@ class GithubActionsParser(YamlParser):
             return None
 
         with open(path) as f:
-            schema = json.loads(files("glitch.parsers").joinpath("resources/github_workflow.json").read_text())
+            schema = json.loads(
+                files("glitch.parsers")
+                .joinpath("resources/github_workflow.json")
+                .read_text()
+            )
             yaml = YAML()
             try:
                 jsonschema.validate(yaml.load(f.read()), schema)  # type: ignore
