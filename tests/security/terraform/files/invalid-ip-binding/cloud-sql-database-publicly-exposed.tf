@@ -1,10 +1,8 @@
 resource "google_sql_database_instance" "bad_example" {
-  ip_configuration {
-    require_ssl = true
-  }
   settings {
     ip_configuration {
       ipv4_enabled = false
+      require_ssl = true
       authorized_networks {
         value           = "108.12.12.0/24"
         name            = "internal"
@@ -55,12 +53,10 @@ resource "google_sql_database_instance" "bad_example" {
 }
 
 resource "google_sql_database_instance" "good_example" {
-  ip_configuration {
-    require_ssl = true
-  }
   settings {
     ip_configuration {
       ipv4_enabled = false
+      require_ssl = true
       authorized_networks {
         value           = "10.0.0.1/24"
         name            = "internal"

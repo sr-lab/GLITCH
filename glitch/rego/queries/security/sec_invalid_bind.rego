@@ -64,3 +64,26 @@ Glitch_Analysis[result] {
         "description": "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issues. (CWE-284)"
 	}}
 }
+
+# Check for invalid bindings in Array values
+Glitch_Analysis[result] {
+    parent := glitch_lib._gather_parent_unit_blocks[_]
+    parent.path != ""
+    attr := glitch_lib.all_attributes(parent)
+    variables := glitch_lib.all_variables(parent)
+    all_nodes := attr | variables
+    node := all_nodes[_]
+
+    node.value.ir_type == "Array"
+    array_item := node.value.value[_]
+    glitch_lib.is_ir_type_in(array_item, ["String"])
+    check_inv_bind(node.name, array_item)
+    matched_node := node
+
+    result := {{
+		"type": "sec_invalid_bind",
+		"element": matched_node,
+		"path": parent.path,
+        "description": "Invalid IP address binding - Binding to the address 0.0.0.0 allows connections from every possible network which might be a security issues. (CWE-284)"
+	}}
+}

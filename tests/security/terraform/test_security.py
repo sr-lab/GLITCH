@@ -301,7 +301,7 @@ class TestSecurity(BaseSecurityTest):
             "script",
             1,
             ["sec_invalid_bind"],
-            [14],
+            [12],
         )
         self._help_test(
             "tests/security/terraform/files/invalid-ip-binding/compute-firewall-inbound-rule-public-ip.tf",
