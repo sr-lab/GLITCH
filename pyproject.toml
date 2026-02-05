@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "glitch"
-version = "1.0.1"
+version = "2.0.0"
 description = "A tool to analyze IaC scripts"
 authors = ["Nuno Saavedra <nuno.saavedra@tecnico.ulisboa.pt>"]
 license = "GPL-3.0"
