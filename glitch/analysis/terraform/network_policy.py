@@ -21,7 +21,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                 and atomic_unit.type in rule["au_type"]
                 and self._parent_matches(parent_name, rule["parents"])
                 and not VariableChecker().check(attribute.value)
-                and rule["values"] != [""]
+                and rule["values"] != []
             ):
                 if isinstance(attribute.value, (String, Boolean)):
                     if str(attribute.value.value).lower() not in rule["values"]:
