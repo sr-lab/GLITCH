@@ -7,7 +7,7 @@
 
 ![alt text](https://github.com/sr-lab/GLITCH/blob/main/logo.png?raw=true)
 
-GLITCH is a technology-agnostic framework that enables automated detection of IaC smells. GLITCH allows polyglot smell detection by transforming IaC scripts into an intermediate representation, on which different smell detectors can be defined. GLITCH currently supports the detection of nine different security smells [1, 2] and nine design & implementation smells [3] in scripts written in Puppet, Ansible, or Chef.
+GLITCH is a technology-agnostic framework that enables automated detection of IaC smells and, via InfraFix, interactive repair of infrastructure code. GLITCH allows polyglot smell detection by transforming IaC scripts into an intermediate representation, on which different smell detectors can be defined. GLITCH currently supports the detection of nine different security smells [1, 2] and nine design & implementation smells [3] in scripts written in Puppet, Ansible, Chef or Terraform.
 
 
 
@@ -148,6 +148,28 @@ Alternatively, you can use `poetry shell`:
 ```
 poetry shell
 glitch lint --help
+```
+
+### InfraFix
+
+GLITCH includes **InfraFix**, an interactive repair pipeline that synthesizes technology-agnostic patches for Infrastructure as Code. InfraFix observes runtime filesystem effects (via strace-based tracing), compiles IaC into a Delta-P intermediate representation, and uses a Z3-backed solver to produce candidate patches that can be applied back to the original scripts. The repair module is invoked via the `infrafix` subcommand:
+
+```
+glitch infrafix --tech <TECH> PATH_TO_IAC PID
+```
+
+`PATH_TO_IAC` is the file containing the IaC script to repair; `PID` is the process ID of the running shell or process to trace (InfraFix uses strace to observe filesystem effects).
+
+**If you use InfraFix, please cite:**
+
+```
+@inproceedings{saavedra2025infrafix,
+  title={InfraFix: Technology-Agnostic Repair of Infrastructure as Code},
+  author={Saavedra, Nuno and Ferreira, Jo{\~a}o F and Mendes, Alexandra},
+  booktitle={Proceedings of the 34th ACM SIGSOFT International Symposium on Software Testing and Analysis},
+  pages={41--45},
+  year={2025}
+}
 ```
 
 ### Docker
