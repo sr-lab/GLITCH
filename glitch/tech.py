@@ -11,5 +11,4 @@ class Tech(Enum):
     chef = "chef", ["rb"]
     puppet = "puppet", ["pp"]
     terraform = "terraform", ["tf"]
-    docker = "docker", ["Dockerfile"]
     gha = "github-actions", ["yml", "yaml"]

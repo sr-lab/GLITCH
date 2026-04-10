@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "glitch"
-version = "1.0.1"
+version = "2.0.0"
 description = "A tool to analyze IaC scripts"
 authors = ["Nuno Saavedra <nuno.saavedra@tecnico.ulisboa.pt>"]
 license = "GPL-3.0"
@@ -14,17 +14,20 @@ click = "8.1.7"
 prettytable = "3.6.0"
 pandas = "2.3.3"
 configparser = "5.3.0"
-puppetparser = "0.2.4"
-Jinja2 = "3.1.2"
-glitch-python-hcl2 = "0.1.4"
-dockerfile-parse = "2.0.0"
+Jinja2 = { git = "https://github.com/Nfsaavedra/jinja", branch = "tok_loc" }
 bashlex = "0.18"
 requests = "^2.31.0"
 z3-solver = "^4.12.4.0"
-nltk = "^3.8.1"
+nltk = "^3.9.3"
 jsonschema = "^4.21.1"
-setuptools = "^69.5.1"
+setuptools = "^82.0.0"
 tqdm = "^4.66.2"
+puppetparser = "0.2.14"
+python-hcl2 = {git = "https://github.com/Nfsaavedra/python-hcl2.git", rev = "feature/hcl2-reverse-transformer"}
+typing-extensions = "^4.12.2"
+pyright = "1.1.408"
+black = "25.9.0"
+urllib3 = "^2.6.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "7.3.1"

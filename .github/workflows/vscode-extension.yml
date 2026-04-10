@@ -1,0 +1,59 @@
+name: Publish VSCode Extension
+
+on:
+  push:
+    branches:
+      - main
+      - nuno/test/workflow
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-extension/glitch
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Check if version changed
+        id: version-check
+        run: |
+          npm install -g @vscode/vsce
+          
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHER=$(node -p "require('./package.json').publisher")
+          NAME=$(node -p "require('./package.json').name")
+          
+          MARKETPLACE_VERSION=$(vsce show "${PUBLISHER}.${NAME}" --json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).versions[0].version" 2>/dev/null || echo "0.0.0")
+          
+          echo "local=$LOCAL_VERSION" >> $GITHUB_OUTPUT
+          echo "marketplace=$MARKETPLACE_VERSION" >> $GITHUB_OUTPUT
+          
+          if [ "$LOCAL_VERSION" != "$MARKETPLACE_VERSION" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Local version ($LOCAL_VERSION) differs from marketplace ($MARKETPLACE_VERSION)"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged ($LOCAL_VERSION)"
+          fi
+
+      - name: Install dependencies
+        if: steps.version-check.outputs.changed == 'true'
+        run: npm ci
+
+      - name: Compile extension
+        if: steps.version-check.outputs.changed == 'true'
+        run: npm run compile
+
+      - name: Publish to Visual Studio Marketplace
+        if: steps.version-check.outputs.changed == 'true'
+        run: npx vsce publish -p ${{ secrets.VSCE_PAT }}

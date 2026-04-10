@@ -15,6 +15,16 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '2.7.4'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+          cache-dependency-path: glitch/rego/rego_python/src/rego_python/go/go.sum
+      - name: Build Rego library
+        run: |
+          cd glitch/rego/rego_python/src/rego_python/go
+          GOOS=linux GOARCH=amd64 go build -o "../bin/librego-linux-amd64.so" -buildmode=c-shared regolib.go
+          rm -f ../bin/librego-*.h
       - name: Install Python 3
         uses: actions/setup-python@v4
         with:
@@ -23,7 +33,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
+          python -m pip install pytest
       - name: Run tests with pytest
-        run: |
-          cd glitch
-          python -m unittest discover tests
+        run: python -m pytest tests

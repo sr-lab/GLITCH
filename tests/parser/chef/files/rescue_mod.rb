@@ -1,0 +1,1 @@
+cassandra_config = data_bag_item('cassandra', 'clusters') rescue nil

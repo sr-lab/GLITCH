@@ -1,8 +1,16 @@
 from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    Boolean,
+    CodeElement,
+    KeyValue,
+    String,
+)
 
 
 class TerraformIntegrityPolicy(TerraformSmellChecker):
@@ -17,12 +25,26 @@ class TerraformIntegrityPolicy(TerraformSmellChecker):
             if (
                 attribute.name == policy["attribute"]
                 and atomic_unit.type in policy["au_type"]
-                and parent_name in policy["parents"]
-                and not attribute.has_variable
-                and isinstance(attribute.value, str)
-                and attribute.value.lower() not in policy["values"]
+                and (
+                    parent_name in policy["parents"]
+                    or (not policy["parents"] and not parent_name)
+                )
+                and not VariableChecker().check(attribute.value)
             ):
-                return [Error("sec_integrity_policy", attribute, file, repr(attribute))]
+                if (
+                    isinstance(attribute.value, Boolean)
+                    and str(attribute.value.value).lower() not in policy["values"]
+                ):
+                    return [
+                        Error("sec_integrity_policy", attribute, file, repr(attribute))
+                    ]
+                elif (
+                    isinstance(attribute.value, String)
+                    and attribute.value.value.lower() not in policy["values"]
+                ):
+                    return [
+                        Error("sec_integrity_policy", attribute, file, repr(attribute))
+                    ]
 
         return []
 
@@ -34,7 +56,7 @@ class TerraformIntegrityPolicy(TerraformSmellChecker):
                     policy["required"] == "yes"
                     and element.type in policy["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, policy["parents"], policy["attribute"]
+                        element, policy["parents"], policy["attribute"]
                     )
                 ):
                     errors.append(

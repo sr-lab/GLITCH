@@ -5,6 +5,8 @@ __pycache__/
 
 # C extensions
 *.so
+glitch/rego/go/library/librego.h
+glitch/rego/rego_python/src/rego_python/bin/*
 
 # Distribution / packaging
 .Python
@@ -130,3 +132,4 @@ dmypy.json
 
 out
 errors
+.vscode

@@ -2,8 +2,18 @@ import re
 from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.repr.inter import (
+    Array,
+    AtomicUnit,
+    Attribute,
+    Boolean,
+    CodeElement,
+    KeyValue,
+    String,
+    UnitBlock,
+)
+from glitch.analysis.checkers.var_checker import VariableChecker
 
 
 class TerraformNetworkSecurityRules(TerraformSmellChecker):
@@ -18,87 +28,101 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
             if (
                 attribute.name == rule["attribute"]
                 and atomic_unit.type in rule["au_type"]
-                and parent_name in rule["parents"]
-                and not attribute.has_variable
-                and attribute.value is not None
-                and attribute.value.lower() not in rule["values"]
-                and rule["values"] != [""]
+                and self._parent_matches(parent_name, rule["parents"])
+                and not VariableChecker().check(attribute.value)
+                and rule["values"] != []
             ):
-                return [
-                    Error(
-                        "sec_network_security_rules", attribute, file, repr(attribute)
-                    )
-                ]
+                if isinstance(attribute.value, (String, Boolean)):
+                    if str(attribute.value.value).lower() not in rule["values"]:
+                        return [
+                            Error(
+                                "sec_network_security_rules",
+                                attribute,
+                                file,
+                                repr(attribute),
+                            )
+                        ]
+                elif (
+                    hasattr(attribute.value, "code")
+                    and attribute.value.code.lower() not in rule["values"]
+                ):
+                    return [
+                        Error(
+                            "sec_network_security_rules",
+                            attribute,
+                            file,
+                            repr(attribute),
+                        )
+                    ]
 
         return []
+
+    def _has_str_value(
+        self, attr: Attribute | UnitBlock | KeyValue | None, value: str
+    ) -> bool:
+        return (
+            isinstance(attr, (Attribute, KeyValue))
+            and isinstance(attr.value, String)
+            and attr.value.value.lower() == value
+        )
+
+    def _has_str_value_in(
+        self, attr: Attribute | UnitBlock | KeyValue | None, values: list[str]
+    ) -> bool:
+        return (
+            isinstance(attr, (Attribute, KeyValue))
+            and isinstance(attr.value, String)
+            and attr.value.value.lower() in values
+        )
+
+    def _is_permissive_source(
+        self, attr: Attribute | UnitBlock | KeyValue | None
+    ) -> bool:
+        if not isinstance(attr, (Attribute, KeyValue)) or not isinstance(
+            attr.value, String
+        ):
+            return False
+        val = attr.value.value.lower()
+        return val in ["*", "/0", "internet", "any"] or bool(re.match(r"^0.0.0.0", val))
 
     def check(self, element: CodeElement, file: str) -> List[Error]:
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
-            if element.type == "resource.azurerm_network_security_rule":
-                access = self.check_required_attribute(
-                    element.attributes, [""], "access"
-                )
-                if (
-                    isinstance(access, KeyValue)
-                    and isinstance(access.value, str)
-                    and access.value.lower() == "allow"
-                ):
-                    protocol = self.check_required_attribute(
-                        element.attributes, [""], "protocol"
-                    )
-                    if (
-                        isinstance(protocol, KeyValue)
-                        and isinstance(protocol.value, str)
-                        and protocol.value.lower() == "udp"
-                    ):
+            if element.type == "azurerm_network_security_rule":
+                access = self.check_required_attribute(element, [], "access")
+                if self._has_str_value(access, "allow"):
+                    protocol = self.check_required_attribute(element, [], "protocol")
+                    if self._has_str_value(protocol, "udp"):
                         errors.append(
                             Error(
                                 "sec_network_security_rules", access, file, repr(access)
                             )
                         )
-                    elif (
-                        isinstance(protocol, KeyValue)
-                        and isinstance(protocol.value, str)
-                        and protocol.value.lower() == "tcp"
-                    ):
+                    elif self._has_str_value(protocol, "tcp"):
                         dest_port_range = self.check_required_attribute(
-                            element.attributes, [""], "destination_port_range"
+                            element, [], "destination_port_range"
                         )
-                        port = (
-                            isinstance(dest_port_range, KeyValue)
-                            and isinstance(dest_port_range.value, str)
-                            and dest_port_range.value.lower()
-                            in [
-                                "22",
-                                "3389",
-                                "*",
-                            ]
+                        port = self._has_str_value_in(
+                            dest_port_range, ["22", "3389", "*"]
                         )
-                        port_ranges, _ = self.iterate_required_attributes(
-                            element.attributes,
-                            "destination_port_ranges",
-                            lambda x: (
-                                isinstance(x.value, str)
-                                and x.value.lower() in ["22", "3389", "*"]
-                            ),
-                        )
+
+                        port_ranges = False
+                        for attr in element.attributes:
+                            if attr.name == "destination_port_ranges" and isinstance(
+                                attr.value, Array
+                            ):
+                                for item in attr.value.value:
+                                    if isinstance(
+                                        item, String
+                                    ) and item.value.lower() in ["22", "3389", "*"]:
+                                        port_ranges = True
+                                        break
 
                         if port or port_ranges:
                             source_address_prefix = self.check_required_attribute(
-                                element.attributes, [""], "source_address_prefix"
+                                element, [], "source_address_prefix"
                             )
-                            if (
-                                isinstance(source_address_prefix, KeyValue)
-                                and isinstance(source_address_prefix.value, str)
-                                and (
-                                    source_address_prefix.value.lower()
-                                    in ["*", "/0", "internet", "any"]
-                                    or re.match(
-                                        r"^0.0.0.0", source_address_prefix.value.lower()
-                                    )
-                                )
-                            ):
+                            if self._is_permissive_source(source_address_prefix):
                                 errors.append(
                                     Error(
                                         "sec_network_security_rules",
@@ -107,62 +131,30 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                                         repr(source_address_prefix),
                                     )
                                 )
-            elif element.type == "resource.azurerm_network_security_group":
+
+            elif element.type == "azurerm_network_security_group":
                 access = self.check_required_attribute(
-                    element.attributes, ["security_rule"], "access"
+                    element, ["security_rule"], "access"
                 )
-                if (
-                    isinstance(access, KeyValue)
-                    and isinstance(access.value, str)
-                    and access.value.lower() == "allow"
-                ):
+                if self._has_str_value(access, "allow"):
                     protocol = self.check_required_attribute(
-                        element.attributes, ["security_rule"], "protocol"
+                        element, ["security_rule"], "protocol"
                     )
-                    if (
-                        isinstance(protocol, KeyValue)
-                        and isinstance(protocol.value, str)
-                        and protocol.value.lower() == "udp"
-                    ):
+                    if self._has_str_value(protocol, "udp"):
                         errors.append(
                             Error(
                                 "sec_network_security_rules", access, file, repr(access)
                             )
                         )
-                    elif (
-                        isinstance(protocol, KeyValue)
-                        and isinstance(protocol.value, str)
-                        and protocol.value.lower() == "tcp"
-                    ):
+                    elif self._has_str_value(protocol, "tcp"):
                         dest_port_range = self.check_required_attribute(
-                            element.attributes,
-                            ["security_rule"],
-                            "destination_port_range",
+                            element, ["security_rule"], "destination_port_range"
                         )
-                        if (
-                            isinstance(dest_port_range, KeyValue)
-                            and isinstance(dest_port_range.value, str)
-                            and dest_port_range.value.lower()
-                            in [
-                                "22",
-                                "3389",
-                                "*",
-                            ]
-                        ):
+                        if self._has_str_value_in(dest_port_range, ["22", "3389", "*"]):
                             source_address_prefix = self.check_required_attribute(
-                                element.attributes, [""], "source_address_prefix"
+                                element, ["security_rule"], "source_address_prefix"
                             )
-                            if (
-                                isinstance(source_address_prefix, KeyValue)
-                                and isinstance(source_address_prefix.value, str)
-                                and (
-                                    source_address_prefix.value.lower()
-                                    in ["*", "/0", "internet", "any"]
-                                    or re.match(
-                                        r"^0.0.0.0", source_address_prefix.value.lower()
-                                    )
-                                )
-                            ):
+                            if self._is_permissive_source(source_address_prefix):
                                 errors.append(
                                     Error(
                                         "sec_network_security_rules",
@@ -176,9 +168,10 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                 if (
                     rule["required"] == "yes"
                     and element.type in rule["au_type"]
-                    and not self.check_required_attribute(
-                        element.attributes, rule["parents"], rule["attribute"]
+                    and self.check_required_attribute(
+                        element, rule["parents"], rule["attribute"]
                     )
+                    is None
                 ):
                     errors.append(
                         Error(
@@ -186,7 +179,7 @@ class TerraformNetworkSecurityRules(TerraformSmellChecker):
                             element,
                             file,
                             repr(element),
-                            f"Suggestion: check for a required attribute with name '{rule['msg']}'.",
+                            f"Suggestion: check for a required attribute with name '{rule.get('msg', rule['attribute'])}'.",
                         )
                     )
 

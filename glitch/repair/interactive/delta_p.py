@@ -1,8 +1,9 @@
+import logging
 from dataclasses import dataclass
-from abc import ABC
-from typing import Optional, List, Union, Callable, Sequence
+from abc import ABC, abstractmethod
+from typing import Optional, List, Union, Callable, Any
 
-from glitch.repair.interactive.filesystem import *
+from glitch.repair.interactive.system import *
 
 
 class PConst(ABC):
@@ -16,7 +17,7 @@ class PStr(PConst):
 
 @dataclass
 class PNum(PConst):
-    value: int
+    value: int | float
 
 
 @dataclass
@@ -30,6 +31,11 @@ class PExpr(ABC):
 
 @dataclass
 class PEUndef(PExpr):
+    pass
+
+
+@dataclass
+class PEUnsupported(PExpr):
     pass
 
 
@@ -58,7 +64,7 @@ class PEBinOP(PExpr):
 
 @dataclass
 class PUnOp(ABC):
-    value: PExpr
+    pass
 
 
 @dataclass
@@ -116,26 +122,89 @@ class PGt(PBinOp):
 
 
 @dataclass
-class PConcat(PBinOp):
+class PAdd(PBinOp):
+    pass
+
+
+@dataclass
+class PSub(PBinOp):
+    pass
+
+
+@dataclass
+class PMultiply(PBinOp):
+    pass
+
+
+@dataclass
+class PDivide(PBinOp):
+    pass
+
+
+@dataclass
+class PMod(PBinOp):
+    pass
+
+
+@dataclass
+class PPower(PBinOp):
     pass
 
 
 class PStatement(ABC):
-    def __get_str(self, expr: PExpr, vars: Dict[str, PExpr]) -> str:
+    @staticmethod
+    def __get_var(id: str, vars: Dict[str, PExpr]) -> Optional[PExpr]:
+        scopes = id.split(":dejavu:")
+        while True:
+            if ":dejavu:".join(scopes) in vars:
+                return vars[":dejavu:".join(scopes)]
+            if len(scopes) == 1:
+                break
+            scopes.pop(-2)
+
+        return None
+
+    @staticmethod
+    def get_str(
+        expr: PExpr, vars: Dict[str, PExpr], ignore_vars: bool = False
+    ) -> Optional[str]:
         if isinstance(expr, PEConst) and isinstance(expr.const, PStr):
             return expr.const.value
-        elif isinstance(expr, PEVar):
-            return self.__get_str(vars[expr.id], vars)
+        elif isinstance(expr, PEConst) and isinstance(expr.const, PBool):
+            return str(expr.const.value).lower()
+        elif isinstance(expr, PEConst) and isinstance(expr.const, PNum):
+            return str(expr.const.value)
+        elif ignore_vars and isinstance(expr, PEVar):
+            return expr.id
+        elif (
+            isinstance(expr, PEVar) and PStatement.__get_var(expr.id, vars) is not None
+        ):
+            res = PStatement.__get_var(expr.id, vars)
+            assert res is not None
+            return PStatement.get_str(res, vars, ignore_vars=ignore_vars)
+        elif isinstance(expr, PRLet):
+            return PStatement.get_str(expr.expr, vars, ignore_vars=ignore_vars)
+        elif isinstance(expr, PEBinOP) and isinstance(expr.op, PAdd):
+            lhs = PStatement.get_str(expr.lhs, vars, ignore_vars=ignore_vars)
+            rhs = PStatement.get_str(expr.rhs, vars, ignore_vars=ignore_vars)
+            if lhs is None or rhs is None:
+                return None
+            return lhs + rhs
         elif isinstance(expr, PEUndef):
-            return None  # type: ignore
-
-        raise RuntimeError(f"Unsupported expression, got {expr}")
+            return None
+        else:
+            logging.warning(f"Unsupported expression, got {expr}")
+            return None
 
     def __eval(self, expr: PExpr, vars: Dict[str, PExpr]) -> PExpr | None:
         if isinstance(expr, PEVar) and expr.id.startswith("dejavu-condition"):
             return expr
-        if isinstance(expr, PEVar):
-            return self.__eval(vars[expr.id], vars)
+        if isinstance(expr, PEVar) and self.__get_var(expr.id, vars) is not None:
+            res = self.__get_var(expr.id, vars)
+            assert res is not None
+            return self.__eval(res, vars)
+        elif isinstance(expr, PRLet):
+            return self.__eval(expr.expr, vars)
         elif isinstance(expr, PEUndef) or isinstance(expr, PEConst):
             # NOTE: it is an arbitrary string to represent an undefined value
             return expr
@@ -164,28 +233,26 @@ class PStatement(ABC):
         """
 
         def minimize_aux(
-            statement: "PStatement", considered_paths: Sequence[PExpr]
+            statement: "PStatement",
+            considered_paths: List[str],
+            vars: Dict[str, PExpr],
         ) -> "PStatement":
-            # FIXME compile statement.path
-            if isinstance(statement, PMkdir) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PCreate) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PWrite) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PRm) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PCp) and (
-                statement.src in considered_paths or statement.dst in considered_paths
-            ):
-                return statement
-            elif isinstance(statement, PChmod) and statement.path in considered_paths:
-                return statement
-            elif isinstance(statement, PChown) and statement.path in considered_paths:
-                return statement
+            if isinstance(statement, PAttr):
+                path = PStatement.get_str(statement.path, vars)
+                if path not in considered_paths:
+                    return PSkip()
+                else:
+                    return statement
+            elif isinstance(statement, PCp):
+                src = PStatement.get_str(statement.src, vars)
+                dst = PStatement.get_str(statement.dst, vars)
+                if src not in considered_paths and dst not in considered_paths:
+                    return PSkip()
+                else:
+                    return statement
             elif isinstance(statement, PSeq):
-                lhs = minimize_aux(statement.lhs, considered_paths)
-                rhs = minimize_aux(statement.rhs, considered_paths)
+                lhs = minimize_aux(statement.lhs, considered_paths, vars)
+                rhs = minimize_aux(statement.rhs, considered_paths, vars)
                 if not isinstance(lhs, PSkip) and not isinstance(rhs, PSkip):
                     return PSeq(lhs, rhs)
                 elif isinstance(lhs, PSkip):
@@ -193,8 +260,23 @@ class PStatement(ABC):
                 elif isinstance(rhs, PSkip):
                     return lhs
             elif isinstance(statement, PLet):
-                body = minimize_aux(statement.body, considered_paths)
+                vars[statement.id] = statement.expr
+                body = minimize_aux(statement.body, considered_paths, vars)
                 if not isinstance(body, PSkip):
+                    # Checks if the variable is used in the body
+                    references = GetVarReferencesVisitor().visit(body)
+                    for reference in references:
+                        if (
+                            PStatement.__get_var(
+                                reference.id, {statement.id: statement.expr}
+                            )
+                            is not None
+                        ):
+                            break
+                    else:
+                        # The variable is not used in the body
+                        return body
+
                     return PLet(
                         statement.id,
                         statement.expr,
@@ -202,8 +284,8 @@ class PStatement(ABC):
                         body,
                     )
             elif isinstance(statement, PIf):
-                cons = minimize_aux(statement.cons, considered_paths)
-                alt = minimize_aux(statement.alt, considered_paths)
+                cons = minimize_aux(statement.cons, considered_paths, vars)
+                alt = minimize_aux(statement.alt, considered_paths, vars)
                 if not isinstance(cons, PSkip) or not isinstance(alt, PSkip):
                     return PIf(
                         statement.pred,
@@ -213,53 +295,55 @@ class PStatement(ABC):
 
             return PSkip()
 
-        considered_paths_exprs: List[PEConst] = list(
-            map(lambda path: PEConst(const=PStr(value=path)), considered_paths)
-        )
-        return minimize_aux(statement, considered_paths_exprs)
+        return minimize_aux(statement, considered_paths, {})
 
     def to_filesystems(
         self,
-        fss: Union[FileSystemState, List[FileSystemState]] = [],
+        fss: Union[SystemState, List[SystemState]] = [],
         vars: Optional[Dict[str, PExpr]] = None,
-    ) -> List[FileSystemState]:
-        if isinstance(fss, FileSystemState):
+    ) -> List[SystemState]:
+        if isinstance(fss, SystemState):
             fss = [fss.copy()]
         elif fss == []:
-            fss = [FileSystemState()]
+            fss = [SystemState()]
 
         if vars is None:
             vars = {}
 
-        res_fss: List[FileSystemState] = []
+        res_fss: List[SystemState] = []
         for fs in fss:
-            get_str: Callable[[PExpr], str] = lambda expr: self.__get_str(expr, vars)
+            get_str: Callable[[PExpr], Optional[str]] = lambda expr: PStatement.get_str(
+                expr, vars
+            )
+
+            if isinstance(self, PAttr):
+                path = get_str(self.path)
+                if path is None:
+                    res_fss.append(fs)
+                    continue
+            else:
+                path = ""
+
+            if path != "" and path not in fs.state:
+                fs.state[path] = State()
 
             if isinstance(self, PSkip):
                 pass
-            elif isinstance(self, PMkdir):
-                fs.state[get_str(self.path)] = Dir(None, None)
-            elif isinstance(self, PCreate):
-                fs.state[get_str(self.path)] = File(None, None, None)
-            elif isinstance(self, PWrite):
-                path, content = get_str(self.path), get_str(self.content)
-                file = fs.state.get(path)
-                if isinstance(file, File):
-                    file.content = content
-            elif isinstance(self, PRm):
-                fs.state[get_str(self.path)] = Nil()
+            elif isinstance(self, PAttr):
+                value = get_str(self.value)
+                if path != "" and value is not None:
+                    fs.state[path].attrs[self.attr] = value
+                elif path != "":
+                    fs.state[path].attrs[self.attr] = UNDEF
             elif isinstance(self, PCp):
-                fs.state[get_str(self.dst)] = fs.state[get_str(self.src)]
-            elif isinstance(self, PChmod):
-                path, mode = get_str(self.path), get_str(self.mode)
-                file = fs.state.get(path)
-                if isinstance(file, (File, Dir)):
-                    file.mode = mode
-            elif isinstance(self, PChown):
-                path, owner = get_str(self.path), get_str(self.owner)
-                file = fs.state.get(path)
-                if isinstance(file, (File, Dir)):
-                    file.owner = owner
+                try:
+                    dst, src = get_str(self.dst), get_str(self.src)
+                    if dst is None or src is None:
+                        continue
+                    fs.state[dst] = fs.state[src]
+                except ValueError:
+                    logging.warning(f"Invalid path: {self.src} {self.dst}")
+                    continue
             elif isinstance(self, PSeq):
                 fss_lhs = self.lhs.to_filesystems(fs, vars)
                 for fs_lhs in fss_lhs:
@@ -299,24 +383,10 @@ class PSkip(PStatement):
 
 
 @dataclass
-class PMkdir(PStatement):
+class PAttr(PStatement):
     path: PExpr
-
-
-@dataclass
-class PWrite(PStatement):
-    path: PExpr
-    content: PExpr
-
-
-@dataclass
-class PCreate(PStatement):
-    path: PExpr
-
-
-@dataclass
-class PRm(PStatement):
-    path: PExpr
+    attr: str
+    value: PExpr
 
 
 @dataclass
@@ -326,35 +396,24 @@ class PCp(PStatement):
 
 
 @dataclass
-class PChmod(PStatement):
-    path: PExpr
-    mode: PExpr
-
-
-@dataclass
-class Chmod(PStatement):
-    path: PExpr
-    mode: PExpr
-
-
-@dataclass
-class PChown(PStatement):
-    path: PExpr
-    owner: PExpr
-
-
-@dataclass
 class PSeq(PStatement):
     lhs: PStatement
     rhs: PStatement
 
 
 @dataclass
-class PLet(PStatement):
+class PLet(PExpr, PStatement):
     id: str
     expr: PExpr
-    label: Optional[int]
+    label: int
     body: PStatement
+
+
+@dataclass
+class PRLet(PExpr):
+    id: str
+    expr: PExpr
+    label: int
 
 
 @dataclass
@@ -362,3 +421,77 @@ class PIf(PStatement):
     pred: PExpr
     cons: PStatement
     alt: PStatement
+
+
+class TranverseDeltaPVisitor(ABC):
+    @abstractmethod
+    def visit(self, statement: PStatement | PExpr | PConst) -> Any:
+        if isinstance(statement, PEBinOP):
+            return self.visit_binop(statement)
+        elif isinstance(statement, PEUnOP):
+            return self.visit_unop(statement)
+        elif isinstance(statement, PAttr):
+            return self.visit_attr(statement)
+        elif isinstance(statement, PCp):
+            return self.visit_cp(statement)
+        elif isinstance(statement, PSeq):
+            return self.visit_seq(statement)
+        elif isinstance(statement, PLet):
+            return self.visit_let(statement)
+        elif isinstance(statement, PRLet):
+            return self.visit_rlet(statement)
+        elif isinstance(statement, PIf):
+            return self.visit_if(statement)
+        return None
+
+    def visit_binop(self, binop: PEBinOP):
+        return self.visit(binop.lhs) + self.visit(binop.rhs)
+
+    def visit_unop(self, unop: PEUnOP):
+        return self.visit(unop.operand)
+
+    def visit_attr(self, stat: PAttr):
+        return self.visit(stat.path) + self.visit(stat.value)
+
+    def visit_cp(self, stat: PCp):
+        return self.visit(stat.src) + self.visit(stat.dst)
+
+    def visit_seq(self, stat: PSeq):
+        return self.visit(stat.lhs) + self.visit(stat.rhs)
+
+    def visit_let(self, stat: PLet):
+        return self.visit(stat.expr) + self.visit(stat.body)
+
+    def visit_rlet(self, stat: PRLet):
+        return self.visit(stat.expr)
+
+    def visit_if(self, stat: PIf):
+        return self.visit(stat.pred) + self.visit(stat.cons) + self.visit(stat.alt)
+
+
+class GetStringsVisitor(TranverseDeltaPVisitor):
+    def visit(self, statement: PStatement | PExpr | PConst) -> List[str]:
+        res = super().visit(statement)
+        if res is not None:
+            return res
+        elif isinstance(statement, PEConst):
+            return self.visit_const(statement)
+        return []
+
+    def visit_const(self, const: PEConst) -> List[str]:
+        if isinstance(const.const, PStr):
+            return [const.const.value]
+        return []
+
+
+class GetVarReferencesVisitor(TranverseDeltaPVisitor):
+    def visit(self, statement: PStatement | PExpr | PConst) -> List[PEVar]:
+        res = super().visit(statement)
+        if res is not None:
+            return res
+        elif isinstance(statement, PEVar):
+            return [statement]
+        return []
+
+
+from glitch.repair.interactive.values import UNDEF

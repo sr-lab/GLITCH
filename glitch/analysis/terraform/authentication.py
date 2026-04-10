@@ -2,8 +2,16 @@ import re
 from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    CodeElement,
+    KeyValue,
+    String,
+    Boolean,
+)
 
 
 class TerraformAuthentication(TerraformSmellChecker):
@@ -22,8 +30,11 @@ class TerraformAuthentication(TerraformSmellChecker):
                             config["keyword"].lower() + "\\s*" + config["value"].lower()
                         )
                         pattern = re.compile(rf"{expr}")
-                        if isinstance(attribute.value, str) and not re.search(
-                            pattern, attribute.value
+                        value_str = None
+                        if isinstance(attribute.value, String):
+                            value_str = attribute.value.value
+                        if value_str is not None and not re.search(
+                            pattern, value_str.lower()
                         ):
                             return [
                                 Error(
@@ -38,13 +49,23 @@ class TerraformAuthentication(TerraformSmellChecker):
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
-                and parent_name in config["parents"]
-                and not attribute.has_variable
-                and isinstance(attribute.value, str)
-                and attribute.value.lower() not in config["values"]
-                and config["values"] != [""]
+                and self._parent_matches(parent_name, config["parents"])
+                and config["values"] != []
             ):
-                return [Error("sec_authentication", attribute, file, repr(attribute))]
+                value_str = None
+                if isinstance(attribute.value, String):
+                    value_str = attribute.value.value
+                elif isinstance(attribute.value, Boolean):
+                    value_str = "true" if attribute.value.value else "false"
+
+                if (
+                    value_str is not None
+                    and not VariableChecker().check(attribute.value)
+                    and value_str.lower() not in config["values"]
+                ):
+                    return [
+                        Error("sec_authentication", attribute, file, repr(attribute))
+                    ]
 
         return []
 
@@ -52,7 +73,7 @@ class TerraformAuthentication(TerraformSmellChecker):
         errors: List[Error] = []
 
         if isinstance(element, AtomicUnit):
-            if element.type == "resource.google_sql_database_instance":
+            if element.type == "google_sql_database_instance":
                 errors += self.check_database_flags(
                     element,
                     file,
@@ -60,11 +81,16 @@ class TerraformAuthentication(TerraformSmellChecker):
                     "contained database authentication",
                     "off",
                 )
-            elif element.type == "resource.aws_iam_group":
-                expr = "\\${aws_iam_group\\." + f"{element.name}\\."
+            elif element.type == "aws_iam_group":
+                name_str = (
+                    element.name.value
+                    if isinstance(element.name, String)
+                    else str(element.name)
+                )
+                expr = "(\\$\\{)?aws_iam_group\\." + f"{name_str}\\."
                 pattern = re.compile(rf"{expr}")
                 if not self.get_associated_au(
-                    file, "resource.aws_iam_group_policy", "group", pattern, [""]
+                    file, "aws_iam_group_policy", "group", pattern, []
                 ):
                     errors.append(
                         Error(
@@ -81,17 +107,23 @@ class TerraformAuthentication(TerraformSmellChecker):
                 if (
                     config["required"] == "yes"
                     and element.type in config["au_type"]
-                    and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                    and self.check_required_attribute(
+                        element, config["parents"], config["attribute"]
                     )
+                    is None
                 ):
+                    msg = config.get("msg")
+                    if msg is None:
+                        parents = config["parents"]
+                        attr = config["attribute"]
+                        msg = ".".join(parents + [attr]) if parents else attr
                     errors.append(
                         Error(
                             "sec_authentication",
                             element,
                             file,
                             repr(element),
-                            f"Suggestion: check for a required attribute with name '{config['msg']}'.",
+                            f"Suggestion: check for a required attribute with name '{msg}'.",
                         )
                     )
 

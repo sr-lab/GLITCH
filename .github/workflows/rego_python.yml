@@ -1,0 +1,188 @@
+name: rego-python
+
+on:
+  push:
+    paths:
+      - ".github/workflows/rego-python.yml"
+      - "glitch/rego/rego_python/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-binaries:
+    name: Build Rego Python binaries
+    runs-on: ${{ matrix.os_runner }}
+    strategy:
+      matrix:
+        include:
+          # Linux
+          - os: linux
+            arch: amd64
+            os_runner: ubuntu-latest
+          - os: linux
+            arch: arm64
+            os_runner: ubuntu-24.04-arm
+
+          # macOS
+          - os: darwin
+            arch: amd64
+            os_runner: macos-15-intel
+          - os: darwin
+            arch: arm64
+            os_runner: macos-latest
+
+          # Windows
+          - os: windows
+            arch: amd64
+            os_runner: windows-latest
+          #- os: windows
+          #  arch: arm64
+          #  os_runner: windows-11-arm
+          # This fails the build because the runner is still limited
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+          cache-dependency-path: glitch/rego/rego_python/src/rego_python/go/go.sum
+
+      - name: Build binary
+        shell: bash
+        run: |
+          OS=${{ matrix.os }}
+          ARCH=${{ matrix.arch }}
+
+          # Determine file extension
+          if [ "$OS" = "windows" ]; then
+            EXT="dll"
+          elif [ "$OS" = "darwin" ]; then
+            EXT="dylib"
+          else
+            EXT="so"
+          fi
+
+          OUTPUT="../bin/librego-$OS-$ARCH.$EXT"
+          echo "Building $OUTPUT ..."
+
+          cd glitch/rego/rego_python/src/rego_python/go
+          GOOS=$OS GOARCH=$ARCH go build -o "$OUTPUT" -buildmode=c-shared regolib.go
+          rm -f ../bin/librego-*.h
+
+      - name: List bin folder
+        run: ls -l glitch/rego/rego_python/src/rego_python/bin/
+      
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: librego-${{ matrix.os }}-${{ matrix.arch }}
+          path: glitch/rego/rego_python/src/rego_python/bin/librego-${{ matrix.os }}-${{ matrix.arch }}.*
+          retention-days: 1
+
+  build-package:
+    name: Build Python package
+    runs-on: ubuntu-latest
+    needs: build-binaries
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Download all binary artifacts into bin/
+      - uses: actions/download-artifact@v4
+        with:
+          path: glitch/rego/rego_python/src/rego_python/bin
+          merge-multiple: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade build twine
+
+      - name: Build wheel and sdist
+        working-directory: glitch/rego/rego_python
+        run: python -m build
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: glitch/rego/rego_python/dist/*
+          retention-days: 1
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-package 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version and check if tag exists
+        id: get_version
+        run: |
+          VERSION=$(grep '^version = ' glitch/rego/rego_python/pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version extracted: $VERSION"
+
+          TAG=rego_python-v$VERSION
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping release"
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG does not exist, will create release"
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tag for release
+        if: steps.get_version.outputs.tag_exists == 'false'
+        run: |
+          git config user.name "rego_python-release-bot"
+          git config user.email "rego_python@users.noreply.github.com"
+          TAG=rego_python-v${{ steps.get_version.outputs.version }}
+          git tag $TAG
+          git push origin $TAG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download built package and binaries
+        if: steps.get_version.outputs.tag_exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+          merge-multiple: true
+
+      - name: List downloaded assets
+        if: steps.get_version.outputs.tag_exists == 'false'
+        run: |
+          echo "Listing contents of release_assets directory:"
+          ls -lR release_assets
+
+      - name: Create GitHub Release
+        if: steps.get_version.outputs.tag_exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "rego_python-v${{ steps.get_version.outputs.version }}"
+          name: "Rego Python v${{ steps.get_version.outputs.version }}"
+          files: |
+            release_assets/*.whl
+            release_assets/*.tar.gz
+            release_assets/*.so
+            release_assets/*.dylib
+            release_assets/*.dll
+          generate_release_notes: false
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

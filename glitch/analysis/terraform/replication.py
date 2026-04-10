@@ -2,8 +2,9 @@ import re
 from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue, String
+from glitch.analysis.checkers.var_checker import VariableChecker
 
 
 class TerraformReplication(TerraformSmellChecker):
@@ -14,15 +15,16 @@ class TerraformReplication(TerraformSmellChecker):
         parent_name: str,
         file: str,
     ) -> List[Error]:
+        var_checker = VariableChecker()
         for config in SecurityVisitor.REPLICATION:
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
                 and parent_name in config["parents"]
                 and config["values"] != [""]
-                and not attribute.has_variable
-                and isinstance(attribute.value, str)
-                and attribute.value.lower() not in config["values"]
+                and not var_checker.check(attribute.value)
+                and isinstance(attribute.value, String)
+                and attribute.value.value.lower() not in config["values"]
             ):
                 return [Error("sec_replication", attribute, file, repr(attribute))]
 
@@ -56,9 +58,10 @@ class TerraformReplication(TerraformSmellChecker):
                 if (
                     config["required"] == "yes"
                     and element.type in config["au_type"]
-                    and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                    and self.check_required_attribute(
+                        element, config["parents"], config["attribute"]
                     )
+                    is None
                 ):
                     errors.append(
                         Error(

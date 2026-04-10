@@ -1,12 +1,12 @@
 import json
 import tqdm
+import functools
 import click, os, sys
 
 from pathlib import Path
-from typing import Tuple, List, Set, Optional, TextIO, Dict
+from typing import Tuple, List, Set, Optional, TextIO, Dict, Any
 from glitch.analysis.rules import Error, RuleVisitor
-from glitch.helpers import get_smell_types, get_smells
-from glitch.parsers.docker import DockerParser
+from glitch.helpers import get_smell_types, get_smells, ini_to_json_dict
 from glitch.stats.print import print_stats
 from glitch.stats.stats import FileStats
 from glitch.tech import Tech
@@ -18,15 +18,22 @@ from glitch.parsers.puppet import PuppetParser
 from glitch.parsers.terraform import TerraformParser
 from glitch.parsers.gha import GithubActionsParser
 from glitch.exceptions import throw_exception
-from pkg_resources import resource_filename
+from glitch.repair.interactive.main import run_infrafix
+from importlib.resources import files
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
+from glitch.rego.engine import load_rego_from_path, run_analyses
+from glitch.rego.rego_python.src.rego_python import is_rego_available, get_rego_error
 
 
 # NOTE: These are necessary in order for python to load the visitors.
 # Otherwise, python will not consider these types of rules.
 from glitch.analysis.design.visitor import DesignVisitor  # type: ignore
-from glitch.analysis.security import SecurityVisitor  # type: ignore
+from glitch.analysis.security.visitor import SecurityVisitor  # type: ignore
+
+
+def __get_resource_path(resource: str) -> str:
+    return str(files("glitch").joinpath(resource))
 
 
 def __parse_and_check(
@@ -36,19 +43,74 @@ def __parse_and_check(
     parser: Parser,
     analyses: List[RuleVisitor],
     stats: FileStats,
+    config_rego: Dict[str, Dict[str, List[str]]],
+    rego_modules: Dict[str, str],
 ) -> Set[Error]:
     errors: Set[Error] = set()
     inter = parser.parse(path, type, module)
     # Avoids problems with multiple threads (and possibly multiple files)
     # sharing the same object
-    analyses = deepcopy(analyses)
 
+    analyses = deepcopy(analyses)
     if inter != None:
         for analysis in analyses:
             errors.update(analysis.check(inter))
+
+        inputRego = json.dumps(inter.as_dict(), indent=2)
+
+        errors.update(run_analyses(inputRego, config_rego, rego_modules))
+
         stats.compute(inter)
 
     return errors
+
+
+def __filter_analysis(
+    smell_types: Tuple[str, ...], config: str, tech: Tech
+) -> Tuple[Dict[str, str], List[RuleVisitor]]:
+    rego_modules: Dict[str, str] = {}
+    python_analyses: List[RuleVisitor] = []
+
+    rego_lib_path = __get_resource_path("rego/queries/library/glitch_lib.rego")
+    if not os.path.exists(rego_lib_path):
+        raise FileNotFoundError("The rego query library does not exist.")
+    load_rego_from_path(rego_lib_path, rego_modules)
+
+    for smell_type in smell_types:
+        smells: List[str] = get_smells([smell_type], tech)
+        fallback: Set[str] = set()
+
+        for smell in smells:
+            rego_path = __get_resource_path(f"rego/queries/{smell_type}/{smell}.rego")
+            if os.path.exists(rego_path):
+                load_rego_from_path(rego_path, rego_modules)
+            else:
+                fallback.add(smell)
+
+        if len(fallback) > 0:
+            match smell_type:
+                case "design":
+                    visitor = DesignVisitor(tech, fallback)
+                case "security":
+                    visitor = SecurityVisitor(tech, fallback)
+                case _:
+                    raise ValueError(f"Invalid smell type: {smell_type}")
+
+            visitor.config(config)
+            python_analyses.append(visitor)
+
+    return rego_modules, python_analyses
+
+
+def __get_tech(tech: str) -> Tech:
+    for t in Tech:
+        if t.tech == tech:
+            return t
+
+    raise click.BadOptionUsage(
+        "tech",
+        f"Invalid value for 'tech': '{tech}' is not a valid technology.",
+    )
 
 
 def __print_errors(errors: Set[Error], f: TextIO, linter: bool, csv: bool) -> None:
@@ -71,8 +133,6 @@ def __get_parser(tech: Tech) -> Parser:
         return ChefParser()
     elif tech == Tech.puppet:
         return PuppetParser()
-    elif tech == Tech.docker:
-        return DockerParser()
     elif tech == Tech.terraform:
         return TerraformParser()
     elif tech == Tech.gha:
@@ -111,38 +171,44 @@ def __get_paths_and_title(
     return paths, title
 
 
-def repr_mode(
-    type: UnitBlockType,
-    path: str,
-    module: bool,
-    parser: Parser,
-) -> None:
-    inter = parser.parse(path, type, module)
-    if inter != None:
-        print(json.dumps(inter.as_dict(), indent=2))
+def __common_params(func: Any) -> Any:
+    @click.option(
+        "--tech",
+        type=click.Choice([t.tech for t in Tech]),
+        required=True,
+        help="The IaC technology to be considered.",
+    )
+    @click.option(
+        "--type",
+        type=click.Choice([t.value for t in UnitBlockType]),
+        default=UnitBlockType.unknown,
+        help="The type of the scripts being analyzed.",
+    )
+    @click.argument("path", type=click.Path(exists=True), required=True)
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any):
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
-@click.command(
-    help="PATH is the file or folder to analyze. OUTPUT is an optional file to which we can redirect the smells output."
+@click.group()
+def cli():
+    pass
+
+
+@cli.command(
+    help="Lint the IaC scripts in the given PATH.\n"
+    "PATH is the file or folder to analyze.\n"
+    "OUTPUT is an optional file to which we can redirect the smells output."
 )
-@click.option(
-    "--tech",
-    type=click.Choice([t.tech for t in Tech]),
-    required=True,
-    help="The IaC technology to be considered.",
-)
+@__common_params
 @click.option(
     "--table-format",
     type=click.Choice(("prettytable", "latex")),
     required=False,
     default="prettytable",
     help="The presentation format of the tables that summarize the run.",
-)
-@click.option(
-    "--type",
-    type=click.Choice([t.value for t in UnitBlockType]),
-    default=UnitBlockType.unknown,
-    help="The type of the scripts being analyzed.",
 )
 @click.option(
     "--config",
@@ -181,21 +247,13 @@ def repr_mode(
     help="The type of smell_types being analyzed.",
 )
 @click.option(
-    "--mode",
-    type=click.Choice(["smell_detector", "repr"]),
-    help="The mode the tool is running in. If the mode is 'repr', the output is the intermediate representation."
-    "Defaults to 'smell_detector'.",
-    default="smell_detector",
-)
-@click.option(
     "--n-workers",
     type=int,
     help="Number of parallel workers to use. Defaults to 1.",
     default=1,
 )
-@click.argument("path", type=click.Path(exists=True), required=True)
 @click.argument("output", type=click.Path(), required=False)
-def glitch(
+def lint(
     tech: str,  # type: ignore
     type: str,
     path: str,
@@ -206,21 +264,21 @@ def glitch(
     output: Optional[str],
     table_format: str,
     linter: bool,
-    mode: str,
     n_workers: int,
 ):
-    for t in Tech:
-        if t.tech == tech:
-            tech: Tech = t
-            break
-    else:
-        raise click.BadOptionUsage(
-            "tech",
-            f"Invalid value for 'tech': '{tech}' is not a valid technology.",
-        )
-
+    tech: Tech = __get_tech(tech)
     type = UnitBlockType(type)
     module = folder_strategy == "module"
+
+    if not is_rego_available():
+        click.echo(
+            f"Error: Rego library is not available. {get_rego_error()}", err=True
+        )
+        click.echo(
+            "Please build or install the Rego library. See README for instructions.",
+            err=True,
+        )
+        sys.exit(1)
 
     if config != "configs/default.ini" and not os.path.exists(config):
         raise click.BadOptionUsage(
@@ -231,29 +289,19 @@ def glitch(
             "config", f"Invalid value for 'config': Path '{config}' should be a file."
         )
     elif config == "configs/default.ini":
-        config_path = resource_filename("glitch", "configs/default.ini")
-    else:
-        config_path = config
+        config = __get_resource_path("configs/default.ini")
 
     parser = __get_parser(tech)
     if tech == Tech.terraform:
-        config_path = resource_filename("glitch", "configs/terraform.ini")
+        config = __get_resource_path("configs/terraform.ini")
     file_stats = FileStats()
-
-    if mode == "repr":
-        repr_mode(type, path, module, parser)
-        return
 
     if smell_types == ():
         smell_types = get_smell_types()
 
-    analyses: List[RuleVisitor] = []
-    rules = RuleVisitor.__subclasses__()
-    for r in rules:
-        if smell_types == () or r.get_name() in smell_types:
-            analysis = r(tech)
-            analysis.config(config_path)
-            analyses.append(analysis)
+    config_rego = ini_to_json_dict(config)
+
+    rego_modules, analyses = __filter_analysis(smell_types, config, tech)
 
     errors: List[Error] = []
     paths: Set[str]
@@ -266,12 +314,22 @@ def glitch(
     for p in paths:
         futures.append(
             executor.submit(
-                __parse_and_check, type, p, module, parser, analyses, file_stats
+                __parse_and_check,
+                type,
+                p,
+                module,
+                parser,
+                analyses,
+                file_stats,
+                config_rego,
+                rego_modules,
             )
         )
         future_to_path[futures[-1]] = p
 
     f = sys.stdout if output is None else open(output, "w")
+    if csv:
+        print("PATH,LINE,ERROR,DESCRIPTION,CODE", file=f)
     for future in tqdm.tqdm(as_completed(futures), total=len(futures), desc=title):
         try:
             new_errors = future.result()
@@ -286,8 +344,43 @@ def glitch(
         print_stats(errors, get_smells(smell_types, tech), file_stats, table_format)
 
 
+@cli.command()
+@__common_params
+@click.argument("pid", type=str, required=True)
+def infrafix(
+    path: str,
+    pid: str,
+    tech: str,  # type: ignore
+    type: UnitBlockType,
+):
+    tech: Tech = __get_tech(tech)
+    parser = __get_parser(tech)
+    run_infrafix(path, pid, parser, type, tech)
+
+
+@cli.command()
+@__common_params
+@click.option(
+    "--module",
+    is_flag=True,
+    default=False,
+    help="True if the path is a module, false otherwise.",
+)
+def repr(
+    path: str,
+    type: UnitBlockType,
+    tech: str,  # type: ignore
+    module: bool,
+) -> None:
+    tech: Tech = __get_tech(tech)
+    parser = __get_parser(tech)
+    inter = parser.parse(path, type, module)
+    if inter != None:
+        print(json.dumps(inter.as_dict(), indent=2))
+
+
 def main() -> None:
-    glitch(prog_name="glitch")
+    cli(prog_name="glitch")
 
 
 if __name__ == "__main__":

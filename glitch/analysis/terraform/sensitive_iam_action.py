@@ -1,8 +1,15 @@
 import json
-from typing import List, Dict
+from typing import Any, List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.repr.inter import AtomicUnit, CodeElement, KeyValue
+from glitch.repr.inter import (
+    Array,
+    AtomicUnit,
+    CodeElement,
+    KeyValue,
+    String,
+    UnitBlock,
+)
 
 
 class TerraformSensitiveIAMAction(TerraformSmellChecker):
@@ -20,56 +27,63 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
         if not isinstance(element, AtomicUnit):
             return errors
 
-        if element.type != "data.aws_iam_policy_document":
-            return errors
-
-        statements = self.check_required_attribute(
-            element.attributes, [""], "statement", return_all=True
-        )
-        if isinstance(statements, list):
+        if element.type == "data.aws_iam_policy_document":
+            statements = self.get_attributes(element, [], "statement")
             for statement in statements:
-                allow = self.check_required_attribute(
-                    statement.keyvalues, [""], "effect"
-                )
-                if (
-                    isinstance(allow, KeyValue)
-                    and isinstance(allow.value, str)
-                    and allow.value.lower() == "allow"
-                ) or (not allow):
-                    sensitive_action, action = self.iterate_required_attributes(
-                        statement.keyvalues,
-                        "actions",
-                        lambda x: isinstance(x.value, str) and "*" in x.value.lower(),
-                    )
-                    if sensitive_action:
-                        errors.append(
-                            Error(
-                                "sec_sensitive_iam_action", action, file, repr(action)
-                            )
-                        )
+                if isinstance(statement, UnitBlock):
+                    effect_value = None
+                    for attr in statement.attributes:
+                        if attr.name == "effect":
+                            if isinstance(attr.value, String):
+                                effect_value = attr.value.value.lower()
+                            elif isinstance(attr.value, str):
+                                effect_value = attr.value.lower()
+                            break
 
-                    wildcarded_resource, resource = self.iterate_required_attributes(
-                        statement.keyvalues,
-                        "resources",
-                        lambda x: isinstance(x.value, str)
-                        and ((x.value.lower() in ["*"]) or (":*" in x.value.lower())),
-                    )
-                    if wildcarded_resource:
-                        errors.append(
-                            Error(
-                                "sec_sensitive_iam_action",
-                                resource,
-                                file,
-                                repr(resource),
-                            )
-                        )
+                    if effect_value == "allow" or effect_value is None:
+                        for attr in statement.attributes:
+                            if attr.name == "actions" and isinstance(attr.value, Array):
+                                for item in attr.value.value:
+                                    item_val = (
+                                        item.value if isinstance(item, String) else item
+                                    )
+                                    if isinstance(item_val, str) and "*" in item_val:
+                                        errors.append(
+                                            Error(
+                                                "sec_sensitive_iam_action",
+                                                attr,
+                                                file,
+                                                repr(attr),
+                                            )
+                                        )
+                                        break
+
+                            if attr.name == "resources" and isinstance(
+                                attr.value, Array
+                            ):
+                                for item in attr.value.value:
+                                    item_val = (
+                                        item.value if isinstance(item, String) else item
+                                    )
+                                    if isinstance(item_val, str) and (
+                                        item_val == "*" or ":*" in item_val
+                                    ):
+                                        errors.append(
+                                            Error(
+                                                "sec_sensitive_iam_action",
+                                                attr,
+                                                file,
+                                                repr(attr),
+                                            )
+                                        )
+                                        break
         elif element.type in [
             "resource.aws_iam_role_policy",
             "resource.aws_iam_policy",
             "resource.aws_iam_user_policy",
             "resource.aws_iam_group_policy",
         ]:
-            policy = self.check_required_attribute(element.attributes, [""], "policy")
+            policy = self.check_required_attribute(element, [""], "policy")
             if not isinstance(policy, KeyValue) or not isinstance(policy.value, str):
                 return errors
 
@@ -77,11 +91,12 @@ class TerraformSensitiveIAMAction(TerraformSmellChecker):
             if not (policy_dict and policy_dict["statement"]):
                 return errors
 
-            policy_statements = policy_dict["statement"]
-            if isinstance(statements, dict):
-                policy_statements: List[Dict[str, str | List[str]]] = [statements]
+            policy_statements: List[Any] = policy_dict["statement"]
+            if isinstance(policy_statements, dict):
+                policy_statements = [policy_statements]
 
             for statement in policy_statements:
+                statement: Any
                 if not (
                     statement["effect"]
                     and statement["action"]

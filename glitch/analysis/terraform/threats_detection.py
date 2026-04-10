@@ -1,8 +1,16 @@
 from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
+from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    KeyValue,
+    CodeElement,
+    String,
+    Boolean,
+)
 
 
 class TerraformThreatsDetection(TerraformSmellChecker):
@@ -17,13 +25,19 @@ class TerraformThreatsDetection(TerraformSmellChecker):
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
-                and parent_name in config["parents"]
-                and config["values"] != [""]
+                and self._parent_matches(parent_name, config["parents"])
+                and config["values"] != []
             ):
+                value_str = None
+                if isinstance(attribute.value, String):
+                    value_str = attribute.value.value.lower()
+                elif isinstance(attribute.value, Boolean):
+                    value_str = "true" if attribute.value.value else "false"
+
                 if (
                     "any_not_empty" in config["values"]
-                    and isinstance(attribute.value, str)
-                    and attribute.value.lower() == ""
+                    and value_str is not None
+                    and value_str == ""
                 ):
                     return [
                         Error(
@@ -35,9 +49,9 @@ class TerraformThreatsDetection(TerraformSmellChecker):
                     ]
                 elif (
                     "any_not_empty" not in config["values"]
-                    and not attribute.has_variable
-                    and isinstance(attribute.value, str)
-                    and attribute.value.lower() not in config["values"]
+                    and value_str is not None
+                    and not VariableChecker().check(attribute.value)
+                    and value_str not in config["values"]
                 ):
                     return [
                         Error(
@@ -54,28 +68,31 @@ class TerraformThreatsDetection(TerraformSmellChecker):
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             for config in SecurityVisitor.MISSING_THREATS_DETECTION_ALERTS:
-                if (
-                    config["required"] == "yes"
-                    and element.type in config["au_type"]
-                    and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
-                    )
-                ):
-                    errors.append(
-                        Error(
-                            "sec_threats_detection_alerts",
-                            element,
-                            file,
-                            repr(element),
-                            f"Suggestion: check for a required attribute with name '{config['msg']}'.",
+                if config["required"] == "yes" and element.type in config["au_type"]:
+                    attr_name = config["attribute"]
+                    if (
+                        self.check_required_attribute(
+                            element, config["parents"], attr_name
                         )
-                    )
+                        is None
+                    ):
+                        msg = config.get("msg", attr_name)
+                        errors.append(
+                            Error(
+                                "sec_threats_detection_alerts",
+                                element,
+                                file,
+                                repr(element),
+                                f"Suggestion: check for a required attribute with name '{msg}'.",
+                            )
+                        )
                 elif (
                     config["required"] == "must_not_exist"
                     and element.type in config["au_type"]
                 ):
+                    attr_name = config["attribute"]
                     a = self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], attr_name
                     )
                     if a is not None:
                         errors.append(

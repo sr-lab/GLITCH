@@ -1,8 +1,17 @@
 from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, KeyValue, CodeElement
+from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    KeyValue,
+    CodeElement,
+    Integer,
+    Boolean,
+    String,
+)
 
 
 class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
@@ -17,14 +26,17 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
             if (
                 attribute.name == policy["attribute"]
                 and atomic_unit.type in policy["au_type"]
-                and parent_name in policy["parents"]
+                and (
+                    parent_name in policy["parents"]
+                    or (not policy["parents"] and not parent_name)
+                )
                 and policy["values"] != [""]
             ):
                 if policy["logic"] == "equal":
                     if (
                         "any_not_empty" in policy["values"]
-                        and isinstance(attribute.value, str)
-                        and attribute.value.lower() == ""
+                        and isinstance(attribute.value, String)
+                        and attribute.value.value == ""
                     ):
                         return [
                             Error(
@@ -36,9 +48,9 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                         ]
                     elif (
                         "any_not_empty" not in policy["values"]
-                        and not attribute.has_variable
-                        and isinstance(attribute.value, str)
-                        and attribute.value.lower() not in policy["values"]
+                        and not VariableChecker().check(attribute.value)
+                        and isinstance(attribute.value, String)
+                        and attribute.value.value.lower() not in policy["values"]
                     ):
                         return [
                             Error(
@@ -48,15 +60,33 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                                 repr(attribute),
                             )
                         ]
-                elif (
-                    policy["logic"] == "gte"
-                    and isinstance(attribute.value, str)
-                    and not attribute.value.isnumeric()
-                ) or (
-                    policy["logic"] == "gte"
-                    and isinstance(attribute.value, str)
-                    and attribute.value.isnumeric()
-                    and int(attribute.value) < int(policy["values"][0])
+                    elif (
+                        "any_not_empty" not in policy["values"]
+                        and isinstance(attribute.value, Boolean)
+                        and str(attribute.value.value).lower() not in policy["values"]
+                    ):
+                        return [
+                            Error(
+                                "sec_weak_password_key_policy",
+                                attribute,
+                                file,
+                                repr(attribute),
+                            )
+                        ]
+                elif policy["logic"] == "gte" and (
+                    (
+                        isinstance(attribute.value, Integer)
+                        and attribute.value.value < int(policy["values"][0])
+                    )
+                    or (
+                        isinstance(attribute.value, str)
+                        and not attribute.value.isnumeric()
+                    )
+                    or (
+                        isinstance(attribute.value, str)
+                        and attribute.value.isnumeric()
+                        and int(attribute.value) < int(policy["values"][0])
+                    )
                 ):
                     return [
                         Error(
@@ -66,15 +96,20 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                             repr(attribute),
                         )
                     ]
-                elif (
-                    policy["logic"] == "lte"
-                    and isinstance(attribute.value, str)
-                    and not attribute.value.isnumeric()
-                ) or (
-                    policy["logic"] == "lte"
-                    and isinstance(attribute.value, str)
-                    and attribute.value.isnumeric()
-                    and int(attribute.value) > int(policy["values"][0])
+                elif policy["logic"] == "lte" and (
+                    (
+                        isinstance(attribute.value, Integer)
+                        and attribute.value.value > int(policy["values"][0])
+                    )
+                    or (
+                        isinstance(attribute.value, str)
+                        and not attribute.value.isnumeric()
+                    )
+                    or (
+                        isinstance(attribute.value, str)
+                        and attribute.value.isnumeric()
+                        and int(attribute.value) > int(policy["values"][0])
+                    )
                 ):
                     return [
                         Error(
@@ -95,7 +130,7 @@ class TerraformWeakPasswordKeyPolicy(TerraformSmellChecker):
                     policy["required"] == "yes"
                     and element.type in policy["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, policy["parents"], policy["attribute"]
+                        element, policy["parents"], policy["attribute"]
                     )
                 ):
                     errors.append(

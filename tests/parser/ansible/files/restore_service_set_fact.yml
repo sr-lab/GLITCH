@@ -1,0 +1,5 @@
+---
+- name: Restore Service | Set variables
+  set_fact:
+    restore_service_username: "{{ restore_service.user | hash('sha1') }}"
+

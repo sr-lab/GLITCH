@@ -4,6 +4,9 @@ from glitch.analysis.design.visitor import DesignVisitor
 from glitch.analysis.design.smell_checker import DesignSmellChecker
 from glitch.repr.inter import *
 
+# Deprecated: This rule has been rewritten in Rego.
+# This is kept for reference and possible future use since there are no tests for the Rego version yet.
+
 
 class ImperativeAbstraction(DesignSmellChecker):
     def __count_atomic_units(self, ub: UnitBlock) -> Tuple[int, int]:

@@ -7,6 +7,7 @@ RecursiveTokenList = List[Union[Token, "RecursiveTokenList", None]]
 class Node:
     comment: Optional[RecursiveTokenList]
     value: Any
+    tag: str
     start_mark: StreamMark
     end_mark: StreamMark
 

@@ -1,16 +1,65 @@
 from abc import ABC
 from enum import Enum
-from typing import List, Union, Dict, Any
+from dataclasses import dataclass
+from typing import List, Union, Dict, Any, ClassVar
+
+UNDEFINED_POSITION = -33550336
+
+
+@dataclass
+class ElementInfo:
+    line: int
+    column: int
+    end_line: int
+    end_column: int
+    code: str
+    sketched: ClassVar[int] = -1
+
+    @staticmethod
+    def from_code_element(element: "CodeElement") -> "ElementInfo":
+        return ElementInfo(
+            element.line,
+            element.column,
+            element.end_line,
+            element.end_column,
+            element.code,
+        )
+
+    @staticmethod
+    def get_sketched() -> "ElementInfo":
+        info = ElementInfo(
+            ElementInfo.sketched,
+            ElementInfo.sketched,
+            ElementInfo.sketched,
+            ElementInfo.sketched,
+            "",
+        )
+        ElementInfo.sketched -= 1
+        return info
 
 
 class CodeElement(ABC):
-    def __init__(self) -> None:
-        self.line: int = -1
-        self.column: int = -1
-        self.code: str = ""
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is not None:
+            self.line: int = info.line
+            self.column: int = info.column
+            self.end_line: int = info.end_line
+            self.end_column: int = info.end_column
+            self.code: str = info.code
+        else:
+            self.line: int = UNDEFINED_POSITION
+            self.column: int = UNDEFINED_POSITION
+            self.end_line: int = UNDEFINED_POSITION
+            self.end_column: int = UNDEFINED_POSITION
+            self.code: str = ""
 
     def __hash__(self) -> int:
-        return hash(self.line) * hash(self.column)
+        return (
+            hash(self.line)
+            * hash(self.column)
+            * hash(self.end_line)
+            * hash(self.end_column)
+        )
 
     def __eq__(self, o: object) -> bool:
         if not isinstance(o, CodeElement):
@@ -25,17 +74,376 @@ class CodeElement(ABC):
             "ir_type": self.__class__.__name__,
             "line": self.line,
             "column": self.column,
+            "end_line": self.end_line,
+            "end_column": self.end_column,
             "code": self.code,
         }
 
 
-class Block(CodeElement):
-    def __init__(self) -> None:
-        super().__init__()
+# TODO: as dict for expr and values
+@dataclass
+class Expr(CodeElement, ABC):
+    def __init__(self, info: ElementInfo) -> None:
+        super().__init__(info)
+
+    def __hash__(self) -> int:
+        return (
+            hash(self.line)
+            * hash(self.column)
+            * hash(self.end_line)
+            * hash(self.end_column)
+        )
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, CodeElement):
+            return False
+        return self.line == o.line and self.column == o.column
+
+
+@dataclass
+class Value(Expr, ABC):
+    def __init__(self, info: ElementInfo, value: Any) -> None:
+        super().__init__(info)
+        self.value = value
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, CodeElement):
+            return False
+        return (
+            self.line == o.line
+            and self.column == o.column
+            and self.end_line == o.end_line
+            and self.end_column == o.end_column
+        )
+
+    def __hash__(self) -> int:
+        return (
+            hash(self.line)
+            * hash(self.column)
+            * hash(self.end_line)
+            * hash(self.end_column)
+        )
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": (
+                self.value
+                if not isinstance(self.value, CodeElement)
+                else self.value.as_dict()
+            ),
+        }
+
+
+class String(Value):
+    def __init__(self, value: str, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Integer(Value):
+    def __init__(self, value: int, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Complex(Value):
+    def __init__(self, value: complex, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Float(Value):
+    def __init__(self, value: float, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Boolean(Value):
+    def __init__(self, value: bool, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class Null(Value):
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is None:
+            # Let's hope there are no files with 2**32 lines lol
+            info = ElementInfo(2**32, 2**32, 2**32, 2**32, "")
+        super().__init__(info, None)
+
+
+class Undef(Value):
+    def __init__(self, info: ElementInfo | None = None) -> None:
+        if info is None:
+            # Let's hope there are no files with 2**32 lines lol
+            info = ElementInfo(2**32, 2**32, 2**32, 2**32, "")
+        super().__init__(info, None)
+
+
+class Hash(Value):
+    def __init__(self, value: Dict[Expr, Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [
+                {"key": k.as_dict(), "value": v.as_dict()}
+                for k, v in self.value.items()
+            ],
+        }
+
+
+class Array(Value):
+    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [v.as_dict() for v in self.value],
+        }
+
+
+class VariableReference(Value):
+    def __init__(self, value: str, info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+
+class FunctionCall(Expr):
+    def __init__(self, name: str, args: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info)
+        self.name: str = name
+        self.args: List[Expr] = args
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "name": self.name,
+            "args": [a.as_dict() for a in self.args],
+        }
+
+
+class MethodCall(Expr):
+    def __init__(
+        self, receiver: Expr, method: str, args: List[Expr], info: ElementInfo
+    ) -> None:
+        super().__init__(info)
+        self.receiver: Expr = receiver
+        self.method: str = method
+        self.args: List[Expr] = args
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "receiver": self.receiver.as_dict(),
+            "method": self.method,
+            "args": [a.as_dict() for a in self.args],
+        }
+
+
+class BlockExpr(Expr):
+    def __init__(self, info: ElementInfo) -> None:
+        super().__init__(info)
         self.statements: List[CodeElement] = []
 
-    def add_statement(self, statement: "ConditionalStatement") -> None:
+    def add_statement(self, statement: CodeElement) -> None:
         self.statements.append(statement)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "statements": [s.as_dict() for s in self.statements],
+        }
+
+
+# This is only used in Chef, and should be removed soon
+class AddArgs(Value):
+    def __init__(self, value: List[Expr], info: ElementInfo) -> None:
+        super().__init__(info, value)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "value": [v.as_dict() for v in self.value],
+        }
+
+
+class UnaryOperation(Expr, ABC):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info)
+        self.expr = expr
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "expr": self.expr.as_dict(),
+        }
+
+
+class Not(UnaryOperation):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info, expr)
+
+
+class Minus(UnaryOperation):
+    def __init__(self, info: ElementInfo, expr: Expr) -> None:
+        super().__init__(info, expr)
+
+
+class BinaryOperation(Expr, ABC):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info)
+        self.left = left
+        self.right = right
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, CodeElement):
+            return False
+        return (
+            self.line == o.line
+            and self.column == o.column
+            and self.end_line == o.end_line
+            and self.end_column == o.end_column
+        )
+
+    def __hash__(self) -> int:
+        return (
+            hash(self.line)
+            * hash(self.column)
+            * hash(self.end_line)
+            * hash(self.end_column)
+        )
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            **super().as_dict(),
+            "left": self.left.as_dict(),
+            "right": self.right.as_dict(),
+            "type": self.__class__.__name__.lower(),
+        }
+
+
+class Or(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class And(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Sum(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Equal(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class NotEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class LessThan(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class LessThanOrEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class GreaterThan(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class GreaterThanOrEqual(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class In(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Subtract(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Multiply(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Divide(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Modulo(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Power(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class RightShift(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class LeftShift(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Access(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class BitwiseAnd(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class BitwiseOr(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class BitwiseXor(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Assign(BinaryOperation):
+    def __init__(self, info: ElementInfo, left: Expr, right: Expr) -> None:
+        super().__init__(info, left, right)
+
+
+class Block(CodeElement):
+    def __init__(self) -> None:
+        CodeElement.__init__(self)
+        self.statements: List[CodeElement] = []
+
+    def add_statement(self, statement: CodeElement) -> None:
+        self.statements.append(statement)
+
+    def set_element_info(self, info: ElementInfo) -> None:
+        self.line = info.line
+        self.column = info.column
+        self.end_line = info.end_line
+        self.end_column = info.end_column
+        self.code = info.code
 
     @staticmethod
     def __as_dict_statement(
@@ -61,21 +469,26 @@ class Block(CodeElement):
         }
 
 
-class ConditionalStatement(Block):
+class ConditionalStatement(Block, Expr):
     class ConditionType(Enum):
         IF = 1
         SWITCH = 2
 
     def __init__(
         self,
-        condition: str,
+        condition: Expr,
         type: "ConditionalStatement.ConditionType",
         is_default: bool = False,
+        is_top: bool = False,
+        info: ElementInfo | None = None,
     ) -> None:
-        super().__init__()
-        self.condition: str = condition
+        Block.__init__(self)
+        if info is not None:
+            Expr.__init__(self, info)
+        self.condition: Expr = condition
         self.else_statement: ConditionalStatement | None = None
         self.is_default = is_default
+        self.is_top = is_top
         self.type = type
 
     def __repr__(self) -> str:
@@ -84,9 +497,10 @@ class ConditionalStatement(Block):
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "condition": self.condition,
+            "condition": self.condition.as_dict(),
             "type": self.type.name,
             "is_default": self.is_default,
+            "is_top": self.is_top,
             "else_statement": (
                 self.else_statement.as_dict() if self.else_statement else None
             ),
@@ -94,8 +508,8 @@ class ConditionalStatement(Block):
 
 
 class Comment(CodeElement):
-    def __init__(self, content: str) -> None:
-        super().__init__()
+    def __init__(self, content: str, info: ElementInfo | None = None) -> None:
+        super().__init__(info)
         self.content: str = content
 
     def __repr__(self) -> str:
@@ -109,75 +523,73 @@ class Comment(CodeElement):
 
 
 class KeyValue(CodeElement):
-    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(info)
         self.name: str = name
-        self.value: str | None = value
-        self.has_variable: bool = has_variable
-        self.keyvalues: List[KeyValue] = []
+        self.value: Expr = value
 
     def __repr__(self) -> str:
-        value = repr(self.value).split("\n")[0]
-        if value == "None":
-            return f"{self.name}:{value}:{self.keyvalues}"
-        else:
-            return f"{self.name}:{value}"
+        return self.code
 
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
             "name": self.name,
-            # FIXME: In Puppet code, the value can be a ConditionalStatement or a dict.
-            # The types need to be fixed.
-            "value": self.value if not isinstance(self.value, CodeElement) else self.value.as_dict(),  # type: ignore
-            "has_variable": self.has_variable,
-            "keyvalues": [kv.as_dict() for kv in self.keyvalues],
+            "value": self.value.as_dict(),
         }
 
 
 class Variable(KeyValue):
-    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
-        super().__init__(name, value, has_variable)
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(name, value, info)
 
 
 class Attribute(KeyValue):
-    def __init__(self, name: str, value: str | None, has_variable: bool) -> None:
-        super().__init__(name, value, has_variable)
+    def __init__(self, name: str, value: Expr, info: ElementInfo) -> None:
+        super().__init__(name, value, info)
 
 
 class AtomicUnit(Block):
-    def __init__(self, name: str | None, type: str) -> None:
+    def __init__(self, name: Expr, type: str) -> None:
         super().__init__()
-        self.name: str | None = name
+        self.name: Expr = name
         self.type: str = type
-        self.attributes: list[Attribute] = []
+        self.attributes: List[Attribute] = []
 
     def add_attribute(self, a: Attribute) -> None:
         self.attributes.append(a)
 
     def __repr__(self) -> str:
-        return f"{self.name} {self.type}"
+        if isinstance(self.name, String):
+            name_str = self.name.value
+        elif hasattr(self.name, "code"):
+            name_str = self.name.code
+        else:
+            name_str = str(self.name)
+
+        return f"{name_str} {self.type}"
 
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "name": self.name,
+            "name": self.name.as_dict(),
             "type": self.type,
             "attributes": [a.as_dict() for a in self.attributes],
         }
 
 
 class Dependency(CodeElement):
-    def __init__(self, name: str) -> None:
+    def __init__(self, names: List[str]) -> None:
         super().__init__()
-        self.name: str = name
+        self.names: List[str] = names
 
     def __repr__(self) -> str:
-        return self.name
+        return ",".join(self.names)
 
     def as_dict(self) -> Dict[str, Any]:
         return {
             **super().as_dict(),
-            "name": self.name,
+            "names": self.names,
         }
 
 
@@ -186,6 +598,8 @@ class UnitBlockType(str, Enum):
     tasks = "tasks"
     vars = "vars"
     block = "block"
+    function = "function"
+    definition = "definition"
     unknown = "unknown"
 
 
@@ -224,7 +638,7 @@ class UnitBlock(Block):
         self.attributes.append(a)
 
     def as_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             **super().as_dict(),
             "dependencies": [d.as_dict() for d in self.dependencies],
             "comments": [c.as_dict() for c in self.comments],
@@ -236,6 +650,18 @@ class UnitBlock(Block):
             "path": self.path,
             "type": self.type,
         }
+
+        lines = -1
+        if self.path != "":
+            with open(self.path, "r") as f:
+                try:
+                    lines = sum(1 for _ in f)
+                except Exception:
+                    pass
+        if lines != -1:
+            result["lines"] = lines
+
+        return result
 
 
 class File:

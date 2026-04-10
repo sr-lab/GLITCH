@@ -7,7 +7,7 @@
 
 ![alt text](https://github.com/sr-lab/GLITCH/blob/main/logo.png?raw=true)
 
-GLITCH is a technology-agnostic framework that enables automated detection of IaC smells. GLITCH allows polyglot smell detection by transforming IaC scripts into an intermediate representation, on which different smell detectors can be defined. GLITCH currently supports the detection of nine different security smells [1, 2] and nine design & implementation smells [3] in scripts written in Puppet, Ansible, or Chef.
+GLITCH is a technology-agnostic framework that enables automated detection of IaC smells and, via InfraFix, interactive repair of infrastructure code. GLITCH allows polyglot smell detection by transforming IaC scripts into an intermediate representation, on which different smell detectors can be defined. GLITCH currently supports the detection of nine different security smells [1, 2] and nine design & implementation smells [3] in scripts written in Puppet, Ansible, Chef or Terraform.
 
 
 
@@ -58,6 +58,58 @@ To install GLITCH using Poetry, run:
 poetry install
 ```
 
+### Rego
+
+Some smell checks (design and security) are implemented in [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/). To use these checks, you need the appropriate Rego binary for your platform.
+
+#### Option 1: Download Pre-built Binary (Recommended)
+
+Download the binary for your platform from the [Rego Python release](https://github.com/sr-lab/GLITCH/releases).
+
+Available binaries:
+| Platform | Architecture | Binary Name |
+|----------|--------------|-------------|
+| Linux | x86_64/amd64 | `librego-linux-amd64.so` |
+| Linux | arm64 | `librego-linux-arm64.so` |
+| macOS | Intel (x86_64) | `librego-darwin-amd64.dylib` |
+| macOS | Apple Silicon | `librego-darwin-arm64.dylib` |
+| Windows | x86_64/amd64 | `librego-windows-amd64.dll` |
+
+After downloading, place the binary in:
+```
+glitch/rego/rego_python/src/rego_python/bin/
+```
+
+#### Option 2: Build from Source
+
+If you need a binary not listed above or prefer to build from source, you need [Go](https://go.dev/doc/install) installed.
+
+```bash
+cd glitch/rego/rego_python/src/rego_python/go
+
+# Set your target OS and architecture
+OS=linux      # Options: linux, darwin, windows
+ARCH=amd64    # Options: amd64, arm64
+
+# Determine file extension
+if [ "$OS" = "windows" ]; then
+  EXT="dll"
+elif [ "$OS" = "darwin" ]; then
+  EXT="dylib"
+else
+  EXT="so"
+fi
+
+GOOS=$OS GOARCH=$ARCH go build -o "../bin/librego-$OS-$ARCH.$EXT" -buildmode=c-shared regolib.go
+```
+
+#### Verifying Rego is Working
+
+To verify the Rego binary is correctly installed, run:
+```bash
+python -c "from glitch.rego.rego_python.src.rego_python import run_rego; print('Rego is working!')"
+```
+
 **WARNING**: _For now, the GLITCH VSCode extension does not function if GLITCH 
 is installed via Poetry. Since Poetry uses virtual environments it does not 
 create a binary for GLITCH available in the user's PATH, which is required for 
@@ -75,12 +127,12 @@ Please read `usage` > `Docker`
 
 To explore all available options, use the command:
 ```
-glitch --help
+glitch lint --help
 ```
 
 To analyze a file or folder and retrieve CSV results, use the following command:
 ```
-glitch --tech (chef|puppet|ansible|terraform) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
+glitch lint --tech (chef|puppet|ansible|terraform) --csv --config PATH_TO_CONFIG PATH_TO_FILE_OR_FOLDER
 ```
 
 If you want to consider the module structure you can add the flag ```--module```.
@@ -89,13 +141,35 @@ If you want to consider the module structure you can add the flag ```--module```
 
 If GLITCH was installed using Poetry, execute GLITCH commands as follows:
 ```
-poetry run glitch --help
+poetry run glitch lint --help
 ```
 
 Alternatively, you can use `poetry shell`:
 ```
 poetry shell
-glitch --help
+glitch lint --help
+```
+
+### InfraFix
+
+GLITCH includes **InfraFix**, an interactive repair pipeline that synthesizes technology-agnostic patches for Infrastructure as Code. InfraFix observes runtime filesystem effects (via strace-based tracing), compiles IaC into a Delta-P intermediate representation, and uses a Z3-backed solver to produce candidate patches that can be applied back to the original scripts. The repair module is invoked via the `infrafix` subcommand:
+
+```
+glitch infrafix --tech <TECH> PATH_TO_IAC PID
+```
+
+`PATH_TO_IAC` is the file containing the IaC script to repair; `PID` is the process ID of the running shell or process to trace (InfraFix uses strace to observe filesystem effects).
+
+**If you use InfraFix, please cite:**
+
+```
+@inproceedings{saavedra2025infrafix,
+  title={InfraFix: Technology-Agnostic Repair of Infrastructure as Code},
+  author={Saavedra, Nuno and Ferreira, Jo{\~a}o F and Mendes, Alexandra},
+  booktitle={Proceedings of the 34th ACM SIGSOFT International Symposium on Software Testing and Analysis},
+  pages={41--45},
+  year={2025}
+}
 ```
 
 ### Docker
@@ -112,9 +186,9 @@ docker run --rm -v /Users/user/.../project:/glitch:ro glitch --tech terraform .
 
 ## Tests
 
-To run the tests for GLITCH go to the folder ```glitch``` and run:
+To run the tests for GLITCH run the following command:
 ```
-python -m unittest discover tests
+poetry run pytest -s
 ```
 
 ## Configs

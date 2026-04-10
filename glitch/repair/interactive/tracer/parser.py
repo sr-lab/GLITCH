@@ -60,7 +60,7 @@ class UnlinkFlag(Enum):
     AT_REMOVEDIR = 0
 
 
-def parse_tracer_output(tracer_output: str, debug: bool = False) -> Syscall:
+def parse_tracer_output(tracer_output: str, debug: bool = False) -> Syscall | None:
     # Tokens defined as functions preserve order
     def t_ADDRESS(t: LexToken):
         r"0[xX][0-9a-fA-F]+"
@@ -147,7 +147,7 @@ def parse_tracer_output(tracer_output: str, debug: bool = False) -> Syscall:
         # Ignore comments
 
     def t_ANY_error(t: LexToken) -> None:
-        logging.error(f"Illegal character {t.value[0]!r}.")
+        logging.debug(f"Illegal character {t.value[0]!r}.")
         t.lexer.skip(1)
 
     lexer = lex()
@@ -291,8 +291,9 @@ def parse_tracer_output(tracer_output: str, debug: bool = False) -> Syscall:
         r"unlink_flags : unlink_flags PIPE UNLINK_FLAG"
         p[0] = p[1] + [p[3]]
 
-    def p_error(p: YaccProduction) -> None:
-        logging.error(f"Syntax error at {p.value!r}")
+    def p_error(p: YaccProduction | None) -> None:
+        if p is not None:
+            logging.debug(f"Syntax error at {p.value!r}")
 
     # Build the parser
     parser = yacc()

@@ -1,0 +1,3 @@
+postgresql_users:
+- user: {{ idr_omero_readonly_database.user }}
+

@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    aqua_admin_users:
+      - user: test1
+      - user: test2

@@ -2,6 +2,7 @@ from typing import Dict, Optional, Union, List, Any
 from abc import ABC, abstractmethod
 from glitch.tech import Tech
 from glitch.repr.inter import *
+from glitch.repr.inter import UNDEFINED_POSITION
 
 ErrorValue = Dict[Tech | str, Dict[str, str] | str]
 ErrorDict = Dict[str, ErrorValue]
@@ -23,9 +24,6 @@ class Error:
             "sec_no_default_switch": "Missing default case statement - Not handling every possible input combination might allow an attacker to trigger an error for an unhandled value. (CWE-478)",
             "sec_full_permission_filesystem": "Full permission to the filesystem - Files should not have full permissions to every user. (CWE-732)",
             "sec_obsolete_command": "Use of obsolete command or function - Avoid using obsolete or deprecated commands and functions. (CWE-477)",
-            Tech.docker: {
-                "sec_non_official_image": "Use of non-official Docker image - Use of non-official images should be avoided or taken into careful consideration. (CWE-829)",
-            },
             Tech.terraform: {
                 "sec_integrity_policy": "Integrity Policy - Image tag is prone to be mutable or integrity monitoring is disabled. (CWE-471)",
                 "sec_ssl_tls_policy": "SSL/TLS/mTLS Policy - Developers should use SSL/TLS/mTLS protocols and their secure versions. (CWE-326)",
@@ -88,26 +86,42 @@ class Error:
         self.opt_msg = opt_msg
 
         if isinstance(self.el, CodeElement):
-            self.line = self.el.line
+            if (
+                self.code == "sec_no_default_switch"
+                and type(self.el) is ConditionalStatement
+            ):
+                # Special case: use line number of condition
+                # TODO: improve this hack for edge cases on parsing errors
+                # self.line = self.el.condition.line
+                # In the ideal case, we would use the line of the condition but this can break in some cases
+                # Temporary fix: use line of case - 1
+                self.line = self.el.line - 1
+            else:
+                self.line = self.el.line
         else:
             self.line = -1
 
     def to_csv(self) -> str:
         repr = self.repr.split("\n")[0].strip()
         if self.opt_msg:
-            return f"{self.path},{self.line},{self.code},{repr},{self.opt_msg}"
+            return f"{self.path},{self.line},{self.code},{self.opt_msg},{repr}"
         else:
-            return f"{self.path},{self.line},{self.code},{repr},-"
+            return f"{self.path},{self.line},{self.code},-,{repr}"
 
     def __repr__(self) -> str:
         with open(self.path) as f:
             line = (
                 f.readlines()[self.line - 1].strip()
-                if self.line != -1
+                if self.line != UNDEFINED_POSITION
                 else self.repr.split("\n")[0]
             )
             if self.opt_msg:
                 line += f"\n-> {self.opt_msg}"
+
+            if self.line == UNDEFINED_POSITION:
+                return (
+                    f"{self.path}\nIssue: {Error.ALL_ERRORS[self.code]}\n" + f"{line}\n"
+                )
             return (
                 f"{self.path}\nIssue on line {self.line}: {Error.ALL_ERRORS[self.code]}\n"
                 + f"{line}\n"
@@ -127,6 +141,122 @@ class Error:
 
 
 Error.agglomerate_errors()
+
+
+class Checker(ABC):
+    def check(self, element: CodeElement) -> bool:
+        if isinstance(element, String):
+            return self.check_string(element)
+        elif isinstance(element, Integer):
+            return self.check_integer(element)
+        elif isinstance(element, Float):
+            return self.check_float(element)
+        elif isinstance(element, Complex):
+            return self.check_complex(element)
+        elif isinstance(element, Boolean):
+            return self.check_boolean(element)
+        elif isinstance(element, Null):
+            return self.check_null(element)
+        elif isinstance(element, Undef):
+            return self.check_undef(element)
+        elif isinstance(element, Hash):
+            return self.check_hash(element)
+        elif isinstance(element, Array):
+            return self.check_array(element)
+        elif isinstance(element, VariableReference):
+            return self.check_var_reference(element)
+        elif isinstance(element, FunctionCall):
+            return self.check_function_call(element)
+        elif isinstance(element, MethodCall):
+            return self.check_method_call(element)
+        elif isinstance(element, UnaryOperation):
+            return self.check_unary_operation(element)
+        elif isinstance(element, BinaryOperation):
+            return self.check_binary_operation(element)
+        elif isinstance(element, ConditionalStatement):
+            return self.check_conditional_statement(element)
+        elif isinstance(element, BlockExpr):
+            return self.check_blockexpr(element)
+        elif isinstance(element, AddArgs):
+            for e in element.value:
+                if not self.check(e):
+                    return False
+            return True
+        elif isinstance(element, KeyValue):
+            return self.check_keyvalue(element)
+        elif isinstance(element, Block):
+            return self.check_block(element)
+        elif isinstance(element, AtomicUnit):
+            return self.check_atomicunit(element)
+        elif isinstance(element, Comment):
+            return self.check_comment(element)
+        elif isinstance(element, Dependency):
+            return self.check_dependency(element)
+        else:
+            return False
+
+    def check_string(self, expr: String) -> bool:
+        return False
+
+    def check_integer(self, expr: Integer) -> bool:
+        return False
+
+    def check_float(self, expr: Float) -> bool:
+        return False
+
+    def check_complex(self, expr: Complex) -> bool:
+        return False
+
+    def check_boolean(self, expr: Boolean) -> bool:
+        return False
+
+    def check_null(self, expr: Null) -> bool:
+        return False
+
+    def check_hash(self, expr: Hash) -> bool:
+        return False
+
+    def check_array(self, expr: Array) -> bool:
+        return False
+
+    def check_var_reference(self, expr: VariableReference) -> bool:
+        return False
+
+    def check_function_call(self, expr: FunctionCall) -> bool:
+        return False
+
+    def check_method_call(self, expr: MethodCall) -> bool:
+        return False
+
+    def check_unary_operation(self, expr: UnaryOperation) -> bool:
+        return False
+
+    def check_binary_operation(self, expr: BinaryOperation) -> bool:
+        return False
+
+    def check_conditional_statement(self, expr: ConditionalStatement) -> bool:
+        return False
+
+    def check_blockexpr(self, element: BlockExpr) -> bool:
+        return False
+
+    def check_undef(self, expr: Undef) -> bool:
+        return False
+
+    def check_keyvalue(self, element: KeyValue) -> bool:
+        return False
+
+    def check_block(self, element: Block) -> bool:
+        return False
+
+    def check_atomicunit(self, element: AtomicUnit) -> bool:
+        return False
+
+    def check_comment(self, element: Comment) -> bool:
+        return False
+
+    def check_dependency(self, element: Dependency) -> bool:
+        return False
 
 
 class RuleVisitor(ABC):
@@ -241,9 +371,6 @@ class RuleVisitor(ABC):
     @abstractmethod
     def check_comment(self, c: Comment, file: str) -> list[Error]:
         pass
-
-
-Error.agglomerate_errors()
 
 
 class SmellChecker(ABC):

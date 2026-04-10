@@ -5,16 +5,41 @@ from cmath import inf
 from glitch.analysis.rules import Error, RuleVisitor
 from glitch.tech import Tech
 from glitch.repr.inter import *
-from typing import List
+from typing import List, Type
 from glitch.analysis.design.smell_checker import DesignSmellChecker
 
 
 class DesignVisitor(RuleVisitor):
-    def __init__(self, tech: Tech) -> None:
+    def __init__(self, tech: Tech, fallback: set[str]) -> None:
         super().__init__(tech)
+
+        from glitch.analysis.design.unguarded_variable import UnguardedVariable
+        from glitch.analysis.design.duplicate_block import DuplicateBlock
+        from glitch.analysis.design.imperative_abstraction import ImperativeAbstraction
+        from glitch.analysis.design.improper_alignment import (
+            ImproperAlignmentTabs,
+            ImproperAlignment,
+            PuppetImproperAlignment,
+        )
+        from glitch.analysis.design.long_statement import LongStatement
+
+        DESIGN_CHECKER_ERRORS: Dict[Type[DesignSmellChecker], str] = {
+            UnguardedVariable: "implementation_unguarded_variable",
+            DuplicateBlock: "design_duplicate_block",
+            ImperativeAbstraction: "design_imperative_abstraction",
+            ImproperAlignmentTabs: "implementation_improper_alignment",
+            ImproperAlignment: "implementation_improper_alignment",
+            PuppetImproperAlignment: "implementation_improper_alignment",
+            LongStatement: "implementation_long_statement",
+        }
 
         self.checkers: List[DesignSmellChecker] = []
         for child in DesignSmellChecker.__subclasses__():
+            error_name = DESIGN_CHECKER_ERRORS.get(child)
+
+            if error_name is not None and error_name not in fallback:
+                continue
+
             if (child.tech() is None and tech not in child.ignore_techs()) or (
                 child.tech() is not None and child.tech() == tech
             ):
@@ -28,6 +53,7 @@ class DesignVisitor(RuleVisitor):
         self.variable_stack: List[int] = []
         self.variables_names: List[str] = []
         self.first_code_line = inf
+        self.code_lines: List[str] = []
 
     @staticmethod
     def get_name() -> str:
@@ -58,18 +84,12 @@ class DesignVisitor(RuleVisitor):
         if u.path != "":
             with open(u.path, "r") as f:
                 try:
-                    code_lines = f.readlines()
+                    self.code_lines = f.readlines()
                     f.seek(0, 0)
                 except UnicodeDecodeError:
                     return []
         else:
-            code_lines = []
-
-        self.first_non_comm_line = inf
-        for i, line in enumerate(code_lines):
-            if not line.startswith(self.comment):
-                self.first_non_comm_line = i + 1
-                break
+            self.code_lines = []
 
         self.variable_stack.append(len(self.variables_names))
         for attr in u.attributes:
@@ -97,7 +117,7 @@ class DesignVisitor(RuleVisitor):
         #     errors.append(Error('design_unnecessary_abstraction', u, file, repr(u)))
 
         for checker in self.checkers:
-            checker.code_lines = code_lines
+            checker.code_lines = self.code_lines
             checker.variables_names = self.variables_names
             errors += checker.check(u, file)
 
@@ -120,6 +140,7 @@ class DesignVisitor(RuleVisitor):
     def check_atomicunit(self, au: AtomicUnit, file: str) -> list[Error]:
         errors = super().check_atomicunit(au, file)
         for checker in self.checkers:
+            checker.code_lines = self.code_lines
             errors += checker.check(au, file)
         return errors
 
@@ -134,10 +155,7 @@ class DesignVisitor(RuleVisitor):
         return []
 
     def check_comment(self, c: Comment, file: str) -> list[Error]:
-        errors: List[Error] = []
-        if c.line >= self.first_non_comm_line:
-            errors.append(Error("design_avoid_comments", c, file, repr(c)))
-        return errors
+        return []
 
 
 # NOTE: in the end of the file to avoid circular import

@@ -1,0 +1,1 @@
+new_resource.extension ||= defaults.extension

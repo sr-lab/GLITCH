@@ -3,7 +3,8 @@ from pwd import getpwuid
 from typing import Set, Callable
 
 from glitch.repair.interactive.tracer.model import *
-from glitch.repair.interactive.filesystem import *
+from glitch.repair.interactive.system import *
+from glitch.repair.interactive.values import UNDEF
 
 
 def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
@@ -43,32 +44,44 @@ def get_affected_paths(workdir: str, syscalls: List[Syscall]) -> Set[str]:
         elif isinstance(syscall, SRename):
             paths.add(abspath(workdir, syscall.src))
             paths.add(abspath(workdir, syscall.dst))
-        elif isinstance(syscall, (SUnlink, SUnlinkAt, SRmdir, SMkdir, SMkdirAt)):
+        elif isinstance(
+            syscall,
+            (SUnlink, SUnlinkAt, SRmdir, SMkdir, SMkdirAt, SChmod, SFchmodAt, FChownAt),
+        ):
             paths.add(abspath(workdir, syscall.path))
         elif isinstance(syscall, SChdir):
             workdir = syscall.path
 
+    paths = {path for path in paths if path != "/dev/null"}
     return paths
 
 
-def get_file_system_state(files: Set[str]) -> FileSystemState:
+def get_file_system_state(files: Set[str]) -> SystemState:
     """Get the file system state from the given set of files.
 
     Args:
         files: A set of files.
 
     Returns:
-        FileSystemState: The file system state.
+        SystemState: The file system state.
     """
-    fs = FileSystemState()
+    fs = SystemState()
     get_owner: Callable[[str], str] = lambda f: getpwuid(os.stat(f).st_uid).pw_name
-    get_mode: Callable[[str], str] = lambda f: oct(os.stat(f).st_mode & 0o777)[2:]
+    get_mode: Callable[[str], str] = lambda f: "0" + oct(os.stat(f).st_mode & 0o777)[2:]
 
     for file in files:
         if not os.path.exists(file):
-            fs.state[file] = Nil()
+            fs.state[file] = State()
+            fs.state[file].attrs["state"] = "absent"
+            fs.state[file].attrs["mode"] = UNDEF
+            fs.state[file].attrs["owner"] = UNDEF
+            fs.state[file].attrs["content"] = UNDEF
         elif os.path.isdir(file):
-            fs.state[file] = Dir(get_mode(file), get_owner(file))
+            fs.state[file] = State()
+            fs.state[file].attrs["state"] = "directory"
+            fs.state[file].attrs["mode"] = get_mode(file)
+            fs.state[file].attrs["owner"] = get_owner(file)
+            fs.state[file].attrs["content"] = UNDEF
         elif os.path.isfile(file):
             with open(file, "rb") as f:
                 bytes = f.read()
@@ -76,6 +89,10 @@ def get_file_system_state(files: Set[str]) -> FileSystemState:
                     content = bytes.decode("utf-8")
                 except UnicodeDecodeError:
                     content = bytes.hex()
-                fs.state[file] = File(get_mode(file), get_owner(file), content)
+                fs.state[file] = State()
+                fs.state[file].attrs["state"] = "present"
+                fs.state[file].attrs["mode"] = get_mode(file)
+                fs.state[file].attrs["owner"] = get_owner(file)
+                fs.state[file].attrs["content"] = content
 
     return fs

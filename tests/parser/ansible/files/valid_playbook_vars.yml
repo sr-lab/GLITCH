@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    aqua_admin_password: "{{ lookup('env', 'AQUA_ADMIN_PASSWORD') }}"
+    aqua_sso_client_secret: >-
+      "{{ lookup('env', 'AQUA_SSO_CLIENT_SECRET') }}"

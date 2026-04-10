@@ -1,0 +1,5 @@
+---
+- become: true
+  name: Run a command as the apache user
+  command: somecommand
+  become_user: apache

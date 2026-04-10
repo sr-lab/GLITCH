@@ -1,13 +1,28 @@
 import os
-import re
 
 from re import Pattern
-from typing import Optional, List, Callable, Any
+from typing import Optional, List, Callable
 from glitch.repr.inter import *
 from glitch.analysis.rules import Error, SmellChecker
+from glitch.analysis.checkers.string_checker import StringChecker
 
 
 class TerraformSmellChecker(SmellChecker):
+    def _parent_matches(
+        self, parent_name: str, config_parents: list[list[str] | str]
+    ) -> bool:
+        if not config_parents and not parent_name:
+            return True
+        if not config_parents:
+            return False
+        for p in config_parents:
+            if isinstance(p, list):
+                if len(p) == 1 and p[0] == parent_name:
+                    return True
+            elif p == parent_name:
+                return True
+        return False
+
     def get_au(
         self,
         file: str,
@@ -28,7 +43,19 @@ class TerraformSmellChecker(SmellChecker):
                     return au
         elif isinstance(c, UnitBlock):
             for au in c.atomic_units:
-                if au.type == type and au.name == name:
+                if isinstance(au.name, String):
+                    au_name = au.name.value
+                else:
+                    au_name = au.name
+                if au.type == type and au_name == name:
+                    return au
+                if (
+                    type.startswith("resource.")
+                    and au.type == type[9:]
+                    and au_name == name
+                ):
+                    return au
+                if type.startswith("data.") and au.type == type and au_name == name:
                     return au
         return None
 
@@ -59,68 +86,143 @@ class TerraformSmellChecker(SmellChecker):
         elif isinstance(code, UnitBlock):
             for au in code.atomic_units:
                 if au.type == type and self.check_required_attribute(
-                    au.attributes, attribute_parents, attribute_name, None, pattern
+                    au, attribute_parents, attribute_name, None, pattern
                 ):
                     return au
         return None
 
-    def get_attributes_with_name_and_value(
+    def get_attributes(
         self,
-        attributes: List[KeyValue] | List[Attribute],
+        element: AtomicUnit | Attribute | UnitBlock,
         parents: List[str],
         name: str,
-        value: Optional[Any] = None,
-        pattern: Optional[Pattern[str]] = None,
-    ) -> List[KeyValue]:
-        aux: List[KeyValue] = []
-        for a in attributes:
-            if a.name.split("dynamic.")[-1] == name and parents == [""]:
-                if (
-                    value and isinstance(a.value, str) and a.value.lower() == value
-                ) or (
-                    pattern
-                    and isinstance(a.value, str)
-                    and re.match(pattern, a.value.lower())
-                ):
-                    aux.append(a)
-                elif (
-                    value and isinstance(a.value, str) and a.value.lower() != value
-                ) or (
-                    pattern
-                    and isinstance(a.value, str)
-                    and not re.match(pattern, a.value.lower())
-                ):
-                    continue
-                elif not value and not pattern:
-                    aux.append(a)
-            elif a.name.split("dynamic.")[-1] in parents:
-                aux += self.get_attributes_with_name_and_value(
-                    a.keyvalues, [""], name, value, pattern
-                )
-            elif a.keyvalues != []:
-                aux += self.get_attributes_with_name_and_value(
-                    a.keyvalues, parents, name, value, pattern
-                )
-        return aux
+    ) -> List[Attribute | UnitBlock | KeyValue]:
+        res: List[Attribute | UnitBlock | KeyValue] = []
+        if isinstance(element, AtomicUnit):
+            for attr in element.attributes:
+                res.extend(self.get_attributes(attr, parents, name))
+            for ub in element.statements:
+                if isinstance(ub, UnitBlock):
+                    res.extend(self.get_attributes(ub, parents, name))
+        elif (
+            isinstance(element, Attribute)
+            and len(parents) > 0
+            and element.name == parents[0]
+        ):
+            if isinstance(element.value, Hash):
+                for k, v in element.value.value.items():
+                    key_name = k.value if isinstance(k, VariableReference) else str(k)
+                    if len(parents) == 1 and key_name == name:
+                        elem_info = ElementInfo(
+                            k.line, k.column, k.end_line, k.end_column, k.code
+                        )
+                        res.append(KeyValue(key_name, v, elem_info))
+        elif isinstance(element, UnitBlock) and element.type == UnitBlockType.block:
+            if len(parents) > 0:
+                matched = element.name == parents[0]
+                next_parents = parents[1:] if matched else parents
+                if matched:
+                    for attribute in element.attributes:
+                        res.extend(self.get_attributes(attribute, next_parents, name))
+                for ub in element.statements + element.unit_blocks:
+                    if isinstance(ub, UnitBlock):
+                        res.extend(self.get_attributes(ub, next_parents, name))
+            elif element.name == name:
+                res.append(element)
+            else:
+                for attribute in element.attributes:
+                    res.extend(self.get_attributes(attribute, parents, name))
+                for ub in element.statements + element.unit_blocks:
+                    if isinstance(ub, UnitBlock):
+                        res.extend(self.get_attributes(ub, parents, name))
+        elif len(parents) == 0 and element.name == name:
+            res.append(element)
+
+        return res
+
+    def get_attribute(
+        self,
+        element: AtomicUnit | Attribute | UnitBlock,
+        parents: List[str],
+        name: str,
+    ) -> Attribute | UnitBlock | KeyValue | None:
+        attributes = self.get_attributes(element, parents, name)
+        return attributes[0] if len(attributes) > 0 else None
 
     def check_required_attribute(
         self,
-        attributes: List[Attribute] | List[KeyValue],
-        parents: List[str],
+        atomic_unit: AtomicUnit | UnitBlock,
+        parents: List[str] | List[List[str]],
         name: str,
-        value: Optional[Any] = None,
+        value: Optional[str] = None,
         pattern: Optional[Pattern[str]] = None,
-        return_all: bool = False,
-    ) -> Union[Optional[KeyValue], List[KeyValue]]:
-        attributes = self.get_attributes_with_name_and_value(
-            attributes, parents, name, value, pattern
-        )
-        if attributes != []:
-            if return_all:
-                return attributes  # type: ignore
-            return attributes[0]
+    ) -> Attribute | UnitBlock | KeyValue | None:
+        # Handle [0] suffix - check if array attribute has at least one element
+        if name.endswith("[0]"):
+            base_name = name[:-3]
+            element = self.check_required_attribute(atomic_unit, parents, base_name)
+            if (
+                element is not None
+                and isinstance(element, Attribute)
+                and isinstance(element.value, Array)
+                and len(element.value.value) > 0
+            ):
+                return element
+            return None
 
-        return None
+        element = None
+        # In the case we have a list, we consider that one of the
+        # parents list must be satisfied. This is particularly useful
+        # when attributes changes its location between Terraform versions.
+        has_parents_list = False
+        for parents_list in parents:
+            if isinstance(parents_list, list):
+                has_parents_list = True
+                element = self.get_attribute(atomic_unit, parents_list, name)
+                if element is not None:
+                    break
+        if not has_parents_list:
+            element = self.get_attribute(atomic_unit, parents, name)  # type: ignore
+
+        if value is not None:
+            if value == "any_not_empty":
+                value_checker = StringChecker(lambda x: len(x.strip()) > 0)
+            else:
+                value_checker = StringChecker(lambda x: x.lower() == value.lower())
+
+            if element is not None and isinstance(element, Attribute):
+                if (
+                    value == "true"
+                    and isinstance(element.value, Boolean)
+                    and element.value.value
+                ):
+                    return element
+                elif (
+                    value == "false"
+                    and isinstance(element.value, Boolean)
+                    and not element.value.value
+                ):
+                    return element
+                elif value == "non_empty_list":
+                    if (
+                        isinstance(element.value, Array)
+                        and len(element.value.value) > 0
+                    ):
+                        return element
+                elif value_checker.check(element.value):
+                    return element
+                return None
+        elif (
+            pattern is not None
+            and element is not None
+            and isinstance(element, Attribute)
+        ):
+            # HACK: using the code is sort of an hack (avoids dealing with Access)
+            if pattern.match(element.value.code) is not None:
+                return element
+            return None
+        else:
+            return element
 
     def check_database_flags(
         self,
@@ -131,33 +233,42 @@ class TerraformSmellChecker(SmellChecker):
         safe_value: str,
         required_flag: bool = True,
     ) -> List[Error]:
-        database_flags = self.get_attributes_with_name_and_value(
-            au.attributes, ["settings"], "database_flags"
-        )
+        database_flags = self.get_attributes(au, ["settings"], "database_flags")
         found_flag = False
         errors: List[Error] = []
         if database_flags != []:
             for flag in database_flags:
+                if isinstance(flag, Attribute) or flag.name is None:
+                    continue
+
+                # Fake AtomicUnit to use the check_required_attribute method
+                fake_au = AtomicUnit(Null(), "")
+                fake_au.statements = [flag]
                 name = self.check_required_attribute(
-                    flag.keyvalues, [""], "name", flag_name
+                    fake_au, [flag.name], "name", flag_name
                 )
+                # Attribute not found but it is not required
+                if name is None and not required_flag:
+                    continue
+
+                # Attribute found
                 if name is not None:
                     found_flag = True
-                    value = self.check_required_attribute(flag.keyvalues, [""], "value")
-                    if (
-                        isinstance(value, KeyValue)
-                        and isinstance(value.value, str)
-                        and value.value.lower() != safe_value
-                    ):
-                        errors.append(Error(smell, value, file, repr(value)))
-                        break
-                    elif not value and required_flag:
+                    value = self.check_required_attribute(
+                        fake_au, [flag.name], "value", value=safe_value
+                    )
+                    # But value is not correct
+                    if value is None:
+                        value_attr = self.check_required_attribute(
+                            fake_au, [flag.name], "value"
+                        )
+                        error_element = value_attr if value_attr is not None else flag
                         errors.append(
                             Error(
                                 smell,
-                                flag,
+                                error_element,
                                 file,
-                                repr(flag),
+                                repr(error_element),
                                 f"Suggestion: check for a required attribute with name 'value'.",
                             )
                         )
@@ -180,14 +291,17 @@ class TerraformSmellChecker(SmellChecker):
         name: str,
         check: Callable[[KeyValue], bool],
     ):
+        fake_au = AtomicUnit(Null(), "")
+        fake_au.attributes = list(attributes)  # type: ignore
+
         i = 0
-        attribute = self.check_required_attribute(attributes, [""], f"{name}[{i}]")
+        attribute = self.check_required_attribute(fake_au, [""], f"{name}[{i}]")
 
         while isinstance(attribute, KeyValue):
             if check(attribute):
                 return True, attribute
             i += 1
-            attribute = self.check_required_attribute(attributes, [""], f"{name}[{i}]")
+            attribute = self.check_required_attribute(fake_au, [""], f"{name}[{i}]")
 
         return False, None
 
@@ -202,21 +316,46 @@ class TerraformSmellChecker(SmellChecker):
 
     def __check_attribute(
         self,
-        attribute: Attribute | KeyValue,
+        element: Attribute | UnitBlock,
         atomic_unit: AtomicUnit,
         parent_name: str,
         file: str,
     ) -> List[Error]:
         errors: List[Error] = []
-        errors += self._check_attribute(attribute, atomic_unit, parent_name, file)
-        for attr_child in attribute.keyvalues:
-            errors += self.__check_attribute(
-                attr_child, atomic_unit, attribute.name, file
-            )
+        if isinstance(element, Attribute):
+            errors += self._check_attribute(element, atomic_unit, parent_name, file)
+            if isinstance(element.value, Hash):
+                for k, v in element.value.value.items():
+                    key_name = k.value if isinstance(k, VariableReference) else str(k)
+                    elem_info = ElementInfo(
+                        k.line, k.column, k.end_line, k.end_column, k.code
+                    )
+                    hash_attr = KeyValue(key_name, v, elem_info)
+                    errors += self._check_attribute(
+                        hash_attr, atomic_unit, element.name, file
+                    )
+        elif element.type == UnitBlockType.block:
+            for attr in element.attributes:
+                errors += self._check_attribute(attr, atomic_unit, element.name, file)  # type: ignore
+            for statement in element.statements:
+                if (
+                    isinstance(statement, UnitBlock)
+                    and statement.type == UnitBlockType.block
+                ):
+                    errors += self.__check_attribute(statement, atomic_unit, element.name, file)  # type: ignore
+            for ub in element.unit_blocks:
+                if ub.type == UnitBlockType.block:
+                    errors += self.__check_attribute(ub, atomic_unit, element.name, file)  # type: ignore
         return errors
 
-    def _check_attributes(self, atomic_unit: AtomicUnit, file: str) -> List[Error]:
+    def _check_attributes(self, element: AtomicUnit, file: str) -> List[Error]:
         errors: List[Error] = []
-        for attribute in atomic_unit.attributes:
-            errors += self.__check_attribute(attribute, atomic_unit, "", file)
+        for attribute in element.attributes:
+            errors += self.__check_attribute(attribute, element, "", file)
+        for statement in element.statements:
+            if (
+                isinstance(statement, UnitBlock)
+                and statement.type == UnitBlockType.block
+            ):
+                errors += self.__check_attribute(statement, element, "", file)
         return errors

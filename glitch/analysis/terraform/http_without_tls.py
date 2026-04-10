@@ -1,8 +1,16 @@
 from typing import List
 from glitch.analysis.terraform.smell_checker import TerraformSmellChecker
 from glitch.analysis.rules import Error
-from glitch.analysis.security import SecurityVisitor
-from glitch.repr.inter import AtomicUnit, Attribute, CodeElement, KeyValue
+from glitch.analysis.security.visitor import SecurityVisitor
+from glitch.analysis.checkers.var_checker import VariableChecker
+from glitch.repr.inter import (
+    AtomicUnit,
+    Attribute,
+    Boolean,
+    CodeElement,
+    KeyValue,
+    String,
+)
 
 
 class TerraformHttpWithoutTls(TerraformSmellChecker):
@@ -17,12 +25,24 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
             if (
                 attribute.name == config["attribute"]
                 and atomic_unit.type in config["au_type"]
-                and parent_name in config["parents"]
-                and not attribute.has_variable
-                and isinstance(attribute.value, str)
-                and attribute.value.lower() not in config["values"]
+                and self._parent_matches(parent_name, config["parents"])
+                and not VariableChecker().check(attribute.value)
             ):
-                return [Error("sec_https", attribute, file, repr(attribute))]
+                if (
+                    isinstance(attribute.value, Boolean)
+                    and str(attribute.value.value).lower() not in config["values"]
+                ):
+                    return [Error("sec_https", attribute, file, repr(attribute))]
+                elif (
+                    isinstance(attribute.value, String)
+                    and attribute.value.value.lower() not in config["values"]
+                ):
+                    return [Error("sec_https", attribute, file, repr(attribute))]
+                elif (
+                    isinstance(attribute.value, str)
+                    and attribute.value.lower() not in config["values"]
+                ):
+                    return [Error("sec_https", attribute, file, repr(attribute))]
 
         return []
 
@@ -30,14 +50,15 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
         errors: List[Error] = []
         if isinstance(element, AtomicUnit):
             if element.type == "data.http":
-                url = self.check_required_attribute(element.attributes, [""], "url")
+                url = self.check_required_attribute(element, [], "url")
                 if (
                     isinstance(url, KeyValue)
-                    and isinstance(url.value, str)
-                    and "${" in url.value
+                    and hasattr(url.value, "code")
+                    and "${" in url.value.code
                 ):
-                    vars = url.value.split("${")
-                    r = url.value.split("${")[1].split("}")[0]
+                    url_code = url.value.code
+                    vars = url_code.split("${")
+                    r = url_code.split("${")[1].split("}")[0]
                     for var in vars:
                         if "data" in var or "resource" in var:
                             r = var.split("}")[0]
@@ -58,7 +79,7 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
                     config["required"] == "yes"
                     and element.type in config["au_type"]
                     and not self.check_required_attribute(
-                        element.attributes, config["parents"], config["attribute"]
+                        element, config["parents"], config["attribute"]
                     )
                 ):
                     errors.append(
@@ -67,7 +88,7 @@ class TerraformHttpWithoutTls(TerraformSmellChecker):
                             element,
                             file,
                             repr(element),
-                            f"Suggestion: check for a required attribute with name '{config['msg']}'.",
+                            f"Suggestion: check for a required attribute with name '{config.get('msg', config['attribute'])}'.",
                         )
                     )
 
