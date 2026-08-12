@@ -4,6 +4,7 @@
   black,
   pyright,
   puppetparser,
+  librego,
   bashlex,
   z3-solver,
   typing-extensions,
@@ -21,7 +22,8 @@
   configparser,
   click,
   poetry-core,
-  pytestCheckHook
+  pytestCheckHook,
+  python,
 }:
 
 buildPythonApplication {
@@ -54,6 +56,20 @@ buildPythonApplication {
     black
     pyright
   ];
+
+  # Place librego where the Python wrapper expects it (see README Rego build docs).
+  # postPatch: pytest imports from the source tree, which otherwise has no .so.
+  # postInstall: poetry skips gitignored *.so files when packaging.
+  postPatch = ''
+    mkdir -p glitch/rego/rego_python/src/rego_python/bin
+    cp ${librego}/lib/librego-linux-amd64.so glitch/rego/rego_python/src/rego_python/bin/
+  '';
+
+  postInstall = ''
+    bin_dir="$out/${python.sitePackages}/glitch/rego/rego_python/src/rego_python/bin"
+    mkdir -p "$bin_dir"
+    cp ${librego}/lib/librego-linux-amd64.so "$bin_dir/"
+  '';
 
   pythonImportsCheck = [
     "glitch"

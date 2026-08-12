@@ -11,7 +11,10 @@
       pkgs = nixpkgs.legacyPackages.${system};
 
       puppetparser = pkgs.python3Packages.callPackage ./nix/puppetparser.nix {};
-      package = pkgs.python3Packages.callPackage ./nix/glitch.nix { inherit self puppetparser; };
+      librego = pkgs.callPackage ./nix/librego.nix {};
+      package = pkgs.python3Packages.callPackage ./nix/glitch.nix {
+        inherit self puppetparser librego;
+      };
     in
     {
       devShells.${system}.default = pkgs.mkShell {
@@ -20,6 +23,9 @@
         ];
       };
 
-      packages.${system}.default = package;
+      packages.${system} = {
+        default = package;
+        librego = librego;
+      };
     };
 }
