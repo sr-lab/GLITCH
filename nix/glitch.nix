@@ -12,7 +12,7 @@
   setuptools,
   ruamel-yaml,
   requests,
-  bc-python-hcl2,
+  python-hcl2,
   prettytable,
   ply,
   pandas,
@@ -24,6 +24,8 @@
   poetry-core,
   pytestCheckHook,
   python,
+  ruby,
+  z3,
 }:
 
 buildPythonApplication {
@@ -44,7 +46,7 @@ buildPythonApplication {
     pandas
     ply
     prettytable
-    bc-python-hcl2
+    python-hcl2
     requests
     ruamel-yaml
     setuptools
@@ -77,9 +79,23 @@ buildPythonApplication {
 
   nativeCheckInputs = [
     pytestCheckHook
+    ruby
+    z3
   ];
+
+  enabledTestPaths = [ "tests" ];
+
+  disabledTests = [
+    # Ripper sexp for mix.rb changed on Ruby 3.x (CI uses 2.7.4).
+    "test_chef_parser_mix"
+    # Relies on `ulimit -v`, which the Nix sandbox does not enforce.
+    "test_patch_solver_puppet_memory_limit"
+  ];
+
+  # CLI tests invoke the `glitch` script; patch solver shells out to `z3`.
+  preCheck = ''
+    export PATH="$out/bin:$PATH"
+  '';
 
   dontCheckRuntimeDeps = true;
 }
-
-
