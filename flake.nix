@@ -11,15 +11,27 @@
       pkgs = nixpkgs.legacyPackages.${system};
 
       puppetparser = pkgs.python3Packages.callPackage ./nix/puppetparser.nix {};
-      package = pkgs.python3Packages.callPackage ./nix/glitch.nix { inherit self puppetparser; };
+      jinja2 = pkgs.python3Packages.callPackage ./nix/jinja2.nix {};
+      python-hcl2 = pkgs.python3Packages.callPackage ./nix/python-hcl2.nix {};
+      librego = pkgs.callPackage ./nix/librego.nix {};
+      package = pkgs.python3Packages.callPackage ./nix/glitch.nix {
+        inherit self puppetparser librego jinja2 python-hcl2;
+        z3 = pkgs.z3;
+      };
     in
     {
       devShells.${system}.default = pkgs.mkShell {
-        buildInputs = [
+        packages = [
           package
+          pkgs.ruby
+          pkgs.z3
+          pkgs.python3Packages.pytest
         ];
       };
 
-      packages.${system}.default = package;
+      packages.${system} = {
+        default = package;
+        librego = librego;
+      };
     };
 }
