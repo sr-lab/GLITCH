@@ -1,0 +1,9 @@
+# This is a comment
+AWSTemplateFormatVersion: "2010-09-09"
+# Another comment
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket
+    # Inline comment
+    Properties:
+      BucketName: my-bucket

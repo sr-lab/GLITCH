@@ -12,3 +12,4 @@ class Tech(Enum):
     puppet = "puppet", ["pp"]
     terraform = "terraform", ["tf"]
     gha = "github-actions", ["yml", "yaml"]
+    cloudformation = "cloudformation", ["yml", "yaml"]
