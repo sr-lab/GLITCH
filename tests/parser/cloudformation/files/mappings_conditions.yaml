@@ -1,0 +1,10 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-12345678
+Conditions:
+  IsProd: !Equals [!Ref "AWS::NoValue", prod]
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket

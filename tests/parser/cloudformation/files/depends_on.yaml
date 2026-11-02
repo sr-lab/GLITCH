@@ -1,0 +1,12 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket
+    DependsOn: MyRole
+  MyRole:
+    Type: AWS::IAM::Role
+  MyInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - MyBucket
+      - MyRole

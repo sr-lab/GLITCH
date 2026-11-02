@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !GetAtt MyRole.Arn
+  MyInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !GetAtt [MyBucket, Arn]
+  MyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::GetAtt:
+          - MyBucket
+          - Arn

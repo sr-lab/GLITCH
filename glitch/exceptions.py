@@ -14,6 +14,7 @@ EXCEPTIONS = {
     "PUPPET_COULD_NOT_PARSE": "Puppet - Could not parse file: {}",
     "SHELL_COULD_NOT_PARSE": "Shell Command - Could not parse: {}",
     "TERRAFORM_COULD_NOT_PARSE": "Terraform - Could not parse file: {}",
+    "CF_COULD_NOT_PARSE": "CloudFormation - Could not parse file: {}",
 }
 
 
