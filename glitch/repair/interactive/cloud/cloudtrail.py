@@ -31,10 +31,14 @@ class CloudTrailChangeDetector:
         "ec2.amazonaws.com": {
             "ModifyInstanceAttribute": "instanceId",
         },
+        "s3.amazonaws.com": {
+            "PutBucketAcl": "bucketName",
+        },
     }
 
     _TYPE_NAMES: Dict[str, str] = {
         "ec2.amazonaws.com": "AWS::EC2::Instance",
+        "s3.amazonaws.com": "AWS::S3::Bucket",
     }
 
     def detect(self, events: List[CloudTrailEvent]) -> List[ChangedResource]:
