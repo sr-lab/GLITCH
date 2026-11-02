@@ -585,7 +585,7 @@ class PatchApplier:
     ) -> None:
         # FIXME: There should be a way to change the way we apply the patch
         # according to the technology
-        if tech == Tech.terraform and attribute.name == "state":
+        if tech in (Tech.terraform, Tech.cloudformation) and attribute.name == "state":
             return
 
         name, _ = NamesDatabase.get_attr_pair(
@@ -624,6 +624,8 @@ class PatchApplier:
         new_line = TemplateDatabase.get_template(attribute, tech)
         if tech == Tech.terraform:
             value = value if not is_string else f'"{value}"'
+        elif tech == Tech.cloudformation:
+            pass
         else:
             value = value if not is_string else f"'{value}'"
         new_line = col * " " + new_line.format(attribute.name, value)

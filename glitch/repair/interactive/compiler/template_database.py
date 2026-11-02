@@ -22,6 +22,8 @@ class TemplateDatabase:
             return "{}: {}\n"
         elif isinstance(code_element, Attribute) and tech == Tech.terraform:
             return "{} = {}\n"
+        elif isinstance(code_element, Attribute) and tech == Tech.cloudformation:
+            return "{}: {}\n"
 
         raise NotImplementedError(
             "Template not found for the given code element and tech."

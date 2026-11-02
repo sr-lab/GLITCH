@@ -40,6 +40,8 @@ class NamesDatabase:
                 return "aws_instance"
             case "amazon.aws.iam_role", Tech.ansible:
                 return "aws_iam_role"
+            case "AWS::EC2::Instance", Tech.cloudformation:
+                return "aws_instance"
             case _:
                 pass
         return type
@@ -78,6 +80,10 @@ class NamesDatabase:
                 return "action"
             case "name", "aws_s3_bucket", Tech.terraform:
                 return "bucket"
+            case "instance_type", "aws_instance", Tech.cloudformation:
+                return "InstanceType"
+            case "availability_zone", "aws_instance", Tech.cloudformation:
+                return "AvailabilityZone"
             case "assume_role_policy", "aws_iam_role", Tech.ansible:
                 return "assume_role_policy_document"
             case _:
@@ -171,6 +177,10 @@ class NamesDatabase:
                 return "enabled"
             case "bucket", "aws_s3_bucket", Tech.terraform:
                 return "name"
+            case "InstanceType", "aws_instance", Tech.cloudformation:
+                return "instance_type"
+            case "AvailabilityZone", "aws_instance", Tech.cloudformation:
+                return "availability_zone"
             case "assume_role_policy_document", "aws_iam_role", Tech.ansible:
                 return "assume_role_policy"
             case _:
@@ -319,7 +329,7 @@ class NormalizationVisitor:
 
         # Since Terraform does not define a state, we add it manually
         # FIXME: Probably should be in a better place
-        if self.tech == Tech.terraform:
+        if self.tech in (Tech.terraform, Tech.cloudformation):
             element.attributes.insert(
                 0,
                 Attribute(
