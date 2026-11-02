@@ -1,7 +1,7 @@
 """Identify changed resources from CloudTrail events."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol
 import json
 
 
@@ -76,3 +76,40 @@ def parse_events(data: dict) -> List[CloudTrailEvent]:
 def parse_events_file(path: str) -> List[CloudTrailEvent]:
     with open(path) as f:
         return parse_events(json.load(f))
+
+
+class CloudTrailApi(Protocol):
+    def lookup_events(self, **kwargs: Any) -> Dict:
+        ...
+
+
+class CloudTrailLookupSource:
+    """Fetch all matching CloudTrail pages using boto3."""
+
+    def __init__(
+        self, region_name: str = "us-east-1", client: Optional[CloudTrailApi] = None
+    ) -> None:
+        if client is None:
+            import boto3
+
+            client = boto3.client("cloudtrail", region_name=region_name)
+        self._client = client
+
+    def lookup(self, page_size: int = 50, **filters: Any) -> List[CloudTrailEvent]:
+        events: List[CloudTrailEvent] = []
+        next_token: Optional[str] = None
+
+        while True:
+            request = {"MaxResults": page_size, **filters}
+            if next_token is not None:
+                request["NextToken"] = next_token
+
+            response = self._client.lookup_events(**request)
+            for record in response.get("Events", []):
+                detail = record.get("CloudTrailEvent")
+                if detail:
+                    events.extend(parse_events(json.loads(detail)))
+
+            next_token = response.get("NextToken")
+            if next_token is None:
+                return events

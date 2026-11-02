@@ -1,6 +1,7 @@
 """Read live resource properties and normalize them for InfraFix."""
 
 from typing import Dict, Protocol
+import json
 
 from glitch.repr.inter import String, ElementInfo
 from glitch.tech import Tech
@@ -26,6 +27,26 @@ class MockCloudControlClient:
         if key not in self._resources:
             raise KeyError(f"No live resource for {key}")
         return self._resources[key]
+
+
+class BotoCloudControlClient:
+    """Cloud Control ``GetResource`` client backed by boto3."""
+
+    def __init__(self, region_name: str = "us-east-1") -> None:
+        import boto3
+
+        self._client = boto3.client("cloudcontrol", region_name=region_name)
+
+    def get_resource(self, type_name: str, identifier: str) -> Dict:
+        response = self._client.get_resource(
+            TypeName=type_name, Identifier=identifier
+        )
+        description = response["ResourceDescription"]
+        raw_properties = description.get("Properties")
+        return {
+            "TypeName": response.get("TypeName", type_name),
+            "Properties": json.loads(raw_properties) if raw_properties else {},
+        }
 
 
 def build_system_state(
